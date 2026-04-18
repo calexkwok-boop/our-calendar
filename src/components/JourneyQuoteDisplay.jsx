@@ -9,6 +9,10 @@ export default function JourneyQuoteDisplay({
   const [showSource, setShowSource] = React.useState(false);
   const quoteText = String(quote?.text || '').trim();
   const quoteSource = String(quote?.source || '').trim();
+  const quoteColor = compact
+    ? (darkMode ? '#cbd5e1' : '#374151')
+    : (darkMode ? '#f3f4f6' : '#111827');
+  const sourceColor = darkMode ? '#94a3b8' : '#6b7280';
 
   React.useEffect(() => {
     // Reset the reveal when the daily quote changes.
@@ -30,8 +34,9 @@ export default function JourneyQuoteDisplay({
       style={{ WebkitTapHighlightColor: 'transparent' }}
     >
       <div
-        className={compact ? 'text-sm text-gray-700 dark:text-gray-200 leading-5' : 'text-xl sm:text-2xl text-gray-900 dark:text-gray-100 leading-tight'}
+        className={compact ? 'text-sm leading-5' : 'text-xl sm:text-2xl leading-tight'}
         style={{
+          color: quoteColor,
           fontFamily: "'Lora', Georgia, serif",
           fontStyle: 'italic',
           letterSpacing: compact ? '-0.01em' : '-0.025em',
@@ -41,8 +46,9 @@ export default function JourneyQuoteDisplay({
         {quoteText}
       </div>
       <div
-        className={`${compact ? 'text-[11px]' : 'text-sm'} mt-1 text-gray-500 dark:text-gray-400 transition-all duration-200`}
+        className={`${compact ? 'text-[11px]' : 'text-sm'} mt-1 transition-all duration-200`}
         style={{
+          color: sourceColor,
           opacity: showSource ? 0.82 : 0,
           maxHeight: showSource ? 48 : 0,
           overflow: 'hidden',

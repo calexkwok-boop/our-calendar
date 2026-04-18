@@ -20,6 +20,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { MapPin, ExternalLink, Search, X, Camera, Globe } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import JourneyQuoteDisplay from './JourneyQuoteDisplay';
+import TRAVEL_QUOTES from '../data/travelQuotes';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 const handwritten = '"Caveat", cursive';
@@ -409,7 +411,7 @@ const SkeletonCard = ({ darkMode }) => (
 );
 
 // ─── Featured community post ──────────────────────────────────────────────────
-const FeaturedDestinationPost = React.memo(({ post, currentUserId, onSomeday, onRemoveFromSomeday, onDelete, darkMode }) => {
+const FeaturedDestinationPost = React.memo(({ post, photoUrl, currentUserId, onSomeday, onRemoveFromSomeday, onDelete, darkMode }) => {
   const bg = darkMode ? '#161f30' : '#ffffff';
   const bw = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
   const tp = darkMode ? '#f1f5f9' : '#111827';
@@ -428,8 +430,8 @@ const FeaturedDestinationPost = React.memo(({ post, currentUserId, onSomeday, on
       )}
       <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 1fr' }} className="max-sm:block">
         <div style={{ minHeight: 220, background: darkMode ? 'rgba(99,102,241,0.08)' : '#eef2ff', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 72 }}>
-          {post.destination_image ? (
-            <img src={post.destination_image} alt={post.destination_name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+          {(photoUrl || post.destination_image) ? (
+            <img src={photoUrl || post.destination_image} alt={post.destination_name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
           ) : '✈️'}
           <div style={{ position: 'absolute', top: 12, left: 12, padding: '5px 10px', borderRadius: 999, background: 'rgba(0,0,0,0.5)', color: '#fff', fontSize: 11, fontWeight: 700 }}>
             Most saved this week
@@ -662,6 +664,13 @@ const DestinationsPage = ({
   const communityFeedRef = useRef(null);
   const fetchedRef       = useRef(false);
   const photoFetchedRef  = useRef(new Set());
+  const travelToday = new Date();
+  const travelDailyQuoteSeed = (
+    travelToday.getFullYear() * 10000 + (travelToday.getMonth() + 1) * 100 + travelToday.getDate()
+  );
+  const destinationsQuote = TRAVEL_QUOTES[
+    ((travelDailyQuoteSeed % TRAVEL_QUOTES.length) + TRAVEL_QUOTES.length) % TRAVEL_QUOTES.length
+  ] || null;
 
   // ── Auth ─────────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -736,11 +745,13 @@ const DestinationsPage = ({
 
   const fetchDestinationPhoto = useCallback(async (destination) => {
     const destinationId = String(destination?.id || '');
-    if (!destinationId || destination.photo || photoFetchedRef.current.has(destinationId)) return;
+    const destinationName = destination?.name || destination?.destination_name || '';
+    const destinationPhoto = destination?.photo || destination?.destination_image || '';
+    if (!destinationId || !destinationName || destinationPhoto || photoFetchedRef.current.has(destinationId)) return;
     photoFetchedRef.current.add(destinationId);
 
     try {
-      const q = encodeURIComponent(`${destination.name} ${destination.location || ''} travel destination`);
+      const q = encodeURIComponent(`${destinationName} ${destination.location || ''} travel destination`);
       const res = await fetch(`/api/places?action=textsearch&query=${q}&type=tourist_attraction`);
       const data = await res.json();
       const photo = data.results?.[0]?.photos?.[0];
@@ -767,6 +778,11 @@ const DestinationsPage = ({
     if (!filtered.length) return;
     filtered.slice(0, 24).forEach((destination) => fetchDestinationPhoto(destination));
   }, [filtered, fetchDestinationPhoto]);
+
+  useEffect(() => {
+    if (!featuredPost) return;
+    fetchDestinationPhoto(featuredPost);
+  }, [featuredPost, fetchDestinationPhoto]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
   const handleVibeChange = (vibeId) => {
@@ -913,9 +929,12 @@ const DestinationsPage = ({
         <h1 style={{ fontFamily: handwritten, fontSize: 52, fontWeight: 700, lineHeight: 1.02, margin: '42px 0 10px', maxWidth: 360, backgroundImage: darkMode ? 'linear-gradient(90deg, #f8fafc 0%, #a5b4fc 100%)' : 'linear-gradient(90deg, #1e1b4b 0%, #6366f1 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>
           The world is waiting
         </h1>
-        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7, color: ts, maxWidth: 340 }}>
-          Discover places worth dreaming about. Save them to your Someday List and start planning.
-        </p>
+        <JourneyQuoteDisplay
+          quote={destinationsQuote}
+          darkMode={darkMode}
+          compact
+          className="max-w-[340px]"
+        />
       </div>
 
       {/* ── Search bar ── */}
@@ -980,6 +999,7 @@ const DestinationsPage = ({
           </p>
           <FeaturedDestinationPost
             post={featuredPost}
+            photoUrl={placePhotos[featuredPost.id] || ''}
             currentUserId={currentUserId}
             onSomeday={handleSomedayFromPost}
             onRemoveFromSomeday={onRemoveFromSomeday}

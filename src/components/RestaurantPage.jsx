@@ -384,7 +384,7 @@ const SkeletonCard = ({ darkMode }) => (
 );
 
 // ─── Featured community recommendation ───────────────────────────────────────
-const FeaturedRestaurantRecommendation = React.memo(({ post, currentUserId, onSomeday, onRemoveFromSomeday, onDelete, darkMode }) => {
+const FeaturedRestaurantRecommendation = React.memo(({ post, photoUrl, currentUserId, onSomeday, onRemoveFromSomeday, onDelete, darkMode }) => {
   const bg = darkMode ? '#161f30' : '#ffffff';
   const bw = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
   const tp = darkMode ? '#f1f5f9' : '#111827';
@@ -408,8 +408,8 @@ const FeaturedRestaurantRecommendation = React.memo(({ post, currentUserId, onSo
       )}
       <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 1fr' }} className="max-sm:block">
         <div style={{ minHeight: 220, background: darkMode ? 'rgba(201,161,93,0.08)' : '#fff7eb', position: 'relative' }}>
-          {post.restaurant_image ? (
-            <img src={post.restaurant_image} alt={post.restaurant_name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+          {(photoUrl || post.restaurant_image) ? (
+            <img src={photoUrl || post.restaurant_image} alt={post.restaurant_name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64 }}>🍽️</div>
           )}
@@ -457,7 +457,7 @@ const FeaturedRestaurantRecommendation = React.memo(({ post, currentUserId, onSo
 });
 
 // ─── Community recommendation card ───────────────────────────────────────────
-const RestaurantRecommendationCard = React.memo(({ post, currentUserId, onSomeday, onVote, onDelete, darkMode }) => {
+const RestaurantRecommendationCard = React.memo(({ post, photoUrl, currentUserId, onSomeday, onVote, onDelete, darkMode }) => {
   const bg = darkMode ? '#161f30' : '#ffffff';
   const bw = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
   const tp = darkMode ? '#f1f5f9' : '#111827';
@@ -475,8 +475,8 @@ const RestaurantRecommendationCard = React.memo(({ post, currentUserId, onSomeda
           <span style={{ fontSize: 15, lineHeight: 1, fontWeight: 700 }}>×</span>
         </button>
       )}
-      {post.restaurant_image ? (
-        <img src={post.restaurant_image} alt={post.restaurant_name} style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+      {(photoUrl || post.restaurant_image) ? (
+        <img src={photoUrl || post.restaurant_image} alt={post.restaurant_name} style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
       ) : (
         <div style={{ width: '100%', height: 120, background: darkMode ? 'rgba(201,161,93,0.08)' : '#fff7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 44 }}>🍽️</div>
       )}
@@ -764,6 +764,7 @@ const RestaurantPage = ({
   const [featuredRestaurantPost, setFeaturedRestaurantPost] = useState(null);
   const [highlightedRestaurantId, setHighlightedRestaurantId] = useState(null);
   const [isRecommendOpen, setIsRecommendOpen] = useState(false);
+  const [recommendedPostPhotos, setRecommendedPostPhotos] = useState({});
   const [location, setLocation]         = useState(userLocation || { lat: 34.0522, lng: -118.2437 });
   const [locationSearch, setLocationSearch]   = useState('');
   const [locationLabel, setLocationLabel]     = useState('');
@@ -773,6 +774,7 @@ const RestaurantPage = ({
   const [radius] = useState(10000); // fixed radius — no UI toggle needed
   const communityFeedRef = useRef(null);
   const fetchedRef       = useRef(false);
+  const recommendationPhotoFetchedRef = useRef(new Set());
 
   // ── Auth ────────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -803,6 +805,38 @@ const RestaurantPage = ({
   }, []);
 
   useEffect(() => { fetchRecommendedPosts(); }, [fetchRecommendedPosts]);
+
+  const fetchRecommendationPhoto = useCallback(async (post) => {
+    const postId = String(post?.id || '');
+    const restaurantName = post?.restaurant_name || post?.name || '';
+    const existingPhoto = post?.restaurant_image || post?.photo || '';
+    if (!postId || !restaurantName || existingPhoto || recommendationPhotoFetchedRef.current.has(postId)) return;
+    recommendationPhotoFetchedRef.current.add(postId);
+
+    try {
+      const query = `${restaurantName} ${post.address || ''}`.trim();
+      const res = await fetch(`/api/places?action=textsearch&query=${encodeURIComponent(query)}&type=restaurant`);
+      const data = await res.json();
+      const place = Array.isArray(data.results) ? data.results[0] : null;
+      const photoRef = place?.photos?.[0]?.photo_reference;
+      if (!photoRef) return;
+
+      const url = `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=600`;
+      setRecommendedPostPhotos((prev) => (
+        prev[post.id] ? prev : { ...prev, [post.id]: url }
+      ));
+    } catch {
+      // Recommendation photos are progressive enhancement; keep emoji cards if unavailable.
+    }
+  }, []);
+
+  useEffect(() => {
+    const postsToHydrate = [
+      featuredRestaurantPost,
+      ...recommendedPosts.slice(0, 8),
+    ].filter(Boolean);
+    postsToHydrate.forEach((post) => fetchRecommendationPhoto(post));
+  }, [featuredRestaurantPost, recommendedPosts, fetchRecommendationPhoto]);
 
   // ── Vote hydration ──────────────────────────────────────────────────────────
   const hydrateRestaurantVotes = useCallback(async (items) => {
@@ -1443,6 +1477,7 @@ const RestaurantPage = ({
           </p>
           <FeaturedRestaurantRecommendation
             post={featuredRestaurantPost || recommendedPosts[0]}
+            photoUrl={recommendedPostPhotos[(featuredRestaurantPost || recommendedPosts[0])?.id] || ''}
             currentUserId={currentUserId}
             onSomeday={handleSomedayFromRecommendation}
             onRemoveFromSomeday={onRemoveFromSomeday}

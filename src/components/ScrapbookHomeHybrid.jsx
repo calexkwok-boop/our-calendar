@@ -488,47 +488,6 @@ const ScrapbookHomeHybrid = ({
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={tripSpotlight ? onOpenTripsTab : onStartTrip}
-          className="w-full rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-4 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
-        >
-          <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">
-            Your Next Adventure
-          </div>
-          {tripSpotlight ? (
-            <div className="overflow-hidden rounded-[18px] border border-white/50 dark:border-white/10 bg-white/80 dark:bg-white/[0.05]">
-              <div className="relative h-[152px] w-full bg-gradient-to-br from-sky-200 via-cyan-100 to-emerald-100 dark:from-sky-900/40 dark:via-slate-900 dark:to-emerald-900/30">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.45),transparent_38%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.22),transparent_32%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_38%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.08),transparent_32%)]" />
-                <div className="absolute inset-x-0 bottom-0 px-4 py-4">
-                  <div className="truncate text-lg text-gray-900 dark:text-white" style={{ fontFamily: '"Comic Sans MS", "Bradley Hand", cursive' }}>
-                    {tripSpotlight?.weather_location || tripSpotlight?.name || 'Your next destination'}
-                  </div>
-                  <div className="mt-1 truncate text-xs text-gray-700/80 dark:text-gray-300">
-                    {formatDisplayDate(tripSpotlight.startDateLabel || tripSpotlight.startDate || tripSpotlight.start)} - {formatDisplayDate(tripSpotlight.endDateLabel || tripSpotlight.endDate || tripSpotlight.end)}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex min-h-[152px] flex-col items-start justify-between rounded-[18px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-sky-100 via-cyan-50 to-emerald-100 p-4 dark:from-sky-900/30 dark:via-slate-900 dark:to-emerald-900/20">
-              <div>
-                <div className="text-sm font-semibold text-gray-900 dark:text-white">Where do you want to go?</div>
-                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Plan a trip and it will show up here as your next adventure.
-                </div>
-              </div>
-              <div
-                className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold"
-                style={themeAccentEllieChipButtonStyle}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Plan trip
-              </div>
-            </div>
-          )}
-        </button>
-
         {/* SOMEDAY LIST - NEW scrapbook enhanced */}
         <div className="rounded-[28px] border-2 border-emerald-900/20 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-emerald-950/30 dark:via-slate-900 dark:to-cyan-950/20 p-6 shadow-xl">
           <div className="flex items-center justify-between mb-4">
@@ -537,8 +496,16 @@ const ScrapbookHomeHybrid = ({
               className="flex items-center gap-2 text-left active:opacity-70 transition-opacity"
             >
               <Sparkles className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
-              <h3 className="font-handwritten text-3xl text-gray-900 dark:text-white">
-                Someday List
+              <h3
+                className="font-handwritten text-3xl"
+                style={{
+                  background: 'linear-gradient(90deg, #5eada0, #a89bc2, #c4867a, #c9a15d)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                Komo Book
               </h3>
             </button>
             <button
@@ -630,6 +597,47 @@ const ScrapbookHomeHybrid = ({
             </div>
           )}
         </div>
+
+        <button
+          type="button"
+          onClick={tripSpotlight ? onOpenTripsTab : onStartTrip}
+          className="w-full rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-4 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
+        >
+          <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">
+            Your Next Adventure
+          </div>
+          {tripSpotlight ? (
+            <div className="overflow-hidden rounded-[18px] border border-white/50 dark:border-white/10 bg-white/80 dark:bg-white/[0.05]">
+              <div className="relative h-[152px] w-full bg-gradient-to-br from-sky-200 via-cyan-100 to-emerald-100 dark:from-sky-900/40 dark:via-slate-900 dark:to-emerald-900/30">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.45),transparent_38%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.22),transparent_32%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_38%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.08),transparent_32%)]" />
+                <div className="absolute inset-x-0 bottom-0 px-4 py-4">
+                  <div className="truncate text-lg text-gray-900 dark:text-white" style={{ fontFamily: '"Comic Sans MS", "Bradley Hand", cursive' }}>
+                    {tripSpotlight?.weather_location || tripSpotlight?.name || 'Your next destination'}
+                  </div>
+                  <div className="mt-1 truncate text-xs text-gray-700/80 dark:text-gray-300">
+                    {formatDisplayDate(tripSpotlight.startDateLabel || tripSpotlight.startDate || tripSpotlight.start)} - {formatDisplayDate(tripSpotlight.endDateLabel || tripSpotlight.endDate || tripSpotlight.end)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex min-h-[152px] flex-col items-start justify-between rounded-[18px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-sky-100 via-cyan-50 to-emerald-100 p-4 dark:from-sky-900/30 dark:via-slate-900 dark:to-emerald-900/20">
+              <div>
+                <div className="text-sm font-semibold text-gray-900 dark:text-white">Where do you want to go?</div>
+                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Plan a trip and it will show up here as your next adventure.
+                </div>
+              </div>
+              <div
+                className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold"
+                style={themeAccentEllieChipButtonStyle}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Plan trip
+              </div>
+            </div>
+          )}
+        </button>
 
         <div className="rounded-[24px] border border-amber-900/10 bg-white/70 px-4 py-3 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-black/20 sm:px-6 sm:py-4">
           <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-900/55 dark:text-amber-100/55">
