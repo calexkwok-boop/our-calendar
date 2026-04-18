@@ -147,9 +147,9 @@ function ProductModal({ product, isSaved, onSomeday, onPost, onClose, darkMode }
                 href={product.amazonUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`flex-1 rounded-2xl py-3 text-sm font-medium transition-all text-center border ${dm ? 'bg-amber-400/10 border-amber-400/25 text-amber-400 hover:bg-amber-400/20' : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'}`}
+                className={`flex-1 rounded-2xl py-3 text-sm font-handwritten font-bold transition-all text-center border ${dm ? 'bg-purple-500/10 border-purple-400/25 text-purple-300 hover:bg-purple-500/20' : 'bg-purple-50 border-purple-300 text-purple-700 hover:bg-purple-100'}`}
               >
-                View on Amazon →
+                View on Amazon
               </a>
             )}
             <button

@@ -142,9 +142,9 @@ const truncateText = (text, max = 120) => {
   return clean.length > max ? `${clean.slice(0, max).trimEnd()}…` : clean;
 };
 
-const destinationSomedayPayload = (post) => ({
+const destinationSomedayPayload = (post, photoUrl = '') => ({
   title: post.destination_name,
-  imageUrl: post.destination_image || '',
+  imageUrl: photoUrl || post.destination_image || '',
   emoji: '✈️',
   type: 'destinations',
   notes: [post.review, post.location, post.best_for, post.vibe]
@@ -825,8 +825,14 @@ const DestinationsPage = ({
   }, [recordDestinationInteraction]);
 
   const handleSaveToSomeday = (destination) => {
+    const imageUrl = destination.photo
+      || destination.imageUrl
+      || destination.destination_image
+      || placePhotos[destination.id]
+      || '';
+
     setSavedIds(prev => new Set([...prev, destination.id]));
-    recordDestinationInteraction(destination, 'save');
+    recordDestinationInteraction({ ...destination, photo: imageUrl }, 'save');
     onSaveToSomeday?.({
       id: Date.now().toString(),
       text: destination.name,
@@ -835,7 +841,7 @@ const DestinationsPage = ({
       status: 'dreaming',
       tab: 'ours',
       emoji: destination.emoji || '✈️',
-      imageUrl: destination.photo || '',
+      imageUrl,
       notes: `${destination.location} · ${VIBES.find(v => v.id === destination.vibe)?.label || ''}`,
       comments: [],
       partnerHearted: false,
@@ -888,9 +894,10 @@ const DestinationsPage = ({
   }, [communityPosts]);
 
   const handleSomedayFromPost = useCallback((post) => {
-    recordDestinationInteraction(post, 'save');
-    onSaveToSomeday?.({ ...destinationSomedayPayload(post), location: post.location || '', review: post.review || '', best_for: post.best_for || '' });
-  }, [onSaveToSomeday, recordDestinationInteraction]);
+    const imageUrl = post.destination_image || placePhotos[post.id] || '';
+    recordDestinationInteraction({ ...post, destination_image: imageUrl }, 'save');
+    onSaveToSomeday?.({ ...destinationSomedayPayload(post, imageUrl), location: post.location || '', review: post.review || '', best_for: post.best_for || '' });
+  }, [onSaveToSomeday, placePhotos, recordDestinationInteraction]);
 
   // ── Style tokens ─────────────────────────────────────────────────────────────
   const pageBg = darkMode ? '#0e1520' : '#faf8f3';
