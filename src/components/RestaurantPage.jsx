@@ -760,10 +760,10 @@ const RestaurantPage = ({
   darkMode = false,
 }) => {
   const [restaurants, setRestaurants]   = useState([]);
-  const [loading, setLoading]           = useState(true);
+  const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState('');
   const [search, setSearch]             = useState('');
-  const [occasion, setOccasion]         = useState('bucket_list');   // replaces cuisine/price/radius UI
+  const [occasion, setOccasion]         = useState('');   // no pill selected until the user chooses one
   const [selected, setSelected]         = useState(null);
   const [savedIds, setSavedIds]         = useState(new Set());
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -1107,16 +1107,7 @@ const RestaurantPage = ({
   useEffect(() => {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
-    const initialOccasion = OCCASIONS.find(o => o.id === 'bucket_list') || OCCASIONS[0];
-    if (initialOccasion && CURATED_RESTAURANT_SEARCHES[initialOccasion.id]) {
-      fetchCuratedRestaurants(initialOccasion);
-    } else if (!userLocation && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        pos => { const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude }; setLocation(loc); fetchRestaurants(loc, '', radius); },
-        () => fetchRestaurants(location, '', radius),
-        { timeout: 5000 }
-      );
-    } else { fetchRestaurants(userLocation || location, '', radius); }
+    setRestaurants([]);
   }, []);
 
   // ── Unified smart search ─────────────────────────────────────────────────────
@@ -1125,6 +1116,7 @@ const RestaurantPage = ({
   const handleUnifiedSearch = useCallback(async (query) => {
     const trimmed = query.trim();
     if (!trimmed) return;
+    setOccasion('');
     setLocSearching(true); setLoading(true); setError('');
     const KEY = apiKey || process.env.REACT_APP_GOOGLE_PLACES_KEY || '';
 
@@ -1202,6 +1194,18 @@ const RestaurantPage = ({
   }, [handleUnifiedSearch]);
 
   const handleOccasionSearch = useCallback(async (occasionItem) => {
+    if (occasion === occasionItem.id) {
+      setOccasion('');
+      setLocationLabel('');
+      setLocationSearch('');
+      setSearch('');
+      setLocationSuggestions([]);
+      setError('');
+      setRestaurants([]);
+      setLoading(false);
+      return;
+    }
+
     setOccasion(occasionItem.id);
 
     if (occasionItem.id === 'all') {
@@ -1230,10 +1234,11 @@ const RestaurantPage = ({
       ? ` near ${locationLabel}`
       : '';
     await handleUnifiedSearch(`${occasionItem.query || occasionItem.label}${locationContext}`);
-  }, [fetchCuratedRestaurants, fetchHiddenGemRecommendations, fetchMostAddedRestaurants, fetchRestaurants, handleUnifiedSearch, location, locationLabel, radius]);
+  }, [fetchCuratedRestaurants, fetchHiddenGemRecommendations, fetchMostAddedRestaurants, fetchRestaurants, handleUnifiedSearch, location, locationLabel, occasion, radius]);
 
   const useMyLocation = () => {
     if (!navigator.geolocation) return;
+    setOccasion('');
     setLocSearching(true); setError('');
     navigator.geolocation.getCurrentPosition(
       pos => {
@@ -1383,7 +1388,7 @@ const RestaurantPage = ({
               style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 14, color: tp }}
             />
             {(locationSearch || search) && (
-              <button onClick={() => { setSearch(''); setLocationSearch(''); setLocationSuggestions([]); fetchRestaurants(location); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: ts, padding: 0 }}>✕</button>
+              <button onClick={() => { setOccasion(''); setSearch(''); setLocationSearch(''); setLocationSuggestions([]); fetchRestaurants(location); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: ts, padding: 0 }}>✕</button>
             )}
           </div>
           {(locationSuggesting || locationSuggestions.length > 0) && locationSearch.trim().length >= 2 && (
