@@ -231,17 +231,13 @@ const RestaurantDetailSheet = ({ restaurant, onAddEvent, onSaveToSomeday, onClos
             </p>
           )}
 
-          {/* Minimal tags — cuisine only, no price/distance clutter */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 18, flexWrap: 'wrap' }}>
-            <span style={{ padding: '4px 10px', borderRadius: 8, background: darkMode ? 'rgba(201,161,93,0.15)' : 'rgba(201,161,93,0.12)', color: darkMode ? '#f5c842' : '#92621a', fontSize: 12, fontWeight: 600 }}>
-              {restaurant.cuisine}
-            </span>
-            {restaurant.rating > 0 && (
+          {restaurant.rating > 0 && (
+            <div style={{ display: 'flex', gap: 6, marginBottom: 18, flexWrap: 'wrap' }}>
               <span style={{ padding: '4px 10px', borderRadius: 8, background: darkMode ? 'rgba(255,255,255,0.05)' : '#f9fafb', color: ts, fontSize: 12, fontWeight: 600, border: `1px solid ${bw}` }}>
                 {'★'.repeat(Math.round(restaurant.rating))} {restaurant.rating.toFixed(1)}
               </span>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Contact info — compact */}
           {(restaurant.address || restaurant.phone || restaurant.website) && (
@@ -363,16 +359,13 @@ const RestaurantCard = ({ restaurant, onTap, savedIds, darkMode, stagger }) => {
           </p>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 7, background: darkMode ? 'rgba(201,161,93,0.15)' : 'rgba(201,161,93,0.12)', color: darkMode ? '#f5c842' : '#92621a' }}>
-            {getCuisineEmoji(restaurant.cuisine)} {restaurant.cuisine}
-          </span>
-          {restaurant.rating > 0 && (
+        {restaurant.rating > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
             <span style={{ fontSize: 12, color: ts, fontFamily: handwritten, fontWeight: 600 }}>
               ★ {restaurant.rating.toFixed(1)}
             </span>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1116,7 +1109,6 @@ const RestaurantPage = ({
   const handleUnifiedSearch = useCallback(async (query) => {
     const trimmed = query.trim();
     if (!trimmed) return;
-    setOccasion('');
     setLocSearching(true); setLoading(true); setError('');
     const KEY = apiKey || process.env.REACT_APP_GOOGLE_PLACES_KEY || '';
 
