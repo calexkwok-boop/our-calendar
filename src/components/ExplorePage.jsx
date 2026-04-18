@@ -3,7 +3,7 @@ import MoviesPage from "./MoviesPage";
 import BoardGamePage from "./BoardGamePage";
 import RestaurantPage from "./RestaurantPage";
 import HikingPage from "./HikingPage";
-import ProductsPage from "./ProductsPage";
+import DreamShelfPage from "./DreamShelfPage";
 import DestinationsPage from "./DestinationsPage";
 
 const TMDB_KEY = "b66752afda91b8258d32f4388f049a22";
@@ -15,7 +15,7 @@ const COMMUNITY_POSTS = [
   { id: "c1", type: "hiking", icon: "🥾", page: "Hiking & Outdoors", time: "Trending", cardTitle: "Lands End Trail", location: "San Francisco · 3.4 mi", desc: "Stunning coastal views, moderate difficulty. Best visited at golden hour.", votes: 183, tag: "Hiking", actions: ["Add to someday", "Plan it"] },
   { id: "c2", type: "games", icon: "🎲", page: "Board Games", time: "Community pick", cardTitle: "Wingspan", desc: "Elegant engine-builder about birds. Perfect for 2–5 players, around 90 minutes.", votes: 312, tag: "Games", actions: ["Add to someday", "Plan game night"] },
   { id: "c3", type: "restaurants", icon: "🍜", page: "Restaurants", time: "New addition", cardTitle: "Dumpling Time", location: "SoMa, San Francisco", desc: "Handcrafted dumplings, beautiful space. The XLB are unmissable.", votes: 198, tag: "Restaurants", actions: ["Add to someday", "Plan dinner"] },
-  { id: "c4", type: "products", icon: "🛍️", page: "Products", time: "Community pick", cardTitle: "Sony WH-1000XM5", desc: "Most recommended headphones this month — noise cancellation is unreal.", votes: 247, tag: "Products", actions: ["Add to someday", "Browse products"] },
+  { id: "c4", type: "products", icon: "✨", page: "Dream Shelf", time: "Community pick", cardTitle: "Sony WH-1000XM5", desc: "Most recommended headphones this month — noise cancellation is unreal.", votes: 247, tag: "Dream Shelf", amazonUrl: "https://www.amazon.com/Sony-WH-1000XM5-Canceling-Headphones-Hands-Free/dp/B09XS7JWHH", actions: ["Add to someday", "View on Amazon"] },
   { id: "c5", type: "destinations", icon: "✈️", page: "Destinations", time: "Dream trip", cardTitle: "Kyoto in Cherry Blossom Season", location: "Japan", desc: "Temples, lantern-lit alleys, and a city transformed by spring. Save this one for the kind of trip you plan around.", votes: 276, tag: "Destinations", actions: ["Add to someday", "Plan trip"] },
 ];
 
@@ -25,7 +25,7 @@ const SOURCE_CONFIG = {
   hiking:      { label: "Hiking & Outdoors", sub: "1.8k members",            icon: "🥾", bg: "bg-green-500/10" },
   games:       { label: "Board Games",       sub: "892 members",             icon: "🎲", bg: "bg-amber-500/10" },
   restaurants: { label: "Restaurants",       sub: "3.1k members",            icon: "🍜", bg: "bg-pink-500/10" },
-  products:    { label: "Products",          sub: "Wishlist & recommendations", icon: "🛍️", bg: "bg-violet-500/10" },
+  products:    { label: "Dream Shelf",        sub: "Someday-worthy finds", icon: "✨", bg: "bg-violet-500/10" },
   destinations:{ label: "Destinations",       sub: "Trips worth dreaming about", icon: "✈️", bg: "bg-indigo-500/10" },
 };
 
@@ -35,7 +35,7 @@ const TAG_STYLES = {
   Hiking:      "bg-green-500/10 text-green-600 dark:text-green-400",
   Games:       "bg-amber-500/10 text-amber-600 dark:text-amber-400",
   Restaurants: "bg-pink-500/10 text-pink-600 dark:text-pink-400",
-  Products:    "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+  "Dream Shelf": "bg-violet-500/10 text-violet-600 dark:text-violet-400",
   Destinations:"bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
 };
 
@@ -223,7 +223,7 @@ function MovieCard({ movie, onAddToSomeday, onRemoveFromSomeday, onPageTap, onPl
   );
 }
 
-const TYPE_EMOJI = { hiking: "🥾", games: "🎲", restaurants: "🍜", products: "🛍️", destinations: "✈️" };
+const TYPE_EMOJI = { hiking: "🥾", games: "🎲", restaurants: "🍜", products: "✨", destinations: "✈️" };
 
 function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveFromSomeday }) {
   const [inSomeday, setInSomeday] = useState(false);
@@ -238,10 +238,32 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
         <p className="text-sm text-gray-500 leading-relaxed">{post.desc}</p>
       </div>
       <div className="flex items-center gap-2 px-4 pb-4 pt-1">
-        {post.actions.map((a, i) => (
-          <button
-            key={a}
-            onClick={() => {
+        {post.actions.map((a, i) => {
+          const isAmazonLink = post.type === "products" && i === 1 && post.amazonUrl;
+          const actionClassName = `flex-1 text-xs font-bold px-3 py-1.5 rounded-xl active:opacity-70 ${
+            i === 0
+              ? `font-handwritten ${inSomeday ? "bg-teal-600 text-white" : "bg-teal-400 text-gray-900"}`
+              : "font-handwritten bg-violet-500/10 dark:bg-violet-400/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 dark:border-violet-400/25"
+          }`;
+
+          if (isAmazonLink) {
+            return (
+              <a
+                key={a}
+                href={post.amazonUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${actionClassName} text-center`}
+              >
+                View on Amazon
+              </a>
+            );
+          }
+
+          return (
+            <button
+              key={a}
+              onClick={() => {
               if (i === 0) {
                 if (!inSomeday) {
                   onAddToSomeday?.({
@@ -285,18 +307,15 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
                   });
                 }
               }
-            }}
-            className={`flex-1 text-xs font-bold px-3 py-1.5 rounded-xl active:opacity-70 ${
-              i === 0
-                ? `font-handwritten ${inSomeday ? "bg-teal-600 text-white" : "bg-teal-400 text-gray-900"}`
-                : "font-handwritten bg-violet-500/10 dark:bg-violet-400/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 dark:border-violet-400/25"
-            }`}
-          >
-            {i === 0
-              ? (inSomeday ? "✓ Someday" : "+ Someday")
-              : (post.type === "products" ? a : "+ Plan")}
-          </button>
-        ))}
+              }}
+              className={actionClassName}
+            >
+              {i === 0
+                ? (inSomeday ? "✓ Someday" : "+ Someday")
+                : (post.type === "products" ? a : "+ Plan")}
+            </button>
+          );
+        })}
         <VoteButtons initialVotes={post.votes} />
       </div>
     </div>
@@ -418,7 +437,7 @@ function CategoryGrid({ onPageTap }) {
     { key: 'games',       icon: '🎲', label: 'Board Games',       page: 'games' },
     { key: 'hiking',      icon: '🥾', label: 'Hiking & Outdoors', page: 'hiking' },
     { key: 'restaurants', icon: '🍜', label: 'Restaurants',       page: 'restaurants' },
-    { key: 'products',    icon: '🛍️', label: 'Products',          page: 'products' },
+    { key: 'products',    icon: '✨', label: 'Dream Shelf',        page: 'products' },
     { key: 'destinations',icon: '✈️', label: 'Destinations',      page: 'destinations' },
   ];
   return (
@@ -469,7 +488,7 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
     return <HikingPage onBack={() => setActivePage(null)} onPlanEvent={onPlanEvent} darkMode={darkMode} />;
   }
   if (activePage === "products") {
-    return <ProductsPage onBack={() => setActivePage(null)} onAddToSomeday={onAddToSomeday} darkMode={darkMode} />;
+    return <DreamShelfPage onBack={() => setActivePage(null)} onAddToSomeday={onAddToSomeday} onAddEvent={onPlanEvent} darkMode={darkMode} />;
   }
   if (activePage === "games") {
     return <BoardGamePage onBack={() => setActivePage(null)} onAddEvent={onPlanEvent} onAddToSomeday={onAddToSomeday} darkMode={darkMode} />;

@@ -467,9 +467,6 @@ export default function MoviesPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
               {loading ? "Loading…" : `${movies.length} movie${movies.length !== 1 ? "s" : ""}${page < totalPages ? "+" : ""}`}
             </p>
           </div>
-          <button className="ml-auto text-xs font-medium px-3.5 py-1.5 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 active:opacity-70">
-            Joined ✓
-          </button>
         </div>
 
         {/* Tabs */}

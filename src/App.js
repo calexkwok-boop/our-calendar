@@ -29603,8 +29603,8 @@ transform: translateY(0);
                   if (!text) return;
                   const posterPath = post?.poster_path || '';
                   const photoUrl = posterPath ? `https://image.tmdb.org/t/p/w342${posterPath}` : (post?.imageUrl || '');
-                  const emoji = post?.emoji || (post?.type === 'movies' ? '🎬' : post?.type === 'hiking' ? '⛰️' : post?.type === 'restaurants' ? '🍽️' : post?.type === 'games' ? '🎲' : post?.type === 'products' ? '🛍️' : post?.type === 'destinations' ? '✈️' : '✨');
-                  const category = post?.categoryId === 'travel' || post?.type === 'destinations' ? 'travel' : post?.categoryId === 'food' || post?.type === 'restaurants' ? 'food' : post?.type === 'movies' ? 'fun' : post?.type === 'hiking' ? 'adventure' : post?.type === 'games' ? 'fun' : 'fun';
+                  const emoji = post?.emoji || (post?.type === 'movies' ? '🎬' : post?.type === 'hiking' ? '⛰️' : post?.type === 'restaurants' ? '🍽️' : post?.type === 'games' ? '🎲' : (post?.type === 'products' || post?.type === 'dreamshelf') ? '✨' : post?.type === 'destinations' ? '✈️' : '✨');
+                  const category = post?.categoryId === 'travel' || post?.type === 'destinations' ? 'travel' : post?.categoryId === 'food' || post?.type === 'restaurants' ? 'food' : post?.type === 'movies' ? 'fun' : post?.type === 'hiking' ? 'adventure' : post?.type === 'games' ? 'fun' : (post?.type === 'products' || post?.type === 'dreamshelf') ? 'fun' : 'fun';
                   setBucketList((prev) => {
                     const alreadyExists = prev.some(d => d.text === text && d.emoji === emoji);
                     if (alreadyExists) return prev;
@@ -29624,7 +29624,7 @@ transform: translateY(0);
                 }}
                 onRemoveFromSomeday={(post) => {
                   const text = String(post?.title || '').trim();
-                  const emoji = post?.emoji || (post?.type === 'movies' ? '🎬' : post?.type === 'hiking' ? '⛰️' : post?.type === 'restaurants' ? '🍽️' : post?.type === 'games' ? '🎲' : post?.type === 'products' ? '🛍️' : post?.type === 'destinations' ? '✈️' : '✨');
+                  const emoji = post?.emoji || (post?.type === 'movies' ? '🎬' : post?.type === 'hiking' ? '⛰️' : post?.type === 'restaurants' ? '🍽️' : post?.type === 'games' ? '🎲' : (post?.type === 'products' || post?.type === 'dreamshelf') ? '✨' : post?.type === 'destinations' ? '✈️' : '✨');
                   setBucketList((prev) => (Array.isArray(prev) ? prev : []).filter(d => !(d.text === text && d.emoji === emoji)));
                 }}
                 onPlanEvent={(hint) => openHomeAddEventModal(hint)}
