@@ -526,7 +526,7 @@ function TrailRecommendModal({ query, onQueryChange, onSearch, onClose, loading,
 export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMode = false } = {}) {
   const dm = darkMode;
   const [query, setQuery]               = useState("");
-  const [activeFilter, setActiveFilter] = useState("bucket_list");
+  const [activeFilter, setActiveFilter] = useState("");
   const [trails, setTrails]             = useState([]);
   const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState(null);
@@ -546,10 +546,6 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
       (pos) => setUserLocation({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
       ()    => setUserLocation({ lat: 37.7749, lon: -122.4194 })
     );
-  }, []);
-
-  useEffect(() => {
-    setTrails(withCuratedTrailThumbnails(CURATED_TRAIL_COLLECTIONS.bucket_list));
   }, []);
 
   useEffect(() => {
@@ -627,7 +623,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
   }, [trails, fetchTrailPhoto]);
 
   const handleSearch = () => {
-    setActiveFilter("nearby");
+    setActiveFilter("");
     if (userLocation) fetchTrails(userLocation.lat, userLocation.lon, query);
   };
 
@@ -635,7 +631,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
     const nextQuery = recommendQuery.trim();
     if (!nextQuery) return;
     setQuery(nextQuery);
-    setActiveFilter("nearby");
+    setActiveFilter("");
     setIsRecommendOpen(false);
     if (userLocation) fetchTrails(userLocation.lat, userLocation.lon, nextQuery);
   };
@@ -681,7 +677,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
   const handleSuggestionSelect = async (suggestion) => {
     const nextQuery = suggestion.main_text || suggestion.description;
     setQuery(nextQuery);
-    setActiveFilter("nearby");
+    setActiveFilter("");
     setTrailSuggestions([]);
     setTrailSuggesting(false);
 
@@ -756,6 +752,16 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
   }, []);
 
   const handleTrailCollection = (collection) => {
+    if (activeFilter === collection.id) {
+      setActiveFilter("");
+      setQuery("");
+      setTrailSuggestions([]);
+      setTrailSuggesting(false);
+      setError(null);
+      setTrails([]);
+      return;
+    }
+
     setActiveFilter(collection.id);
     setQuery("");
     setTrailSuggestions([]);
@@ -820,7 +826,9 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
   const featuredTrail = filteredTrails[0] ?? null;
   const gridTrails    = filteredTrails.slice(1, 7);
   const activeCollection = TRAIL_COLLECTIONS.find((item) => item.id === activeFilter);
-  const sectionLabel = activeFilter === "nearby" ? "Trails near you" : (activeCollection?.label || "Trails worth saving");
+  const sectionLabel = activeFilter === "nearby"
+    ? "Trails near you"
+    : activeCollection?.label || (query.trim() ? `Results for "${query.trim()}"` : "Trails worth saving");
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -1038,7 +1046,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
         )}
 
         {/* ── Empty state ── */}
-        {!loading && filteredTrails.length === 0 && !error && (
+        {!loading && filteredTrails.length === 0 && !error && (activeFilter || query.trim()) && (
           <div className="text-center py-16 text-slate-400 mb-8">
             <div className="text-5xl mb-4">🗺️</div>
             <p className={`font-['Caveat'] text-2xl mb-1 ${dm ? 'text-slate-400' : 'text-slate-600'}`}>No trails found</p>
