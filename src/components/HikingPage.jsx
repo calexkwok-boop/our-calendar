@@ -902,7 +902,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
         </div>
 
         {/* ── Filter chips ── */}
-        <div className="flex gap-2 mb-6 flex-wrap">
+        <div className="flex gap-2 mb-6 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
           {TRAIL_COLLECTIONS.map((collection) => (
             <button
               key={collection.id}
@@ -910,7 +910,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
                 e.currentTarget.blur();
                 handleTrailCollection(collection);
               }}
-              className={`rounded-full px-4 py-1.5 text-xs transition-all duration-200 border focus:outline-none focus-visible:outline-none ${
+              className={`flex-shrink-0 rounded-full px-4 py-1.5 text-xs transition-all duration-200 border focus:outline-none focus-visible:outline-none ${
                 activeFilter === collection.id
                   ? "bg-teal-400/12 border-teal-400/40 text-teal-600"
                   : dm
