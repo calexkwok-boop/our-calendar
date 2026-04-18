@@ -36,16 +36,16 @@ const getDreamShelfImageQuery = (item = {}) => [
 ].filter(Boolean).join(" ");
 
 const DREAMSHELF_IMAGES = {
-  w1: "https://images.unsplash.com/photo-1547996160-81dfa63595aa?w=600&q=80",
+  w1: "https://media.rolex.com/image/upload/q_auto/f_auto/t_v7-cover-majesty-landscape/c_limit,w_1200/v1/a677b2c664f6/catalogue/2026/upright-c/m124060-0001",
   w2: "https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=600&q=80",
-  w3: "https://images.unsplash.com/photo-1518544801976-3e188e67a0f5?w=600&q=80",
-  w4: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=600&q=80",
+  w3: "https://dynamicmedia.audemarspiguet.com/is/image/audemarspiguet/lbv3_RO_collection?size=1920,0&wid=1920&fmt=avif-alpha&dpr=off",
+  w4: "https://www.omegawatches.com/media/catalog/product/o/m/omega-speedmaster-moonwatch-professional-co-axial-master-chronometer-chronograph-42-mm-31030425001001-3ccf4a.png?w=900",
   w5: "https://images.unsplash.com/photo-1542496658-e33a6d0d50f6?w=600&q=80",
   w6: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80",
   w7: "https://images.unsplash.com/photo-1490367532201-b9bc1dc483f6?w=600&q=80",
-  w8: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&q=80",
+  w8: "https://img.iwc.com/cluster-overview-lg-2/o-dpr-2/e6a2f75233ae6901b6842c6abe142d6834ebf5fc.jpg",
   b1: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600&q=80",
-  b2: "https://images.unsplash.com/photo-1593032465171-8f3a2f4a54c1?w=600&q=80",
+  b2: "https://assets.hermes.com/is/image/hermesedito/P_11_Birkin_2018?fit=wrap%2C0&wid=1920&resMode=sharp2&op_usm=1%2C1%2C6%2C0",
   b3: "https://images.unsplash.com/photo-1591561954557-26941169b49e?w=600&q=80",
   b4: "https://images.unsplash.com/photo-1611930022073-b7a4ba5fcccd?w=600&q=80",
   b5: "https://images.unsplash.com/photo-1592878849122-1cfad6a1c8a6?w=600&q=80",
@@ -862,12 +862,12 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         </div>
 
         {/* ── Category strip ── */}
-        <div className="flex gap-2 mb-3 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+        <div className="flex gap-1.5 mb-3 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
           {CATEGORIES.map(cat => (
             <button
               key={cat.id}
               onClick={() => handleCategoryClick(cat)}
-              className="dream-shelf-pill flex-shrink-0 rounded-full px-4 py-1.5 text-lg font-bold transition-all duration-200 border focus:outline-none relative overflow-hidden"
+              className="dream-shelf-pill flex-shrink-0 rounded-full px-3 py-1 text-base font-bold transition-all duration-200 border focus:outline-none relative overflow-hidden"
               style={{
                 background: activeCategory?.id === cat.id
                   ? (dm
@@ -881,8 +881,8 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                 fontFamily: "'Caveat', cursive",
                 boxShadow: activeCategory?.id === cat.id
                   ? (dm
-                    ? '0 8px 24px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.32), inset 0 -1px 0 rgba(216,190,127,0.22)'
-                    : '0 8px 22px rgba(143,113,66,0.16), inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(143,113,66,0.16)')
+                    ? '0 5px 16px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.32), inset 0 -1px 0 rgba(216,190,127,0.20)'
+                    : '0 5px 14px rgba(143,113,66,0.13), inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(143,113,66,0.14)')
                   : 'none',
               }}
             >
