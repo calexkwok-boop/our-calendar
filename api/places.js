@@ -83,7 +83,7 @@ export default async function handler(req, res) {
   if (action === 'details' || place_id) {
     if (!place_id) return res.status(400).json({ error: 'place_id required' });
 
-    const fields = 'geometry,name,rating,price_level,formatted_address,formatted_phone_number,website,opening_hours,photos,place_id,types,editorial_summary';
+    const fields = 'geometry,name,rating,user_ratings_total,price_level,formatted_address,formatted_phone_number,website,opening_hours,photos,place_id,types,editorial_summary';
     const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place_id}&fields=${fields}&key=${key}`;
 
     try {

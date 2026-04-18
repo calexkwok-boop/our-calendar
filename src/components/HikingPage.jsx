@@ -148,6 +148,42 @@ const withCuratedTrailThumbnails = (items = []) => (
   items.map((trail) => ({ ...trail, thumbnail: trail.thumbnail || getCuratedTrailThumbnail(trail) }))
 );
 
+const parseGooglePlaceLocation = (place = {}, suggestion = {}) => {
+  const raw = place.formatted_address || suggestion.secondary_text || "";
+  const parts = raw.split(",").map((part) => part.trim()).filter(Boolean);
+  return {
+    city: parts[0] || "",
+    state: parts[1] || "",
+  };
+};
+
+const googlePlaceToTrail = (place = {}, suggestion = {}) => {
+  const location = parseGooglePlaceLocation(place, suggestion);
+  const photo = place.photos?.[0];
+  const name = place.name || suggestion.main_text || suggestion.description || "Saved trail";
+
+  return {
+    id: place.place_id || suggestion.place_id || `google-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    googlePlaceId: place.place_id || suggestion.place_id || "",
+    name,
+    city: location.city,
+    state: location.state,
+    lat: place.geometry?.location?.lat ?? null,
+    lon: place.geometry?.location?.lng ?? null,
+    difficulty: 2,
+    length: null,
+    ascent: null,
+    rating: place.rating || null,
+    ratingCount: place.user_ratings_total || null,
+    thumbnail: photo?.photo_reference
+      ? `/api/places?action=photo&ref=${encodeURIComponent(photo.photo_reference)}&maxwidth=800`
+      : getCuratedTrailThumbnail({ name, ...location, features: ["Views"] }),
+    features: ["Views"],
+    description: place.editorial_summary?.overview || "A saved outdoor place from Google Places. Details may vary, but it is ready to add to Someday.",
+    directions: place.formatted_address || suggestion.description || "",
+  };
+};
+
 // ─── Friends feed placeholder ────────────────────────────────────────────────
 
 const FRIEND_HIKES = [];
@@ -552,10 +588,12 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
         features:    parseFeatures(t),
       }));
       setTrails(normalized);
+      return normalized;
     } catch (err) {
       console.error(err);
       setError("Couldn't load trails. Check your API key or try again.");
       setTrails(MOCK_TRAILS);
+      return MOCK_TRAILS;
     } finally {
       setLoading(false);
     }
@@ -614,7 +652,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
     setTrailSuggesting(true);
     const timer = window.setTimeout(async () => {
       try {
-        const res = await fetch(`/api/places?action=autocomplete&input=${encodeURIComponent(term)}&types=establishment`);
+        const res = await fetch(`/api/places?action=autocomplete&input=${encodeURIComponent(term)}`);
         const data = await res.json();
         if (!active) return;
         if (data.status === "OK" && Array.isArray(data.predictions)) {
@@ -650,11 +688,20 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
     try {
       const res = await fetch(`/api/places?action=details&place_id=${encodeURIComponent(suggestion.place_id)}`);
       const data = await res.json();
-      const loc = data.result?.geometry?.location;
+      const place = data.result;
+      const loc = place?.geometry?.location;
       if (loc) {
         const nextLocation = { lat: loc.lat, lon: loc.lng };
         setUserLocation(nextLocation);
-        await fetchTrails(nextLocation.lat, nextLocation.lon, nextQuery);
+        const matchedTrails = await fetchTrails(nextLocation.lat, nextLocation.lon, nextQuery);
+        if (!matchedTrails?.length && place) {
+          const googleTrail = googlePlaceToTrail(place, suggestion);
+          setTrails([googleTrail]);
+          const attribution = place.photos?.[0]?.html_attributions?.[0] || "";
+          if (attribution) {
+            setPhotoAttributions((prev) => ({ ...prev, [googleTrail.id]: attribution }));
+          }
+        }
         return;
       }
     } catch {
@@ -947,6 +994,27 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
           </>
         )}
 
+        {/* ── Recommend a trail CTA ── */}
+        <div className={`relative overflow-hidden rounded-3xl border p-6 mb-8 text-center ${dm ? 'bg-gradient-to-br from-[#102331] via-[#162b3a] to-[#0e1520] border-teal-400/15 shadow-black/20' : 'bg-gradient-to-br from-teal-50 via-emerald-50 to-slate-50 border-teal-100'}`}>
+          <div className={`absolute -right-10 -top-10 w-28 h-28 rounded-full ${dm ? 'bg-teal-400/10' : 'bg-teal-300/20'}`} />
+          <div className={`absolute -left-8 -bottom-8 w-24 h-24 rounded-full ${dm ? 'bg-violet-400/8' : 'bg-violet-200/25'}`} />
+          <div className="relative">
+            <div className="text-3xl mb-2">🥾</div>
+            <h3 className={`font-['Caveat'] text-2xl font-bold leading-tight ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
+              Know a trail worth saving?
+            </h3>
+            <p className="text-sm text-slate-500 mb-4">
+              Recommend a hike, hidden overlook, or park people should add to Someday.
+            </p>
+            <button
+              onClick={() => setIsRecommendOpen(true)}
+              className={`rounded-full px-6 py-3 font-['Caveat'] text-lg font-bold transition-all ${dm ? 'bg-teal-400 text-[#0e1520] hover:bg-teal-300' : 'bg-teal-500 text-white hover:bg-teal-600'}`}
+            >
+              Recommend a trail
+            </button>
+          </div>
+        </div>
+
         {/* ── Trail grid ── */}
         {!loading && gridTrails.length > 0 && (
           <>
@@ -977,27 +1045,6 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
             <p className="text-sm">Try a different location or filter</p>
           </div>
         )}
-
-        {/* ── Recommend a trail CTA ── */}
-        <div className={`relative overflow-hidden rounded-3xl border p-6 mb-8 text-center ${dm ? 'bg-gradient-to-br from-[#102331] via-[#162b3a] to-[#0e1520] border-teal-400/15 shadow-black/20' : 'bg-gradient-to-br from-teal-50 via-emerald-50 to-slate-50 border-teal-100'}`}>
-          <div className={`absolute -right-10 -top-10 w-28 h-28 rounded-full ${dm ? 'bg-teal-400/10' : 'bg-teal-300/20'}`} />
-          <div className={`absolute -left-8 -bottom-8 w-24 h-24 rounded-full ${dm ? 'bg-violet-400/8' : 'bg-violet-200/25'}`} />
-          <div className="relative">
-            <div className="text-3xl mb-2">🥾</div>
-            <h3 className={`font-['Caveat'] text-2xl font-bold leading-tight ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
-              Know a trail worth saving?
-            </h3>
-            <p className="text-sm text-slate-500 mb-4">
-              Recommend a hike, hidden overlook, or park people should add to Someday.
-            </p>
-            <button
-              onClick={() => setIsRecommendOpen(true)}
-              className={`rounded-full px-6 py-3 font-['Caveat'] text-lg font-bold transition-all ${dm ? 'bg-teal-400 text-[#0e1520] hover:bg-teal-300' : 'bg-teal-500 text-white hover:bg-teal-600'}`}
-            >
-              Recommend a trail
-            </button>
-          </div>
-        </div>
 
         {/* ── Someday banner ── */}
         {savedIds.size > 0 && (
