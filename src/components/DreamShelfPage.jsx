@@ -47,11 +47,11 @@ const DREAMSHELF_IMAGES = {
   b1: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600&q=80",
   b2: "https://assets.hermes.com/is/image/hermesedito/P_11_Birkin_2018?fit=wrap%2C0&wid=1920&resMode=sharp2&op_usm=1%2C1%2C6%2C0",
   b3: "https://images.unsplash.com/photo-1591561954557-26941169b49e?w=600&q=80",
-  b4: "https://images.unsplash.com/photo-1611930022073-b7a4ba5fcccd?w=600&q=80",
-  b5: "https://images.unsplash.com/photo-1592878849122-1cfad6a1c8a6?w=600&q=80",
+  b4: "https://image.celine.com/4f155e4444f81751/original/L102H3J20-27RE_1_SUM26_W_V1.jpg?im=Resize=(1200)",
+  b5: "https://bottega-veneta.dam.kering.com/asset/f218add7-b810-4d7e-8617-cea4a2e50434/Large/766016VCPP14181_A.jpg?v=2",
   b6: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=600&q=80",
-  b7: "https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=600&q=80",
-  b8: "https://images.unsplash.com/photo-1585487000160-6ebcfceb0d03?w=600&q=80",
+  b7: "https://www.prada.com/content/dam/pradabkg_products/1/1BA/1BA457/NZVF0046/1BA457_NZV_F0046_V_EOM_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg",
+  b8: "https://assets.hermes.com/is/image/hermesedito/P_169_KELLY_HEADER?fit=wrap%2C0&wid=1920&resMode=sharp2&op_usm=1%2C1%2C6%2C0",
 };
 
 // ─── Category config ──────────────────────────────────────────────────────────
@@ -158,10 +158,10 @@ const CURATED_ITEMS = {
     { id: "b1",  name: "Chanel Classic Flap",         brand: "Chanel",  priceRange: "$8,000–$10,000",  subFilter: ["chanel","shoulder","5kp"],emoji: "👜", description: "The most iconic bag ever made. Quilted leather, gold chain, and a logo that needs no introduction." },
     { id: "b2",  name: "Hermès Birkin",                brand: "Hermès",  priceRange: "$10,000–$500,000+",subFilter: ["hermes","tote","5kp"],    emoji: "👜", description: "You can't just buy one. You earn the right to buy one. That's the point." },
     { id: "b3",  name: "Louis Vuitton Neverfull",      brand: "LV",      priceRange: "$1,800–$2,500",   subFilter: ["lv","tote","2k5k"],       emoji: "👜", description: "The tote that never goes out of style. A first serious bag for many, a forever bag for most." },
-    { id: "b4",  name: "Celine Box Bag",               brand: "Celine",  priceRange: "$2,500–$3,500",   subFilter: ["shoulder","2k5k"],        emoji: "👜", description: "Minimalist, structured, and quietly superior. The anti-logo luxury bag." },
-    { id: "b5",  name: "Bottega Veneta Jodie",         brand: "Bottega", priceRange: "$2,200–$3,000",   subFilter: ["shoulder","2k5k"],        emoji: "👜", description: "The intrecciato weave is so recognizable it doesn't need a logo. That's the flex." },
+    { id: "b4",  name: "Celine Bucket Bag",            brand: "Celine",  priceRange: "$2,500–$3,500",   subFilter: ["shoulder","2k5k"],        emoji: "👜", description: "Minimalist, structured, and quietly superior. The anti-logo luxury bag." },
+    { id: "b5",  name: "Bottega Veneta Andiamo",       brand: "Bottega", priceRange: "$4,500–$7,000",   subFilter: ["shoulder","2k5k"],        emoji: "👜", description: "The intrecciato weave is so recognizable it doesn't need a logo. That's the flex." },
     { id: "b6",  name: "Gucci Dionysus",               brand: "Gucci",   priceRange: "$2,000–$3,500",   subFilter: ["shoulder","2k5k"],        emoji: "👜", description: "Tiger head clasp, GG web strap, and the energy of someone who knows exactly who they are." },
-    { id: "b7",  name: "Prada Re-Edition 2005",        brand: "Prada",   priceRange: "$1,200–$1,800",   subFilter: ["shoulder","u2k"],         emoji: "👜", description: "Nylon and a triangle logo. Somehow still the coolest bag in the room every time." },
+    { id: "b7",  name: "Prada Galleria",               brand: "Prada",   priceRange: "$3,000–$7,000",   subFilter: ["shoulder","2k5k"],        emoji: "👜", description: "Nylon and a triangle logo. Somehow still the coolest bag in the room every time." },
     { id: "b8",  name: "Hermès Kelly",                 brand: "Hermès",  priceRange: "$8,000–$20,000",  subFilter: ["hermes","5kp"],           emoji: "👜", description: "Grace Kelly made it famous in 1956 and it hasn't aged a day since. A true forever bag." },
   ],
   jewelry: [
@@ -862,12 +862,12 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         </div>
 
         {/* ── Category strip ── */}
-        <div className="flex gap-1.5 mb-3 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+        <div className="flex gap-1.5 mb-4 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
           {CATEGORIES.map(cat => (
             <button
               key={cat.id}
               onClick={() => handleCategoryClick(cat)}
-              className="dream-shelf-pill flex-shrink-0 rounded-full px-3 py-1 text-base font-bold transition-all duration-200 border focus:outline-none relative overflow-hidden"
+              className="dream-shelf-pill flex-shrink-0 rounded-full px-2.5 py-0.5 text-sm font-bold transition-all duration-200 border focus:outline-none relative overflow-hidden"
               style={{
                 background: activeCategory?.id === cat.id
                   ? (dm
@@ -875,14 +875,14 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                     : 'linear-gradient(135deg, #fffdf7 0%, #d8be7f 16%, #ffffff 31%, #c7b68d 43%, #f8efe0 56%, #fef9ec 74%, #b9954f 100%)')
                   : (dm ? 'rgba(255,255,255,0.05)' : '#f3f4f6'),
                 border: activeCategory?.id === cat.id
-                  ? `1.5px solid ${dm ? 'rgba(216,190,127,0.55)' : 'rgba(143,113,66,0.48)'}`
+                  ? `1px solid ${dm ? 'rgba(216,190,127,0.50)' : 'rgba(143,113,66,0.42)'}`
                   : `1px solid ${dm ? 'rgba(255,255,255,0.07)' : '#e5e7eb'}`,
                 color: activeCategory?.id === cat.id ? (dm ? '#fff7d6' : '#4a3210') : (dm ? '#6b7280' : '#9ca3af'),
                 fontFamily: "'Caveat', cursive",
                 boxShadow: activeCategory?.id === cat.id
                   ? (dm
-                    ? '0 5px 16px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.32), inset 0 -1px 0 rgba(216,190,127,0.20)'
-                    : '0 5px 14px rgba(143,113,66,0.13), inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(143,113,66,0.14)')
+                    ? '0 3px 10px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.24), inset 0 -1px 0 rgba(216,190,127,0.16)'
+                    : '0 3px 10px rgba(143,113,66,0.10), inset 0 1px 0 rgba(255,255,255,0.82), inset 0 -1px 0 rgba(143,113,66,0.10)')
                   : 'none',
               }}
             >
