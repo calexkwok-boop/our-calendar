@@ -517,66 +517,46 @@ const ScrapbookHomeHybrid = ({
           </div>
 
           {bucketList.length > 0 ? (
-            <div className="space-y-3">
-              {/* Polaroid strip for photo dreams */}
-              {bucketList.some((d) => d.photoUrl) && (
-                <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide snap-x snap-mandatory [touch-action:pan-x]">
-                  {bucketList.filter((d) => d.photoUrl).map((dream, idx) => (
-                    <div
-                      key={dream.id || idx}
-                  className="group flex-shrink-0 snap-start w-28 cursor-pointer"
-                      style={{ rotate: `${idx % 2 === 0 ? '-1.5deg' : '1.2deg'}` }}
-                      onClick={onOpenSomeday}
-                    >
-                      {/* Polaroid frame */}
-                      <div className="bg-white dark:bg-slate-100 rounded-sm shadow-md p-1.5 pb-0 transition-all group-hover:shadow-lg group-hover:-translate-y-0.5">
-                        <div className="aspect-square w-full overflow-hidden rounded-[2px]">
-                          <img
-                            src={dream.photoUrl}
-                            alt={dream.text}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        {/* Polaroid caption strip */}
-                        <div className="py-2 px-0.5 text-center">
-                          <div className="text-[10px] leading-tight text-gray-600 font-handwritten line-clamp-2" style={{ fontSize: 11 }}>
-                            {dream.emoji} {dream.text}
-                          </div>
-                        </div>
-                      </div>
-                      {onDeleteDream && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onDeleteDream(dream); }}
-                          className="mt-1 mx-auto flex opacity-0 group-hover:opacity-100 rounded-full bg-white/80 dark:bg-black/40 p-1 hover:bg-red-50 dark:hover:bg-red-900/50 transition-all"
-                        >
-                          <Trash2 className="w-3 h-3 text-gray-500 dark:text-gray-400" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Regular list for text-only dreams */}
-              {bucketList.filter((d) => !d.photoUrl).map((dream, idx) => (
+            <div className="flex gap-4 overflow-x-auto overflow-y-hidden pb-2 pl-0.5 pr-5 scrollbar-hide snap-x snap-mandatory [touch-action:pan-x]">
+              {bucketList.map((dream, idx) => (
                 <div
                   key={dream.id || idx}
+                  className="group flex-shrink-0 snap-start w-40 sm:w-48 cursor-pointer"
+                  style={{ rotate: `${idx % 2 === 0 ? '-1.4deg' : '1.1deg'}` }}
                   onClick={onOpenSomeday}
-                  className="group w-full flex items-center gap-3 rounded-xl border border-emerald-900/10 bg-white/60 dark:bg-black/20 p-3 text-left transition-all hover:bg-white/90 dark:hover:bg-black/40 hover:border-emerald-500/30 cursor-pointer"
                 >
-                  <span className="text-2xl flex-shrink-0">{dream.emoji}</span>
-                  <span className="text-sm text-gray-900 dark:text-white flex-1">
-                    {dream.text}
-                  </span>
+                  {dream.photoUrl ? (
+                    <div className="bg-white dark:bg-slate-100 rounded-sm shadow-lg p-2 pb-0 transition-all group-hover:shadow-xl group-hover:-translate-y-0.5">
+                      <div className="aspect-square w-full overflow-hidden rounded-[3px]">
+                        <img
+                          src={dream.photoUrl}
+                          alt={dream.text}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div className="px-1 py-3 text-center">
+                        <div className="font-handwritten text-base leading-tight text-gray-600 line-clamp-2">
+                          {dream.emoji} {dream.text}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex min-h-[216px] flex-col justify-between rounded-[22px] border border-emerald-900/10 bg-white/70 p-4 text-left shadow-lg transition-all group-hover:-translate-y-0.5 group-hover:bg-white/90 group-hover:shadow-xl dark:border-white/10 dark:bg-black/20 dark:group-hover:bg-black/40">
+                      <span className="text-4xl">{dream.emoji}</span>
+                      <span className="font-handwritten text-2xl leading-tight text-gray-900 dark:text-white line-clamp-4">
+                        {dream.text}
+                      </span>
+                    </div>
+                  )}
                   {onDeleteDream && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         onDeleteDream(dream);
                       }}
-                      className="opacity-0 group-hover:opacity-100 rounded-full bg-white/60 dark:bg-black/20 p-1.5 hover:bg-red-50 dark:hover:bg-red-900/50 transition-all"
+                      className="mx-auto mt-2 flex rounded-full bg-white/80 p-1 opacity-0 transition-all hover:bg-red-50 group-hover:opacity-100 dark:bg-black/40 dark:hover:bg-red-900/50"
                     >
-                      <Trash2 className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
+                      <Trash2 className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
                     </button>
                   )}
                 </div>
