@@ -454,7 +454,7 @@ export default function MoviesPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
           fontSize: 14, lineHeight: 1.6, margin: 0,
           maxWidth: 300,
         }}>
-          Browse what's popular, find your next watch, and save movies to your Someday List.
+          Browse what's popular, find your next watch, and save movies to your Dreamboard.
         </p>
       </div>
 

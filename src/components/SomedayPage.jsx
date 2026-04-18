@@ -750,7 +750,7 @@ const SomedayPage = ({
             )}
             <div>
               <h1 style={{ fontFamily: CAVEAT, fontSize: 34, fontWeight: 700, color: tp, margin: 0, lineHeight: 1 }}>
-              {(!ownerName || ownerName === currentUser) ? '✦ Your Someday' : `${ownerName}'s Someday`}
+              {(!ownerName || ownerName === currentUser) ? <>✦ Your <span style={{ background: 'linear-gradient(90deg, #5eada0, #a89bc2, #c4867a, #c9a15d)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Dreamboard</span></> : <>{ownerName}'s <span style={{ background: 'linear-gradient(90deg, #5eada0, #a89bc2, #c4867a, #c9a15d)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Dreamboard</span></>}
             </h1>
               <p style={{ fontSize: 11, color: ts, margin: '3px 0 0', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 500 }}>
                 {pins.filter(p => p.type !== 'label' && p.type !== 'sticker').length} things pinned

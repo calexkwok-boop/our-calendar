@@ -1356,7 +1356,7 @@ const RestaurantPage = ({
           Turn meals into memories
         </h1>
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7, color: ts, maxWidth: 340 }}>
-          Find places worth planning for. Save them to your Someday List and make a night of it.
+          Find places worth planning for. Save them to your Dreamboard and make a night of it.
         </p>
       </div>
 
