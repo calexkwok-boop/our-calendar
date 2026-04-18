@@ -925,8 +925,8 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
       setCommunityPosts(data);
       setFeaturedPost(data[0] ?? null);
     } else {
-      setCommunityPosts(MOCK_FEED);
-      setFeaturedPost(MOCK_FEED[0]);
+      setCommunityPosts([]);
+      setFeaturedPost(null);
     }
   };
 
@@ -1368,10 +1368,4 @@ const MOCK_PRODUCTS = [
   { id: "B09G9HD6PD", name: "Four Thousand Weeks — Oliver Burkeman", image: null, price: "$18",  priceValue: 18,  rating: 4.6, ratingsTotal: 22000, isPrime: true,  amazonUrl: "#" },
   { id: "B01MSWBXK1", name: "CeraVe Moisturizing Cream",            image: null, price: "$19",  priceValue: 19,  rating: 4.9, ratingsTotal: 91000, isPrime: true,  amazonUrl: "#" },
   { id: "B07QMSL3QL", name: "Olight Baton 3 Pro Flashlight",        image: null, price: "$59",  priceValue: 59,  rating: 4.8, ratingsTotal: 4100,  isPrime: true,  amazonUrl: "#" },
-];
-
-const MOCK_FEED = [
-  { id: 1, profiles: { full_name: "Jamie L." }, product_name: "Sony WH-1000XM5", product_brand: "Sony", product_image: null, product_price: "$349", review: "Game changer for working from home. The noise cancellation is unreal — I forget I'm in a café.", category: "Tech",    likes_count: 12, comments_count: 4, created_at: new Date(Date.now() - 3 * 3600000).toISOString() },
-  { id: 2, profiles: { full_name: "Sam R."   }, product_name: "Aer Travel Pack 3", product_brand: "Aer", product_image: null, product_price: "$245", review: "Took this to 6 countries and it never left my side. Fits under the seat, looks professional, holds everything.", category: "Travel",  likes_count: 9,  comments_count: 6, created_at: new Date(Date.now() - 26 * 3600000).toISOString() },
-  { id: 3, profiles: { full_name: "Maya K."  }, product_name: "Fellow Stagg EKG", product_brand: "Fellow", product_image: null, product_price: "$165", review: "I resisted buying this for two years. Do not make my mistake. It is perfect.", category: "Kitchen", likes_count: 21, comments_count: 11, created_at: new Date(Date.now() - 48 * 3600000).toISOString() },
 ];

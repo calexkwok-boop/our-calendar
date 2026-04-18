@@ -136,7 +136,7 @@ function MovieDetailSheet({ movie, open, onClose, onAddToSomeday, onPlanEvent, s
             </button>
         <button
           onClick={() => { onClose(); onPlanEvent?.({ title: `Movie night: ${movie.title}` }); }}
-          className="flex-1 py-3 rounded-2xl text-sm font-['Caveat'] font-bold bg-violet-500/10 dark:bg-violet-400/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 dark:border-violet-400/25 active:opacity-70"
+          className="flex-1 py-3 rounded-2xl text-sm font-handwritten font-bold bg-violet-500/10 dark:bg-violet-400/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 dark:border-violet-400/25 active:opacity-70"
         >
           + Plan
         </button>
@@ -478,7 +478,7 @@ export default function MoviesPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
             <button
               key={t.key}
               onClick={() => handleTabChange(t.key)}
-              className={`text-xs font-medium px-3.5 py-1.5 rounded-full whitespace-nowrap transition-colors flex-shrink-0 ${
+              className={`text-sm font-handwritten font-bold px-3.5 py-1.5 rounded-full whitespace-nowrap transition-colors flex-shrink-0 ${
                 activeTab === t.key && !isSearching
                   ? "bg-purple-500/20 text-purple-600 dark:text-purple-300"
                   : "bg-stone-100 dark:bg-white/5 text-gray-500"

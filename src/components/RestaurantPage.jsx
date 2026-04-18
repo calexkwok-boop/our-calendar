@@ -1430,9 +1430,6 @@ const RestaurantPage = ({
             </div>
           )}
         </div>
-        <button onClick={useMyLocation} disabled={locSearching} style={{ padding: '10px 14px', borderRadius: 14, border: `1px solid ${bw}`, background: darkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6', color: locSearching ? ts : tp, fontSize: 13, fontWeight: 500, cursor: locSearching ? 'default' : 'pointer', opacity: locSearching ? .6 : 1, whiteSpace: 'nowrap' }}>
-          {locSearching ? '…' : '📍 Me'}
-        </button>
       </div>
 
       {/* ── Occasion strip (replaces cuisine/price/radius filters) ── */}

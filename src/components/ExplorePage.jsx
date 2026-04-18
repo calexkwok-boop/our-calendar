@@ -154,7 +154,7 @@ function FriendCard({ post }) {
       </div>
       <div className="flex items-center gap-2 px-4 pb-4 pt-1">
         {post.actions.map((a, i) => (
-          <button key={a} className={`text-xs font-medium px-3.5 py-1.5 rounded-xl transition-opacity active:opacity-70 ${i === 0 ? "bg-teal-400 text-gray-900" : "bg-stone-100 dark:bg-white/5 text-gray-600 dark:text-gray-400"}`}>{a}</button>
+          <button key={a} className={`text-xs font-handwritten font-bold px-3.5 py-1.5 rounded-xl transition-opacity active:opacity-70 ${i === 0 ? "bg-teal-400 text-gray-900" : "bg-stone-100 dark:bg-white/5 text-gray-600 dark:text-gray-400"}`}>{a}</button>
         ))}
       </div>
     </div>
@@ -213,7 +213,7 @@ function MovieCard({ movie, onAddToSomeday, onRemoveFromSomeday, onPageTap, onPl
         </button>
         <button
           onClick={() => onPlanEvent?.({ title: `Movie night: ${movie.title}` })}
-          className="flex-1 text-xs leading-none font-['Caveat'] font-bold px-3 py-1.5 rounded-xl bg-violet-500/10 dark:bg-violet-400/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 dark:border-violet-400/25 active:opacity-70"
+          className="flex-1 text-xs font-handwritten font-bold px-3 py-1.5 rounded-xl bg-violet-500/10 dark:bg-violet-400/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 dark:border-violet-400/25 active:opacity-70"
         >
           + Plan
         </button>
@@ -286,10 +286,10 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
                 }
               }
             }}
-            className={`flex-1 text-xs leading-none font-bold px-3 py-1.5 rounded-xl active:opacity-70 ${
+            className={`flex-1 text-xs font-bold px-3 py-1.5 rounded-xl active:opacity-70 ${
               i === 0
                 ? `font-handwritten ${inSomeday ? "bg-teal-600 text-white" : "bg-teal-400 text-gray-900"}`
-                : "font-['Caveat'] bg-violet-500/10 dark:bg-violet-400/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 dark:border-violet-400/25"
+                : "font-handwritten bg-violet-500/10 dark:bg-violet-400/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 dark:border-violet-400/25"
             }`}
           >
             {i === 0

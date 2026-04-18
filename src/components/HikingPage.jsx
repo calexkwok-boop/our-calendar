@@ -308,7 +308,7 @@ function TrailModal({ trail, photoUrl, photoAttribution, isSaved, onSave, onPlan
             <div className="flex gap-3">
               <button
                 onClick={() => onSave(trail)}
-                className={`flex-1 rounded-2xl py-3 text-sm font-['Caveat'] font-bold transition-all duration-200 border ${
+                className={`flex-1 rounded-2xl py-3 text-sm font-handwritten font-bold transition-all duration-200 border ${
                   isSaved
                     ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
                     : dm
@@ -320,7 +320,7 @@ function TrailModal({ trail, photoUrl, photoAttribution, isSaved, onSave, onPlan
               </button>
               <button
                 onClick={onPlanTrip}
-                className={`flex-1 rounded-2xl py-3 text-sm font-['Caveat'] font-bold transition-all duration-200 border ${dm ? 'bg-violet-400/10 border-violet-400/25 text-violet-400 hover:bg-violet-400/20' : 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100'}`}
+                className={`flex-1 rounded-2xl py-3 text-sm font-handwritten font-bold transition-all duration-200 border ${dm ? 'bg-violet-400/10 border-violet-400/25 text-violet-400 hover:bg-violet-400/20' : 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100'}`}
               >
                 + Plan
               </button>
@@ -403,7 +403,7 @@ function TrailCard({ trail, photoUrl, photoAttribution, onSave, savedIds, onOpen
         <div className="flex gap-2 mt-auto" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => onSave(trail)}
-            className={`flex-1 rounded-xl py-2 text-sm font-['Caveat'] font-bold transition-all duration-200 border ${
+            className={`flex-1 rounded-xl py-2 text-sm font-handwritten font-bold transition-all duration-200 border ${
               isSaved
                 ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
                 : dm
@@ -418,7 +418,7 @@ function TrailCard({ trail, photoUrl, photoAttribution, onSave, savedIds, onOpen
               e.stopPropagation();
               onPlanTrip?.(trail);
             }}
-            className={`flex-1 rounded-xl py-2 text-xs font-['Caveat'] font-bold transition-all duration-200 border ${dm ? 'bg-violet-400/8 border-violet-400/20 text-violet-400 hover:bg-violet-400/15' : 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100'}`}
+            className={`flex-1 rounded-xl py-2 text-sm font-handwritten font-bold transition-all duration-200 border ${dm ? 'bg-violet-400/8 border-violet-400/20 text-violet-400 hover:bg-violet-400/15' : 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100'}`}
           >
             + Plan
           </button>
@@ -895,7 +895,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
           <button
             onClick={handleSearch}
             disabled={loading}
-            className={`rounded-2xl px-5 py-3 text-sm font-medium transition-colors disabled:opacity-50 whitespace-nowrap ${dm ? 'bg-teal-400 text-[#0e1520] hover:bg-teal-300' : 'bg-teal-500 text-white hover:bg-teal-600'}`}
+            className={`rounded-2xl px-5 py-3 text-sm font-handwritten font-bold transition-colors disabled:opacity-50 whitespace-nowrap ${dm ? 'bg-teal-400 text-[#0e1520] hover:bg-teal-300' : 'bg-teal-500 text-white hover:bg-teal-600'}`}
           >
             {loading ? "Searching…" : "Find Trails"}
           </button>
@@ -1015,7 +1015,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
           <div className={`absolute -left-8 -bottom-8 w-24 h-24 rounded-full ${dm ? 'bg-violet-400/8' : 'bg-violet-200/25'}`} />
           <div className="relative">
             <div className="text-3xl mb-2">🥾</div>
-            <h3 className={`font-['Caveat'] text-2xl font-bold leading-tight ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
+            <h3 className={`font-handwritten text-2xl font-bold leading-tight ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
               Know a trail worth saving?
             </h3>
             <p className="text-sm text-slate-500 mb-4">
@@ -1023,7 +1023,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
             </p>
             <button
               onClick={() => setIsRecommendOpen(true)}
-              className={`rounded-full px-6 py-3 font-['Caveat'] text-lg font-bold transition-all ${dm ? 'bg-teal-400 text-[#0e1520] hover:bg-teal-300' : 'bg-teal-500 text-white hover:bg-teal-600'}`}
+              className={`rounded-full px-6 py-3 font-handwritten text-lg font-bold transition-all ${dm ? 'bg-teal-400 text-[#0e1520] hover:bg-teal-300' : 'bg-teal-500 text-white hover:bg-teal-600'}`}
             >
               Recommend a trail
             </button>
