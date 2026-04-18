@@ -844,15 +844,37 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
             <button
               key={cat.id}
               onClick={() => handleCategoryClick(cat)}
-              className="dream-shelf-pill flex-shrink-0 rounded-full px-4 py-1.5 text-lg font-bold transition-all duration-200 border focus:outline-none"
+              className="dream-shelf-pill flex-shrink-0 rounded-full px-4 py-1.5 text-lg font-bold transition-all duration-200 border focus:outline-none relative overflow-hidden"
               style={{
-                background: activeCategory?.id === cat.id ? GOLD_MUTED : (dm ? 'rgba(255,255,255,0.05)' : '#f3f4f6'),
-                border: `1px solid ${activeCategory?.id === cat.id ? GOLD_BORDER : (dm ? 'rgba(255,255,255,0.07)' : '#e5e7eb')}`,
-                color: activeCategory?.id === cat.id ? GOLD_DARK : (dm ? '#6b7280' : '#9ca3af'),
+                background: activeCategory?.id === cat.id
+                  ? (dm
+                    ? 'linear-gradient(135deg, #070a12 0%, #1c2432 18%, #f8fafc 31%, #8f7142 39%, #151a24 52%, #d8be7f 66%, #080b12 100%)'
+                    : 'linear-gradient(135deg, #fffdf7 0%, #d8be7f 16%, #ffffff 31%, #c7b68d 43%, #f8efe0 56%, #fef9ec 74%, #b9954f 100%)')
+                  : (dm ? 'rgba(255,255,255,0.05)' : '#f3f4f6'),
+                border: activeCategory?.id === cat.id
+                  ? `1.5px solid ${dm ? 'rgba(216,190,127,0.55)' : 'rgba(143,113,66,0.48)'}`
+                  : `1px solid ${dm ? 'rgba(255,255,255,0.07)' : '#e5e7eb'}`,
+                color: activeCategory?.id === cat.id ? (dm ? '#fff7d6' : '#4a3210') : (dm ? '#6b7280' : '#9ca3af'),
                 fontFamily: "'Caveat', cursive",
+                boxShadow: activeCategory?.id === cat.id
+                  ? (dm
+                    ? '0 8px 24px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.32), inset 0 -1px 0 rgba(216,190,127,0.22)'
+                    : '0 8px 22px rgba(143,113,66,0.16), inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(143,113,66,0.16)')
+                  : 'none',
               }}
             >
+              {activeCategory?.id === cat.id && (
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background: `linear-gradient(116deg, transparent 0%, transparent 28%, ${dm ? 'rgba(255,255,255,0.26)' : 'rgba(255,255,255,0.62)'} 42%, transparent 56%, transparent 100%)`,
+                  }}
+                />
+              )}
+              <span className="relative z-10">
               {cat.emoji} {cat.label}
+              </span>
             </button>
           ))}
         </div>
