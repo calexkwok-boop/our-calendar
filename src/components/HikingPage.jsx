@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 
 const RAPIDAPI_KEY  = process.env.REACT_APP_TRAILAPI_KEY;
 const RAPIDAPI_HOST = "trailapi-trailapi.p.rapidapi.com";
-const GOOGLE_KEY    = process.env.REACT_APP_GOOGLE_MAPS_KEY;
 
 const DIFFICULTY_MAP = {
   1: { label: "Easy",     style: "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" },
@@ -303,6 +302,8 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
   const [userLocation, setUserLocation] = useState(null);
   const [placePhotos, setPlacePhotos]   = useState({});
   const [selectedTrail, setSelectedTrail] = useState(null);
+  const [trailSuggestions, setTrailSuggestions] = useState([]);
+  const [trailSuggesting, setTrailSuggesting] = useState(false);
   const fetchedRef = useRef(new Set());
 
   useEffect(() => {
@@ -358,15 +359,15 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
   }, []);
 
   const fetchTrailPhoto = useCallback(async (trail) => {
-    if (!GOOGLE_KEY || fetchedRef.current.has(String(trail.id))) return;
+    if (fetchedRef.current.has(String(trail.id))) return;
     fetchedRef.current.add(String(trail.id));
     try {
       const q = encodeURIComponent(`${trail.name} trail ${trail.city || ""} ${trail.state || ""}`);
-      const res  = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${q}&key=${GOOGLE_KEY}`);
+      const res  = await fetch(`/api/places?action=textsearch&query=${q}&type=park`);
       const data = await res.json();
       const photoRef = data.results?.[0]?.photos?.[0]?.photo_reference;
       if (photoRef) {
-        const url = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference=${encodeURIComponent(photoRef)}&key=${GOOGLE_KEY}`;
+        const url = `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800`;
         setPlacePhotos((prev) => ({ ...prev, [trail.id]: url }));
       }
     } catch {
@@ -381,6 +382,67 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
 
   const handleSearch = () => {
     if (userLocation) fetchTrails(userLocation.lat, userLocation.lon, query);
+  };
+
+  useEffect(() => {
+    const term = query.trim();
+    if (term.length < 2) {
+      setTrailSuggestions([]);
+      setTrailSuggesting(false);
+      return;
+    }
+
+    let active = true;
+    setTrailSuggesting(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/places?action=autocomplete&input=${encodeURIComponent(term)}&types=establishment`);
+        const data = await res.json();
+        if (!active) return;
+        if (data.status === "OK" && Array.isArray(data.predictions)) {
+          setTrailSuggestions(data.predictions.slice(0, 5).map((p) => ({
+            place_id: p.place_id,
+            description: p.description,
+            main_text: p.structured_formatting?.main_text || p.description,
+            secondary_text: p.structured_formatting?.secondary_text || "",
+          })));
+        } else {
+          setTrailSuggestions([]);
+        }
+      } catch {
+        if (active) setTrailSuggestions([]);
+      } finally {
+        if (active) setTrailSuggesting(false);
+      }
+    }, 250);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [query]);
+
+  const handleSuggestionSelect = async (suggestion) => {
+    const nextQuery = suggestion.main_text || suggestion.description;
+    setQuery(nextQuery);
+    setTrailSuggestions([]);
+    setTrailSuggesting(false);
+
+    try {
+      const res = await fetch(`/api/places?action=details&place_id=${encodeURIComponent(suggestion.place_id)}`);
+      const data = await res.json();
+      const loc = data.result?.geometry?.location;
+      if (loc) {
+        const nextLocation = { lat: loc.lat, lon: loc.lng };
+        setUserLocation(nextLocation);
+        await fetchTrails(nextLocation.lat, nextLocation.lon, nextQuery);
+        return;
+      }
+    } catch {
+      // Fall through to the normal TrailAPI name search.
+    }
+
+    if (userLocation) fetchTrails(userLocation.lat, userLocation.lon, nextQuery);
   };
 
   const handleSave = (trail) => {
@@ -437,14 +499,35 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
         </div>
 
         {/* ── Search ── */}
-        <div className="flex gap-2.5 mb-5">
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            placeholder="Search trails, parks, or cities..."
-            className={`flex-1 min-w-0 border rounded-2xl px-4 py-3 text-sm outline-none transition-colors ${dm ? 'bg-[#161f30] border-white/7 text-slate-200 placeholder-slate-500 focus:border-teal-400/40' : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400 focus:border-teal-400'}`}
-          />
+        <div className="relative flex gap-2.5 mb-5">
+          <div className="relative flex-1 min-w-0">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              placeholder="Search trails, parks, or cities..."
+              className={`w-full border rounded-2xl px-4 py-3 text-sm outline-none transition-colors ${dm ? 'bg-[#161f30] border-white/7 text-slate-200 placeholder-slate-500 focus:border-teal-400/40' : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400 focus:border-teal-400'}`}
+            />
+            {(trailSuggesting || trailSuggestions.length > 0) && query.trim().length >= 2 && (
+              <div className={`absolute left-0 right-0 top-[calc(100%+8px)] z-30 overflow-hidden rounded-2xl border shadow-xl ${dm ? 'bg-[#111827] border-white/10 shadow-black/30' : 'bg-white border-slate-200 shadow-slate-900/10'}`}>
+                {trailSuggesting && trailSuggestions.length === 0 ? (
+                  <div className={`px-4 py-3 text-sm ${dm ? 'text-slate-400' : 'text-slate-500'}`}>Looking up trails and parks...</div>
+                ) : trailSuggestions.map((suggestion, idx) => (
+                  <button
+                    key={suggestion.place_id}
+                    type="button"
+                    onClick={() => handleSuggestionSelect(suggestion)}
+                    className={`w-full border-0 px-4 py-3 text-left transition-colors ${idx === trailSuggestions.length - 1 ? '' : dm ? 'border-b border-white/7' : 'border-b border-slate-100'} ${dm ? 'bg-transparent hover:bg-white/5 text-slate-100' : 'bg-transparent hover:bg-slate-50 text-slate-800'}`}
+                  >
+                    <div className="text-sm font-semibold leading-tight">{suggestion.main_text}</div>
+                    {suggestion.secondary_text && (
+                      <div className={`mt-1 text-xs ${dm ? 'text-slate-500' : 'text-slate-400'}`}>{suggestion.secondary_text}</div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             onClick={handleSearch}
             disabled={loading}

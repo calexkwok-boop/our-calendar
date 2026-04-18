@@ -29,14 +29,54 @@ const handwritten = '"Caveat", cursive';
 
 // Occasion-based browsing replaces cuisine/price/radius filters
 const OCCASIONS = [
-  { id: 'all',         label: 'All',             emoji: '✨' },
-  { id: 'date_night',  label: 'Date night',       emoji: '🕯️' },
-  { id: 'celebration', label: 'Celebration',      emoji: '🥂' },
-  { id: 'worth_trip',  label: 'Worth the trip',   emoji: '🗺️' },
-  { id: 'hidden_gem',  label: 'Hidden gem',       emoji: '💎' },
-  { id: 'special',     label: 'Special occasion', emoji: '⭐' },
-  { id: 'bucket_list', label: 'Bucket list',      emoji: '📋' },
+  { id: 'bucket_list', label: 'Bucket list',      emoji: '📋', query: 'bucket list restaurants' },
+  { id: 'date_night',  label: 'Date night',       emoji: '🕯️', query: 'date night restaurants' },
+  { id: 'most_added',  label: 'Most added',       emoji: '🔥', query: '' },
+  { id: 'worth_trip',  label: 'Worth the trip',   emoji: '🗺️', query: 'destination restaurants worth the trip' },
+  { id: 'hidden_gem',  label: 'Hidden gem',       emoji: '💎', query: 'hidden gem restaurants' },
+  { id: 'food_challenge', label: 'Food challenge', emoji: '🔥', query: 'restaurant food challenges' },
+  { id: 'all',         label: 'Nearby',           emoji: '✨', query: '' },
 ];
+
+// Edit these names to curate the Bucket list chip.
+const CURATED_RESTAURANT_SEARCHES = {
+  bucket_list: [
+    { name: 'Maido', locationHint: 'Lima Peru', note: 'A world-stage Nikkei tasting menu and the kind of trip-defining dinner people plan around.' },
+    { name: 'Asador Etxebarri', locationHint: 'Atxondo Spain', note: 'Smoke, fire, and Basque countryside magic. A true pilgrimage restaurant.' },
+    { name: 'Quintonil', locationHint: 'Mexico City Mexico', note: 'Modern Mexican cooking with a sense of place, celebration, and occasion.' },
+    { name: 'Alchemist', locationHint: 'Copenhagen Denmark', note: 'Immersive, theatrical, and wildly ambitious. Dinner as a full-on experience.' },
+    { name: 'Gaggan', locationHint: 'Bangkok Thailand', note: 'Playful, high-energy, and unforgettable. A bucket-list night with personality.' },
+    { name: 'Sezanne', locationHint: 'Tokyo Japan', note: 'Elegant French technique in Tokyo, polished enough to anchor a dream itinerary.' },
+    { name: 'Atomix', locationHint: 'New York NY', note: 'A deeply personal Korean tasting menu that feels intimate, precise, and memorable.' },
+    { name: 'The French Laundry', locationHint: 'Yountville CA', note: 'A classic American bucket-list dinner in Napa Valley.' },
+    { name: 'SingleThread', locationHint: 'Healdsburg CA', note: 'A full evening built around seasonality, place, and celebration.' },
+    { name: 'Smyth', locationHint: 'Chicago IL', note: 'A luxurious Chicago tasting menu with enough craft and warmth to justify the trip.' },
+  ],
+  date_night: [
+    { name: 'One if by Land, Two if by Sea', locationHint: 'New York NY', note: 'Candlelit, historic, and unapologetically romantic. The classic date-night fantasy.' },
+    { name: 'The River Cafe', locationHint: 'Brooklyn NY', note: 'Skyline views, flowers, and old-school polish. Save this for a night that needs a little magic.' },
+    { name: 'Restaurant Gary Danko', locationHint: 'San Francisco CA', note: 'Intimate, polished, and quietly theatrical. Perfect when you want the whole evening to feel cared for.' },
+    { name: 'Canlis', locationHint: 'Seattle WA', note: 'Mountain views, tableside grace, and occasion-level service without losing warmth.' },
+    { name: "Bern's Steak House", locationHint: 'Tampa FL', note: 'A legendary steakhouse with a dessert room made for lingering after dinner.' },
+    { name: "Commander’s Palace", locationHint: 'New Orleans LA', note: 'A joyful, dressed-up New Orleans classic with the kind of energy that makes dinner feel like an event.' },
+    { name: 'Canoe', locationHint: 'Atlanta GA', note: 'Riverside, graceful, and easy to love. A softer special-night pick with real atmosphere.' },
+    { name: 'Tidepools', locationHint: 'Poipu Kauai HI', note: 'Thatched bungalows, koi lagoons, waterfalls, and vacation-date-night energy.' },
+    { name: 'The Olde Pink House', locationHint: 'Savannah GA', note: 'Historic, charming, and a little dreamy. A date night that feels like stepping into a story.' },
+    { name: "Dakota's Steakhouse", locationHint: 'Dallas TX', note: 'A dramatic underground steakhouse with a courtyard that feels made for a slow dinner.' },
+  ],
+  food_challenge: [
+    { name: 'The Big Texan Steak Ranch', locationHint: 'Amarillo TX', note: 'Home of the legendary 72-ounce steak dinner challenge. Pure roadside Americana.' },
+    { name: "Denny's Beer Barrel Pub", locationHint: 'Clearfield PA', note: 'A burger-challenge institution known for truly gigantic burgers and advance-notice attempts.' },
+    { name: 'San Francisco Creamery Co.', locationHint: 'Walnut Creek CA', note: 'The Kitchen Sink ice cream challenge is messy, sweet, ridiculous, and perfect for a dare.' },
+    { name: "Humpy's Great Alaskan Alehouse", locationHint: 'Anchorage AK', note: 'The Kodiak Arrest challenge turns Alaskan seafood into a full-blown eating spectacle.' },
+    { name: 'Smoke Eaters', locationHint: 'San Jose CA', note: 'The Hellfire wing challenge is more pain cave than dinner reservation.' },
+    { name: "Munchies 420 Cafe", locationHint: 'Sarasota FL', note: 'The Fire in Your Hole wing challenge is infamous for heat, waiver energy, and bad decisions.' },
+    { name: 'Nitally’s ThaiMex Cuisine', locationHint: 'St. Petersburg FL', note: 'Inferno Soup combines volume and serious spice into one chaotic bowl.' },
+    { name: 'Stadium Grill', locationHint: 'Columbia MO', note: 'The Hail Mary burger challenge is an over-the-top tower of beef, fries, and spectacle.' },
+    { name: "Crown Candy Kitchen", locationHint: 'St. Louis MO', note: 'The malt challenge is old-school, nostalgic, and deceptively brutal.' },
+    { name: 'Beth’s Cafe', locationHint: 'Seattle WA', note: 'Known for massive omelets and diner-sized ambition. A novelty-food classic.' },
+  ],
+};
 
 // Kept internally for API calls — not shown as UI filters
 const CUISINE_FILTERS = [
@@ -93,6 +133,12 @@ const truncateText = (text, max = 120) => {
   const clean = String(text).trim();
   return clean.length > max ? `${clean.slice(0, max).trimEnd()}…` : clean;
 };
+const restaurantAddKey = (restaurant = {}) => (
+  restaurant.googlePlaceId
+  || restaurant.google_place_id
+  || restaurant.id
+  || `${restaurant.name || restaurant.restaurant_name || ''}-${restaurant.address || ''}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+);
 const restaurantSomedayPayload = (post) => ({
   title: post.restaurant_name,
   imageUrl: post.restaurant_image || '',
@@ -717,7 +763,7 @@ const RestaurantPage = ({
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState('');
   const [search, setSearch]             = useState('');
-  const [occasion, setOccasion]         = useState('all');   // replaces cuisine/price/radius UI
+  const [occasion, setOccasion]         = useState('bucket_list');   // replaces cuisine/price/radius UI
   const [selected, setSelected]         = useState(null);
   const [savedIds, setSavedIds]         = useState(new Set());
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -851,11 +897,220 @@ const RestaurantPage = ({
     } finally { setLoading(false); }
   }, [apiKey, hydrateRestaurantVotes]);
 
+  const fetchCuratedRestaurants = useCallback(async (occasionItem) => {
+    const curatedItems = CURATED_RESTAURANT_SEARCHES[occasionItem.id] || [];
+    if (!curatedItems.length) return false;
+
+    setLoading(true);
+    setError('');
+    setLocationLabel(occasionItem.label);
+    setLocationSearch('');
+    setSearch('');
+    setLocationSuggestions([]);
+
+    try {
+      const KEY = apiKey || process.env.REACT_APP_GOOGLE_PLACES_KEY || '';
+      const mapped = await Promise.all(curatedItems.map(async (item, index) => {
+        const searchText = `${item.name} ${item.locationHint || ''}`.trim();
+        let data;
+
+        try {
+          const res = await fetch(`/api/places?action=textsearch&query=${encodeURIComponent(searchText)}&type=restaurant`);
+          if (!res.ok) throw new Error('proxy_unavailable');
+          data = await res.json();
+        } catch {
+          if (KEY) {
+            const res = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchText)}&type=restaurant&key=${KEY}`);
+            data = await res.json();
+          }
+        }
+
+        const place = data?.results?.[0];
+        if (!place) {
+          return {
+            id: `curated-${occasionItem.id}-${index}`,
+            name: item.name,
+            cuisine: 'american',
+            rating: 0,
+            priceLevel: 0,
+            address: item.locationHint || '',
+            photo: '',
+            phone: '',
+            website: '',
+            description: item.note || '',
+            curatedLabel: occasionItem.label,
+            vote_count: 0,
+            my_vote: 0,
+          };
+        }
+
+        return {
+          id: place.place_id || `curated-${occasionItem.id}-${index}`,
+          googlePlaceId: place.place_id,
+          name: place.name || item.name,
+          cuisine: inferCuisine(place.types || [], place.name || item.name),
+          rating: place.rating || 0,
+          priceLevel: place.price_level || 0,
+          address: place.formatted_address || place.vicinity || item.locationHint || '',
+          photo: place.photos?.[0]?.photo_reference
+            ? `/api/places?action=photo&ref=${encodeURIComponent(place.photos[0].photo_reference)}&maxwidth=400`
+            : '',
+          phone: '',
+          website: '',
+          description: item.note || '',
+          curatedLabel: occasionItem.label,
+          vote_count: 0,
+          my_vote: 0,
+        };
+      }));
+
+      const hydrated = await hydrateRestaurantVotes(mapped.filter(Boolean));
+      setRestaurants(hydrated);
+      return true;
+    } catch {
+      setRestaurants(FALLBACK_RESTAURANTS);
+      setError('Showing saved curated picks for now.');
+      return true;
+    } finally {
+      setLoading(false);
+    }
+  }, [apiKey, hydrateRestaurantVotes]);
+
+  const fetchMostAddedRestaurants = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    setLocationLabel('Most added');
+    setLocationSearch('');
+    setSearch('');
+    setLocationSuggestions([]);
+
+    try {
+      const { data, error } = await supabase.rpc('get_most_added_restaurants', { p_limit: 10 });
+      if (error) throw error;
+
+      if (Array.isArray(data) && data.length > 0) {
+        const mapped = data.map((row) => ({
+          id: row.google_place_id || row.restaurant_key,
+          googlePlaceId: row.google_place_id || '',
+          name: row.restaurant_name,
+          cuisine: normalizeCuisineId(row.cuisine || '') || inferCuisine([], row.restaurant_name),
+          rating: Number(row.rating || 0),
+          priceLevel: Number(row.price_level || 0),
+          address: row.address || '',
+          photo: row.photo || '',
+          phone: '',
+          website: '',
+          description: row.description || `Added to ${Number(row.add_count || 0).toLocaleString()} Someday board${Number(row.add_count || 0) === 1 ? '' : 's'}.`,
+          add_count: Number(row.add_count || 0),
+          vote_count: 0,
+          my_vote: 0,
+        }));
+        const hydrated = await hydrateRestaurantVotes(mapped);
+        setRestaurants(hydrated);
+        return true;
+      }
+    } catch {
+      // Fall back below until the aggregate migration has been applied.
+    }
+
+    const fallbackPosts = [...recommendedPosts]
+      .sort((a, b) => Number(b.likes_count || 0) - Number(a.likes_count || 0))
+      .slice(0, 10);
+
+    if (fallbackPosts.length > 0) {
+      setRestaurants(fallbackPosts.map((post) => ({
+        id: post.google_place_id || `post-${post.id}`,
+        googlePlaceId: post.google_place_id || '',
+        name: post.restaurant_name,
+        cuisine: normalizeCuisineId(post.cuisine || '') || inferCuisine([], post.restaurant_name),
+        rating: Number(post.rating || 0),
+        priceLevel: Number(post.price_level || 0),
+        address: post.address || '',
+        photo: post.restaurant_image || '',
+        phone: post.phone || '',
+        website: post.website || '',
+        description: post.review || `Recommended by the community with ${Number(post.likes_count || 0).toLocaleString()} like${Number(post.likes_count || 0) === 1 ? '' : 's'}.`,
+        add_count: Number(post.likes_count || 0),
+        vote_count: 0,
+        my_vote: 0,
+      })));
+      setError('Most added will use real Someday saves after the restaurant add-count migration is applied. Showing most-liked recommendations for now.');
+      return true;
+    }
+
+    setRestaurants(FALLBACK_RESTAURANTS);
+    setError('Most added will appear after people start saving restaurants.');
+    return true;
+  }, [hydrateRestaurantVotes, recommendedPosts]);
+
+  const fetchHiddenGemRecommendations = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    setLocationLabel('Hidden gem');
+    setLocationSearch('');
+    setSearch('');
+    setLocationSuggestions([]);
+
+    let posts = recommendedPosts;
+
+    try {
+      const { data, error } = await supabase
+        .from('restaurant_posts')
+        .select('id, user_id, restaurant_name, restaurant_image, address, google_place_id, website, phone, cuisine, price_level, rating, review, best_for, vibe_tags, likes_count, created_at')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        posts = data;
+      }
+    } catch {
+      // Use already loaded recommendations if Supabase is unavailable.
+    }
+
+    const mapped = [...posts]
+      .sort((a, b) => {
+        const hiddenA = /hidden|gem/i.test(`${a.best_for || ''} ${a.vibe_tags || ''} ${a.review || ''}`) ? 1 : 0;
+        const hiddenB = /hidden|gem/i.test(`${b.best_for || ''} ${b.vibe_tags || ''} ${b.review || ''}`) ? 1 : 0;
+        if (hiddenA !== hiddenB) return hiddenB - hiddenA;
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+      })
+      .slice(0, 10)
+      .map((post) => ({
+        id: post.google_place_id || `post-${post.id}`,
+        googlePlaceId: post.google_place_id || '',
+        name: post.restaurant_name,
+        cuisine: normalizeCuisineId(post.cuisine || '') || inferCuisine([], post.restaurant_name),
+        rating: Number(post.rating || 0),
+        priceLevel: Number(post.price_level || 0),
+        address: post.address || '',
+        photo: post.restaurant_image || '',
+        phone: post.phone || '',
+        website: post.website || '',
+        description: post.review || 'A community-recommended spot worth saving.',
+        curatedLabel: 'Hidden gem',
+        vote_count: Number(post.likes_count || 0),
+        my_vote: 0,
+      }));
+
+    if (mapped.length > 0) {
+      setRestaurants(mapped);
+    } else {
+      setRestaurants(FALLBACK_RESTAURANTS);
+      setError('Hidden gems will show up here after people recommend restaurants.');
+    }
+
+    setLoading(false);
+    return true;
+  }, [recommendedPosts]);
+
   // Initial load
   useEffect(() => {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
-    if (!userLocation && navigator.geolocation) {
+    const initialOccasion = OCCASIONS.find(o => o.id === 'bucket_list') || OCCASIONS[0];
+    if (initialOccasion && CURATED_RESTAURANT_SEARCHES[initialOccasion.id]) {
+      fetchCuratedRestaurants(initialOccasion);
+    } else if (!userLocation && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         pos => { const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude }; setLocation(loc); fetchRestaurants(loc, '', radius); },
         () => fetchRestaurants(location, '', radius),
@@ -946,6 +1201,37 @@ const RestaurantPage = ({
     await handleUnifiedSearch(query);
   }, [handleUnifiedSearch]);
 
+  const handleOccasionSearch = useCallback(async (occasionItem) => {
+    setOccasion(occasionItem.id);
+
+    if (occasionItem.id === 'all') {
+      setLocationLabel('');
+      setLocationSearch('');
+      setSearch('');
+      setLocationSuggestions([]);
+      await fetchRestaurants(location, '', radius);
+      return;
+    }
+
+    if (occasionItem.id === 'most_added') {
+      await fetchMostAddedRestaurants();
+      return;
+    }
+
+    if (occasionItem.id === 'hidden_gem') {
+      await fetchHiddenGemRecommendations();
+      return;
+    }
+
+    const usedCuratedList = await fetchCuratedRestaurants(occasionItem);
+    if (usedCuratedList) return;
+
+    const locationContext = locationLabel && locationLabel !== 'Current location'
+      ? ` near ${locationLabel}`
+      : '';
+    await handleUnifiedSearch(`${occasionItem.query || occasionItem.label}${locationContext}`);
+  }, [fetchCuratedRestaurants, fetchHiddenGemRecommendations, fetchMostAddedRestaurants, fetchRestaurants, handleUnifiedSearch, location, locationLabel, radius]);
+
   const useMyLocation = () => {
     if (!navigator.geolocation) return;
     setLocSearching(true); setError('');
@@ -963,8 +1249,31 @@ const RestaurantPage = ({
   };
 
   // ── Handlers ────────────────────────────────────────────────────────────────
+  const recordRestaurantAdd = useCallback(async (restaurant = {}) => {
+    const restaurantName = restaurant.name || restaurant.restaurant_name || restaurant.title || restaurant.text || '';
+    const key = restaurantAddKey({ ...restaurant, name: restaurantName });
+    if (!key || !restaurantName) return;
+
+    try {
+      await supabase.rpc('record_restaurant_add', {
+        p_restaurant_key: key,
+        p_google_place_id: restaurant.googlePlaceId || restaurant.google_place_id || null,
+        p_restaurant_name: restaurantName,
+        p_address: restaurant.address || null,
+        p_photo: restaurant.photo || restaurant.restaurant_image || restaurant.imageUrl || null,
+        p_cuisine: restaurant.cuisine || null,
+        p_rating: restaurant.rating ? Number(restaurant.rating) : null,
+        p_price_level: restaurant.priceLevel || restaurant.price_level ? Number(restaurant.priceLevel || restaurant.price_level) : null,
+        p_description: restaurant.description || restaurant.review || null,
+      });
+    } catch {
+      // The Most added chip gracefully falls back until this migration exists in Supabase.
+    }
+  }, []);
+
   const handleSaveToSomeday = (restaurant) => {
     setSavedIds(prev => new Set([...prev, restaurant.id]));
+    recordRestaurantAdd(restaurant);
     onSaveToSomeday?.({ id: Date.now().toString(), text: restaurant.name, categoryId: 'food', status: 'dreaming', tab: 'ours', emoji: getCuisineEmoji(restaurant.cuisine), imageUrl: restaurant.photo || '', notes: `${restaurant.address || ''} · ${restaurant.cuisine}`, comments: [], partnerHearted: false, myHearted: false, createdAt: new Date().toISOString() });
   };
 
@@ -1007,8 +1316,9 @@ const RestaurantPage = ({
   }, [recommendedPosts]);
 
   const handleSomedayFromRecommendation = useCallback((post) => {
+    recordRestaurantAdd(post);
     onSaveToSomeday?.({ ...restaurantSomedayPayload(post), cuisine: post.cuisine || '', address: post.address || '', review: post.review || '', best_for: post.best_for || '', price_level: post.price_level || null });
-  }, [onSaveToSomeday]);
+  }, [onSaveToSomeday, recordRestaurantAdd]);
 
   // ── Style tokens ─────────────────────────────────────────────────────────────
   const pageBg = darkMode ? '#0e1520' : '#faf8f3';
@@ -1022,6 +1332,10 @@ const RestaurantPage = ({
 
   // ── Filtered results (occasion is a UI label only for now; extend with best_for matching if desired) ──
   const filtered = useMemo(() => [...restaurants], [restaurants]);
+  const activeOccasionLabel = OCCASIONS.find(o => o.id === occasion)?.label || '';
+  const resultHeading = activeOccasionLabel && occasion !== 'all'
+    ? activeOccasionLabel
+    : (locationLabel ? `Places near ${locationLabel}` : 'Places worth planning for');
 
   // ─────────────────────────────────────────────────────────────────────────────
   return (
@@ -1095,7 +1409,7 @@ const RestaurantPage = ({
         {OCCASIONS.map(o => (
           <button
             key={o.id}
-            onClick={() => setOccasion(o.id)}
+            onClick={() => handleOccasionSearch(o)}
             style={{
               flexShrink: 0, padding: '6px 14px', borderRadius: 20,
               fontSize: 13, fontFamily: handwritten,
@@ -1191,7 +1505,7 @@ const RestaurantPage = ({
 
       {/* ── Section label ── */}
       <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: ts, padding: '0 18px 10px', margin: 0 }}>
-        {locationLabel ? `Places near ${locationLabel}` : 'Places worth planning for'}
+        {resultHeading}
       </p>
 
       {/* ── Restaurant grid ── */}

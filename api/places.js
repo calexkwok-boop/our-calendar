@@ -16,6 +16,7 @@
  *   GET /api/places?action=autocomplete&input=los%20angeles
  *   GET /api/places?action=autocomplete&input=bestia&types=establishment
  *   GET /api/places?action=textsearch&query=The%20French%20Laundry&type=restaurant
+ *   GET /api/places?action=textsearch&query=Mission%20Peak%20Trail&type=park
  *   GET /api/places/details?place_id=ChIJ...
  */
 
@@ -67,7 +68,7 @@ export default async function handler(req, res) {
   if (action === 'textsearch') {
     if (!query) return res.status(400).json({ error: 'query required' });
 
-    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&type=restaurant&key=${key}`;
+    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&type=${encodeURIComponent(type)}&key=${key}`;
 
     try {
       const r = await fetch(url);
