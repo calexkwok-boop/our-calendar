@@ -19,15 +19,6 @@ const CATEGORIES = [
   { label: "Books",    emoji: "📚", searchTerm: "best books 2024"            },
 ];
 
-const TRENDING = [
-  { emoji: "☕", label: "Coffee gear",  count: 47 },
-  { emoji: "🎒", label: "Travel bags",  count: 31 },
-  { emoji: "📚", label: "Books",        count: 28 },
-  { emoji: "🧴", label: "Skincare",     count: 22 },
-  { emoji: "🎧", label: "Audio",        count: 19 },
-  { emoji: "🍳", label: "Kitchen",      count: 15 },
-];
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function normalizeProduct(item) {
@@ -837,7 +828,7 @@ function FeaturedSomedayButton({ featured, onAddToSomeday, darkMode }) {
 export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false } = {}) {
   const dm = darkMode;
   const communityFeedRef = useRef(null);
-  const [activeCategory, setActiveCategory] = useState(CATEGORIES[0]);
+  const [activeCategory, setActiveCategory] = useState(null);
   const [searchQuery,    setSearchQuery]    = useState("");
   const [products,       setProducts]       = useState([]);
   const [communityPosts, setCommunityPosts] = useState([]);
@@ -894,12 +885,25 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
     }
   }, []);
 
-  useEffect(() => {
-    fetchProducts(activeCategory.searchTerm);
-  }, [activeCategory, fetchProducts]);
-
   const handleSearch = () => {
-    if (searchQuery.trim()) fetchProducts(searchQuery.trim());
+    const trimmed = searchQuery.trim();
+    if (trimmed) {
+      setActiveCategory(null);
+      fetchProducts(trimmed);
+    }
+  };
+
+  const handleCategoryClick = (cat) => {
+    setSearchQuery("");
+    if (activeCategory?.label === cat.label) {
+      setActiveCategory(null);
+      setProducts([]);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+    setActiveCategory(cat);
+    fetchProducts(cat.searchTerm);
   };
 
   // ── Fetch community posts from Supabase ──
@@ -1067,17 +1071,20 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
         </div>
 
         {/* ── Category filters ── */}
-        <div className="flex gap-2 mb-6 flex-wrap">
+        <div className="flex gap-2 mb-6 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
           {CATEGORIES.map((cat) => (
             <button
               key={cat.label}
-              onClick={() => setActiveCategory(cat)}
-              className={`rounded-full px-4 py-1.5 text-xs transition-all duration-200 border ${
-                activeCategory.label === cat.label
+              onClick={(e) => {
+                e.currentTarget.blur();
+                handleCategoryClick(cat);
+              }}
+              className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-handwritten font-bold transition-all duration-200 border focus:outline-none focus-visible:outline-none ${
+                activeCategory?.label === cat.label
                   ? "bg-violet-400/12 border-violet-400/40 text-violet-600"
                   : dm
-                    ? "bg-[#161f30] border-white/7 text-slate-500 hover:text-violet-400 hover:border-violet-400/25"
-                    : "bg-white border-slate-200 text-slate-500 hover:text-violet-600 hover:border-violet-300"
+                    ? "bg-white/5 border-white/7 text-slate-500"
+                    : "bg-slate-100 border-slate-200 text-slate-500"
               }`}
             >
               {cat.emoji} {cat.label}
@@ -1086,21 +1093,6 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
         </div>
 
         {/* ── Trending pills ── */}
-        <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">Trending right now</p>
-        <div className="flex gap-2.5 mb-7 overflow-x-auto pb-1 scrollbar-hide">
-          {TRENDING.map((t) => (
-            <button
-              key={t.label}
-              onClick={() => fetchProducts(t.label)}
-              className={`border rounded-full px-4 py-2 flex items-center gap-2 whitespace-nowrap hover:border-violet-400/30 hover:bg-violet-400/5 transition-all ${dm ? 'bg-[#161f30] border-white/7' : 'bg-white border-slate-200'}`}
-            >
-              <span className="text-base leading-none">{t.emoji}</span>
-              <span className={`text-sm ${dm ? 'text-slate-200' : 'text-slate-700'}`}>{t.label}</span>
-              <span className="text-xs text-slate-400">{t.count} posts</span>
-            </button>
-          ))}
-        </div>
-
         {/* ── Featured (most loved community post) ── */}
         {featured && (
           <>
@@ -1165,7 +1157,11 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
 
         {/* ── Product grid ── */}
         <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">
-          {searchQuery ? `Results for "${searchQuery}"` : `Discover · ${activeCategory.label}`}
+          {searchQuery.trim()
+            ? `Results for "${searchQuery}"`
+            : activeCategory
+              ? `Discover · ${activeCategory.label}`
+              : "Choose a category or search"}
         </p>
 
         {loading ? (

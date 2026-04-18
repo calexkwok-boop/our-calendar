@@ -639,20 +639,6 @@ const ScrapbookHomeHybrid = ({
           )}
         </button>
 
-        <div className="rounded-[24px] border border-amber-900/10 bg-white/70 px-4 py-3 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-black/20 sm:px-6 sm:py-4">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-900/55 dark:text-amber-100/55">
-            {(yearStats.year || new Date().getFullYear())} so far
-          </div>
-          <div className="mt-1 text-sm text-gray-700 dark:text-gray-200 sm:text-base">
-            {yearStats.events} events · {yearStats.trips} trips · {yearStats.photos} photos
-          </div>
-          {yearStats.streakHelpText ? (
-            <div className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-              {yearStats.streakHelpText}
-            </div>
-          ) : null}
-        </div>
-
         {/* LATEST MEMORIES - Collage 2x2 */}
         <div className="rounded-[28px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-purple-50/60 via-white/90 to-pink-50/60 dark:from-purple-950/30 dark:via-slate-900/80 dark:to-pink-950/20 p-5 shadow-lg">
           <div className="flex items-center justify-between mb-3">
@@ -716,6 +702,20 @@ const ScrapbookHomeHybrid = ({
               ))}
             </div>
           )}
+        </div>
+
+        <div className="rounded-[24px] border border-amber-900/10 bg-white/70 px-4 py-3 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-black/20 sm:px-6 sm:py-4">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-900/55 dark:text-amber-100/55">
+            {(yearStats.year || new Date().getFullYear())} so far
+          </div>
+          <div className="mt-1 text-sm text-gray-700 dark:text-gray-200 sm:text-base">
+            {yearStats.events} events · {yearStats.trips} trips · {yearStats.photos} photos
+          </div>
+          {yearStats.streakHelpText ? (
+            <div className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+              {yearStats.streakHelpText}
+            </div>
+          ) : null}
         </div>
 
         <QuickThoughtsSection

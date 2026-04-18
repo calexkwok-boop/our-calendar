@@ -910,7 +910,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
                 e.currentTarget.blur();
                 handleTrailCollection(collection);
               }}
-              className={`flex-shrink-0 rounded-full px-4 py-1.5 text-xs transition-all duration-200 border focus:outline-none focus-visible:outline-none ${
+              className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-handwritten font-bold transition-all duration-200 border focus:outline-none focus-visible:outline-none ${
                 activeFilter === collection.id
                   ? "bg-teal-400/12 border-teal-400/40 text-teal-600"
                   : dm
