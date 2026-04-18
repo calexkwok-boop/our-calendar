@@ -29604,7 +29604,7 @@ transform: translateY(0);
                   const posterPath = post?.poster_path || '';
                   const photoUrl = posterPath ? `https://image.tmdb.org/t/p/w342${posterPath}` : (post?.imageUrl || '');
                   const emoji = post?.emoji || (post?.type === 'movies' ? '🎬' : post?.type === 'hiking' ? '⛰️' : post?.type === 'restaurants' ? '🍽️' : post?.type === 'games' ? '🎲' : (post?.type === 'products' || post?.type === 'dreamshelf') ? '✨' : post?.type === 'destinations' ? '✈️' : '✨');
-                  const category = post?.categoryId === 'travel' || post?.type === 'destinations' ? 'travel' : post?.categoryId === 'food' || post?.type === 'restaurants' ? 'food' : post?.type === 'movies' ? 'fun' : post?.type === 'hiking' ? 'adventure' : post?.type === 'games' ? 'fun' : (post?.type === 'products' || post?.type === 'dreamshelf') ? 'fun' : 'fun';
+                  const category = post?.categoryId === 'buy' || post?.type === 'products' || post?.type === 'dreamshelf' ? 'buy' : post?.categoryId === 'travel' || post?.type === 'destinations' ? 'travel' : post?.categoryId === 'food' || post?.type === 'restaurants' ? 'food' : post?.type === 'movies' ? 'fun' : post?.type === 'hiking' ? 'adventure' : post?.type === 'games' ? 'fun' : 'fun';
                   setBucketList((prev) => {
                     const alreadyExists = prev.some(d => d.text === text && d.emoji === emoji);
                     if (alreadyExists) return prev;
@@ -29850,7 +29850,7 @@ transform: translateY(0);
           )}
 
           {bottomNavTab === 'someday' && (() => {
-            const catMap = { travel: 'places', food: 'food', adventure: 'experiences', culture: 'experiences', home: 'home', wellness: 'experiences', fun: 'experiences' };
+            const catMap = { travel: 'places', food: 'food', adventure: 'experiences', culture: 'experiences', home: 'home', wellness: 'experiences', fun: 'experiences', buy: 'buy' };
             const somedayDreams = [
               ...(Array.isArray(bucketList) ? bucketList : []).map(d => ({
                 id: d.id,

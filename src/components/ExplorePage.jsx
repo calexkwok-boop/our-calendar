@@ -15,7 +15,7 @@ const COMMUNITY_POSTS = [
   { id: "c1", type: "hiking", icon: "🥾", page: "Hiking & Outdoors", time: "Trending", cardTitle: "Lands End Trail", location: "San Francisco · 3.4 mi", desc: "Stunning coastal views, moderate difficulty. Best visited at golden hour.", votes: 183, tag: "Hiking", actions: ["Add to someday", "Plan it"] },
   { id: "c2", type: "games", icon: "🎲", page: "Board Games", time: "Community pick", cardTitle: "Wingspan", desc: "Elegant engine-builder about birds. Perfect for 2–5 players, around 90 minutes.", votes: 312, tag: "Games", actions: ["Add to someday", "Plan game night"] },
   { id: "c3", type: "restaurants", icon: "🍜", page: "Restaurants", time: "New addition", cardTitle: "Dumpling Time", location: "SoMa, San Francisco", desc: "Handcrafted dumplings, beautiful space. The XLB are unmissable.", votes: 198, tag: "Restaurants", actions: ["Add to someday", "Plan dinner"] },
-  { id: "c4", type: "products", icon: "✨", page: "Dream Shelf", time: "Community pick", cardTitle: "Sony WH-1000XM5", desc: "Most recommended headphones this month — noise cancellation is unreal.", votes: 247, tag: "Dream Shelf", amazonUrl: "https://www.amazon.com/Sony-WH-1000XM5-Canceling-Headphones-Hands-Free/dp/B09XS7JWHH", actions: ["Add to someday", "View on Amazon"] },
+  { id: "c4", type: "products", icon: "✨", page: "Dream Shelf", time: "Most dreamed about", cardTitle: "Rolex Submariner", desc: "A forever watch with quiet presence — the kind of piece people save for and keep for life.", votes: 247, tag: "Dream Shelf", imageUrl: "https://media.rolex.com/image/upload/q_auto/f_auto/t_v7-cover-majesty-landscape/c_limit,w_1200/v1/a677b2c664f6/catalogue/2026/upright-c/m124060-0001", actions: ["Add to someday", "Open Dream Shelf"] },
   { id: "c5", type: "destinations", icon: "✈️", page: "Destinations", time: "Dream trip", cardTitle: "Kyoto in Cherry Blossom Season", location: "Japan", desc: "Temples, lantern-lit alleys, and a city transformed by spring. Save this one for the kind of trip you plan around.", votes: 276, tag: "Destinations", actions: ["Add to someday", "Plan trip"] },
 ];
 
@@ -270,7 +270,8 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
                     title:    post.cardTitle,
                     emoji:    TYPE_EMOJI[post.type] || "✨",
                     type:     post.type,
-                    imageUrl: "",
+                    imageUrl: post.imageUrl || "",
+                    categoryId: post.type === "products" ? "buy" : undefined,
                   });
                 } else {
                   onRemoveFromSomeday?.({

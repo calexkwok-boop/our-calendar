@@ -52,10 +52,10 @@ const DREAMSHELF_IMAGES = {
   b6: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=600&q=80",
   b7: "https://www.prada.com/content/dam/pradabkg_products/1/1BA/1BA457/NZVF0046/1BA457_NZV_F0046_V_EOM_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg",
   b8: "https://assets.hermes.com/is/image/hermesedito/P_169_KELLY_HEADER?fit=wrap%2C0&wid=1920&resMode=sharp2&op_usm=1%2C1%2C6%2C0",
-  s1: "https://images.unsplash.com/photo-1519744346363-dc1a3f6c6c8b?w=600&q=80",
-  s2: "https://images.unsplash.com/photo-1528701800489-20be3c3c8c66?w=600&q=80",
+  s1: "https://images.stockx.com/images/Air-Jordan-1-Retro-High-OG-Chicago-Reimagined-Product.jpg?fit=fill&bg=FFFFFF&w=140&h=75&q=57&dpr=2&trim=color&updated_at=1738193358",
+  s2: "https://encrypted-tbn3.gstatic.com/shopping?q=tbn:ANd9GcQhynJlN1yrf037AvDWWDJYI5wC6c8CMshpSyIYM1g90oPfwzSlqUr25x1gNiQSmlfjKeIIxZYrJEfmubsRbgcK54vE7L_ZewlPuLmYVAlPnODL85ERZwoW",
   s3: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=600&q=80",
-  s4: "https://images.unsplash.com/photo-1606813902917-55e58fd2f3a2?w=600&q=80",
+  s4: "data:image/webp;base64,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",
   s5: "https://images.unsplash.com/photo-1584735174914-6b1272458e3e?w=600&q=80",
   s6: "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&q=80",
   s7: "https://images.unsplash.com/photo-1585386959984-a4155224a1b3?w=600&q=80",
@@ -199,7 +199,7 @@ const CURATED_ITEMS = {
     { id: "s4",  name: "New Balance 550",              brand: "New Balance",priceRange: "$110–$140",     subFilter: ["collab"],                 emoji: "👟", description: "Aime Leon Dore put these back on the map and now everyone wants a pair. Deservedly." },
     { id: "s5",  name: "Air Max 97 Silver Bullet",     brand: "Nike",    priceRange: "$175–$500+",       subFilter: ["nike","grail"],           emoji: "👟", description: "Full-length air unit and a silver upper inspired by bullet trains. Still the best Air Max ever." },
     { id: "s6",  name: "Jordan 4 Retro",               brand: "Jordan",  priceRange: "$200–$1,000+",     subFilter: ["jordan","grail"],         emoji: "👟", description: "The shoe from Do the Right Thing. Every retro release sells out in minutes. For good reason." },
-    { id: "s7",  name: "Salehe Bembury x Crocs",       brand: "Crocs",   priceRange: "$80–$300+",        subFilter: ["collab"],                 emoji: "👟", description: "The collaboration nobody expected and everyone wanted. Proof that great design transcends category." },
+    { id: "s7",  name: "Common Projects Achilles Low", brand: "Common Projects", priceRange: "$400–$500", subFilter: ["grail"],                  emoji: "👟", description: "Minimal, Italian-made, and quietly iconic. The white sneaker that makes everything look more considered." },
     { id: "s8",  name: "Nike Dunk Low Panda",          brand: "Nike",    priceRange: "$110–$200+",       subFilter: ["nike"],                   emoji: "👟", description: "Black and white, simple as it gets, and somehow still the hardest dunk to keep in stock." },
   ],
   hobbies: [
@@ -462,7 +462,7 @@ const CommunityPost = React.memo(function CommunityPost({ post, photoUrl, curren
         </div>
         <button
           onClick={() => {
-            if (!wished) onAddToSomeday?.({ title: post.product_name, imageUrl: resolvedImage, emoji: cat?.emoji || "✨", type: "dreamshelf" });
+            if (!wished) onAddToSomeday?.({ title: post.product_name, imageUrl: resolvedImage, emoji: cat?.emoji || "✨", type: "dreamshelf", categoryId: "buy" });
             setWished(w => !w);
           }}
           className="ml-auto text-sm px-3 py-1.5 rounded-xl border font-['Caveat'] font-bold transition-all duration-200"
@@ -744,7 +744,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     });
     if (!alreadySaved) {
       const imageUrl = item.image || itemImages[getDreamShelfImageKey(item)] || await fetchDreamShelfImage(item) || "";
-      onAddToSomeday?.({ title: item.name, imageUrl, emoji: item.emoji || "✨", type: "dreamshelf", notes: `${item.brand} · ${item.priceRange || ""}` });
+      onAddToSomeday?.({ title: item.name, imageUrl, emoji: item.emoji || "✨", type: "dreamshelf", categoryId: "buy", notes: `${item.brand} · ${item.priceRange || ""}` });
     }
   }, [fetchDreamShelfImage, itemImages, onAddToSomeday, savedIds]);
 
@@ -795,7 +795,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className={`min-h-screen font-['DM_Sans'] ${dm ? 'bg-[#0e1520] text-slate-200' : 'bg-[#faf8f3] text-slate-800'}`}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Cormorant+Garamond:wght@400;500;600;700&display=swap'); .font-handwritten, .dream-shelf-pill { font-family: 'Caveat', cursive !important; } .dream-shelf-product-text { font-family: 'Cormorant Garamond', serif !important; } @keyframes dreamShelfChromeSweep { 0% { transform: translateX(-130%) rotate(12deg); opacity: 0; } 24% { opacity: .34; } 58% { opacity: .18; } 100% { transform: translateX(155%) rotate(12deg); opacity: 0; } }`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Cormorant+Garamond:wght@400;500;600;700&display=swap'); .font-handwritten, .dream-shelf-pill { font-family: 'Caveat', cursive !important; } .dream-shelf-product-text { font-family: 'Cormorant Garamond', serif !important; }`}</style>
       <div className="max-w-3xl mx-auto px-4 py-6 pb-24">
 
         {/* ── Hero ── */}
@@ -810,44 +810,6 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
               ? '0 24px 64px rgba(0,0,0,0.48), inset 0 1px 0 rgba(255,255,255,0.34), inset 0 -1px 0 rgba(216,190,127,0.24)'
               : '0 20px 50px rgba(143,113,66,0.18), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(143,113,66,0.18)',
           }}>
-          <div className="absolute inset-0 pointer-events-none" style={{
-            background: [
-              `radial-gradient(ellipse at 18% 8%, ${dm ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.72)'}, transparent 38%)`,
-              `radial-gradient(circle at 82% 18%, ${dm ? 'rgba(216,190,127,0.26)' : 'rgba(216,190,127,0.38)'}, transparent 18%)`,
-              `linear-gradient(116deg, transparent 0%, transparent 30%, ${dm ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.62)'} 38%, ${dm ? 'rgba(216,190,127,0.12)' : 'rgba(216,190,127,0.22)'} 44%, transparent 55%, transparent 100%)`,
-            ].join(', '),
-          }} />
-          <div className="absolute -inset-y-8 left-0 w-20 pointer-events-none"
-            style={{
-              animation: 'dreamShelfChromeSweep 5.5s ease-in-out infinite',
-              background: `linear-gradient(90deg, transparent, ${dm ? 'rgba(255,244,204,0.28)' : 'rgba(255,255,255,0.74)'}, transparent)`,
-              filter: 'blur(0.5px)',
-            }}
-          />
-          <div className="absolute right-8 top-7 h-14 w-14 rounded-full pointer-events-none"
-            style={{
-              background: `radial-gradient(circle, ${dm ? 'rgba(255,244,204,0.42)' : 'rgba(255,255,255,0.95)'} 0 2px, transparent 3px), radial-gradient(circle, rgba(216,190,127,0.36), transparent 58%)`,
-              opacity: dm ? 0.58 : 0.72,
-            }}
-          />
-          <div className="absolute right-16 top-20 h-px w-24 rotate-[-24deg] pointer-events-none"
-            style={{ background: `linear-gradient(90deg, transparent, ${dm ? 'rgba(255,244,204,0.55)' : 'rgba(143,113,66,0.34)'}, transparent)` }}
-          />
-          <div className="absolute left-8 bottom-8 h-px w-20 rotate-[18deg] pointer-events-none"
-            style={{ background: `linear-gradient(90deg, transparent, ${dm ? 'rgba(216,190,127,0.28)' : 'rgba(143,113,66,0.22)'}, transparent)` }}
-          />
-          <div className="absolute inset-x-0 top-1/2 h-16 -translate-y-1/2 rotate-[-8deg] pointer-events-none"
-            style={{
-              background: `linear-gradient(90deg, transparent 0%, ${dm ? 'rgba(255,255,255,0.00)' : 'rgba(255,255,255,0.00)'} 30%, ${dm ? 'rgba(255,244,204,0.08)' : 'rgba(255,255,255,0.32)'} 48%, transparent 63%, transparent 100%)`,
-              filter: 'blur(1px)',
-            }}
-          />
-          <div className="absolute right-20 top-24 h-20 w-28 pointer-events-none"
-            style={{
-              background: `radial-gradient(circle at 12px 10px, ${dm ? 'rgba(255,244,204,0.42)' : 'rgba(143,113,66,0.25)'} 0 1px, transparent 2px), radial-gradient(circle at 64px 26px, ${dm ? 'rgba(255,255,255,0.34)' : 'rgba(255,255,255,0.75)'} 0 1px, transparent 2px), radial-gradient(circle at 94px 8px, ${dm ? 'rgba(216,190,127,0.40)' : 'rgba(143,113,66,0.20)'} 0 1px, transparent 2px)`,
-              opacity: 0.75,
-            }}
-          />
           <div className="absolute right-10 top-8 text-2xl opacity-30 -rotate-6 select-none pointer-events-none">✨</div>
 
           <div className="relative z-10">
@@ -912,12 +874,12 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
         {/* ── Sub-filter strip (contextual) ── */}
         {subFilters.length > 0 && (
-          <div className="flex gap-2 mb-6 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          <div className="flex gap-1.5 mb-6 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
             {subFilters.map(sf => (
               <button
                 key={sf.id}
                 onClick={() => handleSubFilter(sf.id)}
-                className="dream-shelf-pill flex-shrink-0 rounded-full px-3 py-1 text-base font-bold transition-all duration-200 border focus:outline-none"
+                className="dream-shelf-pill flex-shrink-0 rounded-full px-2.5 py-0.5 text-sm font-bold transition-all duration-200 border focus:outline-none"
                 style={{
                   background: activeSubFilter === sf.id ? (dm ? 'rgba(168,176,188,0.15)' : 'rgba(168,176,188,0.12)') : 'transparent',
                   border: `1px solid ${activeSubFilter === sf.id ? SILVER : (dm ? 'rgba(255,255,255,0.07)' : '#e5e7eb')}`,
@@ -969,7 +931,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                     </div>
                   </div>
                   <button
-                    onClick={() => onAddToSomeday?.({ title: featured.product_name, imageUrl: featuredImage, emoji: "✨", type: "dreamshelf" })}
+                    onClick={() => onAddToSomeday?.({ title: featured.product_name, imageUrl: featuredImage, emoji: "✨", type: "dreamshelf", categoryId: "buy" })}
                     className="self-start px-4 py-2 rounded-xl text-sm font-['Caveat'] font-bold border transition-all"
                     style={{ background: dm ? TEAL_MUTED : '#f0fdfa', border: `1px solid ${TEAL_BORDER}`, color: TEAL, fontFamily: "'Caveat', cursive" }}
                   >
