@@ -321,65 +321,48 @@ function ItemModal({ item, isSaved, onSomeday, onMilestone, onShare, onClose, da
 }
 
 // ─── Item Card ────────────────────────────────────────────────────────────────
-const ItemCard = React.memo(function ItemCard({ item, onSomeday, savedIds, onMilestone, onShare, onOpen, darkMode }) {
+const ItemCard = React.memo(function ItemCard({ item, savedIds, onOpen, darkMode }) {
   const dm = darkMode;
   const isSaved = savedIds.has(item.id);
 
   return (
     <div
       onClick={() => onOpen(item)}
-      className={`border rounded-2xl overflow-hidden transition-all duration-200 flex flex-col cursor-pointer group ${dm ? 'bg-[#161f30] border-white/5 hover:border-amber-400/20' : 'bg-white border-slate-200 hover:border-amber-300/40'} hover:-translate-y-0.5`}
+      className={`border rounded-[26px] overflow-hidden transition-all duration-200 flex flex-col cursor-pointer group ${dm ? 'bg-[#161f30] border-white/5 hover:border-amber-400/25' : 'bg-white border-amber-100/70 hover:border-amber-300/50'} hover:-translate-y-1`}
+      style={{
+        boxShadow: dm
+          ? '0 16px 34px rgba(0,0,0,0.24)'
+          : '0 14px 32px rgba(143,113,66,0.10)',
+      }}
     >
       {/* Image / emoji */}
-      <div className={`w-full h-36 flex flex-col items-center justify-center gap-2 relative ${dm ? 'bg-[#131c2e]' : 'bg-gradient-to-br from-amber-50 to-yellow-50'}`}>
+      <div className={`w-full h-52 flex flex-col items-center justify-center gap-2 relative ${dm ? 'bg-[#131c2e]' : 'bg-gradient-to-br from-[#fffaf0] via-[#fffdf7] to-[#f3e7ce]'}`}>
         {item.image ? (
-          <img src={item.image} alt={item.name} className="w-full h-36 object-contain p-3" />
+          <img src={item.image} alt={item.name} className="w-full h-52 object-contain p-6 transition-transform duration-300 group-hover:scale-[1.03]" />
         ) : (
           <>
-            <span className="text-5xl">{item.emoji}</span>
-            <span className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: GOLD }}>{item.brand}</span>
+            <span className="text-6xl">{item.emoji}</span>
+            <span className="dream-shelf-product-text text-[11px] uppercase tracking-[0.18em] font-semibold" style={{ color: GOLD }}>{item.brand}</span>
           </>
         )}
         {isSaved && (
-          <div className="absolute top-2 right-2 text-[9px] font-bold px-2 py-0.5 rounded-md text-white" style={{ background: '#0d9488' }}>
+          <div className="dream-shelf-product-text absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-md text-white" style={{ background: '#0d9488' }}>
             ✓ Someday
           </div>
         )}
       </div>
 
-      <div className="p-3.5 flex flex-col flex-1">
-        <p className="text-[10px] uppercase tracking-widest mb-0.5 font-medium" style={{ color: SILVER }}>{item.brand}</p>
-        <h3 className={`font-['Caveat'] text-lg font-semibold leading-tight mb-1.5 flex-1 line-clamp-2 ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
+      <div className="p-5 flex flex-col flex-1">
+        <p className="dream-shelf-product-text text-[11px] uppercase tracking-[0.2em] mb-1 font-semibold" style={{ color: SILVER }}>{item.brand}</p>
+        <h3 className={`dream-shelf-product-text text-2xl font-semibold leading-tight mb-2 flex-1 line-clamp-2 ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
           {item.name}
         </h3>
 
         {item.priceRange && (
-          <p className="font-['Caveat'] text-base font-bold mb-3" style={{ color: GOLD }}>
+          <p className="dream-shelf-product-text text-xl font-semibold mb-0" style={{ color: GOLD }}>
             {item.priceRange}
           </p>
         )}
-
-        <div className="flex gap-2" onClick={e => e.stopPropagation()}>
-          <button
-            onClick={() => onSomeday(item)}
-            className="flex-1 rounded-xl py-2 text-sm font-['Caveat'] font-bold transition-all duration-200 border"
-            style={{
-              background: dm ? TEAL_MUTED : '#f0fdfa',
-              border: `1px solid ${TEAL_BORDER}`,
-              color: TEAL,
-              fontFamily: "'Caveat', cursive",
-            }}
-          >
-            {isSaved ? "✓ Someday" : "+ Someday"}
-          </button>
-          <button
-            onClick={() => onMilestone(item)}
-            className="flex-1 rounded-xl py-2 text-xs font-['Caveat'] font-bold transition-all duration-200 border"
-            style={{ background: dm ? LAVENDER_DARK_BG : LAVENDER_LIGHT, border: `1px solid ${LAVENDER_BORDER}`, color: dm ? LAVENDER_TEXT_DARK : LAVENDER_TEXT, fontFamily: "'Caveat', cursive" }}
-          >
-            🎯 Milestone
-          </button>
-        </div>
       </div>
     </div>
   );
@@ -681,7 +664,8 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         const response = await fetch(`/api/google-image-search?query=${encodeURIComponent(query)}&num=1`);
         if (!response.ok) return "";
         const data = await response.json();
-        const imageUrl = data?.results?.[0]?.url || "";
+        const result = data?.results?.[0];
+        const imageUrl = result?.displayUrl || result?.thumbnail || result?.url || "";
         if (!imageUrl) return "";
 
         setItemImages(prev => prev[key] ? prev : { ...prev, [key]: imageUrl });
@@ -780,14 +764,60 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className={`min-h-screen font-['DM_Sans'] ${dm ? 'bg-[#0e1520] text-slate-200' : 'bg-[#faf8f3] text-slate-800'}`}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap'); .font-handwritten, .dream-shelf-pill { font-family: 'Caveat', cursive !important; }`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Cormorant+Garamond:wght@400;500;600;700&display=swap'); .font-handwritten, .dream-shelf-pill { font-family: 'Caveat', cursive !important; } .dream-shelf-product-text { font-family: 'Cormorant Garamond', serif !important; } @keyframes dreamShelfChromeSweep { 0% { transform: translateX(-130%) rotate(12deg); opacity: 0; } 24% { opacity: .34; } 58% { opacity: .18; } 100% { transform: translateX(155%) rotate(12deg); opacity: 0; } }`}</style>
       <div className="max-w-3xl mx-auto px-4 py-6 pb-24">
 
         {/* ── Hero ── */}
-        <div className={`relative rounded-3xl p-8 mb-6 overflow-hidden border ${dm ? 'border-white/5' : 'border-amber-200/60'}`}
-          style={{ background: dm ? 'linear-gradient(135deg, #0f1a2e 0%, #1a1510 54%, #0e1520 100%)' : 'linear-gradient(135deg, #FFFBEB 0%, #FFF8DC 54%, #faf8f3 100%)' }}>
-          <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse 60% 80% at 80% 20%, ${dm ? 'rgba(201,168,76,0.07)' : 'rgba(201,168,76,0.12)'}, transparent)` }} />
-          <div className="absolute right-8 top-6 text-8xl opacity-10 -rotate-6 select-none">✨</div>
+        <div className="relative rounded-3xl p-8 mb-6 overflow-hidden border"
+          style={{
+            background: dm
+              ? 'linear-gradient(135deg, #070a12 0%, #1c2432 18%, #f8fafc 31%, #8f7142 39%, #151a24 52%, #d8be7f 66%, #080b12 100%)'
+              : 'linear-gradient(135deg, #fffdf7 0%, #d8be7f 16%, #ffffff 31%, #c7b68d 43%, #f8efe0 56%, #fef9ec 74%, #b9954f 100%)',
+            borderColor: dm ? 'rgba(216,190,127,0.55)' : 'rgba(143,113,66,0.48)',
+            borderWidth: 1.5,
+            boxShadow: dm
+              ? '0 24px 64px rgba(0,0,0,0.48), inset 0 1px 0 rgba(255,255,255,0.34), inset 0 -1px 0 rgba(216,190,127,0.24)'
+              : '0 20px 50px rgba(143,113,66,0.18), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(143,113,66,0.18)',
+          }}>
+          <div className="absolute inset-0 pointer-events-none" style={{
+            background: [
+              `radial-gradient(ellipse at 18% 8%, ${dm ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.72)'}, transparent 38%)`,
+              `radial-gradient(circle at 82% 18%, ${dm ? 'rgba(216,190,127,0.26)' : 'rgba(216,190,127,0.38)'}, transparent 18%)`,
+              `linear-gradient(116deg, transparent 0%, transparent 30%, ${dm ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.62)'} 38%, ${dm ? 'rgba(216,190,127,0.12)' : 'rgba(216,190,127,0.22)'} 44%, transparent 55%, transparent 100%)`,
+            ].join(', '),
+          }} />
+          <div className="absolute -inset-y-8 left-0 w-20 pointer-events-none"
+            style={{
+              animation: 'dreamShelfChromeSweep 5.5s ease-in-out infinite',
+              background: `linear-gradient(90deg, transparent, ${dm ? 'rgba(255,244,204,0.28)' : 'rgba(255,255,255,0.74)'}, transparent)`,
+              filter: 'blur(0.5px)',
+            }}
+          />
+          <div className="absolute right-8 top-7 h-14 w-14 rounded-full pointer-events-none"
+            style={{
+              background: `radial-gradient(circle, ${dm ? 'rgba(255,244,204,0.42)' : 'rgba(255,255,255,0.95)'} 0 2px, transparent 3px), radial-gradient(circle, rgba(216,190,127,0.36), transparent 58%)`,
+              opacity: dm ? 0.58 : 0.72,
+            }}
+          />
+          <div className="absolute right-16 top-20 h-px w-24 rotate-[-24deg] pointer-events-none"
+            style={{ background: `linear-gradient(90deg, transparent, ${dm ? 'rgba(255,244,204,0.55)' : 'rgba(143,113,66,0.34)'}, transparent)` }}
+          />
+          <div className="absolute left-8 bottom-8 h-px w-20 rotate-[18deg] pointer-events-none"
+            style={{ background: `linear-gradient(90deg, transparent, ${dm ? 'rgba(216,190,127,0.28)' : 'rgba(143,113,66,0.22)'}, transparent)` }}
+          />
+          <div className="absolute inset-x-0 top-1/2 h-16 -translate-y-1/2 rotate-[-8deg] pointer-events-none"
+            style={{
+              background: `linear-gradient(90deg, transparent 0%, ${dm ? 'rgba(255,255,255,0.00)' : 'rgba(255,255,255,0.00)'} 30%, ${dm ? 'rgba(255,244,204,0.08)' : 'rgba(255,255,255,0.32)'} 48%, transparent 63%, transparent 100%)`,
+              filter: 'blur(1px)',
+            }}
+          />
+          <div className="absolute right-20 top-24 h-20 w-28 pointer-events-none"
+            style={{
+              background: `radial-gradient(circle at 12px 10px, ${dm ? 'rgba(255,244,204,0.42)' : 'rgba(143,113,66,0.25)'} 0 1px, transparent 2px), radial-gradient(circle at 64px 26px, ${dm ? 'rgba(255,255,255,0.34)' : 'rgba(255,255,255,0.75)'} 0 1px, transparent 2px), radial-gradient(circle at 94px 8px, ${dm ? 'rgba(216,190,127,0.40)' : 'rgba(143,113,66,0.20)'} 0 1px, transparent 2px)`,
+              opacity: 0.75,
+            }}
+          />
+          <div className="absolute right-10 top-8 text-2xl opacity-30 -rotate-6 select-none pointer-events-none">✨</div>
 
           <div className="relative z-10">
             {onBack && (
@@ -904,29 +934,26 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         </p>
 
         {loading ? (
-          <div className="grid grid-cols-3 max-sm:grid-cols-2 gap-3 mb-8">
+          <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-5 mb-8">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className={`rounded-2xl h-72 animate-pulse border ${dm ? 'bg-[#161f30] border-white/5' : 'bg-amber-50/60 border-amber-100'}`} />
+              <div key={i} className={`rounded-[26px] h-80 animate-pulse border ${dm ? 'bg-[#161f30] border-white/5' : 'bg-amber-50/60 border-amber-100'}`} />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-3 max-sm:grid-cols-2 gap-3 mb-8">
+          <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-5 mb-8">
             {items.length > 0 ? items.map(item => {
               const itemWithImage = { ...item, image: item.image || itemImages[getDreamShelfImageKey(item)] || "" };
               return (
                 <ItemCard
                   key={item.id}
                   item={itemWithImage}
-                  onSomeday={handleSomeday}
                   savedIds={savedIds}
-                  onMilestone={handleMilestone}
-                  onShare={setSharingItem}
                   onOpen={setSelectedItem}
                   darkMode={dm}
                 />
               );
             }) : (
-              <div className="col-span-3 text-center py-16 text-slate-400">
+              <div className="col-span-2 max-sm:col-span-1 text-center py-16 text-slate-400">
                 <div className="text-5xl mb-4">✨</div>
                 <p className="font-['Caveat'] text-2xl mb-1">Nothing here yet</p>
                 <p className="text-sm">Try a different filter</p>

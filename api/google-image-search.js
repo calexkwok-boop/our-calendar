@@ -51,6 +51,7 @@ export default async function handler(req, res) {
     const results = (data.items || []).map(item => ({
       url: item.link,
       thumbnail: item.image?.thumbnailLink || "",
+      displayUrl: item.image?.thumbnailLink || item.link || "",
       title: item.title || "",
       source: item.displayLink || "",
     }));
