@@ -4,6 +4,7 @@ import BoardGamePage from "./BoardGamePage";
 import RestaurantPage from "./RestaurantPage";
 import HikingPage from "./HikingPage";
 import ProductsPage from "./ProductsPage";
+import DestinationsPage from "./DestinationsPage";
 
 const TMDB_KEY = "b66752afda91b8258d32f4388f049a22";
 const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
@@ -15,6 +16,7 @@ const COMMUNITY_POSTS = [
   { id: "c2", type: "games", icon: "🎲", page: "Board Games", time: "Community pick", cardTitle: "Wingspan", desc: "Elegant engine-builder about birds. Perfect for 2–5 players, around 90 minutes.", votes: 312, tag: "Games", actions: ["Add to someday", "Plan game night"] },
   { id: "c3", type: "restaurants", icon: "🍜", page: "Restaurants", time: "New addition", cardTitle: "Dumpling Time", location: "SoMa, San Francisco", desc: "Handcrafted dumplings, beautiful space. The XLB are unmissable.", votes: 198, tag: "Restaurants", actions: ["Add to someday", "Plan dinner"] },
   { id: "c4", type: "products", icon: "🛍️", page: "Products", time: "Community pick", cardTitle: "Sony WH-1000XM5", desc: "Most recommended headphones this month — noise cancellation is unreal.", votes: 247, tag: "Products", actions: ["Add to someday", "Browse products"] },
+  { id: "c5", type: "destinations", icon: "✈️", page: "Destinations", time: "Dream trip", cardTitle: "Kyoto in Cherry Blossom Season", location: "Japan", desc: "Temples, lantern-lit alleys, and a city transformed by spring. Save this one for the kind of trip you plan around.", votes: 276, tag: "Destinations", actions: ["Add to someday", "Plan trip"] },
 ];
 
 const SOURCE_CONFIG = {
@@ -24,6 +26,7 @@ const SOURCE_CONFIG = {
   games:       { label: "Board Games",       sub: "892 members",             icon: "🎲", bg: "bg-amber-500/10" },
   restaurants: { label: "Restaurants",       sub: "3.1k members",            icon: "🍜", bg: "bg-pink-500/10" },
   products:    { label: "Products",          sub: "Wishlist & recommendations", icon: "🛍️", bg: "bg-violet-500/10" },
+  destinations:{ label: "Destinations",       sub: "Trips worth dreaming about", icon: "✈️", bg: "bg-indigo-500/10" },
 };
 
 const TAG_STYLES = {
@@ -33,6 +36,7 @@ const TAG_STYLES = {
   Games:       "bg-amber-500/10 text-amber-600 dark:text-amber-400",
   Restaurants: "bg-pink-500/10 text-pink-600 dark:text-pink-400",
   Products:    "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+  Destinations:"bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
 };
 
 function useSwipeDownSheet(onClose, open) {
@@ -219,7 +223,7 @@ function MovieCard({ movie, onAddToSomeday, onRemoveFromSomeday, onPageTap, onPl
   );
 }
 
-const TYPE_EMOJI = { hiking: "🥾", games: "🎲", restaurants: "🍜", products: "🛍️" };
+const TYPE_EMOJI = { hiking: "🥾", games: "🎲", restaurants: "🍜", products: "🛍️", destinations: "✈️" };
 
 function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveFromSomeday }) {
   const [inSomeday, setInSomeday] = useState(false);
@@ -272,6 +276,13 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
                   });
                 } else if (post.type === "products") {
                   onPageTap?.("products");
+                } else if (post.type === "destinations") {
+                  onPlanEvent?.({
+                    title: `Trip to ${post.cardTitle}`,
+                    notes: post.location ? post.location : '',
+                    category: 'trip',
+                    location: post.location || post.cardTitle,
+                  });
                 }
               }
             }}
@@ -339,7 +350,7 @@ function FilterDrawer({ open, sources, onToggle, onClose }) {
         </div>
         <div className="px-5 mb-6">
           <p className="text-[10px] font-medium tracking-widest uppercase text-gray-400 dark:text-gray-600 mb-2.5">Pages you've joined</p>
-          {["movies", "hiking", "games", "restaurants", "products"].map(key => (
+          {["movies", "hiking", "games", "restaurants", "products", "destinations"].map(key => (
             <ToggleRow key={key} sourceKey={key} config={SOURCE_CONFIG[key]} enabled={sources[key]} onToggle={onToggle} />
           ))}
         </div>
@@ -408,6 +419,7 @@ function CategoryGrid({ onPageTap }) {
     { key: 'hiking',      icon: '🥾', label: 'Hiking & Outdoors', page: 'hiking' },
     { key: 'restaurants', icon: '🍜', label: 'Restaurants',       page: 'restaurants' },
     { key: 'products',    icon: '🛍️', label: 'Products',          page: 'products' },
+    { key: 'destinations',icon: '✈️', label: 'Destinations',      page: 'destinations' },
   ];
   return (
     <div className="px-3.5 grid grid-cols-2 gap-2.5">
@@ -429,7 +441,7 @@ function CategoryGrid({ onPageTap }) {
 }
 
 export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPlanEvent = () => {}, darkMode = false }) {
-  const [sources, setSources]             = useState({ friends: true, movies: true, hiking: true, games: true, restaurants: true, products: true });
+  const [sources, setSources]             = useState({ friends: true, movies: true, hiking: true, games: true, restaurants: true, products: true, destinations: true });
   const [drawerOpen, setDrawerOpen]       = useState(false);
   const [search, setSearch]               = useState("");
   const [movies, setMovies]               = useState([]);
@@ -465,6 +477,9 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
   if (activePage === "restaurants") {
     return <RestaurantPage onBack={() => setActivePage(null)} onAddEvent={onPlanEvent} onSaveToSomeday={onAddToSomeday} onRemoveFromSomeday={onRemoveFromSomeday} darkMode={darkMode} />;
   }
+  if (activePage === "destinations") {
+    return <DestinationsPage onBack={() => setActivePage(null)} onAddEvent={onPlanEvent} onSaveToSomeday={onAddToSomeday} onRemoveFromSomeday={onRemoveFromSomeday} darkMode={darkMode} />;
+  }
 
   const anyOff        = Object.values(sources).some(v => !v);
   const moviePosts    = movies.slice(0, 6).map(m => ({ ...m, type: "movies" }));
@@ -494,7 +509,7 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
       return out;
     }
     // "Good for this weekend" — casual/quick community items + top-rated movies
-    const weekend  = take([...activeCom.filter(p => ['hiking', 'restaurants'].includes(p.type)), ...moviesByRating], 5);
+    const weekend  = take([...activeCom.filter(p => ['hiking', 'restaurants', 'destinations'].includes(p.type)), ...moviesByRating], 5);
     // "From your friends" — friend activity posts (omit if empty)
     const friends  = activeFriends.length > 0 ? take(activeFriends, 4) : [];
     // "Hidden gems" — lower-voted community + lower-popularity movies
@@ -525,7 +540,7 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
             </svg>
             <input
               type="text" value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search movies, friends, places..."
+              placeholder="Search movies, friends, places, trips..."
               className="bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-600 outline-none flex-1 min-w-0"
             />
             {search && <button onClick={() => setSearch("")} className="text-gray-400 dark:text-gray-600 text-xs leading-none">✕</button>}
