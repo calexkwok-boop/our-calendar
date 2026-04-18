@@ -52,6 +52,14 @@ const DREAMSHELF_IMAGES = {
   b6: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=600&q=80",
   b7: "https://www.prada.com/content/dam/pradabkg_products/1/1BA/1BA457/NZVF0046/1BA457_NZV_F0046_V_EOM_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg",
   b8: "https://assets.hermes.com/is/image/hermesedito/P_169_KELLY_HEADER?fit=wrap%2C0&wid=1920&resMode=sharp2&op_usm=1%2C1%2C6%2C0",
+  s1: "https://images.unsplash.com/photo-1519744346363-dc1a3f6c6c8b?w=600&q=80",
+  s2: "https://images.unsplash.com/photo-1528701800489-20be3c3c8c66?w=600&q=80",
+  s3: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=600&q=80",
+  s4: "https://images.unsplash.com/photo-1606813902917-55e58fd2f3a2?w=600&q=80",
+  s5: "https://images.unsplash.com/photo-1584735174914-6b1272458e3e?w=600&q=80",
+  s6: "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&q=80",
+  s7: "https://images.unsplash.com/photo-1585386959984-a4155224a1b3?w=600&q=80",
+  s8: "https://images.unsplash.com/photo-1606813902770-34e9a1c5b1c5?w=600&q=80",
 };
 
 // ─── Category config ──────────────────────────────────────────────────────────
