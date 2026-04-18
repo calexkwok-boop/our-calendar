@@ -858,7 +858,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
             Hit the trails
           </h1>
           <p className="text-sm text-slate-500 leading-relaxed max-w-sm mb-6">
-            Discover trails near you, save hikes to your Dreamboard, and see where your friends have been adventuring.
+            Discover trails near you, save hikes to your Komo Book, and see where your friends have been adventuring.
           </p>
         </div>
 
@@ -1066,7 +1066,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
           <div className="bg-gradient-to-r from-violet-500/10 to-pink-500/8 border border-violet-400/20 rounded-3xl p-5 mb-8 flex items-center gap-4">
             <span className="text-3xl flex-shrink-0">📌</span>
             <div>
-              <h3 className={`font-['Caveat'] text-xl font-bold leading-tight ${dm ? 'text-slate-100' : 'text-slate-900'}`}>Your Dreamboard</h3>
+              <h3 className={`font-['Caveat'] text-xl font-bold leading-tight ${dm ? 'text-slate-100' : 'text-slate-900'}`}>Your Komo Book</h3>
               <p className="text-sm text-slate-500">
                 You've saved {savedIds.size} trail{savedIds.size !== 1 ? "s" : ""} — ready to pick a date?
               </p>

@@ -735,8 +735,9 @@ const DestinationsPage = ({
   }, [destinations, search, vibe]);
 
   const fetchDestinationPhoto = useCallback(async (destination) => {
-    if (!destination?.id || destination.photo || placePhotos[destination.id] || photoFetchedRef.current.has(String(destination.id))) return;
-    photoFetchedRef.current.add(String(destination.id));
+    const destinationId = String(destination?.id || '');
+    if (!destinationId || destination.photo || photoFetchedRef.current.has(destinationId)) return;
+    photoFetchedRef.current.add(destinationId);
 
     try {
       const q = encodeURIComponent(`${destination.name} ${destination.location || ''} travel destination`);
@@ -747,20 +748,24 @@ const DestinationsPage = ({
       if (!photoRef) return;
 
       const url = `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800`;
-      setPlacePhotos((prev) => ({ ...prev, [destination.id]: url }));
+      setPlacePhotos((prev) => (
+        prev[destination.id] ? prev : { ...prev, [destination.id]: url }
+      ));
 
       const attribution = photo.html_attributions?.[0] || '';
       if (attribution) {
-        setPhotoAttributions((prev) => ({ ...prev, [destination.id]: attribution }));
+        setPhotoAttributions((prev) => (
+          prev[destination.id] ? prev : { ...prev, [destination.id]: attribution }
+        ));
       }
     } catch {
       // Google photos are a progressive enhancement; keep emoji cards if unavailable.
     }
-  }, [placePhotos]);
+  }, []);
 
   useEffect(() => {
     if (!filtered.length) return;
-    filtered.forEach((destination) => fetchDestinationPhoto(destination));
+    filtered.slice(0, 24).forEach((destination) => fetchDestinationPhoto(destination));
   }, [filtered, fetchDestinationPhoto]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
