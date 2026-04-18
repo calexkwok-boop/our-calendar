@@ -676,7 +676,7 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
             <button onClick={onClose} style={{ flex: 1, padding: '12px 14px', borderRadius: 14, border: `1px solid ${bw}`, background: 'transparent', color: ts, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
               Cancel
             </button>
-            <button onClick={handleSubmit} disabled={submitting} style={{ flex: 1, padding: '12px 14px', borderRadius: 14, border: 'none', background: submitting ? 'rgba(201,161,93,0.45)' : '#C9A15D', color: '#fff', fontSize: 16, fontWeight: 700, fontFamily: handwritten, cursor: submitting ? 'default' : 'pointer' }}>
+            <button onClick={handleSubmit} disabled={submitting} style={{ flex: 1, padding: '12px 14px', borderRadius: 14, border: darkMode ? '1px solid rgba(245,200,66,0.24)' : 'none', background: submitting ? 'rgba(201,161,93,0.45)' : (darkMode ? 'linear-gradient(135deg, #C9A15D, #92621a)' : '#C9A15D'), color: '#fff', fontSize: 16, fontWeight: 700, fontFamily: handwritten, cursor: submitting ? 'default' : 'pointer', boxShadow: darkMode && !submitting ? '0 10px 22px rgba(0,0,0,0.24)' : 'none' }}>
               {submitting ? 'Sharing…' : 'Share this place'}
             </button>
           </div>
@@ -1142,17 +1142,47 @@ const RestaurantPage = ({
       )}
 
       {/* ── "Found a great spot?" CTA card ── */}
-      <div style={{ margin: '0 16px 20px', borderRadius: 20, background: '#FFF3E8', border: '1.5px solid #F5C496', padding: '28px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: -30, right: -30, width: 100, height: 100, borderRadius: '50%', background: '#FBBF7C', opacity: 0.18, pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: -20, left: -20, width: 70, height: 70, borderRadius: '50%', background: '#F97316', opacity: 0.10, pointerEvents: 'none' }} />
+      <div style={{
+        margin: '0 16px 20px',
+        borderRadius: 20,
+        background: darkMode
+          ? 'linear-gradient(135deg, rgba(22,31,48,0.98), rgba(45,33,24,0.92))'
+          : '#FFF3E8',
+        border: darkMode ? '1.5px solid rgba(201,161,93,0.24)' : '1.5px solid #F5C496',
+        boxShadow: darkMode ? '0 18px 42px rgba(0,0,0,0.28)' : 'none',
+        padding: '28px 24px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 6,
+        textAlign: 'center',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        <div style={{ position: 'absolute', top: -30, right: -30, width: 100, height: 100, borderRadius: '50%', background: darkMode ? '#C9A15D' : '#FBBF7C', opacity: darkMode ? 0.12 : 0.18, pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: -20, left: -20, width: 70, height: 70, borderRadius: '50%', background: darkMode ? '#F5C842' : '#F97316', opacity: darkMode ? 0.08 : 0.10, pointerEvents: 'none' }} />
         <div style={{ fontSize: 28, marginBottom: 2 }}>📍</div>
-        <p style={{ fontSize: 18, fontWeight: 500, color: '#7C3313', fontFamily: handwritten, margin: 0 }}>Found a great spot?</p>
-        <p style={{ fontSize: 13, color: '#A04B20', margin: '0 0 10px' }}>Share it with the community</p>
+        <p style={{ fontSize: 18, fontWeight: 500, color: darkMode ? '#F8E7C2' : '#7C3313', fontFamily: handwritten, margin: 0 }}>Found a great spot?</p>
+        <p style={{ fontSize: 13, color: darkMode ? 'rgba(248,231,194,0.68)' : '#A04B20', margin: '0 0 10px' }}>Share it with the community</p>
         <button
           onClick={() => setIsRecommendOpen(true)}
-          style={{ background: '#EA6C25', color: 'white', border: 'none', borderRadius: 50, padding: '11px 28px', fontSize: 18, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontFamily: handwritten }}
+          style={{
+            background: darkMode ? 'linear-gradient(135deg, #C9A15D, #92621a)' : '#EA6C25',
+            color: 'white',
+            border: darkMode ? '1px solid rgba(245,200,66,0.28)' : 'none',
+            borderRadius: 50,
+            padding: '11px 28px',
+            fontSize: 18,
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            fontFamily: handwritten,
+            boxShadow: darkMode ? '0 10px 22px rgba(0,0,0,0.28)' : 'none'
+          }}
         >
-          <span style={{ background: '#7C3313', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <span style={{ background: darkMode ? 'rgba(15,23,42,0.45)' : '#7C3313', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5H8M8 5L5.5 2.5M8 5L5.5 7.5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </span>
           Recommend a place
