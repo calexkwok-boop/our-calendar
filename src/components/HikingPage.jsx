@@ -689,14 +689,18 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
       if (loc) {
         const nextLocation = { lat: loc.lat, lon: loc.lng };
         setUserLocation(nextLocation);
+        const googleTrail = googlePlaceToTrail(place, suggestion);
         const matchedTrails = await fetchTrails(nextLocation.lat, nextLocation.lon, nextQuery);
-        if (!matchedTrails?.length && place) {
-          const googleTrail = googlePlaceToTrail(place, suggestion);
-          setTrails([googleTrail]);
-          const attribution = place.photos?.[0]?.html_attributions?.[0] || "";
-          if (attribution) {
-            setPhotoAttributions((prev) => ({ ...prev, [googleTrail.id]: attribution }));
-          }
+        const hasExactMatch = (matchedTrails || []).some((trail) => (
+          String(trail.id) === String(googleTrail.id)
+          || trail.googlePlaceId === googleTrail.googlePlaceId
+          || trail.name?.trim().toLowerCase() === googleTrail.name.trim().toLowerCase()
+        ));
+        setTrails(hasExactMatch ? matchedTrails : [googleTrail, ...(matchedTrails || [])]);
+
+        const attribution = place.photos?.[0]?.html_attributions?.[0] || "";
+        if (attribution) {
+          setPhotoAttributions((prev) => ({ ...prev, [googleTrail.id]: attribution }));
         }
         return;
       }
@@ -903,12 +907,12 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
             <button
               key={collection.id}
               onClick={() => handleTrailCollection(collection)}
-              className={`rounded-full px-4 py-1.5 text-xs transition-all duration-200 border ${
+              className={`rounded-full px-4 py-1.5 text-xs transition-all duration-200 border focus:outline-none ${
                 activeFilter === collection.id
                   ? "bg-teal-400/12 border-teal-400/40 text-teal-600"
                   : dm
-                    ? "bg-[#161f30] border-white/7 text-slate-500 hover:text-teal-400 hover:border-teal-400/25"
-                    : "bg-white border-slate-200 text-slate-500 hover:text-teal-600 hover:border-teal-300"
+                    ? "bg-white/5 border-white/7 text-slate-500 hover:text-teal-400 hover:border-teal-400/25"
+                    : "bg-slate-100 border-slate-200 text-slate-500 hover:text-teal-600 hover:border-teal-300"
               }`}
             >
               {collection.emoji} {collection.label}
