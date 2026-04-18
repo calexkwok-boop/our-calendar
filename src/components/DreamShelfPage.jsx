@@ -35,6 +35,25 @@ const getDreamShelfImageQuery = (item = {}) => [
   "official",
 ].filter(Boolean).join(" ");
 
+const DREAMSHELF_IMAGES = {
+  w1: "https://images.unsplash.com/photo-1547996160-81dfa63595aa?w=600&q=80",
+  w2: "https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=600&q=80",
+  w3: "https://images.unsplash.com/photo-1518544801976-3e188e67a0f5?w=600&q=80",
+  w4: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=600&q=80",
+  w5: "https://images.unsplash.com/photo-1542496658-e33a6d0d50f6?w=600&q=80",
+  w6: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80",
+  w7: "https://images.unsplash.com/photo-1490367532201-b9bc1dc483f6?w=600&q=80",
+  w8: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&q=80",
+  b1: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600&q=80",
+  b2: "https://images.unsplash.com/photo-1593032465171-8f3a2f4a54c1?w=600&q=80",
+  b3: "https://images.unsplash.com/photo-1591561954557-26941169b49e?w=600&q=80",
+  b4: "https://images.unsplash.com/photo-1611930022073-b7a4ba5fcccd?w=600&q=80",
+  b5: "https://images.unsplash.com/photo-1592878849122-1cfad6a1c8a6?w=600&q=80",
+  b6: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=600&q=80",
+  b7: "https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=600&q=80",
+  b8: "https://images.unsplash.com/photo-1585487000160-6ebcfceb0d03?w=600&q=80",
+};
+
 // ─── Category config ──────────────────────────────────────────────────────────
 const CATEGORIES = [
   { id: "watches",   label: "Watches",    emoji: "⌚" },
@@ -635,7 +654,11 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   const loadCategory = useCallback((cat, subFilter = "all") => {
     setLoading(true);
     setActiveSubFilter(subFilter);
-    const allItems = (CURATED_ITEMS[cat.id] || []).map(item => ({ ...item, category: cat.id }));
+    const allItems = (CURATED_ITEMS[cat.id] || []).map(item => ({
+      ...item,
+      category: cat.id,
+      image: item.image || DREAMSHELF_IMAGES[item.id] || "",
+    }));
     const filtered = subFilter === "all"
       ? allItems
       : allItems.filter(item => item.subFilter?.includes(subFilter));
