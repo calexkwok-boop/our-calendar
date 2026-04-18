@@ -12,6 +12,14 @@ const GOLD_MUTED  = "rgba(201,168,76,0.15)";
 const GOLD_BORDER = "rgba(201,168,76,0.35)";
 const SILVER      = "#A8B0BC";
 const SILVER_MUTED = "rgba(168,176,188,0.12)";
+const TEAL        = "#0d9488";
+const TEAL_MUTED  = "rgba(45,212,191,0.15)";
+const TEAL_BORDER = "rgba(45,212,191,0.35)";
+const LAVENDER_LIGHT = "#f5f3ff";
+const LAVENDER_DARK_BG = "rgba(168,85,247,0.12)";
+const LAVENDER_BORDER = "rgba(168,85,247,0.28)";
+const LAVENDER_TEXT = "#7c3aed";
+const LAVENDER_TEXT_DARK = "#c4b5fd";
 
 const getDreamShelfImageKey = (item = {}) => (
   item.id ||
@@ -281,9 +289,10 @@ function ItemModal({ item, isSaved, onSomeday, onMilestone, onShare, onClose, da
             onClick={handleSomeday}
             className="w-full rounded-2xl py-3 text-base font-['Caveat'] font-bold border transition-all duration-200"
             style={{
-              background: saved ? 'rgba(45,212,191,0.15)' : (dm ? GOLD_MUTED : '#FFF8E1'),
-              border: `1px solid ${saved ? 'rgba(45,212,191,0.3)' : GOLD_BORDER}`,
-              color: saved ? '#0d9488' : GOLD_DARK,
+              background: dm ? TEAL_MUTED : '#f0fdfa',
+              border: `1px solid ${TEAL_BORDER}`,
+              color: TEAL,
+              fontFamily: "'Caveat', cursive",
             }}
           >
             {saved ? "✓ On my Someday List" : "+ Add to Someday List"}
@@ -292,7 +301,7 @@ function ItemModal({ item, isSaved, onSomeday, onMilestone, onShare, onClose, da
             <button
               onClick={() => { onMilestone(item); onClose(); }}
               className="flex-1 rounded-2xl py-3 text-sm font-['Caveat'] font-bold transition-all text-center border"
-              style={{ background: dm ? 'rgba(168,85,247,0.12)' : '#f5f3ff', border: `1px solid ${dm ? 'rgba(168,85,247,0.25)' : '#d8b4fe'}`, color: dm ? '#c4b5fd' : '#6d28d9' }}
+              style={{ background: dm ? LAVENDER_DARK_BG : LAVENDER_LIGHT, border: `1px solid ${LAVENDER_BORDER}`, color: dm ? LAVENDER_TEXT_DARK : LAVENDER_TEXT, fontFamily: "'Caveat', cursive" }}
             >
               🎯 Make it a milestone
             </button>
@@ -355,9 +364,10 @@ const ItemCard = React.memo(function ItemCard({ item, onSomeday, savedIds, onMil
             onClick={() => onSomeday(item)}
             className="flex-1 rounded-xl py-2 text-sm font-['Caveat'] font-bold transition-all duration-200 border"
             style={{
-              background: isSaved ? 'rgba(45,212,191,0.15)' : (dm ? GOLD_MUTED : '#FFFBEB'),
-              border: `1px solid ${isSaved ? 'rgba(45,212,191,0.3)' : GOLD_BORDER}`,
-              color: isSaved ? '#0d9488' : GOLD_DARK,
+              background: dm ? TEAL_MUTED : '#f0fdfa',
+              border: `1px solid ${TEAL_BORDER}`,
+              color: TEAL,
+              fontFamily: "'Caveat', cursive",
             }}
           >
             {isSaved ? "✓ Someday" : "+ Someday"}
@@ -365,7 +375,7 @@ const ItemCard = React.memo(function ItemCard({ item, onSomeday, savedIds, onMil
           <button
             onClick={() => onMilestone(item)}
             className="flex-1 rounded-xl py-2 text-xs font-['Caveat'] font-bold transition-all duration-200 border"
-            style={{ background: dm ? 'rgba(168,85,247,0.10)' : '#f5f3ff', border: `1px solid ${dm ? 'rgba(168,85,247,0.2)' : '#e9d5ff'}`, color: dm ? '#c4b5fd' : '#7c3aed' }}
+            style={{ background: dm ? LAVENDER_DARK_BG : LAVENDER_LIGHT, border: `1px solid ${LAVENDER_BORDER}`, color: dm ? LAVENDER_TEXT_DARK : LAVENDER_TEXT, fontFamily: "'Caveat', cursive" }}
           >
             🎯 Milestone
           </button>
@@ -446,7 +456,7 @@ const CommunityPost = React.memo(function CommunityPost({ post, photoUrl, curren
             setWished(w => !w);
           }}
           className="ml-auto text-sm px-3 py-1.5 rounded-xl border font-['Caveat'] font-bold transition-all duration-200"
-          style={{ background: wished ? 'rgba(45,212,191,0.15)' : (dm ? GOLD_MUTED : '#FFFBEB'), border: `1px solid ${wished ? 'rgba(45,212,191,0.3)' : GOLD_BORDER}`, color: wished ? '#0d9488' : GOLD_DARK }}
+          style={{ background: dm ? TEAL_MUTED : '#f0fdfa', border: `1px solid ${TEAL_BORDER}`, color: TEAL, fontFamily: "'Caveat', cursive" }}
         >
           {wished ? "✓ Someday" : "+ Someday"}
         </button>
@@ -770,7 +780,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className={`min-h-screen font-['DM_Sans'] ${dm ? 'bg-[#0e1520] text-slate-200' : 'bg-[#faf8f3] text-slate-800'}`}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap'); .font-handwritten { font-family: 'Caveat', cursive; }`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap'); .font-handwritten, .dream-shelf-pill { font-family: 'Caveat', cursive !important; }`}</style>
       <div className="max-w-3xl mx-auto px-4 py-6 pb-24">
 
         {/* ── Hero ── */}
@@ -785,12 +795,15 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 4l-5 5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </button>
             )}
-            <h1 className="font-['Caveat'] text-5xl font-bold leading-tight mb-2 bg-gradient-to-r bg-clip-text text-transparent"
-              style={{ backgroundImage: dm ? `linear-gradient(90deg, #f8fafc, ${GOLD})` : `linear-gradient(90deg, #1a1208, ${GOLD_DARK})` }}>
-              The Dream Shelf
+            <h1 className="font-handwritten text-5xl font-bold leading-tight mb-2 bg-gradient-to-r bg-clip-text text-transparent"
+              style={{
+                backgroundImage: dm ? `linear-gradient(90deg, #f8fafc, ${GOLD})` : `linear-gradient(90deg, #1a1208, ${GOLD_DARK})`,
+                fontFamily: "'Caveat', cursive",
+              }}>
+              Dream Shelf
             </h1>
             <p className="text-sm leading-relaxed max-w-sm" style={{ color: dm ? '#9ca3af' : '#78716c' }}>
-              Objects worth dreaming about. Save them, plan for them, celebrate when you get them.
+              Some dreams take you somewhere. Some you take with you.
             </p>
           </div>
         </div>
@@ -801,11 +814,12 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
             <button
               key={cat.id}
               onClick={() => handleCategoryClick(cat)}
-              className="flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-['Caveat'] font-bold transition-all duration-200 border focus:outline-none"
+              className="dream-shelf-pill flex-shrink-0 rounded-full px-4 py-1.5 text-lg font-bold transition-all duration-200 border focus:outline-none"
               style={{
                 background: activeCategory?.id === cat.id ? GOLD_MUTED : (dm ? 'rgba(255,255,255,0.05)' : '#f3f4f6'),
                 border: `1px solid ${activeCategory?.id === cat.id ? GOLD_BORDER : (dm ? 'rgba(255,255,255,0.07)' : '#e5e7eb')}`,
                 color: activeCategory?.id === cat.id ? GOLD_DARK : (dm ? '#6b7280' : '#9ca3af'),
+                fontFamily: "'Caveat', cursive",
               }}
             >
               {cat.emoji} {cat.label}
@@ -820,11 +834,12 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
               <button
                 key={sf.id}
                 onClick={() => handleSubFilter(sf.id)}
-                className="flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-all duration-200 border focus:outline-none"
+                className="dream-shelf-pill flex-shrink-0 rounded-full px-3 py-1 text-base font-bold transition-all duration-200 border focus:outline-none"
                 style={{
                   background: activeSubFilter === sf.id ? (dm ? 'rgba(168,176,188,0.15)' : 'rgba(168,176,188,0.12)') : 'transparent',
                   border: `1px solid ${activeSubFilter === sf.id ? SILVER : (dm ? 'rgba(255,255,255,0.07)' : '#e5e7eb')}`,
                   color: activeSubFilter === sf.id ? (dm ? '#e2e8f0' : '#374151') : (dm ? '#6b7280' : '#9ca3af'),
+                  fontFamily: "'Caveat', cursive",
                 }}
               >
                 {sf.label}
@@ -873,7 +888,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                   <button
                     onClick={() => onAddToSomeday?.({ title: featured.product_name, imageUrl: featuredImage, emoji: "✨", type: "dreamshelf" })}
                     className="self-start px-4 py-2 rounded-xl text-sm font-['Caveat'] font-bold border transition-all"
-                    style={{ background: dm ? GOLD_MUTED : '#FFFBEB', border: `1px solid ${GOLD_BORDER}`, color: GOLD_DARK }}
+                    style={{ background: dm ? TEAL_MUTED : '#f0fdfa', border: `1px solid ${TEAL_BORDER}`, color: TEAL, fontFamily: "'Caveat', cursive" }}
                   >
                     + Someday
                   </button>
