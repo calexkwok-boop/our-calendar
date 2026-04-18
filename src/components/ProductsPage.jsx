@@ -236,7 +236,7 @@ const ProductCard = React.memo(function ProductCard({ product, onSomeday, savedI
   );
 });
 
-const CommunityPost = React.memo(function CommunityPost({ post, currentUserId, onAddToSomeday, onVote, darkMode }) {
+const CommunityPost = React.memo(function CommunityPost({ post, photoUrl, currentUserId, onAddToSomeday, onVote, darkMode }) {
   const dm = darkMode;
   const [vote, setVote]     = useState(0);
   const [likes, setLikes]   = useState(post.likes_count ?? 0);
@@ -275,9 +275,9 @@ const CommunityPost = React.memo(function CommunityPost({ post, currentUserId, o
 
       {/* Product block */}
       <div className="flex gap-3 mb-3">
-        {post.product_image ? (
+        {(photoUrl || post.product_image) ? (
           <img
-            src={post.product_image}
+            src={photoUrl || post.product_image}
             alt={post.product_name}
             className={`w-20 h-20 rounded-xl object-contain p-1.5 flex-shrink-0 ${dm ? 'bg-[#1a2540]' : 'bg-slate-100'}`}
           />
@@ -374,7 +374,7 @@ const CommunityPost = React.memo(function CommunityPost({ post, currentUserId, o
             if (!wished) {
               onAddToSomeday?.({
                 title:    post.product_name,
-                imageUrl: post.product_image || "",
+                imageUrl: photoUrl || post.product_image || "",
                 emoji:    "🛍️",
                 type:     "products",
               });
@@ -839,6 +839,8 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
   const [postingProduct, setPostingProduct] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [currentUserId,  setCurrentUserId]  = useState(null);
+  const [communityPostImages, setCommunityPostImages] = useState({});
+  const communityPostImageFetchedRef = useRef(new Set());
 
   // ── Auth ──
   useEffect(() => {
@@ -927,6 +929,47 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
       setFeaturedPost(MOCK_FEED[0]);
     }
   };
+
+  const fetchCommunityPostImage = useCallback(async (post) => {
+    const postId = String(post?.id || '');
+    const productName = String(post?.product_name || '').trim();
+    const existingImage = post?.product_image || '';
+    if (!postId || !productName || existingImage || communityPostImageFetchedRef.current.has(postId)) return;
+    communityPostImageFetchedRef.current.add(postId);
+
+    if (!RAINFOREST_KEY) return;
+
+    try {
+      const params = new URLSearchParams({
+        api_key: RAINFOREST_KEY,
+        type: "search",
+        amazon_domain: "amazon.com",
+        search_term: [post.product_brand, productName].filter(Boolean).join(" "),
+        sort_by: "featured",
+        page: "1",
+      });
+
+      const res = await fetch(`${RAINFOREST_URL}?${params}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const match = (data.search_results ?? []).find((item) => item.image) || null;
+      if (!match?.image) return;
+
+      setCommunityPostImages((prev) => (
+        prev[postId] ? prev : { ...prev, [postId]: match.image }
+      ));
+    } catch {
+      // Product images are progressive enhancement; keep fallback icon if unavailable.
+    }
+  }, []);
+
+  useEffect(() => {
+    const postsToHydrate = [
+      featuredPost,
+      ...communityPosts.slice(0, 8),
+    ].filter(Boolean);
+    postsToHydrate.forEach((post) => fetchCommunityPostImage(post));
+  }, [featuredPost, communityPosts, fetchCommunityPostImage]);
 
   const handleVoteCommunityPost = useCallback(async (post, delta) => {
     if (!post?.id || !delta) return;
@@ -1017,6 +1060,7 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
   }, []);
 
   const featured = featuredPost;
+  const featuredImageUrl = featured ? (communityPostImages[featured.id] || featured.product_image || '') : '';
   const gridProducts = useMemo(() => products.slice(0, 6), [products]);
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -1099,9 +1143,9 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
             <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">Most loved this week</p>
             <div className={`border border-violet-400/15 rounded-3xl overflow-hidden mb-8 hover:border-violet-400/30 transition-colors ${dm ? 'bg-[#161f30]' : 'bg-white'}`}>
               <div className="grid grid-cols-2 max-sm:grid-cols-1">
-                {featured.product_image ? (
+                {featuredImageUrl ? (
                   <img
-                    src={featured.product_image}
+                    src={featuredImageUrl}
                     alt={featured.product_name}
                     className={`w-full h-52 object-contain p-6 ${dm ? 'bg-[#1a2540]' : 'bg-slate-100'}`}
                   />
@@ -1141,7 +1185,7 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
                       <span className="text-[10px] uppercase text-slate-500 tracking-wide">Likes</span>
                     </div>
                   </div>
-                  <FeaturedSomedayButton featured={featured} onAddToSomeday={onAddToSomeday} darkMode={dm} />
+                  <FeaturedSomedayButton featured={{ ...featured, product_image: featuredImageUrl }} onAddToSomeday={onAddToSomeday} darkMode={dm} />
                 </div>
               </div>
             </div>
@@ -1263,7 +1307,15 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
         </p>
         <div className="flex flex-col gap-2.5">
           {communityPosts.map((post) => (
-            <CommunityPost key={post.id} post={post} currentUserId={currentUserId} onAddToSomeday={onAddToSomeday} onVote={handleVoteCommunityPost} darkMode={dm} />
+            <CommunityPost
+              key={post.id}
+              post={post}
+              photoUrl={communityPostImages[post.id] || ''}
+              currentUserId={currentUserId}
+              onAddToSomeday={onAddToSomeday}
+              onVote={handleVoteCommunityPost}
+              darkMode={dm}
+            />
           ))}
         </div>
 
