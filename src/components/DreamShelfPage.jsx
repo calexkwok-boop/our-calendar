@@ -833,7 +833,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
               Dream Shelf
             </h1>
             <p className="text-sm leading-relaxed max-w-sm" style={{ color: dm ? '#9ca3af' : '#78716c' }}>
-              Some dreams take you somewhere. Some you take with you.
+              Some dreams take you somewhere. Others you take with you.
             </p>
           </div>
         </div>
@@ -985,23 +985,45 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         )}
 
         {/* ── CTA Card ── */}
-        <div style={{ borderRadius: '20px', background: dm ? 'rgba(201,168,76,0.06)' : '#FFFBEB', border: `1.5px solid ${GOLD_BORDER}`, padding: '28px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', textAlign: 'center', position: 'relative', overflow: 'hidden', marginBottom: '32px' }}>
-          <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '100px', height: '100px', borderRadius: '50%', background: GOLD, opacity: 0.12, pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', bottom: '-20px', left: '-20px', width: '70px', height: '70px', borderRadius: '50%', background: GOLD_DARK, opacity: 0.08, pointerEvents: 'none' }} />
-          <div style={{ fontSize: '28px', marginBottom: '2px' }}>✨</div>
-          <p style={{ fontSize: '18px', fontWeight: 500, color: dm ? GOLD : GOLD_DARK, fontFamily: "'Caveat', cursive", margin: 0 }}>
+        <div style={{
+          borderRadius: '24px',
+          background: dm
+            ? 'linear-gradient(135deg, #070a12 0%, #1c2432 18%, #f8fafc 31%, #8f7142 39%, #151a24 52%, #d8be7f 66%, #080b12 100%)'
+            : 'linear-gradient(135deg, #fffdf7 0%, #d8be7f 16%, #ffffff 31%, #c7b68d 43%, #f8efe0 56%, #fef9ec 74%, #b9954f 100%)',
+          border: `1.5px solid ${dm ? 'rgba(216,190,127,0.55)' : 'rgba(143,113,66,0.48)'}`,
+          boxShadow: dm
+            ? '0 20px 56px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.32), inset 0 -1px 0 rgba(216,190,127,0.22)'
+            : '0 18px 44px rgba(143,113,66,0.14), inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(143,113,66,0.16)',
+          padding: '30px 24px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '6px',
+          textAlign: 'center',
+          position: 'relative',
+          overflow: 'hidden',
+          marginBottom: '32px',
+        }}>
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: [
+              `radial-gradient(ellipse at 18% 8%, ${dm ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.68)'}, transparent 40%)`,
+              `linear-gradient(116deg, transparent 0%, transparent 30%, ${dm ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.58)'} 41%, ${dm ? 'rgba(216,190,127,0.10)' : 'rgba(216,190,127,0.20)'} 47%, transparent 58%, transparent 100%)`,
+            ].join(', '),
+            pointerEvents: 'none',
+          }} />
+          <div style={{ position: 'relative', zIndex: 1, fontSize: '22px', marginBottom: '2px', opacity: 0.72 }}>✨</div>
+          <p style={{ position: 'relative', zIndex: 1, fontSize: '20px', fontWeight: 700, color: dm ? '#fff7d6' : '#4a3210', fontFamily: "'Caveat', cursive", margin: 0, textShadow: dm ? '0 1px 12px rgba(0,0,0,0.35)' : '0 1px 8px rgba(255,255,255,0.55)' }}>
             Something on your dream list?
           </p>
-          <p style={{ fontSize: '13px', color: dm ? '#9ca3af' : '#78716c', margin: '0 0 10px', fontFamily: "'Caveat', cursive" }}>
+          <p style={{ position: 'relative', zIndex: 1, fontSize: '15px', color: dm ? 'rgba(255,247,214,0.72)' : 'rgba(74,50,16,0.68)', margin: '0 0 12px', fontFamily: "'Caveat', cursive" }}>
             Share what you're saving for with your friends
           </p>
           <button
             onClick={() => setSharingItem({ name: "", brand: "", image: "", priceRange: "", category: activeCategory?.id || "watches", description: "" })}
-            style={{ background: GOLD, color: 'white', border: 'none', borderRadius: '50px', padding: '11px 28px', fontSize: '18px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: "'Caveat', cursive" }}
+            style={{ position: 'relative', zIndex: 1, background: dm ? 'rgba(8,11,18,0.62)' : 'rgba(255,255,255,0.72)', color: dm ? '#fff7d6' : '#4a3210', border: `1px solid ${dm ? 'rgba(255,247,214,0.28)' : 'rgba(143,113,66,0.28)'}`, borderRadius: '50px', padding: '11px 28px', fontSize: '18px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: "'Caveat', cursive", boxShadow: dm ? 'inset 0 1px 0 rgba(255,255,255,0.12)' : '0 8px 20px rgba(143,113,66,0.12), inset 0 1px 0 rgba(255,255,255,0.9)' }}
           >
-            <span style={{ background: GOLD_DARK, borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5H8M8 5L5.5 2.5M8 5L5.5 7.5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </span>
             Add to the Dream Shelf
           </button>
         </div>
