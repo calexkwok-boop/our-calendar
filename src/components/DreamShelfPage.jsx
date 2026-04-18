@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Camera, ExternalLink } from "lucide-react";
+import { Camera } from "lucide-react";
 import { supabase } from "../supabaseClient";
 
 // ─── Color tokens ─────────────────────────────────────────────────────────────
@@ -12,6 +12,20 @@ const GOLD_MUTED  = "rgba(201,168,76,0.15)";
 const GOLD_BORDER = "rgba(201,168,76,0.35)";
 const SILVER      = "#A8B0BC";
 const SILVER_MUTED = "rgba(168,176,188,0.12)";
+
+const getDreamShelfImageKey = (item = {}) => (
+  item.id ||
+  item.product_name ||
+  item.name ||
+  `${item.product_brand || item.brand || ""}-${item.product_name || item.name || ""}`
+).toString();
+
+const getDreamShelfImageQuery = (item = {}) => [
+  item.product_brand || item.brand,
+  item.product_name || item.name,
+  "product",
+  "official",
+].filter(Boolean).join(" ");
 
 // ─── Category config ──────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -362,11 +376,12 @@ const ItemCard = React.memo(function ItemCard({ item, onSomeday, savedIds, onMil
 });
 
 // ─── Community Post ───────────────────────────────────────────────────────────
-const CommunityPost = React.memo(function CommunityPost({ post, currentUserId, onAddToSomeday, onVote, darkMode }) {
+const CommunityPost = React.memo(function CommunityPost({ post, photoUrl, currentUserId, onAddToSomeday, onVote, darkMode }) {
   const dm = darkMode;
   const [vote, setVote]     = useState(0);
   const [likes, setLikes]   = useState(post.likes_count ?? 0);
   const [wished, setWished] = useState(false);
+  const resolvedImage = post.product_image || photoUrl || "";
 
   useEffect(() => { setLikes(post.likes_count ?? 0); }, [post.id, post.likes_count]);
 
@@ -399,8 +414,8 @@ const CommunityPost = React.memo(function CommunityPost({ post, currentUserId, o
 
       {/* Product block */}
       <div className="flex gap-3 mb-3">
-        {post.product_image ? (
-          <img src={post.product_image} alt={post.product_name} className={`w-20 h-20 rounded-xl object-contain p-1.5 flex-shrink-0 ${dm ? 'bg-[#131c2e]' : 'bg-amber-50'}`} />
+        {resolvedImage ? (
+          <img src={resolvedImage} alt={post.product_name} className={`w-20 h-20 rounded-xl object-contain p-1.5 flex-shrink-0 ${dm ? 'bg-[#131c2e]' : 'bg-amber-50'}`} />
         ) : (
           <div className={`w-20 h-20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 ${dm ? 'bg-[#131c2e]' : 'bg-amber-50'}`}>
             {cat?.emoji || "✨"}
@@ -427,7 +442,7 @@ const CommunityPost = React.memo(function CommunityPost({ post, currentUserId, o
         </div>
         <button
           onClick={() => {
-            if (!wished) onAddToSomeday?.({ title: post.product_name, imageUrl: post.product_image || "", emoji: cat?.emoji || "✨", type: "dreamshelf" });
+            if (!wished) onAddToSomeday?.({ title: post.product_name, imageUrl: resolvedImage, emoji: cat?.emoji || "✨", type: "dreamshelf" });
             setWished(w => !w);
           }}
           className="ml-auto text-sm px-3 py-1.5 rounded-xl border font-['Caveat'] font-bold transition-all duration-200"
@@ -593,7 +608,10 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   const [selectedItem, setSelectedItem]     = useState(null);
   const [sharingItem, setSharingItem]       = useState(null);
   const [currentUserId, setCurrentUserId]   = useState(null);
+  const [itemImages, setItemImages]         = useState({});
   const hasFetchedRef = useRef(false);
+  const imageFetchedRef = useRef(new Set());
+  const imageRequestsRef = useRef(new Map());
 
   // ── Auth ──
   useEffect(() => {
@@ -638,6 +656,49 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   }, [loadCategory]);
 
   // ── Handlers ──
+  const fetchDreamShelfImage = useCallback(async (item) => {
+    const key = getDreamShelfImageKey(item);
+    const cachedImage = item?.image || item?.product_image || itemImages[key] || "";
+    if (!key || cachedImage) return cachedImage;
+    if (imageRequestsRef.current.has(key)) return imageRequestsRef.current.get(key);
+    if (imageFetchedRef.current.has(key)) return "";
+
+    const query = getDreamShelfImageQuery(item);
+    if (!query) return "";
+
+    const request = (async () => {
+      try {
+        const response = await fetch(`/api/google-image-search?query=${encodeURIComponent(query)}&num=1`);
+        if (!response.ok) return "";
+        const data = await response.json();
+        const imageUrl = data?.results?.[0]?.url || "";
+        if (!imageUrl) return "";
+
+        setItemImages(prev => prev[key] ? prev : { ...prev, [key]: imageUrl });
+        return imageUrl;
+      } catch (error) {
+        // Keep the emoji fallback if image search is unavailable.
+        return "";
+      } finally {
+        imageFetchedRef.current.add(key);
+        imageRequestsRef.current.delete(key);
+      }
+    })();
+
+    imageRequestsRef.current.set(key, request);
+    return request;
+  }, [itemImages]);
+
+  useEffect(() => {
+    const imageTargets = [
+      ...items.slice(0, 24),
+      featuredPost,
+      ...communityPosts.slice(0, 8),
+    ].filter(Boolean);
+
+    imageTargets.forEach(fetchDreamShelfImage);
+  }, [communityPosts, featuredPost, fetchDreamShelfImage, items]);
+
   const handleCategoryClick = (cat) => {
     setActiveCategory(cat);
     setActiveSubFilter("all");
@@ -649,7 +710,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     loadCategory(activeCategory, subId);
   };
 
-  const handleSomeday = useCallback((item) => {
+  const handleSomeday = useCallback(async (item) => {
     const alreadySaved = savedIds.has(item.id);
     setSavedIds(prev => {
       const next = new Set(prev);
@@ -657,9 +718,10 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
       return next;
     });
     if (!alreadySaved) {
-      onAddToSomeday?.({ title: item.name, imageUrl: item.image || "", emoji: item.emoji || "✨", type: "dreamshelf", notes: `${item.brand} · ${item.priceRange || ""}` });
+      const imageUrl = item.image || itemImages[getDreamShelfImageKey(item)] || await fetchDreamShelfImage(item) || "";
+      onAddToSomeday?.({ title: item.name, imageUrl, emoji: item.emoji || "✨", type: "dreamshelf", notes: `${item.brand} · ${item.priceRange || ""}` });
     }
-  }, [onAddToSomeday, savedIds]);
+  }, [fetchDreamShelfImage, itemImages, onAddToSomeday, savedIds]);
 
   const handleMilestone = useCallback((item) => {
     onAddEvent?.({ title: `🎯 Get my ${item.name}`, notes: `${item.brand} · ${item.priceRange || ""} · Dream Shelf milestone`, category: "milestone" });
@@ -698,6 +760,12 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
   const subFilters = SUB_FILTERS[activeCategory?.id] || [];
   const featured = featuredPost;
+  const featuredImage = featured
+    ? (featured.product_image || itemImages[getDreamShelfImageKey(featured)] || "")
+    : "";
+  const selectedItemWithImage = selectedItem
+    ? { ...selectedItem, image: selectedItem.image || itemImages[getDreamShelfImageKey(selectedItem)] || "" }
+    : null;
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -773,7 +841,11 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
               style={{ borderColor: dm ? GOLD_BORDER : 'rgba(201,168,76,0.25)' }}>
               <div className="grid grid-cols-2 max-sm:grid-cols-1">
                 <div className={`h-52 flex items-center justify-center text-7xl ${dm ? 'bg-[#131c2e]' : 'bg-gradient-to-br from-amber-50 to-yellow-50'}`}>
-                  {CATEGORIES.find(c => c.id === featured.category)?.emoji || "✨"}
+                  {featuredImage ? (
+                    <img src={featuredImage} alt={featured.product_name} className="w-full h-full object-contain p-5" />
+                  ) : (
+                    CATEGORIES.find(c => c.id === featured.category)?.emoji || "✨"
+                  )}
                 </div>
                 <div className="p-6 flex flex-col justify-center">
                   <p className="text-[10px] uppercase tracking-widest mb-2 font-semibold" style={{ color: GOLD }}>
@@ -799,7 +871,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                     </div>
                   </div>
                   <button
-                    onClick={() => onAddToSomeday?.({ title: featured.product_name, imageUrl: featured.product_image || "", emoji: "✨", type: "dreamshelf" })}
+                    onClick={() => onAddToSomeday?.({ title: featured.product_name, imageUrl: featuredImage, emoji: "✨", type: "dreamshelf" })}
                     className="self-start px-4 py-2 rounded-xl text-sm font-['Caveat'] font-bold border transition-all"
                     style={{ background: dm ? GOLD_MUTED : '#FFFBEB', border: `1px solid ${GOLD_BORDER}`, color: GOLD_DARK }}
                   >
@@ -824,18 +896,21 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
           </div>
         ) : (
           <div className="grid grid-cols-3 max-sm:grid-cols-2 gap-3 mb-8">
-            {items.length > 0 ? items.map(item => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                onSomeday={handleSomeday}
-                savedIds={savedIds}
-                onMilestone={handleMilestone}
-                onShare={setSharingItem}
-                onOpen={setSelectedItem}
-                darkMode={dm}
-              />
-            )) : (
+            {items.length > 0 ? items.map(item => {
+              const itemWithImage = { ...item, image: item.image || itemImages[getDreamShelfImageKey(item)] || "" };
+              return (
+                <ItemCard
+                  key={item.id}
+                  item={itemWithImage}
+                  onSomeday={handleSomeday}
+                  savedIds={savedIds}
+                  onMilestone={handleMilestone}
+                  onShare={setSharingItem}
+                  onOpen={setSelectedItem}
+                  darkMode={dm}
+                />
+              );
+            }) : (
               <div className="col-span-3 text-center py-16 text-slate-400">
                 <div className="text-5xl mb-4">✨</div>
                 <p className="font-['Caveat'] text-2xl mb-1">Nothing here yet</p>
@@ -876,6 +951,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
             <CommunityPost
               key={post.id}
               post={post}
+              photoUrl={itemImages[getDreamShelfImageKey(post)] || ""}
               currentUserId={currentUserId}
               onAddToSomeday={onAddToSomeday}
               onVote={handleVoteCommunityPost}
@@ -887,10 +963,10 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
       </div>
 
       {/* ── Item detail modal ── */}
-      {selectedItem && (
+      {selectedItemWithImage && (
         <ItemModal
-          item={selectedItem}
-          isSaved={savedIds.has(selectedItem.id)}
+          item={selectedItemWithImage}
+          isSaved={savedIds.has(selectedItemWithImage.id)}
           onSomeday={handleSomeday}
           onMilestone={handleMilestone}
           onShare={setSharingItem}
