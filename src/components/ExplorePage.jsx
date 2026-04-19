@@ -12,12 +12,45 @@ const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
 const FRIEND_POSTS = [];
 
 const COMMUNITY_POSTS = [
-  { id: "c1", type: "hiking", icon: "🥾", page: "Hiking & Outdoors", time: "Trending", cardTitle: "Lands End Trail", location: "San Francisco · 3.4 mi", desc: "Stunning coastal views, moderate difficulty. Best visited at golden hour.", votes: 183, tag: "Hiking", actions: ["Add to someday", "Plan it"] },
+  { id: "c1", type: "hiking", icon: "🥾", page: "Hiking & Outdoors", time: "Trending", cardTitle: "Lands End Trail", location: "San Francisco · 3.4 mi", desc: "Stunning coastal views, moderate difficulty. Best visited at golden hour.", votes: 183, tag: "Hiking", imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan it"] },
   { id: "c2", type: "games", icon: "🎲", page: "Board Games", time: "Community pick", cardTitle: "Wingspan", desc: "Elegant engine-builder about birds. Perfect for 2–5 players, around 90 minutes.", votes: 312, tag: "Games", actions: ["Add to someday", "Plan game night"] },
-  { id: "c3", type: "restaurants", icon: "🍜", page: "Restaurants", time: "New addition", cardTitle: "Dumpling Time", location: "SoMa, San Francisco", desc: "Handcrafted dumplings, beautiful space. The XLB are unmissable.", votes: 198, tag: "Restaurants", actions: ["Add to someday", "Plan dinner"] },
+  { id: "c3", type: "restaurants", icon: "🍜", page: "Restaurants", time: "New addition", cardTitle: "Dumpling Time", location: "SoMa, San Francisco", desc: "Handcrafted dumplings, beautiful space. The XLB are unmissable.", votes: 198, tag: "Restaurants", imageUrl: "https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan dinner"] },
   { id: "c4", type: "products", icon: "✨", page: "Dream Shelf", time: "Most dreamed about", cardTitle: "Rolex Submariner", desc: "A forever watch with quiet presence — the kind of piece people save for and keep for life.", votes: 247, tag: "Dream Shelf", imageUrl: "https://media.rolex.com/image/upload/q_auto/f_auto/t_v7-cover-majesty-landscape/c_limit,w_1200/v1/a677b2c664f6/catalogue/2026/upright-c/m124060-0001", actions: ["Add to someday", "Open Dream Shelf"] },
-  { id: "c5", type: "destinations", icon: "✈️", page: "Destinations", time: "Dream trip", cardTitle: "Kyoto in Cherry Blossom Season", location: "Japan", desc: "Temples, lantern-lit alleys, and a city transformed by spring. Save this one for the kind of trip you plan around.", votes: 276, tag: "Destinations", actions: ["Add to someday", "Plan trip"] },
+  { id: "c5", type: "destinations", icon: "✈️", page: "Destinations", time: "Dream trip", cardTitle: "Kyoto in Cherry Blossom Season", location: "Japan", desc: "Temples, lantern-lit alleys, and a city transformed by spring. Save this one for the kind of trip you plan around.", votes: 276, tag: "Destinations", imageUrl: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan trip"] },
 ];
+
+const EXPLORE_IMAGE_FALLBACKS = {
+  hiking: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80",
+  restaurants: "https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=900&q=80",
+  products: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=900&q=80",
+  destinations: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?auto=format&fit=crop&w=900&q=80",
+};
+
+function getExploreImageUrl(post = {}) {
+  if (post.imageUrl) return post.imageUrl;
+  if (!["destinations", "hiking", "products", "restaurants"].includes(post.type)) return "";
+
+  const text = `${post.cardTitle || ""} ${post.location || ""}`.toLowerCase();
+  if (post.type === "hiking") {
+    if (text.includes("coast") || text.includes("lands end") || text.includes("beach")) return EXPLORE_IMAGE_FALLBACKS.hiking;
+    if (text.includes("waterfall") || text.includes("falls")) return "https://images.unsplash.com/photo-1432405972618-c60b0225b8f9?auto=format&fit=crop&w=900&q=80";
+    if (text.includes("forest") || text.includes("woods")) return "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=900&q=80";
+    return "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=900&q=80";
+  }
+  if (post.type === "restaurants") {
+    if (text.includes("dumpling") || text.includes("noodle") || text.includes("ramen")) return EXPLORE_IMAGE_FALLBACKS.restaurants;
+    if (text.includes("sushi")) return "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=900&q=80";
+    if (text.includes("pizza") || text.includes("italian")) return "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=900&q=80";
+    return "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80";
+  }
+  if (post.type === "destinations") {
+    if (text.includes("kyoto") || text.includes("japan")) return EXPLORE_IMAGE_FALLBACKS.destinations;
+    if (text.includes("beach") || text.includes("island") || text.includes("santorini")) return "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=900&q=80";
+    if (text.includes("paris")) return "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80";
+    return "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80";
+  }
+  return EXPLORE_IMAGE_FALLBACKS.products;
+}
 
 const SOURCE_CONFIG = {
   friends:     { label: "Friends",           sub: "Events, trips & moments", icon: "👥", bg: "bg-teal-500/10" },
@@ -227,18 +260,19 @@ const TYPE_EMOJI = { hiking: "🥾", games: "🎲", restaurants: "🍜", product
 
 function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveFromSomeday }) {
   const [inSomeday, setInSomeday] = useState(false);
+  const imageUrl = getExploreImageUrl(post);
 
   return (
     <div className="rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent shadow-sm dark:shadow-none overflow-hidden">
       <CardHeader post={post} onPageTap={onPageTap} />
       <Divider />
-      {post.imageUrl && (
+      {imageUrl && (
         <div
           className={`mx-4 mt-3 rounded-2xl overflow-hidden ${post.type === "products" ? "bg-stone-50 dark:bg-white/[0.03]" : "bg-stone-100 dark:bg-white/[0.04]"}`}
           onClick={() => onPageTap?.(post.type)}
         >
           <img
-            src={post.imageUrl}
+            src={imageUrl}
             alt={post.cardTitle}
             className={`w-full h-48 ${post.type === "products" ? "object-contain p-5" : "object-cover"}`}
             loading="lazy"
@@ -283,7 +317,7 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
                     title:    post.cardTitle,
                     emoji:    TYPE_EMOJI[post.type] || "✨",
                     type:     post.type,
-                    imageUrl: post.imageUrl || "",
+                    imageUrl,
                     categoryId: post.type === "products" ? "buy" : undefined,
                   });
                 } else {
