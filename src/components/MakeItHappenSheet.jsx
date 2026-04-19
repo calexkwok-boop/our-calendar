@@ -46,12 +46,24 @@ function useSwipeDownSheet(onClose) {
     setDragY(delta);
   };
   const handleEnd = () => {
+    if (dragStartYRef.current == null) return;
     const shouldClose = dragDistanceRef.current > 90;
     dragStartYRef.current = null;
     dragDistanceRef.current = 0;
     setDragY(0);
     if (shouldClose) onClose?.();
   };
+
+  useEffect(() => {
+    const onMouseMove = (e) => handleMove(e.clientY);
+    const onMouseUp   = () => handleEnd();
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup',   onMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup',   onMouseUp);
+    };
+  }); // runs every render so closures stay fresh
 
   return {
     sheetStyle: {
@@ -63,10 +75,7 @@ function useSwipeDownSheet(onClose) {
       onTouchMove:  (e) => handleMove(e.touches[0].clientY),
       onTouchEnd:   handleEnd,
       onMouseDown:  (e) => handleStart(e.clientY),
-      onMouseMove:  (e) => { if (dragStartYRef.current == null) return; handleMove(e.clientY); },
-      onMouseUp:    handleEnd,
-      onMouseLeave: () => { if (dragStartYRef.current != null) handleEnd(); },
-      style: { touchAction: 'none', cursor: 'grab' },
+      style: { touchAction: 'none', cursor: 'grab', padding: '12px 0', margin: '2px auto 0' },
     },
   };
 }
@@ -262,7 +271,9 @@ export default function MakeItHappenSheet({ item, onClose, onAddEvent, darkMode 
         onClick={e => e.stopPropagation()}
       >
         {/* Drag handle */}
-        <div {...handleProps} style={{ width: 36, height: 4, borderRadius: 2, background: dm ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '14px auto 0', flexShrink: 0, ...handleProps.style }} />
+        <div {...handleProps} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0, ...handleProps.style }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: dm ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', pointerEvents: 'none' }} />
+        </div>
 
         {/* Scrollable content */}
         <div style={{ overflowY: 'auto', flex: 1, padding: '18px 20px calc(80px + env(safe-area-inset-bottom))' }}>
@@ -390,14 +401,14 @@ export default function MakeItHappenSheet({ item, onClose, onAddEvent, darkMode 
           {/* ── Date mode ── */}
           {mode === 'date' && (
             <>
-              <div style={{ marginBottom: 10 }}>
+              <div style={{ marginBottom: 10, overflow: 'hidden' }}>
                 <span style={sectionLabel}>I want this by</span>
                 <input
                   type="date"
                   value={targetDate}
                   onChange={e => setTargetDate(e.target.value)}
                   min={new Date().toISOString().split('T')[0]}
-                  style={{ ...inputStyle, colorScheme: dm ? 'dark' : 'light' }}
+                  style={{ ...inputStyle, colorScheme: dm ? 'dark' : 'light', display: 'block', maxWidth: '100%' }}
                 />
               </div>
               {/* Occasion presets */}
