@@ -232,6 +232,19 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
     <div className="rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent shadow-sm dark:shadow-none overflow-hidden">
       <CardHeader post={post} onPageTap={onPageTap} />
       <Divider />
+      {post.imageUrl && (
+        <div
+          className={`mx-4 mt-3 rounded-2xl overflow-hidden ${post.type === "products" ? "bg-stone-50 dark:bg-white/[0.03]" : "bg-stone-100 dark:bg-white/[0.04]"}`}
+          onClick={() => onPageTap?.(post.type)}
+        >
+          <img
+            src={post.imageUrl}
+            alt={post.cardTitle}
+            className={`w-full h-48 ${post.type === "products" ? "object-contain p-5" : "object-cover"}`}
+            loading="lazy"
+          />
+        </div>
+      )}
       <div className="px-4 py-2.5">
         <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-0.5">{post.cardTitle}</p>
         {post.location && <p className="text-[11px] text-gray-400 dark:text-gray-600 mb-1.5">{post.location}</p>}
