@@ -504,6 +504,12 @@ function DetailSheet({ pin, onClose, onConvertToEvent, onConvertToTrip, onMarkDo
   const divider = darkMode ? 'rgba(255,255,255,0.05)' : '#f0ece4';
   const secBg   = darkMode ? 'rgba(255,255,255,0.04)' : '#f8f7f2';
   const { sheetStyle, handleProps } = useSwipeDownSheet(onClose);
+  const handleTurnIntoPlan = () => {
+    const tripLike = ['places', 'travel', 'adventure'].includes(String(pin.categoryId || '').toLowerCase());
+    const planHandler = tripLike ? (onConvertToTrip || onConvertToEvent) : (onConvertToEvent || onConvertToTrip);
+    planHandler?.(pin);
+    onClose();
+  };
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 10020, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
@@ -526,14 +532,9 @@ function DetailSheet({ pin, onClose, onConvertToEvent, onConvertToTrip, onMarkDo
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16 }}>
           {pin.status !== 'done' && (
-            <>
-              <button onClick={() => { onConvertToEvent?.(pin); onClose(); }} style={{ flex: 1, minWidth: 120, padding: '11px', borderRadius: 14, background: darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb', color: darkMode ? '#2dd4bf' : '#0d9488', border: `1px solid ${darkMode ? 'rgba(45,212,191,0.2)' : '#99f6e4'}`, fontFamily: CAVEAT, fontSize: 16, cursor: 'pointer' }}>
-                📅 Make it an event
-              </button>
-              <button onClick={() => { onConvertToTrip?.(pin); onClose(); }} style={{ flex: 1, minWidth: 120, padding: '11px', borderRadius: 14, background: darkMode ? 'rgba(192,132,252,0.1)' : '#faf5ff', color: darkMode ? '#c084fc' : '#7c3aed', border: `1px solid ${darkMode ? 'rgba(192,132,252,0.2)' : '#e9d5ff'}`, fontFamily: CAVEAT, fontSize: 16, cursor: 'pointer' }}>
-                ✈️ Plan a trip
-              </button>
-            </>
+            <button onClick={handleTurnIntoPlan} style={{ flex: '1 1 100%', minWidth: 120, padding: '12px', borderRadius: 14, background: darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb', color: darkMode ? '#2dd4bf' : '#0d9488', border: `1px solid ${darkMode ? 'rgba(45,212,191,0.2)' : '#99f6e4'}`, fontFamily: CAVEAT, fontSize: 18, fontWeight: 700, cursor: 'pointer' }}>
+              Turn this into a plan
+            </button>
           )}
           <button onClick={() => { onMarkDone?.(pin); onClose(); }} style={{ flex: 1, minWidth: 120, padding: '11px', borderRadius: 14, background: pin.status === 'done' ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : secBg, color: pin.status === 'done' ? (darkMode ? '#2dd4bf' : '#0d9488') : (darkMode ? '#cbd5e1' : ts), border: `1px solid ${darkMode ? 'rgba(255,255,255,0.12)' : '#e5e0d5'}`, fontFamily: CAVEAT, fontSize: 16, cursor: 'pointer' }}>
             {pin.status === 'done' ? '✓ Done!' : 'Mark done'}
@@ -591,6 +592,7 @@ const SomedayPage = ({
   const [dragging, setDragging]   = useState(null);
   const [heroId, setHeroId]       = useState(() => { try { return localStorage.getItem('someday-hero-id') || null; } catch { return null; } });
   const dragOffset                = useRef({ x: 0, y: 0 });
+  const dragStartPoint            = useRef({ x: 0, y: 0 });
   const canvasRef                 = useRef();
   const didDrag                   = useRef(false);
   const draggingTypeRef           = useRef(null); // tracks pin type during drag for bound adjustments
@@ -655,6 +657,7 @@ const SomedayPage = ({
 
   // ─── Drag ──────────────────────────────────────────────────────────────────
   function startDrag(e, id) {
+    if (e.target?.closest?.('button')) return;
     e.preventDefault();
     e.stopPropagation();
     didDrag.current = false;
@@ -663,6 +666,7 @@ const SomedayPage = ({
     if (!pin) return;
     draggingTypeRef.current = pin.type;
     dragOffset.current = { x: touch.clientX - pin.x, y: touch.clientY - pin.y };
+    dragStartPoint.current = { x: touch.clientX, y: touch.clientY };
     setDragging(id);
     setPins(ps => {
       const idx = ps.findIndex(p => p.id === id);
@@ -675,8 +679,11 @@ const SomedayPage = ({
 
   const onMove = useCallback((e) => {
     if (!dragging) return;
-    didDrag.current = true;
     const touch = e.touches?.[0] ?? e;
+    const dx = touch.clientX - dragStartPoint.current.x;
+    const dy = touch.clientY - dragStartPoint.current.y;
+    if (!didDrag.current && Math.hypot(dx, dy) < 6) return;
+    didDrag.current = true;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
@@ -694,7 +701,11 @@ const SomedayPage = ({
   const stopDrag = useCallback(() => {
     if (dragging) {
       const pin = pins.find(p => p.id === dragging);
-      if (pin) onUpdateDream?.({ ...pin });
+      if (pin && didDrag.current) {
+        onUpdateDream?.({ ...pin });
+      } else if (pin && pin.type !== 'label' && pin.type !== 'sticker') {
+        setDetailPin(pin);
+      }
     }
     setDragging(null);
   }, [dragging, pins, onUpdateDream]);
