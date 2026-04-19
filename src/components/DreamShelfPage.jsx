@@ -81,6 +81,14 @@ const DREAMSHELF_IMAGES = {
   s6: "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&q=80",
   s7: "https://www.mrporter.com/variants/images/3024088872901549/in/w2000_q60.jpg",
   s8: "https://images.unsplash.com/photo-1606813902770-34e9a1c5b1c5?w=600&q=80",
+  a1: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=600&q=80",
+  a2: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=600&q=80",
+  a3: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=600&q=80",
+  a4: "https://images.unsplash.com/photo-1508973379184-7517410fb0c9?w=600&q=80",
+  a5: "https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=600&q=80",
+  a6: "https://images.unsplash.com/photo-1483721310020-03333e577078?w=600&q=80",
+  a7: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80",
+  a8: "https://images.unsplash.com/photo-1517336714739-489689fd1ca8?w=600&q=80",
 };
 
 // ─── Category config ──────────────────────────────────────────────────────────
@@ -256,6 +264,54 @@ const CURATED_ITEMS = {
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+function getCuratedDreamShelfMatches(query = "") {
+  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!terms.length) return [];
+
+  return Object.entries(CURATED_ITEMS)
+    .flatMap(([category, categoryItems]) => categoryItems.map(item => {
+      const cat = getDreamShelfCategoryMeta(category);
+      return {
+        ...item,
+        category,
+        emoji: item.emoji || cat.emoji,
+        image: item.image || DREAMSHELF_IMAGES[item.id] || "",
+      };
+    }))
+    .map(item => {
+      const haystack = [
+        item.name,
+        item.brand,
+        item.priceRange,
+        item.description,
+        item.category,
+        ...(item.subFilter || []),
+      ].filter(Boolean).join(" ").toLowerCase();
+      const score = terms.reduce((total, term) => total + (haystack.includes(term) ? 1 : 0), 0);
+      return { item, score };
+    })
+    .filter(result => result.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8)
+    .map(result => result.item);
+}
+
+function getDraftDreamShelfMatch(query = "") {
+  const category = inferDreamShelfCategory(query);
+  const cat = getDreamShelfCategoryMeta(category);
+  return {
+    id: `draft-${query.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    name: query,
+    brand: "Dream find",
+    priceRange: "",
+    image: "",
+    category,
+    emoji: cat.emoji,
+    description: getDreamShelfFallbackDescription(query),
+    external: true,
+  };
+}
+
 function formatTime(iso) {
   if (!iso) return "";
   const diff = Date.now() - new Date(iso).getTime();
@@ -845,8 +901,6 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         if (requestId !== searchRequestIdRef.current) return;
         setSearchResults([fallback]);
         setSearchError("Showing a best-effort match. If the photo is off, add your own picture.");
-      } else if (requestId === searchRequestIdRef.current) {
-        setSearchResults([]);
       }
     } catch (error) {
       if (allowFallback) {
@@ -854,8 +908,6 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         if (requestId !== searchRequestIdRef.current) return;
         setSearchResults([fallback]);
         setSearchError("Search was limited, so I made a draft card you can refine.");
-      } else if (requestId === searchRequestIdRef.current) {
-        setSearchResults([]);
       }
     } finally {
       if (requestId === searchRequestIdRef.current) setSearching(false);
@@ -885,6 +937,11 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
       setSearching(false);
       return undefined;
     }
+
+    const localMatches = getCuratedDreamShelfMatches(query);
+    setSearchResults(localMatches.length ? localMatches : [getDraftDreamShelfMatch(query)]);
+    setSearchError(localMatches.length ? "" : "Press Find it to search wider, or add your own photo.");
+    if (localMatches[0]?.category) setActiveCategory(getDreamShelfCategoryMeta(localMatches[0].category));
 
     const timeout = window.setTimeout(() => {
       runProductSearch(query, { allowFallback: false });
