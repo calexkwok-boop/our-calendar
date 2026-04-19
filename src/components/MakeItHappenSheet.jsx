@@ -31,39 +31,45 @@ const CAVEAT = '"Caveat", cursive';
 // ─── Swipe-down hook ──────────────────────────────────────────────────────────
 function useSwipeDownSheet(onClose) {
   const [dragY, setDragY] = useState(0);
-  const dragStartYRef = useRef(null);
+  const dragStartYRef   = useRef(null);
   const dragDistanceRef = useRef(0);
+  const onCloseRef      = useRef(onClose);
+  onCloseRef.current    = onClose; // keep fresh without re-registering listeners
 
-  const handleStart = (clientY) => {
-    dragStartYRef.current = clientY;
-    dragDistanceRef.current = 0;
-    setDragY(0);
-  };
-  const handleMove = (clientY) => {
+  // Stable handler refs — always call the latest logic
+  const handlersRef = useRef({});
+  handlersRef.current.move = (clientY) => {
     if (dragStartYRef.current == null) return;
     const delta = Math.max(0, clientY - dragStartYRef.current);
     dragDistanceRef.current = delta;
     setDragY(delta);
   };
-  const handleEnd = () => {
+  handlersRef.current.end = () => {
     if (dragStartYRef.current == null) return;
     const shouldClose = dragDistanceRef.current > 90;
-    dragStartYRef.current = null;
+    dragStartYRef.current  = null;
     dragDistanceRef.current = 0;
     setDragY(0);
-    if (shouldClose) onClose?.();
+    if (shouldClose) onCloseRef.current?.();
   };
 
+  // Register document listeners once only
   useEffect(() => {
-    const onMouseMove = (e) => handleMove(e.clientY);
-    const onMouseUp   = () => handleEnd();
+    const onMouseMove = (e) => handlersRef.current.move(e.clientY);
+    const onMouseUp   = ()  => handlersRef.current.end();
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup',   onMouseUp);
     return () => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup',   onMouseUp);
     };
-  }); // runs every render so closures stay fresh
+  }, []);
+
+  const handleStart = (clientY) => {
+    dragStartYRef.current   = clientY;
+    dragDistanceRef.current = 0;
+    setDragY(0);
+  };
 
   return {
     sheetStyle: {
@@ -72,8 +78,8 @@ function useSwipeDownSheet(onClose) {
     },
     handleProps: {
       onTouchStart: (e) => handleStart(e.touches[0].clientY),
-      onTouchMove:  (e) => handleMove(e.touches[0].clientY),
-      onTouchEnd:   handleEnd,
+      onTouchMove:  (e) => handlersRef.current.move(e.touches[0].clientY),
+      onTouchEnd:   ()  => handlersRef.current.end(),
       onMouseDown:  (e) => handleStart(e.clientY),
       style: { touchAction: 'none', cursor: 'grab', padding: '12px 0', margin: '2px auto 0' },
     },
@@ -438,93 +444,97 @@ export default function MakeItHappenSheet({ item, onClose, onAddEvent, darkMode 
             </>
           )}
 
-          {/* ── Milestone moment ── */}
-          {hasGoalDate && (
-            <div style={{
-              borderRadius: 20,
-              background: dm ? 'rgba(201,168,76,0.07)' : '#FFFBEB',
-              border: `1.5px solid ${GOLD_BORDER}`,
-              padding: '20px 18px',
-              marginBottom: 16,
-              position: 'relative',
-              overflow: 'hidden',
-            }}>
-              {/* Decorative circles */}
-              <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: GOLD, opacity: 0.10, pointerEvents: 'none' }} />
-              <div style={{ position: 'absolute', bottom: -15, left: -15, width: 50, height: 50, borderRadius: '50%', background: GOLD, opacity: 0.07, pointerEvents: 'none' }} />
+          {/* ── Milestone moment ── always visible */}
+          <div style={{
+            borderRadius: 20,
+            background: dm ? 'rgba(201,168,76,0.07)' : '#FFFBEB',
+            border: `1.5px solid ${GOLD_BORDER}`,
+            padding: '20px 18px',
+            marginBottom: 16,
+            position: 'relative',
+            overflow: 'hidden',
+          }}>
+            {/* Decorative circles */}
+            <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: GOLD, opacity: 0.10, pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', bottom: -15, left: -15, width: 50, height: 50, borderRadius: '50%', background: GOLD, opacity: 0.07, pointerEvents: 'none' }} />
 
-              <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: dm ? GOLD : GOLD_DARK }}>
-                🎯 Your milestone
-              </p>
+            <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: dm ? GOLD : GOLD_DARK }}>
+              🎯 Your milestone
+            </p>
 
-              {/* The emotional payoff sentence */}
-              <p style={{ margin: '0 0 12px', fontFamily: CAVEAT, fontSize: 20, color: tp, lineHeight: 1.4 }}>
-                {mode === 'weekly' ? (
-                  <>In <span style={{ color: dm ? GOLD : GOLD_DARK, fontWeight: 700 }}>{calc.weeks} {calc.weeks === 1 ? 'week' : 'weeks'}</span>, on <span style={{ color: dm ? GOLD : GOLD_DARK, fontWeight: 700 }}>{formatDateShort(calc.goalDate)}</span>, {goalName || `your ${item?.name || 'dream'}`} goes from your Dream Shelf to your hands.</>
+            {/* The emotional payoff sentence */}
+            <p style={{ margin: '0 0 12px', fontFamily: CAVEAT, fontSize: 20, color: hasGoalDate ? tp : ts, lineHeight: 1.4 }}>
+              {hasGoalDate ? (
+                mode === 'weekly' ? (
+                  <>In <span style={{ color: dm ? GOLD : GOLD_DARK, fontWeight: 700 }}>{calc.weeks} {calc.weeks === 1 ? 'week' : 'weeks'}</span>, on <span style={{ color: dm ? GOLD : GOLD_DARK, fontWeight: 700 }}>{formatDateShort(calc.goalDate)}</span>, {goalName || `your ${item?.name || 'dream'}`} goes from your Dreamboard to your hands.</>
                 ) : (
                   <>By <span style={{ color: dm ? GOLD : GOLD_DARK, fontWeight: 700 }}>{formatDateShort(calc.goalDate)}</span> — just <span style={{ color: dm ? GOLD : GOLD_DARK, fontWeight: 700 }}>{formatCurrency(calc.weeklyNeeded)}/week</span> and you're there.</>
-                )}
-              </p>
+                )
+              ) : (
+                <>Fill in your cost and savings above to see your path to {goalName || item?.name || 'this'} ✨</>
+              )}
+            </p>
 
-              {/* Stats row */}
-              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 14 }}>
-                {calc.weeks != null && (
-                  <div>
-                    <p style={{ margin: 0, fontFamily: CAVEAT, fontSize: 22, fontWeight: 700, color: dm ? GOLD : GOLD_DARK, lineHeight: 1 }}>{calc.weeks}</p>
-                    <p style={{ margin: 0, fontSize: 10, color: ts, textTransform: 'uppercase', letterSpacing: '0.08em' }}>weeks</p>
-                  </div>
-                )}
-                {mode === 'weekly' && parseFloat(weeklyAmount) > 0 && (
-                  <div>
-                    <p style={{ margin: 0, fontFamily: CAVEAT, fontSize: 22, fontWeight: 700, color: dm ? GOLD : GOLD_DARK, lineHeight: 1 }}>{formatCurrency(parseFloat(weeklyAmount))}</p>
-                    <p style={{ margin: 0, fontSize: 10, color: ts, textTransform: 'uppercase', letterSpacing: '0.08em' }}>per week</p>
-                  </div>
-                )}
-                {mode === 'date' && calc.weeklyNeeded != null && (
-                  <div>
-                    <p style={{ margin: 0, fontFamily: CAVEAT, fontSize: 22, fontWeight: 700, color: dm ? GOLD : GOLD_DARK, lineHeight: 1 }}>{formatCurrency(calc.weeklyNeeded)}</p>
-                    <p style={{ margin: 0, fontSize: 10, color: ts, textTransform: 'uppercase', letterSpacing: '0.08em' }}>per week needed</p>
-                  </div>
-                )}
+            {/* Stats row */}
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 14 }}>
+              {calc.weeks != null && (
+                <div>
+                  <p style={{ margin: 0, fontFamily: CAVEAT, fontSize: 22, fontWeight: 700, color: dm ? GOLD : GOLD_DARK, lineHeight: 1 }}>{calc.weeks}</p>
+                  <p style={{ margin: 0, fontSize: 10, color: ts, textTransform: 'uppercase', letterSpacing: '0.08em' }}>weeks</p>
+                </div>
+              )}
+              {mode === 'weekly' && parseFloat(weeklyAmount) > 0 && (
+                <div>
+                  <p style={{ margin: 0, fontFamily: CAVEAT, fontSize: 22, fontWeight: 700, color: dm ? GOLD : GOLD_DARK, lineHeight: 1 }}>{formatCurrency(parseFloat(weeklyAmount))}</p>
+                  <p style={{ margin: 0, fontSize: 10, color: ts, textTransform: 'uppercase', letterSpacing: '0.08em' }}>per week</p>
+                </div>
+              )}
+              {mode === 'date' && calc.weeklyNeeded != null && (
+                <div>
+                  <p style={{ margin: 0, fontFamily: CAVEAT, fontSize: 22, fontWeight: 700, color: dm ? GOLD : GOLD_DARK, lineHeight: 1 }}>{formatCurrency(calc.weeklyNeeded)}</p>
+                  <p style={{ margin: 0, fontSize: 10, color: ts, textTransform: 'uppercase', letterSpacing: '0.08em' }}>per week needed</p>
+                </div>
+              )}
+              {calc.needed > 0 && (
                 <div>
                   <p style={{ margin: 0, fontFamily: CAVEAT, fontSize: 22, fontWeight: 700, color: dm ? GOLD : GOLD_DARK, lineHeight: 1 }}>{formatCurrency(calc.needed)}</p>
                   <p style={{ margin: 0, fontSize: 10, color: ts, textTransform: 'uppercase', letterSpacing: '0.08em' }}>to save</p>
                 </div>
-              </div>
-
-              {/* Add to calendar button */}
-              {!calendarAdded ? (
-                <button
-                  onClick={handleAddToCalendar}
-                  style={{
-                    width: '100%',
-                    padding: '12px 0',
-                    borderRadius: 14,
-                    border: 'none',
-                    background: dm ? GOLD : GOLD_DARK,
-                    color: '#fff',
-                    fontFamily: CAVEAT,
-                    fontSize: 18,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    transition: 'opacity .15s',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.opacity = '.88'}
-                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                >
-                  📅 Add milestone to my calendar
-                </button>
-              ) : (
-                <div style={{ width: '100%', padding: '12px 0', borderRadius: 14, background: dm ? 'rgba(45,212,191,0.12)' : '#f0fdfa', border: `1px solid ${dm ? 'rgba(45,212,191,0.3)' : '#99f6e4'}`, color: dm ? TEAL : TEAL_DARK, fontFamily: CAVEAT, fontSize: 18, fontWeight: 700, textAlign: 'center' }}>
-                  ✓ Added to your calendar!
-                </div>
               )}
             </div>
-          )}
+
+            {/* Add to calendar button */}
+            {calendarAdded ? (
+              <div style={{ width: '100%', padding: '12px 0', borderRadius: 14, background: dm ? 'rgba(45,212,191,0.12)' : '#f0fdfa', border: `1px solid ${dm ? 'rgba(45,212,191,0.3)' : '#99f6e4'}`, color: dm ? TEAL : TEAL_DARK, fontFamily: CAVEAT, fontSize: 18, fontWeight: 700, textAlign: 'center' }}>
+                ✓ Added to your calendar!
+              </div>
+            ) : (
+              <button
+                onClick={handleAddToCalendar}
+                disabled={!hasGoalDate}
+                style={{
+                  width: '100%',
+                  padding: '12px 0',
+                  borderRadius: 14,
+                  border: 'none',
+                  background: hasGoalDate ? (dm ? GOLD : GOLD_DARK) : (dm ? 'rgba(255,255,255,0.06)' : '#e5e0d5'),
+                  color: hasGoalDate ? '#fff' : ts,
+                  fontFamily: CAVEAT,
+                  fontSize: 18,
+                  fontWeight: 700,
+                  cursor: hasGoalDate ? 'pointer' : 'default',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  transition: 'opacity .15s',
+                  opacity: hasGoalDate ? 1 : 0.5,
+                }}
+              >
+                📅 Add milestone to my calendar
+              </button>
+            )}
+          </div>
 
           {/* ── Where will the money come from? ── */}
           <div style={{ marginBottom: 20 }}>
@@ -553,14 +563,6 @@ export default function MakeItHappenSheet({ item, onClose, onAddEvent, darkMode 
             </div>
           </div>
 
-          {/* ── Motivational footer ── */}
-          {!hasGoalDate && (
-            <div style={{ textAlign: 'center', padding: '12px 0 4px' }}>
-              <p style={{ fontFamily: CAVEAT, fontSize: 16, color: ts, fontStyle: 'italic', margin: 0 }}>
-                Fill in the details above to see your path to {goalName || item?.name || 'this'} ✨
-              </p>
-            </div>
-          )}
 
           {/* ── Success state ── */}
           {showSuccess && (
