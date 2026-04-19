@@ -562,6 +562,30 @@ function gridPosition(index) {
   };
 }
 
+function estimatedPinHeight(pin = {}) {
+  if (pin.type === 'label' || pin.type === 'sticker') return 80;
+  if (pin.type === 'note') return 150;
+  return 210;
+}
+
+function positionBelowLowestPin(existingPins = [], addIndex = 0) {
+  const pinned = (Array.isArray(existingPins) ? existingPins : [])
+    .filter(pin => pin && pin.type !== 'label' && pin.type !== 'sticker');
+  if (!pinned.length) return gridPosition(addIndex);
+
+  const lowestBottom = Math.max(...pinned.map(pin => (Number(pin.y) || 0) + estimatedPinHeight(pin)));
+  const col = addIndex % 2;
+  const row = Math.floor(addIndex / 2);
+  const jx = (Math.random() - 0.5) * 14;
+  const jy = (Math.random() - 0.5) * 10;
+
+  return {
+    x: (col === 0 ? 16 : 208) + jx,
+    y: lowestBottom + 28 + row * 240 + jy,
+    rot: (col === 0 ? -1 : 1) * (0.4 + Math.random() * 2.2),
+  };
+}
+
 // ─── Main SomedayPage ─────────────────────────────────────────────────────────
 const SomedayPage = ({
   dreams = SAMPLE_PINS,
@@ -607,17 +631,18 @@ const SomedayPage = ({
       const existingIds = new Set(prev.map(p => p.id));
       const toAdd = (Array.isArray(dreams) ? dreams : []).filter(d => !existingIds.has(d.id));
       if (!toAdd.length) return prev;
-      const newPins = toAdd.map((d, i) => {
-        const pos = (d.x == null || d.y == null) ? gridPosition(prev.length + i) : { x: d.x, y: d.y, rot: d.rot };
-        return {
+      const newPins = toAdd.reduce((acc, d) => {
+        const pos = (d.x == null || d.y == null) ? positionBelowLowestPin([...prev, ...acc], acc.length) : { x: d.x, y: d.y, rot: d.rot };
+        acc.push({
           ...d,
           ...pos,
           rot:       pos.rot       ?? d.rot ?? (Math.random() * 6 - 3),
           pinColor:  d.pinColor  ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)],
           noteColor: d.noteColor ?? 'yellow',
           type:      d.type      ?? (d.imageUrl || d.emoji ? 'photo' : 'note'),
-        };
-      });
+        });
+        return acc;
+      }, []);
       return [...prev, ...newPins];
     });
   }, [dreams]);
@@ -653,7 +678,8 @@ const SomedayPage = ({
           y: 24 + (row * 210),
         };
       });
-  const BOARD_HEIGHT = Math.max(600, Math.ceil(pins.length / 2) * 240 + 240);
+  const lowestPinBottom = pins.reduce((max, pin) => Math.max(max, (Number(pin.y) || 0) + estimatedPinHeight(pin)), 0);
+  const BOARD_HEIGHT = Math.max(600, Math.ceil(pins.length / 2) * 240 + 240, lowestPinBottom + 120);
 
   // ─── Drag ──────────────────────────────────────────────────────────────────
   function startDrag(e, id) {
@@ -724,7 +750,7 @@ const SomedayPage = ({
   }, [onMove, stopDrag]);
 
   function addPin(data) {
-    const pos = gridPosition(pins.length);
+    const pos = positionBelowLowestPin(pins);
     const newPin = { id: Date.now().toString(), ...pos, ...data };
     setPins(ps => [...ps, newPin]);
     onAddDream?.(newPin);

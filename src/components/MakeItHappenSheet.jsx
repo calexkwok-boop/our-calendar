@@ -107,10 +107,8 @@ function weeksUntil(targetDate) {
 }
 
 const OCCASION_PRESETS = [
-  { label: 'My birthday',    emoji: '🎂', getDate: () => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); return d.toISOString().split('T')[0]; } },
   { label: 'Christmas',      emoji: '🎄', getDate: () => { const d = new Date(); d.setMonth(11, 25); if (d < new Date()) d.setFullYear(d.getFullYear() + 1); return d.toISOString().split('T')[0]; } },
   { label: 'New Year',       emoji: '🥂', getDate: () => { const d = new Date(); d.setFullYear(d.getFullYear() + 1, 0, 1); return d.toISOString().split('T')[0]; } },
-  { label: 'Anniversary',    emoji: '💍', getDate: () => { const d = new Date(); d.setMonth(d.getMonth() + 6); return d.toISOString().split('T')[0]; } },
   { label: 'In 3 months',    emoji: '📅', getDate: () => { const d = new Date(); d.setMonth(d.getMonth() + 3); return d.toISOString().split('T')[0]; } },
   { label: 'In 6 months',    emoji: '📅', getDate: () => { const d = new Date(); d.setMonth(d.getMonth() + 6); return d.toISOString().split('T')[0]; } },
   { label: 'In a year',      emoji: '🌟', getDate: () => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); return d.toISOString().split('T')[0]; } },
@@ -403,7 +401,7 @@ export default function MakeItHappenSheet({ item, onClose, onAddEvent, darkMode 
                 />
               </div>
               {/* Occasion presets */}
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
+              <div style={{ display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', margin: '0 -20px 16px', padding: '0 20px 2px' }}>
                 {OCCASION_PRESETS.map(preset => (
                   <button
                     key={preset.label}
@@ -418,6 +416,8 @@ export default function MakeItHappenSheet({ item, onClose, onAddEvent, darkMode 
                       fontSize: 14,
                       cursor: 'pointer',
                       transition: 'all .15s',
+                      flexShrink: 0,
+                      whiteSpace: 'nowrap',
                     }}
                   >
                     {preset.emoji} {preset.label}
