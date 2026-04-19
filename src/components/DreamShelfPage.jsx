@@ -681,6 +681,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   const hasFetchedRef = useRef(false);
   const imageFetchedRef = useRef(new Set());
   const imageRequestsRef = useRef(new Map());
+  const searchRequestIdRef = useRef(0);
 
   // ── Auth ──
   useEffect(() => {
@@ -818,19 +819,20 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     }
   }, []);
 
-  const handleProductSearch = useCallback(async (event) => {
-    event?.preventDefault?.();
-    const query = searchQuery.trim();
+  const runProductSearch = useCallback(async (query, { allowFallback = false } = {}) => {
     if (!query) return;
 
+    const requestId = searchRequestIdRef.current + 1;
+    searchRequestIdRef.current = requestId;
     setSearching(true);
-    setSearchError("");
+    if (allowFallback) setSearchError("");
     try {
       const response = await fetch(`/api/product-search?q=${encodeURIComponent(query)}`);
       if (response.ok) {
         const data = await response.json();
         const results = normalizeSearchItems(data.items || [], query);
         if (results.length) {
+          if (requestId !== searchRequestIdRef.current) return;
           setSearchResults(results);
           setActiveCategory(getDreamShelfCategoryMeta(results[0].category));
           setSearching(false);
@@ -838,23 +840,58 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         }
       }
 
-      const fallback = await buildManualSearchItem(query);
-      setSearchResults([fallback]);
-      setSearchError("Showing a best-effort match. If the photo is off, add your own picture.");
+      if (allowFallback) {
+        const fallback = await buildManualSearchItem(query);
+        if (requestId !== searchRequestIdRef.current) return;
+        setSearchResults([fallback]);
+        setSearchError("Showing a best-effort match. If the photo is off, add your own picture.");
+      } else if (requestId === searchRequestIdRef.current) {
+        setSearchResults([]);
+      }
     } catch (error) {
-      const fallback = await buildManualSearchItem(query);
-      setSearchResults([fallback]);
-      setSearchError("Search was limited, so I made a draft card you can refine.");
+      if (allowFallback) {
+        const fallback = await buildManualSearchItem(query);
+        if (requestId !== searchRequestIdRef.current) return;
+        setSearchResults([fallback]);
+        setSearchError("Search was limited, so I made a draft card you can refine.");
+      } else if (requestId === searchRequestIdRef.current) {
+        setSearchResults([]);
+      }
     } finally {
-      setSearching(false);
+      if (requestId === searchRequestIdRef.current) setSearching(false);
     }
-  }, [buildManualSearchItem, normalizeSearchItems, searchQuery]);
+  }, [buildManualSearchItem, normalizeSearchItems]);
+
+  const handleProductSearch = useCallback(async (event) => {
+    event?.preventDefault?.();
+    const query = searchQuery.trim();
+    await runProductSearch(query, { allowFallback: true });
+  }, [runProductSearch, searchQuery]);
 
   const clearProductSearch = useCallback(() => {
+    searchRequestIdRef.current += 1;
     setSearchQuery("");
     setSearchResults([]);
     setSearchError("");
+    setSearching(false);
   }, []);
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 3) {
+      searchRequestIdRef.current += 1;
+      setSearchResults([]);
+      setSearchError("");
+      setSearching(false);
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => {
+      runProductSearch(query, { allowFallback: false });
+    }, 650);
+
+    return () => window.clearTimeout(timeout);
+  }, [runProductSearch, searchQuery]);
 
   useEffect(() => {
     const imageTargets = [
