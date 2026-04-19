@@ -35,6 +35,27 @@ const getDreamShelfImageQuery = (item = {}) => [
   "official",
 ].filter(Boolean).join(" ");
 
+const getDreamShelfCategoryMeta = (categoryId) => (
+  CATEGORIES.find(c => c.id === categoryId) || CATEGORIES[0]
+);
+
+const inferDreamShelfCategory = (text = "") => {
+  const q = text.toLowerCase();
+  if (/(watch|rolex|omega|patek|audemars|cartier santos|iwc|tag heuer|daytona|submariner)/.test(q)) return "watches";
+  if (/(bag|purse|tote|birkin|kelly|chanel|celine|prada|bottega|louis vuitton|gucci)/.test(q)) return "bags";
+  if (/(ring|bracelet|necklace|earring|jewelry|jewellery|tiffany|van cleef|love bracelet)/.test(q)) return "jewelry";
+  if (/(sneaker|shoe|jordan|nike|adidas|new balance|common projects|dunk|samba)/.test(q)) return "sneakers";
+  if (/(golf|putter|driver|iron|scotty|taylormade|titleist)/.test(q)) return "golf";
+  if (/(camera|guitar|piano|art|leica|fender|gibson)/.test(q)) return "hobbies";
+  if (/(wine|champagne|whiskey|whisky|cellar|bordeaux|burgundy)/.test(q)) return "cellar";
+  if (/(ski|bike|snowboard|tent|kayak|adventure)/.test(q)) return "adventure";
+  return "watches";
+};
+
+const getDreamShelfFallbackDescription = (query = "") => (
+  `A searched Dream Shelf find for "${query}". Add your own photo if this is the exact piece you want to save.`
+);
+
 const DREAMSHELF_IMAGES = {
   w1: "https://media.rolex.com/image/upload/q_auto/f_auto/t_v7-cover-majesty-landscape/c_limit,w_1200/v1/a677b2c664f6/catalogue/2026/upright-c/m124060-0001",
   w2: "https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=600&q=80",
@@ -250,12 +271,15 @@ function formatTime(iso) {
 function ItemModal({ item, isSaved, onSomeday, onMilestone, onShare, onClose, darkMode }) {
   const dm = darkMode;
   const [saved, setSaved] = useState(isSaved);
+  const [imageFailed, setImageFailed] = useState(false);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = prev; };
   }, []);
+
+  useEffect(() => { setImageFailed(false); }, [item.image]);
 
   const handleSomeday = () => {
     if (!saved) onSomeday(item);
@@ -272,8 +296,13 @@ function ItemModal({ item, isSaved, onSomeday, onMilestone, onShare, onClose, da
       <div className={`w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden border ${dm ? 'bg-[#0e1520] border-white/10' : 'bg-white border-slate-200'}`}>
         {/* Image / emoji header */}
         <div className="relative flex-shrink-0">
-          {item.image ? (
-            <img src={item.image} alt={item.name} className={`w-full h-56 object-contain p-8 ${dm ? 'bg-[#131c2e]' : 'bg-slate-50'}`} />
+          {item.image && !imageFailed ? (
+            <img
+              src={item.image}
+              alt={item.name}
+              className={`w-full h-56 object-contain p-8 ${dm ? 'bg-[#131c2e]' : 'bg-slate-50'}`}
+              onError={() => setImageFailed(true)}
+            />
           ) : (
             <div className={`w-full h-56 flex flex-col items-center justify-center gap-3 ${dm ? 'bg-[#131c2e]' : 'bg-gradient-to-br from-amber-50 to-yellow-50'}`}>
               <span className="text-7xl">{item.emoji || cat.emoji}</span>
@@ -351,6 +380,9 @@ function ItemModal({ item, isSaved, onSomeday, onMilestone, onShare, onClose, da
 const ItemCard = React.memo(function ItemCard({ item, savedIds, onOpen, darkMode }) {
   const dm = darkMode;
   const isSaved = savedIds.has(item.id);
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => { setImageFailed(false); }, [item.image]);
 
   return (
     <div
@@ -364,8 +396,13 @@ const ItemCard = React.memo(function ItemCard({ item, savedIds, onOpen, darkMode
     >
       {/* Image / emoji */}
       <div className={`w-full h-52 flex flex-col items-center justify-center gap-2 relative ${dm ? 'bg-[#131c2e]' : 'bg-gradient-to-br from-[#fffaf0] via-[#fffdf7] to-[#f3e7ce]'}`}>
-        {item.image ? (
-          <img src={item.image} alt={item.name} className="w-full h-52 object-contain p-6 transition-transform duration-300 group-hover:scale-[1.03]" />
+        {item.image && !imageFailed ? (
+          <img
+            src={item.image}
+            alt={item.name}
+            className="w-full h-52 object-contain p-6 transition-transform duration-300 group-hover:scale-[1.03]"
+            onError={() => setImageFailed(true)}
+          />
         ) : (
           <>
             <span className="text-6xl">{item.emoji}</span>
@@ -401,9 +438,11 @@ const CommunityPost = React.memo(function CommunityPost({ post, photoUrl, curren
   const [vote, setVote]     = useState(0);
   const [likes, setLikes]   = useState(post.likes_count ?? 0);
   const [wished, setWished] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
   const resolvedImage = post.product_image || photoUrl || "";
 
   useEffect(() => { setLikes(post.likes_count ?? 0); }, [post.id, post.likes_count]);
+  useEffect(() => { setImageFailed(false); }, [resolvedImage]);
 
   const handleVote = async (nextVote) => {
     const delta = nextVote - vote;
@@ -434,8 +473,13 @@ const CommunityPost = React.memo(function CommunityPost({ post, photoUrl, curren
 
       {/* Product block */}
       <div className="flex gap-3 mb-3">
-        {resolvedImage ? (
-          <img src={resolvedImage} alt={post.product_name} className={`w-20 h-20 rounded-xl object-contain p-1.5 flex-shrink-0 ${dm ? 'bg-[#131c2e]' : 'bg-amber-50'}`} />
+        {resolvedImage && !imageFailed ? (
+          <img
+            src={resolvedImage}
+            alt={post.product_name}
+            className={`w-20 h-20 rounded-xl object-contain p-1.5 flex-shrink-0 ${dm ? 'bg-[#131c2e]' : 'bg-amber-50'}`}
+            onError={() => setImageFailed(true)}
+          />
         ) : (
           <div className={`w-20 h-20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 ${dm ? 'bg-[#131c2e]' : 'bg-amber-50'}`}>
             {cat?.emoji || "✨"}
@@ -578,6 +622,7 @@ function ShareItemModal({ item, onClose, onSubmit, darkMode }) {
               <div className="relative rounded-2xl overflow-hidden h-44">
                 <img src={draft.image} alt="preview" className="w-full h-full object-contain bg-slate-100" />
                 <button type="button" onClick={() => updateField("image", "")} className="absolute bottom-2 right-2 px-3 py-1 rounded-lg bg-white/90 text-xs font-semibold text-slate-700">Remove</button>
+                <button type="button" onClick={() => photoInputRef.current?.click()} className="absolute bottom-2 left-2 px-3 py-1 rounded-lg bg-white/90 text-xs font-semibold text-slate-700">Change photo</button>
               </div>
             ) : (
               <button type="button" onClick={() => photoInputRef.current?.click()} className={`py-6 rounded-2xl border-2 border-dashed flex flex-col items-center gap-2 ${dm ? 'border-white/10 bg-white/2' : 'border-slate-200 bg-slate-50'}`}>
@@ -629,6 +674,10 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   const [sharingItem, setSharingItem]       = useState(null);
   const [currentUserId, setCurrentUserId]   = useState(null);
   const [itemImages, setItemImages]         = useState({});
+  const [searchQuery, setSearchQuery]       = useState("");
+  const [searchResults, setSearchResults]   = useState([]);
+  const [searching, setSearching]           = useState(false);
+  const [searchError, setSearchError]       = useState("");
   const hasFetchedRef = useRef(false);
   const imageFetchedRef = useRef(new Set());
   const imageRequestsRef = useRef(new Map());
@@ -680,6 +729,27 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   }, [loadCategory]);
 
   // ── Handlers ──
+  const normalizeSearchItems = useCallback((rawItems = [], query = "") => (
+    rawItems.map((item, index) => {
+      const name = item.name || item.title || query;
+      const category = item.category || inferDreamShelfCategory(`${name} ${item.brand || ""} ${query}`);
+      const cat = getDreamShelfCategoryMeta(category);
+      return {
+        id: `search-${getDreamShelfImageKey(item || {}) || `${query}-${index}`}`,
+        name,
+        brand: item.brand || item.sourceName || "Dream find",
+        priceRange: item.priceRange || item.price || "",
+        image: item.image || item.imageUrl || item.thumbnail || "",
+        sourceUrl: item.sourceUrl || item.link || "",
+        sourceName: item.sourceName || item.source || "",
+        category,
+        emoji: cat.emoji,
+        description: item.description || getDreamShelfFallbackDescription(query),
+        external: true,
+      };
+    })
+  ), []);
+
   const fetchDreamShelfImage = useCallback(async (item) => {
     const key = getDreamShelfImageKey(item);
     const cachedImage = item?.image || item?.product_image || itemImages[key] || "";
@@ -714,15 +784,88 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     return request;
   }, [itemImages]);
 
+  const buildManualSearchItem = useCallback(async (query) => {
+    const category = inferDreamShelfCategory(query);
+    const cat = getDreamShelfCategoryMeta(category);
+    const fallbackItem = {
+      id: `manual-${Date.now()}`,
+      name: query,
+      brand: "Dream find",
+      priceRange: "",
+      image: "",
+      category,
+      emoji: cat.emoji,
+      description: getDreamShelfFallbackDescription(query),
+      external: true,
+    };
+    const image = await fetchDreamShelfImage(fallbackItem);
+    return { ...fallbackItem, image };
+  }, [fetchDreamShelfImage]);
+
+  const cacheDreamShelfImage = useCallback(async (imageUrl, name) => {
+    if (!imageUrl || imageUrl.startsWith("data:")) return imageUrl || "";
+    try {
+      const response = await fetch("/api/cache-product-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl, name }),
+      });
+      if (!response.ok) return imageUrl;
+      const data = await response.json();
+      return data.imageUrl || imageUrl;
+    } catch {
+      return imageUrl;
+    }
+  }, []);
+
+  const handleProductSearch = useCallback(async (event) => {
+    event?.preventDefault?.();
+    const query = searchQuery.trim();
+    if (!query) return;
+
+    setSearching(true);
+    setSearchError("");
+    try {
+      const response = await fetch(`/api/product-search?q=${encodeURIComponent(query)}`);
+      if (response.ok) {
+        const data = await response.json();
+        const results = normalizeSearchItems(data.items || [], query);
+        if (results.length) {
+          setSearchResults(results);
+          setActiveCategory(getDreamShelfCategoryMeta(results[0].category));
+          setSearching(false);
+          return;
+        }
+      }
+
+      const fallback = await buildManualSearchItem(query);
+      setSearchResults([fallback]);
+      setSearchError("Showing a best-effort match. If the photo is off, add your own picture.");
+    } catch (error) {
+      const fallback = await buildManualSearchItem(query);
+      setSearchResults([fallback]);
+      setSearchError("Search was limited, so I made a draft card you can refine.");
+    } finally {
+      setSearching(false);
+    }
+  }, [buildManualSearchItem, normalizeSearchItems, searchQuery]);
+
+  const clearProductSearch = useCallback(() => {
+    setSearchQuery("");
+    setSearchResults([]);
+    setSearchError("");
+  }, []);
+
   useEffect(() => {
     const imageTargets = [
       ...items.slice(0, 24),
+      ...searchResults.slice(0, 8),
       featuredPost,
       ...communityPosts.slice(0, 8),
     ].filter(Boolean);
 
     imageTargets.forEach(fetchDreamShelfImage);
-  }, [communityPosts, featuredPost, fetchDreamShelfImage, items]);
+  }, [communityPosts, featuredPost, fetchDreamShelfImage, items, searchResults]);
 
   const handleCategoryClick = (cat) => {
     setActiveCategory(cat);
@@ -744,9 +887,15 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     });
     if (!alreadySaved) {
       const imageUrl = item.image || itemImages[getDreamShelfImageKey(item)] || await fetchDreamShelfImage(item) || "";
-      onAddToSomeday?.({ title: item.name, imageUrl, emoji: item.emoji || "✨", type: "dreamshelf", categoryId: "buy", notes: `${item.brand} · ${item.priceRange || ""}` });
+      const stableImageUrl = await cacheDreamShelfImage(imageUrl, item.name);
+      onAddToSomeday?.({ title: item.name, imageUrl: stableImageUrl, emoji: item.emoji || "✨", type: "dreamshelf", categoryId: "buy", notes: `${item.brand} · ${item.priceRange || ""}` });
     }
-  }, [fetchDreamShelfImage, itemImages, onAddToSomeday, savedIds]);
+  }, [cacheDreamShelfImage, fetchDreamShelfImage, itemImages, onAddToSomeday, savedIds]);
+
+  const handleCommunitySomeday = useCallback(async (payload) => {
+    const stableImageUrl = await cacheDreamShelfImage(payload?.imageUrl || "", payload?.title || "dream-item");
+    onAddToSomeday?.({ ...payload, imageUrl: stableImageUrl });
+  }, [cacheDreamShelfImage, onAddToSomeday]);
 
   const handleMilestone = useCallback((item) => {
     onAddEvent?.({ title: `🎯 Get my ${item.name}`, notes: `${item.brand} · ${item.priceRange || ""} · Dream Shelf milestone`, category: "milestone" });
@@ -782,6 +931,12 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
       setFeaturedPost(prev => prev && prev.id === post.id ? { ...prev, likes_count: Math.max(0, (prev.likes_count ?? 0) + delta) } : prev);
     }
   }, []);
+
+  const handleFeaturedSomeday = useCallback(async (featured, imageUrl) => {
+    if (!featured) return;
+    const stableImageUrl = await cacheDreamShelfImage(imageUrl || "", featured.product_name || "dream-item");
+    onAddToSomeday?.({ title: featured.product_name, imageUrl: stableImageUrl, emoji: "✨", type: "dreamshelf", categoryId: "buy" });
+  }, [cacheDreamShelfImage, onAddToSomeday]);
 
   const subFilters = SUB_FILTERS[activeCategory?.id] || [];
   const featured = featuredPost;
@@ -832,6 +987,82 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         </div>
 
         {/* ── Category strip ── */}
+        {/* Search / add your own */}
+        <form
+          onSubmit={handleProductSearch}
+          className={`rounded-3xl border p-3 mb-4 ${dm ? 'bg-[#161f30] border-white/5' : 'bg-white border-amber-100/70'}`}
+          style={{
+            boxShadow: dm ? '0 14px 30px rgba(0,0,0,0.20)' : '0 12px 28px rgba(143,113,66,0.08)',
+          }}
+        >
+          <div className="flex gap-2">
+            <input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search a dream item..."
+              className={`flex-1 min-w-0 rounded-2xl px-4 py-3 text-sm outline-none border ${dm ? 'bg-[#0e1520] border-white/8 text-slate-100 placeholder:text-slate-600 focus:border-amber-400/35' : 'bg-[#faf8f3] border-amber-100 text-slate-800 placeholder:text-slate-400 focus:border-amber-300'}`}
+            />
+            <button
+              type="submit"
+              disabled={!searchQuery.trim() || searching}
+              className="dream-shelf-pill flex-shrink-0 rounded-2xl px-4 py-2 text-base font-bold border disabled:opacity-40"
+              style={{ background: dm ? GOLD_MUTED : '#FFFBEB', border: `1px solid ${GOLD_BORDER}`, color: dm ? '#fff7d6' : GOLD_DARK }}
+            >
+              {searching ? "Finding..." : "Find it"}
+            </button>
+          </div>
+          <div className="flex items-center justify-between gap-3 px-1 pt-2">
+            <p className={`text-xs ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
+              Search pulls product matches when configured. You can always add your own photo.
+            </p>
+            <button
+              type="button"
+              onClick={() => setSharingItem({ name: searchQuery.trim(), brand: "", image: "", priceRange: "", category: inferDreamShelfCategory(searchQuery), description: "" })}
+              className="dream-shelf-pill flex-shrink-0 text-sm font-bold"
+              style={{ color: TEAL }}
+            >
+              Add manually
+            </button>
+          </div>
+          {searchError && (
+            <p className="px-1 pt-2 text-xs" style={{ color: GOLD }}>
+              {searchError}
+            </p>
+          )}
+        </form>
+
+        {searchResults.length > 0 && (
+          <>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500">
+                Search results for "{searchQuery.trim()}"
+              </p>
+              <button
+                type="button"
+                onClick={clearProductSearch}
+                className="dream-shelf-pill text-sm font-bold"
+                style={{ color: dm ? '#9ca3af' : '#78716c' }}
+              >
+                Back to curated shelf
+              </button>
+            </div>
+            <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-5 mb-6">
+              {searchResults.map(item => {
+                const itemWithImage = { ...item, image: item.image || itemImages[getDreamShelfImageKey(item)] || "" };
+                return (
+                  <ItemCard
+                    key={item.id}
+                    item={itemWithImage}
+                    savedIds={savedIds}
+                    onOpen={setSelectedItem}
+                    darkMode={dm}
+                  />
+                );
+              })}
+            </div>
+          </>
+        )}
+
         <div className="flex gap-1.5 mb-4 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
           {CATEGORIES.map(cat => (
             <button
@@ -931,7 +1162,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                     </div>
                   </div>
                   <button
-                    onClick={() => onAddToSomeday?.({ title: featured.product_name, imageUrl: featuredImage, emoji: "✨", type: "dreamshelf", categoryId: "buy" })}
+                    onClick={() => handleFeaturedSomeday(featured, featuredImage)}
                     className="self-start px-4 py-2 rounded-xl text-sm font-['Caveat'] font-bold border transition-all"
                     style={{ background: dm ? TEAL_MUTED : '#f0fdfa', border: `1px solid ${TEAL_BORDER}`, color: TEAL, fontFamily: "'Caveat', cursive" }}
                   >
@@ -1032,7 +1263,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
               post={post}
               photoUrl={itemImages[getDreamShelfImageKey(post)] || ""}
               currentUserId={currentUserId}
-              onAddToSomeday={onAddToSomeday}
+              onAddToSomeday={handleCommunitySomeday}
               onVote={handleVoteCommunityPost}
               darkMode={dm}
             />
