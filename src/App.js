@@ -27,6 +27,7 @@ import MemorySystem, { MemoryCreator as ImportedMemoryCreator } from "./componen
 import ScrapbookHomeHybrid from "./components/ScrapbookHomeHybrid";
 import SomedayPage from "./components/SomedayPage";
 import AddDreamSheet from "./components/AddDreamSheet";
+import MakeItHappenSheet from "./components/MakeItHappenSheet";
 import useHomeScreenData from "./hooks/useHomeScreenData";
 import TripsTab from "./components/TripsTab";
 import TripRatingSystem from "./components/TripRatingSystem";
@@ -3307,6 +3308,7 @@ function App() {
   const [quickThoughts, setQuickThoughts] = useState(() => readQuickThoughtsState('guest'));
   const [bucketList, setBucketList] = useState(() => readBucketListState('guest'));
   const [showAddDreamSheet, setShowAddDreamSheet] = useState(false);
+  const [makeItHappenItem, setMakeItHappenItem] = useState(null);
   const [somedayPinPositions, setSomedayPinPositions] = useState(() => {
     try { return JSON.parse(localStorage.getItem('someday-pin-positions') || '{}'); } catch { return {}; }
   });
@@ -24172,19 +24174,61 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   };
 
   const planFromDream = (dream) => {
-    const text = String(dream?.text || dream?.dream || '').trim();
-    const category = String(dream?.category || '').trim().toLowerCase();
-    if (category === 'travel' || category === 'adventure') {
-      setShowSubCalendarModal(true);
-      return;
-    }
-    setHomeAddEventForm({
-      title: text,
-      date: getLocalTodayDateKey(),
-      time: '',
-      location: '',
+    const text = String(dream?.label || dream?.text || dream?.dream || '').trim();
+    const notes = String(dream?.notes || '').trim();
+    const [noteBrand = '', notePrice = ''] = notes.split(/[·Â]+/).map((part) => String(part || '').trim());
+    setMakeItHappenItem({
+      ...dream,
+      name: text,
+      brand: dream?.brand || noteBrand,
+      priceRange: dream?.priceRange || dream?.price || notePrice,
+      emoji: dream?.emoji || '✨',
+      category: dream?.category || dream?.categoryId || dream?.sourceType || '',
+      imageUrl: dream?.imageUrl || dream?.photoUrl || '',
     });
-    setShowHomeAddEventModal(true);
+  };
+
+  const addMakeItHappenMilestone = async (eventData = {}) => {
+    if (!assertCanEditActiveLayer('add events to this calendar')) return;
+    const dateKey = String(eventData.date || getDateKey(new Date())).trim();
+    const title = String(eventData.title || 'Make it happen').trim();
+    const eventId = generateUuid();
+    const newEvent = {
+      id: eventId,
+      title,
+      time: '',
+      date: dateKey,
+      category: eventData.category || 'milestone',
+      description: eventData.notes || '',
+      notes: eventData.notes || '',
+      emoji: eventData.emoji || '✨',
+      isPrivate: false,
+      isUrgent: false,
+      isAnnual: false,
+      recurrence: 'once',
+      annualMonth: null,
+      annualDay: null,
+      createdBy: currentUser,
+      createdAt: new Date().toISOString(),
+      isMultiDay: false,
+      multiDayId: null,
+      userId: user?.id || null,
+      layerId: activeLayerId,
+      layer_id: activeLayerId,
+      calendar_id: activeLayerId,
+      moderationStatus: defaultModerationStatusForNewEvent,
+      location: '',
+    };
+    const nextEvents = { ...(events || {}) };
+    const dayEvents = Array.isArray(nextEvents[dateKey]) ? [...nextEvents[dateKey]] : [];
+    dayEvents.push(newEvent);
+    nextEvents[dateKey] = dayEvents.sort((a, b) => {
+      if (!a.time) return 1;
+      if (!b.time) return -1;
+      return String(a.time).localeCompare(String(b.time));
+    });
+    await saveEvents(nextEvents, { immediate: true });
+    setSelectedDate(new Date(`${dateKey}T12:00:00`));
   };
 
   const closeJourneyTab = () => {
@@ -24748,6 +24792,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     <style>{shakeStyle}</style>
     {controlWidgetAddPanelPortal}
     {homeAddEventModal}
+    {makeItHappenItem ? (
+      <MakeItHappenSheet
+        item={makeItHappenItem}
+        onClose={() => setMakeItHappenItem(null)}
+        onAddEvent={addMakeItHappenMilestone}
+        darkMode={darkMode}
+      />
+    ) : null}
     {!activeSubCalendar && showMemorySystem && renderJourneyPortal((
       <div className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[10000] flex flex-col overflow-hidden ${
         memorySystemView === 'viewer' ? 'bg-black' : 'bg-white dark:bg-slate-950'
@@ -29617,6 +29669,10 @@ transform: translateY(0);
                         emoji,
                         photoUrl,
                         createdAt: new Date().toISOString(),
+                        notes: post?.notes || '',
+                        brand: post?.brand || post?.product_brand || '',
+                        priceRange: post?.priceRange || post?.price || post?.product_price || '',
+                        type: post?.type || '',
                       },
                       ...(Array.isArray(prev) ? prev : []),
                     ];
@@ -29859,6 +29915,10 @@ transform: translateY(0);
                 text: d.text,
                 emoji: d.emoji || '✨',
                 imageUrl: d.photoUrl || '',
+                notes: d.notes || '',
+                brand: d.brand || '',
+                priceRange: d.priceRange || '',
+                sourceType: d.type || '',
                 noteColor: 'yellow',
                 pinColor: 'teal',
                 categoryId: catMap[d.category] || 'experiences',

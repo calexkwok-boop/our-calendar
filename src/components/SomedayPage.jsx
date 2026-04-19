@@ -533,7 +533,7 @@ function DetailSheet({ pin, onClose, onConvertToEvent, onConvertToTrip, onMarkDo
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16 }}>
           {pin.status !== 'done' && (
             <button onClick={handleTurnIntoPlan} style={{ flex: '1 1 100%', minWidth: 120, padding: '12px', borderRadius: 14, background: darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb', color: darkMode ? '#2dd4bf' : '#0d9488', border: `1px solid ${darkMode ? 'rgba(45,212,191,0.2)' : '#99f6e4'}`, fontFamily: CAVEAT, fontSize: 18, fontWeight: 700, cursor: 'pointer' }}>
-              Turn this into a plan
+              Make it happen
             </button>
           )}
           <button onClick={() => { onMarkDone?.(pin); onClose(); }} style={{ flex: 1, minWidth: 120, padding: '11px', borderRadius: 14, background: pin.status === 'done' ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : secBg, color: pin.status === 'done' ? (darkMode ? '#2dd4bf' : '#0d9488') : (darkMode ? '#cbd5e1' : ts), border: `1px solid ${darkMode ? 'rgba(255,255,255,0.12)' : '#e5e0d5'}`, fontFamily: CAVEAT, fontSize: 16, cursor: 'pointer' }}>
