@@ -265,7 +265,7 @@ export default function MakeItHappenSheet({ item, onClose, onAddEvent, darkMode 
         <div {...handleProps} style={{ width: 36, height: 4, borderRadius: 2, background: dm ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '14px auto 0', flexShrink: 0, ...handleProps.style }} />
 
         {/* Scrollable content */}
-        <div style={{ overflowY: 'auto', flex: 1, padding: '18px 20px calc(28px + env(safe-area-inset-bottom))' }}>
+        <div style={{ overflowY: 'auto', flex: 1, padding: '18px 20px calc(80px + env(safe-area-inset-bottom))' }}>
 
           {/* ── Header ── */}
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
