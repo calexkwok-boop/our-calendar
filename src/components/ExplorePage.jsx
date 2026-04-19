@@ -11,13 +11,45 @@ const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
 
 const FRIEND_POSTS = [];
 
-const COMMUNITY_POSTS = [
-  { id: "c1", type: "hiking", icon: "🥾", page: "Hiking & Outdoors", time: "Trending", cardTitle: "Lands End Trail", location: "San Francisco · 3.4 mi", desc: "Stunning coastal views, moderate difficulty. Best visited at golden hour.", votes: 183, tag: "Hiking", imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan it"] },
-  { id: "c2", type: "games", icon: "🎲", page: "Board Games", time: "Community pick", cardTitle: "Wingspan", desc: "Elegant engine-builder about birds. Perfect for 2–5 players, around 90 minutes.", votes: 312, tag: "Games", actions: ["Add to someday", "Plan game night"] },
-  { id: "c3", type: "restaurants", icon: "🍜", page: "Restaurants", time: "New addition", cardTitle: "Dumpling Time", location: "SoMa, San Francisco", desc: "Handcrafted dumplings, beautiful space. The XLB are unmissable.", votes: 198, tag: "Restaurants", imageUrl: "https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan dinner"] },
-  { id: "c4", type: "products", icon: "✨", page: "Dream Shelf", time: "Most dreamed about", cardTitle: "Rolex Submariner", desc: "A forever watch with quiet presence — the kind of piece people save for and keep for life.", votes: 247, tag: "Dream Shelf", imageUrl: "https://media.rolex.com/image/upload/q_auto/f_auto/t_v7-cover-majesty-landscape/c_limit,w_1200/v1/a677b2c664f6/catalogue/2026/upright-c/m124060-0001", actions: ["Add to someday", "Open Dream Shelf"] },
-  { id: "c5", type: "destinations", icon: "✈️", page: "Destinations", time: "Dream trip", cardTitle: "Kyoto in Cherry Blossom Season", location: "Japan", desc: "Temples, lantern-lit alleys, and a city transformed by spring. Save this one for the kind of trip you plan around.", votes: 276, tag: "Destinations", imageUrl: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan trip"] },
-];
+const COMMUNITY_POOL = {
+  hiking: [
+    { id: "h1", type: "hiking", icon: "🥾", page: "Hiking & Outdoors", time: "Trending", cardTitle: "Lands End Trail", location: "San Francisco · 3.4 mi", desc: "Stunning coastal views, moderate difficulty. Best visited at golden hour.", votes: 183, tag: "Hiking", imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan it"] },
+    { id: "h2", type: "hiking", icon: "🥾", page: "Hiking & Outdoors", time: "Community pick", cardTitle: "Angels Landing", location: "Zion National Park · 4.3 mi", desc: "One of the most dramatic hikes in the US. Chain-assisted scramble to an insane summit view.", votes: 412, tag: "Hiking", imageUrl: "https://images.unsplash.com/photo-1501854140801-50d01698950b?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan it"] },
+    { id: "h3", type: "hiking", icon: "🥾", page: "Hiking & Outdoors", time: "Hidden gem", cardTitle: "Emerald Lake Trail", location: "Rocky Mountain NP · 3.2 mi", desc: "A string of alpine lakes through classic Rocky Mountain scenery. Easy enough to linger.", votes: 229, tag: "Hiking", imageUrl: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan it"] },
+    { id: "h4", type: "hiking", icon: "🥾", page: "Hiking & Outdoors", time: "Bucket list", cardTitle: "The Narrows", location: "Zion National Park · 8.9 mi", desc: "Hike through the Virgin River between towering slot canyon walls. Wet feet, zero regrets.", votes: 374, tag: "Hiking", imageUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan it"] },
+    { id: "h5", type: "hiking", icon: "🥾", page: "Hiking & Outdoors", time: "Trending", cardTitle: "Skyline Trail Loop", location: "Mt. Rainier NP · 5.6 mi", desc: "Wildflowers, glaciers, and Rainier dominating the skyline. A Pacific Northwest classic.", votes: 301, tag: "Hiking", imageUrl: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan it"] },
+  ],
+  games: [
+    { id: "g1", type: "games", icon: "🎲", page: "Board Games", time: "Community pick", cardTitle: "Wingspan", desc: "Elegant engine-builder about birds. Perfect for 2–5 players, around 90 minutes.", votes: 312, tag: "Games", actions: ["Add to someday", "Plan game night"] },
+    { id: "g2", type: "games", icon: "🎲", page: "Board Games", time: "Trending", cardTitle: "Catan", desc: "The gateway game that started it all. Trade, build, settle — and ruin a friendship or two.", votes: 489, tag: "Games", actions: ["Add to someday", "Plan game night"] },
+    { id: "g3", type: "games", icon: "🎲", page: "Board Games", time: "Hidden gem", cardTitle: "Ticket to Ride", desc: "Collect cards, claim routes, connect cities. Easy to learn, impossible to put down.", votes: 276, tag: "Games", actions: ["Add to someday", "Plan game night"] },
+    { id: "g4", type: "games", icon: "🎲", page: "Board Games", time: "Community pick", cardTitle: "Codenames", desc: "The perfect party game. One word clues, big laughs, competitive enough to keep score.", votes: 351, tag: "Games", actions: ["Add to someday", "Plan game night"] },
+  ],
+  restaurants: [
+    { id: "r1", type: "restaurants", icon: "🍜", page: "Restaurants", time: "New addition", cardTitle: "Dumpling Time", location: "SoMa, San Francisco", desc: "Handcrafted dumplings, beautiful space. The XLB are unmissable.", votes: 198, tag: "Restaurants", imageUrl: "https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan dinner"] },
+    { id: "r2", type: "restaurants", icon: "🍜", page: "Restaurants", time: "Trending", cardTitle: "Nobu Los Angeles", location: "West Hollywood, LA", desc: "World-famous black cod miso in a room full of people having a great night.", votes: 341, tag: "Restaurants", imageUrl: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan dinner"] },
+    { id: "r3", type: "restaurants", icon: "🍜", page: "Restaurants", time: "Hidden gem", cardTitle: "Mariscos Jalisco", location: "East LA, Los Angeles", desc: "Legendary shrimp tacos with a cult following. Worth any detour, any day.", votes: 287, tag: "Restaurants", imageUrl: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan dinner"] },
+    { id: "r4", type: "restaurants", icon: "🍜", page: "Restaurants", time: "Bucket list", cardTitle: "The French Laundry", location: "Yountville, Napa Valley", desc: "The American bucket-list tasting menu. Three hours, twenty courses, one unforgettable night.", votes: 412, tag: "Restaurants", imageUrl: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan dinner"] },
+    { id: "r5", type: "restaurants", icon: "🍜", page: "Restaurants", time: "Community pick", cardTitle: "Bestia", location: "Downtown LA", desc: "House-made pastas and whole-animal roasts in a buzzy Arts District space. A dinner you talk about.", votes: 253, tag: "Restaurants", imageUrl: "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan dinner"] },
+  ],
+  products: [
+    { id: "p1", type: "products", icon: "✨", page: "Dream Shelf", time: "Most dreamed about", cardTitle: "Rolex Submariner", desc: "A forever watch with quiet presence — the kind of piece people save for and keep for life.", votes: 247, tag: "Dream Shelf", imageUrl: "https://media.rolex.com/image/upload/q_auto/f_auto/t_v7-cover-majesty-landscape/c_limit,w_1200/v1/a677b2c664f6/catalogue/2026/upright-c/m124060-0001", actions: ["Add to someday", "Open Dream Shelf"] },
+    { id: "p2", type: "products", icon: "✨", page: "Dream Shelf", time: "Trending", cardTitle: "Sonos Era 300", desc: "Spatial audio in every room. The speaker that makes staying home feel like a choice.", votes: 189, tag: "Dream Shelf", imageUrl: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Open Dream Shelf"] },
+    { id: "p3", type: "products", icon: "✨", page: "Dream Shelf", time: "Community pick", cardTitle: "Patagonia Black Hole Duffel", desc: "The bag that goes everywhere — carry-on, basecamp, weekend. Built to outlast everything else you own.", votes: 164, tag: "Dream Shelf", imageUrl: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Open Dream Shelf"] },
+    { id: "p4", type: "products", icon: "✨", page: "Dream Shelf", time: "Most dreamed about", cardTitle: "Le Creuset Dutch Oven", desc: "The heirloom kitchen piece. Once you cook in it you understand why people pass these down.", votes: 201, tag: "Dream Shelf", imageUrl: "https://images.unsplash.com/photo-1584990347449-39ce96f6528f?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Open Dream Shelf"] },
+  ],
+  destinations: [
+    { id: "d1", type: "destinations", icon: "✈️", page: "Destinations", time: "Dream trip", cardTitle: "Kyoto in Cherry Blossom Season", location: "Japan", desc: "Temples, lantern-lit alleys, and a city transformed by spring. Save this one for the kind of trip you plan around.", votes: 276, tag: "Destinations", imageUrl: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan trip"] },
+    { id: "d2", type: "destinations", icon: "✈️", page: "Destinations", time: "Bucket list", cardTitle: "Amalfi Coast", location: "Italy", desc: "Clifftop villages, turquoise water, and pasta on terraces overlooking the sea. A trip that earns its reputation.", votes: 389, tag: "Destinations", imageUrl: "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan trip"] },
+    { id: "d3", type: "destinations", icon: "✈️", page: "Destinations", time: "Hidden gem", cardTitle: "Oaxaca, Mexico", location: "Mexico", desc: "Mezcal, mole, markets, and one of the most vibrant food and art scenes in the world.", votes: 231, tag: "Destinations", imageUrl: "https://images.unsplash.com/photo-1518638150340-f706e86654de?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan trip"] },
+    { id: "d4", type: "destinations", icon: "✈️", page: "Destinations", time: "Trending", cardTitle: "Patagonia", location: "Chile & Argentina", desc: "The end of the world, in the best way. Glaciers, peaks, and trails that feel genuinely wild.", votes: 318, tag: "Destinations", imageUrl: "https://images.unsplash.com/photo-1501854140801-50d01698950b?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan trip"] },
+    { id: "d5", type: "destinations", icon: "✈️", page: "Destinations", time: "Dream trip", cardTitle: "Santorini", location: "Greece", desc: "Blue domes, white walls, and sunsets that actually live up to the photos. Worth every cliché.", votes: 344, tag: "Destinations", imageUrl: "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan trip"] },
+  ],
+};
+
+function pickCommunityPosts() {
+  return Object.values(COMMUNITY_POOL).map(pool => pool[Math.floor(Math.random() * pool.length)]);
+}
 
 function shuffle(arr) {
   const a = [...arr];
@@ -536,6 +568,7 @@ function CategoryGrid({ onPageTap }) {
 
 export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPlanEvent = () => {}, darkMode = false }) {
   const [sources, setSources]             = useState({ friends: true, movies: true, hiking: true, games: true, restaurants: true, products: true, destinations: true });
+  const [communityPosts]                  = useState(pickCommunityPosts);
   const [drawerOpen, setDrawerOpen]       = useState(false);
   const [search, setSearch]               = useState("");
   const [movies, setMovies]               = useState([]);
@@ -578,7 +611,7 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
   const anyOff        = Object.values(sources).some(v => !v);
   const moviePosts    = shuffle(movies.slice(0, 20)).slice(0, 6).map(m => ({ ...m, type: "movies" }));
   const activeFriends = sources.friends ? FRIEND_POSTS : [];
-  const activeCom     = shuffle(COMMUNITY_POSTS.filter(p => sources[p.type]));
+  const activeCom     = shuffle(communityPosts.filter(p => sources[p.type]));
   const activeMovies  = sources.movies && !moviesLoading ? moviePosts : [];
   const allPosts      = interleavePosts(activeFriends, activeMovies, activeCom);
   const visiblePosts  = search.trim()
