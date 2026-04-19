@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import MoviesPage from "./MoviesPage";
 import BoardGamePage from "./BoardGamePage";
 import RestaurantPage from "./RestaurantPage";
@@ -18,6 +18,15 @@ const COMMUNITY_POSTS = [
   { id: "c4", type: "products", icon: "✨", page: "Dream Shelf", time: "Most dreamed about", cardTitle: "Rolex Submariner", desc: "A forever watch with quiet presence — the kind of piece people save for and keep for life.", votes: 247, tag: "Dream Shelf", imageUrl: "https://media.rolex.com/image/upload/q_auto/f_auto/t_v7-cover-majesty-landscape/c_limit,w_1200/v1/a677b2c664f6/catalogue/2026/upright-c/m124060-0001", actions: ["Add to someday", "Open Dream Shelf"] },
   { id: "c5", type: "destinations", icon: "✈️", page: "Destinations", time: "Dream trip", cardTitle: "Kyoto in Cherry Blossom Season", location: "Japan", desc: "Temples, lantern-lit alleys, and a city transformed by spring. Save this one for the kind of trip you plan around.", votes: 276, tag: "Destinations", imageUrl: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan trip"] },
 ];
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 const EXPLORE_IMAGE_FALLBACKS = {
   hiking: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80",
@@ -567,9 +576,9 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
   }
 
   const anyOff        = Object.values(sources).some(v => !v);
-  const moviePosts    = movies.slice(0, 6).map(m => ({ ...m, type: "movies" }));
+  const moviePosts    = useMemo(() => shuffle(movies.slice(0, 20)).slice(0, 6).map(m => ({ ...m, type: "movies" })), [movies]);
   const activeFriends = sources.friends ? FRIEND_POSTS : [];
-  const activeCom     = COMMUNITY_POSTS.filter(p => sources[p.type]);
+  const activeCom     = useMemo(() => shuffle(COMMUNITY_POSTS.filter(p => sources[p.type])), [sources]);
   const activeMovies  = sources.movies && !moviesLoading ? moviePosts : [];
   const allPosts      = interleavePosts(activeFriends, activeMovies, activeCom);
   const visiblePosts  = search.trim()

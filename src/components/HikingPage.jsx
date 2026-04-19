@@ -539,7 +539,12 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
   const [trailSuggesting, setTrailSuggesting] = useState(false);
   const [isRecommendOpen, setIsRecommendOpen] = useState(false);
   const [recommendQuery, setRecommendQuery] = useState("");
+  const [currentUserEmail, setCurrentUserEmail] = useState(null);
   const fetchedRef = useRef(new Set());
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setCurrentUserEmail(data?.user?.email ?? null));
+  }, []);
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
@@ -811,6 +816,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
   }, [placePhotos]);
 
   const handleSave = (trail) => {
+    const isOwner = currentUserEmail === 'calexkwok@gmail.com';
     setSavedIds((prev) => {
       const next = new Set(prev);
       next.has(trail.id) ? next.delete(trail.id) : next.add(trail.id);
@@ -818,6 +824,13 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
     });
     recordTrailAdd(trail);
     onAddToSomeday?.(trail);
+    // Owner saves go directly into the curated trail list
+    if (isOwner) {
+      setTrails((prev) => {
+        if (prev.some((t) => t.id === trail.id)) return prev;
+        return [trail, ...prev];
+      });
+    }
   };
 
   const handlePlanTrip = (trail) => {

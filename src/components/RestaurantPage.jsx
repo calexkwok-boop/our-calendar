@@ -760,6 +760,7 @@ const RestaurantPage = ({
   const [selected, setSelected]         = useState(null);
   const [savedIds, setSavedIds]         = useState(new Set());
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState(null);
   const [recommendedPosts, setRecommendedPosts]           = useState([]);
   const [featuredRestaurantPost, setFeaturedRestaurantPost] = useState(null);
   const [highlightedRestaurantId, setHighlightedRestaurantId] = useState(null);
@@ -778,7 +779,10 @@ const RestaurantPage = ({
 
   // ── Auth ────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data?.user?.id ?? null));
+    supabase.auth.getUser().then(({ data }) => {
+      setCurrentUserId(data?.user?.id ?? null);
+      setCurrentUserEmail(data?.user?.email ?? null);
+    });
   }, []);
 
   // ── Community posts ─────────────────────────────────────────────────────────
@@ -1310,6 +1314,8 @@ const RestaurantPage = ({
 
   const handleRecommendSubmit = async (form) => {
     const payload = { user_id: currentUserId, restaurant_name: form.restaurant_name.trim(), restaurant_image: form.restaurant_image.trim() || null, address: form.address.trim() || null, cuisine: form.cuisine.trim() || null, price_level: form.price_level || null, rating: form.rating ? Number(form.rating) : null, review: form.review.trim(), best_for: form.best_for.trim() || null, likes_count: 0 };
+    const isOwner = currentUserEmail === 'calexkwok@gmail.com';
+
     let { error } = await supabase.from('restaurant_posts').insert(payload);
     if (error && payload.restaurant_image) {
       const fallbackPayload = { ...payload, restaurant_image: null };
@@ -1317,9 +1323,30 @@ const RestaurantPage = ({
       if (!error) payload.restaurant_image = null;
     }
     if (error) { console.error(error); return false; }
+
     const savedPost = { ...payload, id: `local-${Date.now()}`, created_at: new Date().toISOString() };
     setRecommendedPosts(prev => [savedPost, ...prev.filter(p => String(p.restaurant_name) !== String(savedPost.restaurant_name))]);
     setFeaturedRestaurantPost(savedPost);
+
+    // Owner additions also go into the main restaurant grid
+    if (isOwner) {
+      const asRestaurant = {
+        id: savedPost.id,
+        name: payload.restaurant_name,
+        cuisine: normalizeCuisineId(payload.cuisine || '') || 'american',
+        rating: payload.rating || 0,
+        priceLevel: Number(payload.price_level) || 0,
+        address: payload.address || '',
+        photo: payload.restaurant_image || '',
+        phone: '',
+        website: '',
+        description: payload.review || '',
+        vote_count: 0,
+        my_vote: 0,
+      };
+      setRestaurants(prev => [asRestaurant, ...prev.filter(r => r.name !== asRestaurant.name)]);
+    }
+
     setHighlightedRestaurantId(String(savedPost.id));
     window.setTimeout(() => communityFeedRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
     return true;
