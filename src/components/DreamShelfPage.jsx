@@ -802,30 +802,30 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         <div className="relative rounded-3xl p-8 mb-6 overflow-hidden border"
           style={{
             background: dm
-              ? 'linear-gradient(135deg, #070a12 0%, #1c2432 18%, #f8fafc 31%, #8f7142 39%, #151a24 52%, #d8be7f 66%, #080b12 100%)'
+              ? 'linear-gradient(135deg, #1b2433 0%, #334155 22%, #f1dfad 45%, #8f7142 58%, #243247 78%, #111827 100%)'
               : 'linear-gradient(135deg, #fffdf7 0%, #d8be7f 16%, #ffffff 31%, #c7b68d 43%, #f8efe0 56%, #fef9ec 74%, #b9954f 100%)',
             borderColor: dm ? 'rgba(216,190,127,0.55)' : 'rgba(143,113,66,0.48)',
             borderWidth: 1.5,
             boxShadow: dm
-              ? '0 24px 64px rgba(0,0,0,0.48), inset 0 1px 0 rgba(255,255,255,0.34), inset 0 -1px 0 rgba(216,190,127,0.24)'
+              ? '0 24px 64px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -1px 0 rgba(216,190,127,0.28)'
               : '0 20px 50px rgba(143,113,66,0.18), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(143,113,66,0.18)',
           }}>
           <div className="absolute right-10 top-8 text-2xl opacity-30 -rotate-6 select-none pointer-events-none">✨</div>
 
           <div className="relative z-10">
             {onBack && (
-              <button onClick={onBack} className={`w-9 h-9 rounded-xl flex items-center justify-center active:opacity-70 flex-shrink-0 mb-4 ${dm ? 'bg-white/5 text-slate-300' : 'bg-white/80 text-slate-600 border border-slate-200/70'}`} aria-label="Back">
+              <button onClick={onBack} className={`w-9 h-9 rounded-xl flex items-center justify-center active:opacity-70 flex-shrink-0 mb-4 ${dm ? 'bg-white/12 text-white border border-white/15' : 'bg-white/80 text-slate-600 border border-slate-200/70'}`} aria-label="Back">
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 4l-5 5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </button>
             )}
             <h1 className="font-handwritten text-5xl font-bold leading-tight mb-2 bg-gradient-to-r bg-clip-text text-transparent"
               style={{
-                backgroundImage: dm ? `linear-gradient(90deg, #f8fafc, ${GOLD})` : `linear-gradient(90deg, #1a1208, ${GOLD_DARK})`,
+                backgroundImage: dm ? 'linear-gradient(90deg, #ffffff, #fff4c7)' : `linear-gradient(90deg, #1a1208, ${GOLD_DARK})`,
                 fontFamily: "'Caveat', cursive",
               }}>
               Dream Shelf
             </h1>
-            <p className="text-sm leading-relaxed max-w-sm" style={{ color: dm ? '#9ca3af' : '#78716c' }}>
+            <p className="text-sm leading-relaxed max-w-sm" style={{ color: dm ? 'rgba(255,255,255,0.82)' : '#78716c' }}>
               Some dreams take you somewhere. Others you take with you.
             </p>
           </div>

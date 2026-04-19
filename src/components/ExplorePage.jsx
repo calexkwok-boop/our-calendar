@@ -266,7 +266,23 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
     <div className="rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent shadow-sm dark:shadow-none overflow-hidden">
       <CardHeader post={post} onPageTap={onPageTap} />
       <Divider />
-      {imageUrl && (
+      {imageUrl && post.type === "hiking" ? (
+        <div className="flex mx-4 mt-3 rounded-2xl overflow-hidden bg-stone-50 dark:bg-white/[0.03] border border-stone-100 dark:border-white/[0.04]">
+          <div className="w-[82px] h-[112px] flex-shrink-0 bg-green-500/10">
+            <img
+              src={imageUrl}
+              alt={post.cardTitle}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
+          <div className="flex-1 min-w-0 px-3.5 py-3">
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-0.5">{post.cardTitle}</p>
+            {post.location && <p className="text-[11px] text-gray-400 dark:text-gray-600 mb-1.5">{post.location}</p>}
+            <p className="text-sm text-gray-500 leading-relaxed line-clamp-3">{post.desc}</p>
+          </div>
+        </div>
+      ) : imageUrl && (
         <div
           className={`mx-4 mt-3 rounded-2xl overflow-hidden ${post.type === "products" ? "bg-stone-50 dark:bg-white/[0.03]" : "bg-stone-100 dark:bg-white/[0.04]"}`}
           onClick={() => onPageTap?.(post.type)}
@@ -279,11 +295,13 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
           />
         </div>
       )}
-      <div className="px-4 py-2.5">
-        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-0.5">{post.cardTitle}</p>
-        {post.location && <p className="text-[11px] text-gray-400 dark:text-gray-600 mb-1.5">{post.location}</p>}
-        <p className="text-sm text-gray-500 leading-relaxed">{post.desc}</p>
-      </div>
+      {post.type !== "hiking" && (
+        <div className="px-4 py-2.5">
+          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-0.5">{post.cardTitle}</p>
+          {post.location && <p className="text-[11px] text-gray-400 dark:text-gray-600 mb-1.5">{post.location}</p>}
+          <p className="text-sm text-gray-500 leading-relaxed">{post.desc}</p>
+        </div>
+      )}
       <div className="flex items-center gap-2 px-4 pb-4 pt-1">
         {post.actions.map((a, i) => {
           const isAmazonLink = post.type === "products" && i === 1 && post.amazonUrl;
