@@ -841,17 +841,17 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
               style={{
                 background: activeCategory?.id === cat.id
                   ? (dm
-                    ? 'linear-gradient(135deg, #070a12 0%, #1c2432 18%, #f8fafc 31%, #8f7142 39%, #151a24 52%, #d8be7f 66%, #080b12 100%)'
+                    ? 'linear-gradient(135deg, #1b2433 0%, #334155 22%, #f1dfad 45%, #8f7142 58%, #243247 78%, #111827 100%)'
                     : 'linear-gradient(135deg, #fffdf7 0%, #d8be7f 16%, #ffffff 31%, #c7b68d 43%, #f8efe0 56%, #fef9ec 74%, #b9954f 100%)')
                   : (dm ? 'rgba(255,255,255,0.05)' : '#f3f4f6'),
                 border: activeCategory?.id === cat.id
                   ? `1px solid ${dm ? 'rgba(216,190,127,0.50)' : 'rgba(143,113,66,0.42)'}`
                   : `1px solid ${dm ? 'rgba(255,255,255,0.07)' : '#e5e7eb'}`,
-                color: activeCategory?.id === cat.id ? (dm ? '#fff7d6' : '#4a3210') : (dm ? '#6b7280' : '#9ca3af'),
+                color: activeCategory?.id === cat.id ? (dm ? '#ffffff' : '#4a3210') : (dm ? '#6b7280' : '#9ca3af'),
                 fontFamily: "'Caveat', cursive",
                 boxShadow: activeCategory?.id === cat.id
                   ? (dm
-                    ? '0 3px 10px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.24), inset 0 -1px 0 rgba(216,190,127,0.16)'
+                    ? '0 3px 10px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.32), inset 0 -1px 0 rgba(216,190,127,0.20)'
                     : '0 3px 10px rgba(143,113,66,0.10), inset 0 1px 0 rgba(255,255,255,0.82), inset 0 -1px 0 rgba(143,113,66,0.10)')
                   : 'none',
               }}
