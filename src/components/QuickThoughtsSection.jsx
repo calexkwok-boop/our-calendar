@@ -70,7 +70,7 @@ const QuickThoughtsSection = ({
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onDeleteThought(thought); }}
-                  className="absolute top-2 right-2 rounded-full bg-white/60 p-1.5 opacity-0 transition-all hover:bg-red-50 group-hover:opacity-100 dark:bg-black/20 dark:hover:bg-red-900/50"
+                  className="absolute top-2 right-2 rounded-full bg-white/60 p-1.5 transition-all hover:bg-red-50 dark:bg-black/20 dark:hover:bg-red-900/50"
                 >
                   <Trash2 className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
                 </button>
