@@ -1,19 +1,8 @@
 /**
- * SomedayPage.jsx — Pinboard redesign matching Explore theme
- *
- * Props:
- *   dreams            – Dream[]
- *   onAddDream        – (dream) => void
- *   onUpdateDream     – (dream) => void
- *   onDeleteDream     – (id) => void
- *   onConvertToEvent  – (dream) => void
- *   onConvertToTrip   – (dream) => void
- *   onUploadImage     – (dreamId, file) => Promise<string>
- *   currentUser       – { id, name }
- *   darkMode          – boolean
+ * SomedayPage.jsx — Komo Book with chapters, grouping, and memories
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 
 const CAVEAT = '"Caveat", cursive';
 
@@ -114,6 +103,60 @@ const PIN_COLOR_OPTIONS   = ['teal', 'purple', 'pink', 'amber', 'red'];
 const STICKERS = ['✈️','🍣','🎬','🎲','❤️','⭐','🌸','🏔️','🏡','🛍️','🍜','🚗','🍕','🎵','📚','🌊','🏄','🌮','☕','🍷','🎪','🌙','🌈','🎭'];
 const LABEL_COLORS = ['#1a1a2e','#ffffff','#0d9488','#7c3aed','#d97706','#db2777','#2563eb','#065f46'];
 
+// ─── Group detection ──────────────────────────────────────────────────────────
+const THEME_KEYWORDS = {
+  japan:    ['japan', 'tokyo', 'kyoto', 'osaka', 'sushi', 'ramen', 'sakura', 'blossom', 'anime', 'onsen', 'jiro', 'disneyland tokyo'],
+  europe:   ['paris', 'france', 'italy', 'rome', 'barcelona', 'spain', 'london', 'europe', 'amsterdam', 'venice', 'florence'],
+  beach:    ['beach', 'surf', 'ocean', 'coast', 'hawaii', 'bali', 'caribbean', 'island', 'snorkel', 'santa cruz'],
+  food:     ['omakase', 'restaurant', 'dining', 'eat', 'food', 'cook', 'chef', 'tasting', 'cuisine', 'coffee', 'brunch', 'vitamix'],
+  outdoors: ['hike', 'trail', 'camp', 'mountain', 'patagonia', 'northern lights', 'national park', 'trek', 'summit', 'wilderness'],
+  road:     ['road trip', 'drive', 'pch', 'route', 'miles', 'road', 'coast highway'],
+  home:     ['redecorate', 'living room', 'kitchen', 'bedroom', 'home', 'renovate', 'decor', 'apartment'],
+  fitness:  ['surf', 'yoga', 'climb', 'run', 'gym', 'fitness', 'wellness', 'learn to'],
+};
+
+const THEME_TITLES = {
+  japan:    'Japan Someday ✈️',
+  europe:   'European Adventure 🗺️',
+  beach:    'Beach Escape 🌊',
+  food:     'Foodie Dreams 🍜',
+  outdoors: 'Into the Wild 🏔️',
+  road:     'Road Trip 🚗',
+  home:     'Home Goals 🏡',
+  fitness:  'Get Active 🏄',
+};
+
+const STRING_COLORS = {
+  japan:    '#f59e0b',
+  europe:   '#8b5cf6',
+  beach:    '#06b6d4',
+  food:     '#ef4444',
+  outdoors: '#10b981',
+  road:     '#f97316',
+  home:     '#ec4899',
+  fitness:  '#3b82f6',
+};
+
+function detectGroups(pins) {
+  const content = pins.filter(p => p.type !== 'label' && p.type !== 'sticker' && p.status !== 'done');
+  const groups = [];
+  const assigned = new Set();
+
+  Object.entries(THEME_KEYWORDS).forEach(([theme, keywords]) => {
+    const matches = content.filter(p => {
+      if (assigned.has(p.id)) return false;
+      const haystack = `${p.label || ''} ${p.text || ''} ${p.emoji || ''}`.toLowerCase();
+      return keywords.some(kw => haystack.includes(kw));
+    });
+    if (matches.length < 2) return;
+    const subset = matches.slice(0, 4);
+    subset.forEach(p => assigned.add(p.id));
+    groups.push({ id: `group-${theme}`, theme, pinIds: subset.map(p => p.id) });
+  });
+
+  return groups;
+}
+
 // ─── Pushpin SVG ─────────────────────────────────────────────────────────────
 function Pushpin({ colorKey, darkMode }) {
   const col = (PIN_COLORS[colorKey] || PIN_COLORS.teal)[darkMode ? 'dark' : 'light'];
@@ -143,35 +186,16 @@ function SharpieX({ size = 138 }) {
       width={s} height={s} viewBox={`0 0 ${s} ${s}`}
       style={{ position: 'absolute', top: 6, left: 6, pointerEvents: 'none', zIndex: 4 }}
     >
-      <line
-        x1={s * 0.08} y1={s * 0.08} x2={s * 0.92} y2={s * 0.92}
-        stroke="#c0392b" strokeWidth="7" strokeLinecap="round"
-        strokeDasharray="2,0"
-        style={{ filter: 'url(#wobble)' }}
-        opacity="0.88"
-      />
-      <line
-        x1={s * 0.92} y1={s * 0.08} x2={s * 0.08} y2={s * 0.92}
-        stroke="#c0392b" strokeWidth="6.5" strokeLinecap="round"
-        opacity="0.82"
-      />
-      {/* Slight second pass to give sharpie texture */}
-      <line
-        x1={s * 0.09} y1={s * 0.06} x2={s * 0.93} y2={s * 0.91}
-        stroke="#a93226" strokeWidth="3" strokeLinecap="round"
-        opacity="0.35"
-      />
-      <line
-        x1={s * 0.91} y1={s * 0.07} x2={s * 0.07} y2={s * 0.93}
-        stroke="#a93226" strokeWidth="3" strokeLinecap="round"
-        opacity="0.35"
-      />
+      <line x1={s * 0.08} y1={s * 0.08} x2={s * 0.92} y2={s * 0.92} stroke="#c0392b" strokeWidth="7" strokeLinecap="round" opacity="0.88" />
+      <line x1={s * 0.92} y1={s * 0.08} x2={s * 0.08} y2={s * 0.92} stroke="#c0392b" strokeWidth="6.5" strokeLinecap="round" opacity="0.82" />
+      <line x1={s * 0.09} y1={s * 0.06} x2={s * 0.93} y2={s * 0.91} stroke="#a93226" strokeWidth="3" strokeLinecap="round" opacity="0.35" />
+      <line x1={s * 0.91} y1={s * 0.07} x2={s * 0.07} y2={s * 0.93} stroke="#a93226" strokeWidth="3" strokeLinecap="round" opacity="0.35" />
     </svg>
   );
 }
 
 // ─── PhotoPin ────────────────────────────────────────────────────────────────
-function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode }) {
+function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterBadge }) {
   const cardBg  = darkMode ? '#e2e8f0' : '#ffffff';
   const labelCol = pin.status === 'done' ? '#9ca3af' : '#374151';
   const shadow  = isDragging
@@ -184,7 +208,6 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode }) {
       onClick={onTap}
     >
       <Pushpin colorKey={pin.pinColor} darkMode={darkMode} />
-      {/* Square image area */}
       <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 2, position: 'relative' }}>
         {pin.imageUrl ? (
           <img src={pin.imageUrl} alt={pin.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: pin.status === 'done' ? 'grayscale(40%) brightness(0.85)' : 'none' }} draggable={false} />
@@ -195,7 +218,6 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode }) {
         )}
         {pin.status === 'done' && <SharpieX size={138} />}
       </div>
-      {/* Caption strip */}
       <div style={{ padding: '6px 2px 7px', textAlign: 'center' }}>
         <div style={{ fontFamily: CAVEAT, fontSize: 12, color: labelCol, lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', textDecoration: pin.status === 'done' ? 'line-through' : 'none' }}>
           {pin.emoji ? `${pin.emoji} ${pin.label}` : pin.label}
@@ -204,13 +226,16 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode }) {
       {pin.status === 'planning' && (
         <div style={{ position: 'absolute', top: 5, right: 5, background: '#fef3c7', color: '#92400e', fontSize: 8, fontWeight: 700, padding: '2px 4px', borderRadius: 4, letterSpacing: '0.05em' }}>PLANNING</div>
       )}
+      {chapterBadge && (
+        <div style={{ position: 'absolute', bottom: 28, right: 0, background: '#5eadce', color: '#fff', fontSize: 8, fontWeight: 700, padding: '2px 5px', borderRadius: '2px 0 0 2px', maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📖 {chapterBadge}</div>
+      )}
       <button onClick={e => { e.stopPropagation(); onDelete(); }} style={{ position: 'absolute', top: 4, left: 4, background: 'rgba(0,0,0,0.10)', border: 'none', borderRadius: '50%', width: 16, height: 16, color: '#6b7280', fontSize: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>✕</button>
     </div>
   );
 }
 
 // ─── NotePin ─────────────────────────────────────────────────────────────────
-function NotePin({ pin, isDragging, onDelete, onTap, darkMode }) {
+function NotePin({ pin, isDragging, onDelete, onTap, darkMode, chapterBadge }) {
   const scheme = (NOTE_COLORS[pin.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'];
   const shadow = isDragging
     ? '0 20px 50px rgba(0,0,0,0.5)'
@@ -224,6 +249,9 @@ function NotePin({ pin, isDragging, onDelete, onTap, darkMode }) {
       <div style={{ position: 'absolute', top: 0, right: 0, borderWidth: '0 20px 20px 0', borderStyle: 'solid', borderColor: `transparent ${scheme.fold} transparent transparent` }} />
       <Pushpin colorKey={pin.pinColor} darkMode={darkMode} />
       <p style={{ fontFamily: CAVEAT, fontSize: 15, color: scheme.text, lineHeight: 1.45, margin: 0, wordBreak: 'break-word' }}>{pin.text}</p>
+      {chapterBadge && (
+        <div style={{ marginTop: 6, background: '#5eadce22', color: '#0e7490', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, display: 'inline-block' }}>📖 {chapterBadge}</div>
+      )}
       <button onClick={e => { e.stopPropagation(); onDelete(); }} style={{ position: 'absolute', bottom: 5, right: 7, background: 'none', border: 'none', fontSize: 10, color: scheme.fold, cursor: 'pointer', padding: 0 }}>✕</button>
     </div>
   );
@@ -282,26 +310,269 @@ function StickerPin({ pin, isDragging, onDelete }) {
   );
 }
 
+// ─── String Overlay ───────────────────────────────────────────────────────────
+function StringOverlay({ groups, pins, chapters, width, height }) {
+  const centers = {};
+  pins.forEach(p => {
+    if (p.type === 'label' || p.type === 'sticker') return;
+    const w = p.type === 'note' ? 74 : 75;
+    const h = p.type === 'note' ? 75 : 110;
+    centers[p.id] = { x: (p.x || 0) + w, y: (p.y || 0) + h };
+  });
+
+  return (
+    <svg
+      style={{ position: 'absolute', top: 0, left: 0, width, height, pointerEvents: 'none', zIndex: 3 }}
+      viewBox={`0 0 ${width} ${height}`}
+    >
+      {groups.map(group => {
+        const alreadyChapter = chapters.some(c => group.pinIds.every(id => c.itemIds.includes(id)));
+        if (alreadyChapter) return null;
+        const points = group.pinIds.map(id => centers[id]).filter(Boolean);
+        if (points.length < 2) return null;
+        const color = STRING_COLORS[group.theme] || '#94a3b8';
+        return points.slice(1).map((pt, i) => {
+          const from = points[i];
+          const mx = (from.x + pt.x) / 2;
+          const my = (from.y + pt.y) / 2 + 28;
+          return (
+            <path
+              key={`${group.id}-${i}`}
+              d={`M ${from.x} ${from.y} Q ${mx} ${my} ${pt.x} ${pt.y}`}
+              stroke={color}
+              strokeWidth="1.5"
+              strokeDasharray="4,3"
+              fill="none"
+              opacity="0.45"
+            />
+          );
+        });
+      })}
+    </svg>
+  );
+}
+
+// ─── Create Chapter Prompt ────────────────────────────────────────────────────
+function CreateChapterPrompt({ group, pins, onConfirm, onDismiss, darkMode }) {
+  const [title, setTitle] = useState(THEME_TITLES[group.theme] || 'New Chapter');
+  const groupPins = pins.filter(p => group.pinIds.includes(p.id));
+  const sheetBg = darkMode ? '#131c2e' : '#ffffff';
+  const tp = darkMode ? '#e8eaf0' : '#1a1a2e';
+  const ts = darkMode ? '#4a5568' : '#9ca3af';
+  const inputBdr = darkMode ? 'rgba(255,255,255,0.08)' : '#e5e0d5';
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 10030, background: 'rgba(0,0,0,0.52)', display: 'flex', alignItems: 'flex-end' }}
+      onClick={onDismiss}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ background: sheetBg, borderRadius: '24px 24px 0 0', padding: '24px 18px max(48px, calc(env(safe-area-inset-bottom) + 48px))', width: '100%', maxWidth: 480, margin: '0 auto' }}
+      >
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 auto 22px' }} />
+        <p style={{ fontSize: 11, color: ts, textTransform: 'uppercase', letterSpacing: '0.18em', margin: '0 0 4px' }}>These seem connected</p>
+        <p style={{ fontFamily: CAVEAT, fontSize: 26, fontWeight: 700, color: tp, margin: '0 0 18px', lineHeight: 1.1 }}>Create a chapter?</p>
+
+        <div style={{ display: 'flex', gap: 8, marginBottom: 22, overflowX: 'auto', paddingBottom: 4 }}>
+          {groupPins.map(p => (
+            <div
+              key={p.id}
+              style={{ flexShrink: 0, width: 68, height: 68, borderRadius: 10, overflow: 'hidden', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}
+            >
+              {p.imageUrl ? (
+                <img src={p.imageUrl} alt={p.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span style={{ fontSize: 26 }}>{p.emoji || (p.type === 'note' ? '📝' : '📌')}</span>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <p style={{ fontSize: 11, color: ts, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 6px' }}>Chapter title</p>
+        <input
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          style={{ background: darkMode ? 'rgba(255,255,255,0.06)' : '#f8f7f2', border: `1px solid ${inputBdr}`, borderRadius: 12, padding: '10px 13px', fontFamily: CAVEAT, fontSize: 18, color: tp, outline: 'none', width: '100%', marginBottom: 20, boxSizing: 'border-box' }}
+        />
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            onClick={onDismiss}
+            style={{ flex: 1, padding: '12px', borderRadius: 14, background: 'transparent', border: `1px solid ${inputBdr}`, color: ts, fontFamily: CAVEAT, fontSize: 16, cursor: 'pointer' }}
+          >Not now</button>
+          <button
+            onClick={() => onConfirm(title.trim() || THEME_TITLES[group.theme] || 'New Chapter')}
+            style={{ flex: 2, padding: '12px', borderRadius: 14, background: '#5eadce', color: '#fff', border: 'none', fontFamily: CAVEAT, fontSize: 18, fontWeight: 700, cursor: 'pointer' }}
+          >Create Chapter 📖</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Chapter Page ─────────────────────────────────────────────────────────────
+function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, darkMode }) {
+  const [showAddMemory, setShowAddMemory] = useState(false);
+  const [memoryText, setMemoryText] = useState('');
+  const chapterPins = pins.filter(p => chapter.itemIds.includes(p.id));
+  const coverPin = chapterPins.find(p => p.imageUrl) || null;
+
+  const pageBg  = darkMode ? '#0e1520' : '#faf8f3';
+  const tp      = darkMode ? '#e8eaf0' : '#1a1a2e';
+  const ts      = darkMode ? '#4a5568' : '#9ca3af';
+  const cardBg  = darkMode ? '#131c2e' : '#ffffff';
+  const divider = darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)';
+
+  function submitMemory() {
+    if (!memoryText.trim()) return;
+    onAddMemory?.({
+      id: Date.now().toString(),
+      type: 'note',
+      text: memoryText.trim(),
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    });
+    setMemoryText('');
+    setShowAddMemory(false);
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: pageBg, paddingBottom: 80 }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
+
+      {/* Sticky header */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 30, background: darkMode ? '#131c2e' : '#fff', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.05)' : '#e5e0d5'}`, padding: '16px 16px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: ts, fontSize: 26, lineHeight: 1, padding: '0 4px', display: 'flex', alignItems: 'center' }}>‹</button>
+          <div>
+            <p style={{ fontSize: 10, color: '#5eadce', textTransform: 'uppercase', letterSpacing: '0.18em', margin: 0, fontWeight: 700 }}>Chapter</p>
+            <h1 style={{ fontFamily: CAVEAT, fontSize: 26, fontWeight: 700, color: tp, margin: 0, lineHeight: 1.1 }}>{chapter.title}</h1>
+          </div>
+        </div>
+      </div>
+
+      {/* Cover image */}
+      {coverPin?.imageUrl && (
+        <div style={{ position: 'relative', width: '100%', height: 200, overflow: 'hidden' }}>
+          <img src={coverPin.imageUrl} alt={chapter.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 35%, rgba(0,0,0,0.55))' }} />
+          <div style={{ position: 'absolute', bottom: 14, left: 16 }}>
+            <span style={{ fontFamily: CAVEAT, fontSize: 30, color: '#fff', fontWeight: 700, textShadow: '0 2px 10px rgba(0,0,0,0.6)' }}>{chapter.title}</span>
+          </div>
+          {chapter.createdAt && (
+            <div style={{ position: 'absolute', top: 12, right: 14, background: 'rgba(0,0,0,0.4)', color: '#fff', fontSize: 10, padding: '3px 8px', borderRadius: 20, backdropFilter: 'blur(4px)' }}>
+              {chapter.createdAt}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Pinned items */}
+      <div style={{ padding: '22px 16px 0' }}>
+        <p style={{ fontSize: 10, color: ts, textTransform: 'uppercase', letterSpacing: '0.18em', margin: '0 0 14px', fontWeight: 600 }}>
+          Pinned · {chapterPins.length} item{chapterPins.length !== 1 ? 's' : ''}
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+          {chapterPins.map(p => (
+            <div key={p.id} style={{ transform: `rotate(${(p.rot || 0) * 0.4}deg)` }}>
+              {p.type === 'note' ? (
+                <div style={{ background: (NOTE_COLORS[p.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'].bg, padding: '11px 12px', width: 140, minHeight: 80, borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', position: 'relative' }}>
+                  <Pushpin colorKey={p.pinColor} darkMode={darkMode} />
+                  <p style={{ fontFamily: CAVEAT, fontSize: 13, color: (NOTE_COLORS[p.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'].text, margin: 0, lineHeight: 1.45 }}>{p.text}</p>
+                  {p.status === 'done' && <SharpieX size={118} />}
+                </div>
+              ) : (
+                <div style={{ background: darkMode ? '#e2e8f0' : '#fff', padding: '5px 5px 0', width: 130, borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', position: 'relative' }}>
+                  <Pushpin colorKey={p.pinColor} darkMode={darkMode} />
+                  <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 1, position: 'relative' }}>
+                    {p.imageUrl ? (
+                      <img src={p.imageUrl} alt={p.label} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: p.status === 'done' ? 'grayscale(40%) brightness(0.85)' : 'none' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30 }}>{p.emoji || '📌'}</div>
+                    )}
+                    {p.status === 'done' && <SharpieX size={120} />}
+                  </div>
+                  <div style={{ padding: '5px 2px 6px', textAlign: 'center', fontFamily: CAVEAT, fontSize: 11, color: p.status === 'done' ? '#9ca3af' : '#374151', textDecoration: p.status === 'done' ? 'line-through' : 'none', lineHeight: 1.3 }}>
+                    {p.emoji ? `${p.emoji} ${p.label}` : p.label}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+          {chapterPins.length === 0 && (
+            <p style={{ fontFamily: CAVEAT, fontSize: 16, color: ts, fontStyle: 'italic' }}>Items from Someday will appear here</p>
+          )}
+        </div>
+      </div>
+
+      {/* Memories section */}
+      <div style={{ margin: '32px 16px 0', borderTop: `2px dashed ${divider}`, paddingTop: 22 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div>
+            <p style={{ fontSize: 10, color: ts, textTransform: 'uppercase', letterSpacing: '0.18em', margin: 0, fontWeight: 600 }}>Memories</p>
+            <p style={{ fontFamily: CAVEAT, fontSize: 22, color: tp, margin: '2px 0 0', lineHeight: 1 }}>As it happens…</p>
+          </div>
+          <button
+            onClick={() => setShowAddMemory(v => !v)}
+            style={{ width: 36, height: 36, borderRadius: '50%', background: '#2dd4bf', border: 'none', color: '#0a1020', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0 }}
+          >+</button>
+        </div>
+
+        {showAddMemory && (
+          <div style={{ marginBottom: 16 }}>
+            <textarea
+              value={memoryText}
+              onChange={e => setMemoryText(e.target.value)}
+              placeholder="Write a memory, note, or moment…"
+              rows={3}
+              autoFocus
+              style={{ width: '100%', background: cardBg, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : '#e5e0d5'}`, borderRadius: 12, padding: '10px 13px', fontFamily: CAVEAT, fontSize: 16, color: tp, outline: 'none', resize: 'none', boxSizing: 'border-box' }}
+            />
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <button onClick={() => { setShowAddMemory(false); setMemoryText(''); }} style={{ flex: 1, padding: '10px', borderRadius: 12, background: 'transparent', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : '#e5e0d5'}`, color: ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={submitMemory} disabled={!memoryText.trim()} style={{ flex: 2, padding: '10px', borderRadius: 12, background: '#2dd4bf', border: 'none', color: '#0a1020', fontFamily: CAVEAT, fontSize: 16, fontWeight: 700, cursor: 'pointer', opacity: memoryText.trim() ? 1 : 0.5 }}>Save memory</button>
+            </div>
+          </div>
+        )}
+
+        {chapter.memories?.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {chapter.memories.map(mem => (
+              <div key={mem.id} style={{ background: cardBg, borderRadius: 14, padding: '12px 14px', boxShadow: `0 1px 4px ${darkMode ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.06)'}` }}>
+                <p style={{ fontFamily: CAVEAT, fontSize: 16, color: tp, margin: 0, lineHeight: 1.5 }}>{mem.text}</p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                  <span style={{ fontSize: 11, color: ts }}>{mem.date}</span>
+                  <button onClick={() => onDeleteMemory?.(mem.id)} style={{ background: 'none', border: 'none', fontSize: 11, color: ts, cursor: 'pointer', padding: 0 }}>remove</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '28px 0' }}>
+            <p style={{ fontFamily: CAVEAT, fontSize: 19, color: ts, fontStyle: 'italic', margin: 0 }}>No memories yet — they'll live here</p>
+            <p style={{ fontSize: 12, color: ts, margin: '6px 0 0', opacity: 0.7 }}>Add notes, moments, or photos as this chapter unfolds</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Add Sheet ────────────────────────────────────────────────────────────────
 function AddSheet({ onClose, onAdd, darkMode }) {
   const [type, setType]               = useState('photo');
-  // photo fields
   const [label, setLabel]             = useState('');
   const [emoji, setEmoji]             = useState('✨');
   const [imageUrl, setUrl]            = useState('');
-  // note fields
   const [text, setText]               = useState('');
   const [noteColor, setNoteColor]     = useState('yellow');
-  // shared photo/note fields
   const [pinColor, setPinColor]       = useState('teal');
   const [catId, setCatId]             = useState('experiences');
-  // label fields
   const [labelText, setLabelText]     = useState('');
   const [fontStyle, setFontStyle]     = useState('handwritten');
   const [fontSize, setFontSize]       = useState('medium');
   const [textColor, setTextColor]     = useState(darkMode ? '#e8eaf0' : '#1a1a2e');
   const [styleVariant, setStyleVar]   = useState('plain');
-  // sticker fields
   const [sticker, setSticker]         = useState('⭐');
   const [stickerSize, setStickerSize] = useState('medium');
   const labelPresets = ['MOVIES', 'My Wishlist', 'Date Night', 'Trips'];
@@ -334,40 +605,16 @@ function AddSheet({ onClose, onAdd, darkMode }) {
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 10020,
-        background: 'rgba(0,0,0,0.5)',
-        display: 'flex',
-        alignItems: 'flex-end',
-        padding: '12px 12px max(12px, env(safe-area-inset-bottom))',
-      }}
+      style={{ position: 'fixed', inset: 0, zIndex: 10020, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', padding: '12px 12px max(12px, env(safe-area-inset-bottom))' }}
       onClick={onClose}
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{
-          background: sheetBg,
-          borderRadius: '24px 24px 0 0',
-          padding: '20px 18px max(32px, calc(env(safe-area-inset-bottom) + 32px))',
-          width: '100%',
-          maxWidth: 480,
-          margin: '0 auto',
-          borderTop: `1px solid ${divider}`,
-          maxHeight: 'calc(100dvh - 24px - env(safe-area-inset-bottom))',
-          overflowY: 'auto',
-          WebkitOverflowScrolling: 'touch',
-          ...sheetStyle,
-        }}
+        style={{ background: sheetBg, borderRadius: '24px 24px 0 0', padding: '20px 18px max(32px, calc(env(safe-area-inset-bottom) + 32px))', width: '100%', maxWidth: 480, margin: '0 auto', borderTop: `1px solid ${divider}`, maxHeight: 'calc(100dvh - 24px - env(safe-area-inset-bottom))', overflowY: 'auto', WebkitOverflowScrolling: 'touch', ...sheetStyle }}
       >
-        <div
-          {...handleProps}
-          style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 auto 18px', ...handleProps.style }}
-        />
+        <div {...handleProps} style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 auto 18px', ...handleProps.style }} />
         <p style={{ fontFamily: CAVEAT, fontSize: 24, fontWeight: 700, color: tp, marginBottom: 16 }}>Pin something new</p>
 
-        {/* Type selector — 2×2 grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
           {[['photo','📸','Photo / emoji'],['note','📝','Quick note'],['label','🏷️','Label'],['sticker','✦','Sticker']].map(([t, ic, lbl]) => (
             <button key={t} onClick={() => setType(t)} style={{ padding: '9px 6px', borderRadius: 14, border: `1px solid ${type === t ? '#2dd4bf' : inputBdr}`, background: type === t ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', color: type === t ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer' }}>
@@ -376,21 +623,13 @@ function AddSheet({ onClose, onAdd, darkMode }) {
           ))}
         </div>
 
-        {/* ── Photo fields ── */}
         {type === 'photo' && (
           <>
             <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Label (e.g. Visit Boston)" style={{ ...inputStyle, marginBottom: 10 }} />
-            {/* Photo source */}
             <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Photo</p>
             <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-              <button
-                onClick={() => { const i = document.createElement('input'); i.type='file'; i.accept='image/*'; i.onchange=e => { const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=ev=>setUrl(ev.target.result); r.readAsDataURL(f); }; i.click(); }}
-                style={{ flex: 1, padding: '9px 6px', borderRadius: 12, border: `1px solid ${inputBdr}`, background: 'transparent', color: ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer' }}
-              >📁 Upload photo</button>
-              <button
-                onClick={() => { const i = document.createElement('input'); i.type='file'; i.accept='image/*'; i.capture='environment'; i.onchange=e => { const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=ev=>setUrl(ev.target.result); r.readAsDataURL(f); }; i.click(); }}
-                style={{ flex: 1, padding: '9px 6px', borderRadius: 12, border: `1px solid ${inputBdr}`, background: 'transparent', color: ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer' }}
-              >📷 Take photo</button>
+              <button onClick={() => { const i = document.createElement('input'); i.type='file'; i.accept='image/*'; i.onchange=e => { const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=ev=>setUrl(ev.target.result); r.readAsDataURL(f); }; i.click(); }} style={{ flex: 1, padding: '9px 6px', borderRadius: 12, border: `1px solid ${inputBdr}`, background: 'transparent', color: ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer' }}>📁 Upload photo</button>
+              <button onClick={() => { const i = document.createElement('input'); i.type='file'; i.accept='image/*'; i.capture='environment'; i.onchange=e => { const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=ev=>setUrl(ev.target.result); r.readAsDataURL(f); }; i.click(); }} style={{ flex: 1, padding: '9px 6px', borderRadius: 12, border: `1px solid ${inputBdr}`, background: 'transparent', color: ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer' }}>📷 Take photo</button>
             </div>
             {imageUrl && imageUrl.startsWith('data:') && (
               <div style={{ position: 'relative', marginBottom: 10 }}>
@@ -408,7 +647,6 @@ function AddSheet({ onClose, onAdd, darkMode }) {
           </>
         )}
 
-        {/* ── Note fields ── */}
         {type === 'note' && (
           <>
             <textarea value={text} onChange={e => setText(e.target.value)} placeholder="What's on your mind?" rows={3} style={{ ...inputStyle, resize: 'none', marginBottom: 12 }} />
@@ -422,57 +660,37 @@ function AddSheet({ onClose, onAdd, darkMode }) {
           </>
         )}
 
-        {/* ── Label fields ── */}
         {type === 'label' && (
           <>
             <input value={labelText} onChange={e => setLabelText(e.target.value)} placeholder="MOVIES · My Wishlist · Date Night" style={{ ...inputStyle, marginBottom: 12 }} />
-
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
               {labelPresets.map((preset) => {
                 const active = labelText.trim().toLowerCase() === preset.toLowerCase();
                 return (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => setLabelText(preset)}
-                    style={{
-                      padding: '6px 10px',
-                      borderRadius: 999,
-                      border: `1px solid ${active ? '#2dd4bf' : inputBdr}`,
-                      background: active ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent',
-                      color: active ? (darkMode ? '#2dd4bf' : '#0d9488') : ts,
-                      fontFamily: CAVEAT,
-                      fontSize: 14,
-                      cursor: 'pointer',
-                    }}
-                  >
+                  <button key={preset} type="button" onClick={() => setLabelText(preset)} style={{ padding: '6px 10px', borderRadius: 999, border: `1px solid ${active ? '#2dd4bf' : inputBdr}`, background: active ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', color: active ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer' }}>
                     {preset}
                   </button>
                 );
               })}
             </div>
-
             <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Style</p>
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
               {[['plain','Plain'],['highlight','Highlight'],['tape','Tape']].map(([v, lbl]) => (
                 <button key={v} onClick={() => setStyleVar(v)} style={pillStyle(styleVariant === v)}>{lbl}</button>
               ))}
             </div>
-
             <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Font</p>
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
               {[['handwritten','Caveat'],['clean','Clean'],['bold','Bold']].map(([v, lbl]) => (
                 <button key={v} onClick={() => setFontStyle(v)} style={{ ...pillStyle(fontStyle === v), fontFamily: v === 'handwritten' ? CAVEAT : 'system-ui', fontWeight: v === 'bold' ? 700 : 400 }}>{lbl}</button>
               ))}
             </div>
-
             <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Size</p>
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
               {[['small','Small'],['medium','Medium'],['large','Large']].map(([v, lbl]) => (
                 <button key={v} onClick={() => setFontSize(v)} style={pillStyle(fontSize === v)}>{lbl}</button>
               ))}
             </div>
-
             <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Colour</p>
             <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
               {LABEL_COLORS.map(c => (
@@ -482,7 +700,6 @@ function AddSheet({ onClose, onAdd, darkMode }) {
           </>
         )}
 
-        {/* ── Sticker fields ── */}
         {type === 'sticker' && (
           <>
             <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Pick a sticker</p>
@@ -491,7 +708,6 @@ function AddSheet({ onClose, onAdd, darkMode }) {
                 <button key={s} onClick={() => setSticker(s)} style={{ width: 44, height: 44, borderRadius: 12, border: `1px solid ${sticker === s ? '#2dd4bf' : inputBdr}`, background: sticker === s ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', fontSize: 22, cursor: 'pointer' }}>{s}</button>
               ))}
             </div>
-
             <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Size</p>
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
               {[['small','Small'],['medium','Medium'],['large','Large']].map(([v, lbl]) => (
@@ -501,7 +717,6 @@ function AddSheet({ onClose, onAdd, darkMode }) {
           </>
         )}
 
-        {/* Category + pin colour — only for photo/note */}
         {(type === 'photo' || type === 'note') && (
           <>
             <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Category</p>
@@ -600,16 +815,13 @@ function buildAutoSortedPins(pins, onAddDream, onDeleteDream, onUpdateDream) {
   const NOTE_ROW_H  = 168;
   const GROUP_GAP   = 36;
 
-  // Remove old auto-generated label pins
   const autoOldLabels = pins.filter(p => p.autoGenerated);
   autoOldLabels.forEach(p => onDeleteDream?.(p.id));
 
-  // Separate content pins from stickers (stickers stay put)
   const contentPins = pins.filter(p => p.type !== 'label' && p.type !== 'sticker' && !p.autoGenerated && p.status !== 'done');
   const donePins    = pins.filter(p => p.type !== 'label' && p.type !== 'sticker' && !p.autoGenerated && p.status === 'done');
   const stickers    = pins.filter(p => p.type === 'sticker');
 
-  // Group by categoryId, preserving SORT_CATEGORY_META order
   const orderedCats = Object.keys(SORT_CATEGORY_META);
   const grouped = {};
   contentPins.forEach(p => {
@@ -634,7 +846,6 @@ function buildAutoSortedPins(pins, onAddDream, onDeleteDream, onUpdateDream) {
     if (!catPins || catPins.length === 0) return;
     const meta = SORT_CATEGORY_META[catId];
 
-    // Auto-generated label pin
     const labelPin = {
       id: `auto-label-${catId}-${Date.now()}`,
       type: 'label',
@@ -652,7 +863,6 @@ function buildAutoSortedPins(pins, onAddDream, onDeleteDream, onUpdateDream) {
     newLabelPins.push(labelPin);
     yOffset += LABEL_H;
 
-    // Position content pins in 2 columns
     catPins.forEach((pin, i) => {
       const col = i % 2;
       const row = Math.floor(i / 2);
@@ -669,12 +879,11 @@ function buildAutoSortedPins(pins, onAddDream, onDeleteDream, onUpdateDream) {
       onUpdateDream?.(updated);
     });
 
-    const rows   = Math.ceil(catPins.length / 2);
-    const rowH   = catPins.some(p => p.type === 'photo') ? PHOTO_ROW_H : NOTE_ROW_H;
+    const rows = Math.ceil(catPins.length / 2);
+    const rowH = catPins.some(p => p.type === 'photo') ? PHOTO_ROW_H : NOTE_ROW_H;
     yOffset += rows * rowH + GROUP_GAP;
   });
 
-  // Completed cluster — always last
   if (donePins.length > 0) {
     const doneLabelPin = {
       id: `auto-label-done-${Date.now()}`,
@@ -710,14 +919,10 @@ function buildAutoSortedPins(pins, onAddDream, onDeleteDream, onUpdateDream) {
     });
   }
 
-  // Add new label pins to persistent store
   newLabelPins.forEach(lp => onAddDream?.(lp));
-
   return result;
 }
 
-// ─── Grid layout helper ───────────────────────────────────────────────────────
-// Places pins in a staggered 2-column layout with small random jitter.
 function gridPosition(index) {
   const col = index % 2;
   const row = Math.floor(index / 2);
@@ -767,7 +972,7 @@ const SomedayPage = ({
   ownerName,
   darkMode = false,
 }) => {
-  const [pins, setPins]           = useState(() => dreams.map((d, idx) => {
+  const [pins, setPins] = useState(() => dreams.map((d, idx) => {
     const pos = (d.x == null || d.y == null) ? gridPosition(idx) : { x: d.x, y: d.y, rot: d.rot };
     return {
       ...d,
@@ -778,22 +983,30 @@ const SomedayPage = ({
       type:      d.type      ?? (d.imageUrl || d.emoji ? 'photo' : 'note'),
     };
   }));
-  const [filter, setFilter]       = useState('all');
-  const [showAdd, setShowAdd]     = useState(false);
-  const [detailPin, setDetailPin] = useState(null);
-  const [dragging, setDragging]   = useState(null);
-  const [heroId, setHeroId]       = useState(() => { try { return localStorage.getItem('someday-hero-id') || null; } catch { return null; } });
-  const dragOffset                = useRef({ x: 0, y: 0 });
-  const dragStartPoint            = useRef({ x: 0, y: 0 });
-  const canvasRef                 = useRef();
-  const didDrag                   = useRef(false);
-  const draggingTypeRef           = useRef(null); // tracks pin type during drag for bound adjustments
+  const [filter, setFilter]               = useState('all');
+  const [showAdd, setShowAdd]             = useState(false);
+  const [detailPin, setDetailPin]         = useState(null);
+  const [dragging, setDragging]           = useState(null);
+  const [heroId, setHeroId]               = useState(() => { try { return localStorage.getItem('someday-hero-id') || null; } catch { return null; } });
+  // Chapter state
+  const [chapters, setChapters]           = useState([]);
+  const [activeChapterId, setActiveChapterId] = useState(null);
+  const [chapterPromptGroup, setChapterPromptGroup] = useState(null);
+  const [dismissedGroups, setDismissedGroups] = useState(new Set());
+
+  const dragOffset      = useRef({ x: 0, y: 0 });
+  const dragStartPoint  = useRef({ x: 0, y: 0 });
+  const canvasRef       = useRef();
+  const didDrag         = useRef(false);
+  const draggingTypeRef = useRef(null);
+
+  // Detect groups from current pins
+  const groups = useMemo(() => detectGroups(pins), [pins]);
 
   useEffect(() => {
     try { if (heroId) localStorage.setItem('someday-hero-id', heroId); else localStorage.removeItem('someday-hero-id'); } catch {}
   }, [heroId]);
 
-  // Sync new items added externally (from home page bucket list / quick notes)
   useEffect(() => {
     setPins(prev => {
       const existingIds = new Set(prev.map(p => p.id));
@@ -815,18 +1028,17 @@ const SomedayPage = ({
     });
   }, [dreams]);
 
-  const pageBg   = darkMode ? '#0e1520' : '#faf8f3';
-  const topbarBg = darkMode ? '#131c2e' : '#ffffff';
-  const topBdr   = darkMode ? 'rgba(255,255,255,0.05)' : '#e5e0d5';
-  const tp       = darkMode ? '#e8eaf0' : '#1a1a2e';
-  const ts       = darkMode ? '#4a5568' : '#9ca3af';
-  const pillAct  = darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfb';
-  const pillActBdr = darkMode ? 'rgba(45,212,191,0.3)' : '#2dd4bf';
-  const pillActTxt = darkMode ? '#2dd4bf' : '#0d9488';
-  const pillIdle   = darkMode ? 'rgba(255,255,255,0.04)' : '#f5f3ee';
+  const pageBg      = darkMode ? '#0e1520' : '#faf8f3';
+  const topbarBg    = darkMode ? '#131c2e' : '#ffffff';
+  const topBdr      = darkMode ? 'rgba(255,255,255,0.05)' : '#e5e0d5';
+  const tp          = darkMode ? '#e8eaf0' : '#1a1a2e';
+  const ts          = darkMode ? '#4a5568' : '#9ca3af';
+  const pillAct     = darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfb';
+  const pillActBdr  = darkMode ? 'rgba(45,212,191,0.3)' : '#2dd4bf';
+  const pillActTxt  = darkMode ? '#2dd4bf' : '#0d9488';
+  const pillIdle    = darkMode ? 'rgba(255,255,255,0.04)' : '#f5f3ee';
   const pillIdleBdr = darkMode ? 'rgba(255,255,255,0.08)' : '#e5e0d5';
 
-  // Board background: subtle dot grid instead of cork
   const boardBg = darkMode
     ? { backgroundColor: '#0e1520', backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)', backgroundSize: '28px 28px' }
     : { backgroundColor: '#f5f2eb', backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.07) 1px, transparent 1px)', backgroundSize: '28px 28px' };
@@ -845,11 +1057,7 @@ const SomedayPage = ({
     : displayedPins.map((pin, index) => {
         const row = Math.floor(index / 2);
         const col = index % 2;
-        return {
-          ...pin,
-          x: Math.min(220 + (col * 170), pin.x),
-          y: 24 + (row * 210),
-        };
+        return { ...pin, x: Math.min(220 + (col * 170), pin.x), y: 24 + (row * 210) };
       });
   const lowestPinBottom = pins.reduce((max, pin) => Math.max(max, (Number(pin.y) || 0) + estimatedPinHeight(pin)), 0);
   const BOARD_HEIGHT = Math.max(600, Math.ceil(pins.length / 2) * 240 + 240, lowestPinBottom + 120);
@@ -888,10 +1096,8 @@ const SomedayPage = ({
     const rect = canvas.getBoundingClientRect();
     let nx = touch.clientX - dragOffset.current.x;
     let ny = touch.clientY - dragOffset.current.y;
-    const isDecor = draggingTypeRef.current === 'label' || draggingTypeRef.current === 'sticker';
+    const isDecor   = draggingTypeRef.current === 'label' || draggingTypeRef.current === 'sticker';
     const isSticker = draggingTypeRef.current === 'sticker';
-    // Labels/stickers: allow negative y so they can overlap the hero/focus section above the board.
-    // Stickers: allow further right since they're much smaller than photo/note cards.
     nx = Math.max(0, Math.min(isSticker ? rect.width - 24 : rect.width - 170, nx));
     ny = Math.max(isDecor ? -320 : 0, Math.min(BOARD_HEIGHT - 240, ny));
     setPins(ps => ps.map(p => p.id === dragging ? { ...p, x: nx, y: ny } : p));
@@ -903,11 +1109,11 @@ const SomedayPage = ({
       if (pin && didDrag.current) {
         onUpdateDream?.({ ...pin });
       } else if (pin && pin.type !== 'label' && pin.type !== 'sticker') {
-        setDetailPin(pin);
+        handlePinClick(pin);
       }
     }
     setDragging(null);
-  }, [dragging, pins, onUpdateDream]);
+  }, [dragging, pins, onUpdateDream]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     window.addEventListener('mousemove', onMove);
@@ -921,6 +1127,56 @@ const SomedayPage = ({
       window.removeEventListener('touchend', stopDrag);
     };
   }, [onMove, stopDrag]);
+
+  function handlePinClick(pin) {
+    if (didDrag.current) return;
+    if (pin.type === 'label' || pin.type === 'sticker') return;
+
+    // Check if pin belongs to a group that hasn't been prompted or made into a chapter yet
+    const pinGroup = groups.find(g =>
+      g.pinIds.includes(pin.id) &&
+      !dismissedGroups.has(g.id) &&
+      !chapters.some(c => g.pinIds.every(id => c.itemIds.includes(id)))
+    );
+    if (pinGroup) {
+      setChapterPromptGroup(pinGroup);
+      return;
+    }
+
+    setDetailPin(pin);
+  }
+
+  function createChapter(group, title) {
+    const newChapter = {
+      id: `chapter-${Date.now()}`,
+      title,
+      theme: group.theme,
+      itemIds: [...group.pinIds],
+      memories: [],
+      createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    };
+    setChapters(prev => [...prev, newChapter]);
+    setChapterPromptGroup(null);
+  }
+
+  function dismissChapterPrompt() {
+    if (chapterPromptGroup) {
+      setDismissedGroups(prev => new Set([...prev, chapterPromptGroup.id]));
+    }
+    setChapterPromptGroup(null);
+  }
+
+  function addMemoryToChapter(chapterId, memory) {
+    setChapters(prev => prev.map(c =>
+      c.id === chapterId ? { ...c, memories: [...(c.memories || []), memory] } : c
+    ));
+  }
+
+  function deleteMemoryFromChapter(chapterId, memoryId) {
+    setChapters(prev => prev.map(c =>
+      c.id === chapterId ? { ...c, memories: (c.memories || []).filter(m => m.id !== memoryId) } : c
+    ));
+  }
 
   function autoSort() {
     setPins(prev => buildAutoSortedPins(prev, onAddDream, onDeleteDream, onUpdateDream));
@@ -944,54 +1200,100 @@ const SomedayPage = ({
     onUpdateDream?.(updated);
   }
 
-  function handlePinClick(pin) {
-    if (didDrag.current) return;
-    // Labels and stickers are decorative — no detail sheet, just drag/delete
-    if (pin.type === 'label' || pin.type === 'sticker') return;
-    setDetailPin(pin);
+  // Helper: get chapter badge for a pin
+  function getPinChapterBadge(pinId) {
+    const ch = chapters.find(c => c.itemIds.includes(pinId));
+    return ch ? ch.title : null;
+  }
+
+  // If a chapter is active, render ChapterPage instead of the board
+  if (activeChapterId) {
+    const chapter = chapters.find(c => c.id === activeChapterId);
+    if (chapter) {
+      return (
+        <>
+          <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
+          <ChapterPage
+            chapter={chapter}
+            pins={pins}
+            onBack={() => setActiveChapterId(null)}
+            onAddMemory={(memory) => addMemoryToChapter(activeChapterId, memory)}
+            onDeleteMemory={(memId) => deleteMemoryFromChapter(activeChapterId, memId)}
+            onMarkDone={markDone}
+            darkMode={darkMode}
+          />
+        </>
+      );
+    }
   }
 
   return (
     <div style={{ minHeight: '100vh', background: pageBg, paddingBottom: 'max(100px, calc(env(safe-area-inset-bottom) + 100px))' }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
 
-      {/* Sticky top bar — matches ExplorePage */}
-      <div style={{ background: topbarBg, borderBottom: `1px solid ${topBdr}`, padding: '18px 16px 12px', position: 'sticky', top: 0, zIndex: 30 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {onBack && (
-              <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: ts, fontSize: 26, lineHeight: 1, padding: '0 4px', display: 'flex', alignItems: 'center' }}>‹</button>
-            )}
-            <div>
-              <h1 style={{ fontFamily: CAVEAT, fontSize: 34, fontWeight: 700, color: tp, margin: 0, lineHeight: 1 }}>
-              {(!ownerName || ownerName === currentUser) ? <>✦ Your <span style={{ background: 'linear-gradient(90deg, #5eada0, #a89bc2, #c4867a, #c9a15d)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Komo Book</span></> : <>{ownerName}'s <span style={{ background: 'linear-gradient(90deg, #5eada0, #a89bc2, #c4867a, #c9a15d)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Komo Book</span></>}
-            </h1>
-              <p style={{ fontSize: 11, color: ts, margin: '3px 0 0', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 500 }}>
-                {pins.filter(p => p.type !== 'label' && p.type !== 'sticker').length} things pinned
-                {completedCount > 0 && <span style={{ color: '#c0392b', marginLeft: 6 }}>· {completedCount} dream{completedCount !== 1 ? 's' : ''} completed</span>}
-              </p>
+      {/* Sticky top bar */}
+      <div style={{ background: topbarBg, borderBottom: `1px solid ${topBdr}`, position: 'sticky', top: 0, zIndex: 30 }}>
+        <div style={{ padding: '18px 16px 12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {onBack && (
+                <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: ts, fontSize: 26, lineHeight: 1, padding: '0 4px', display: 'flex', alignItems: 'center' }}>‹</button>
+              )}
+              <div>
+                <h1 style={{ fontFamily: CAVEAT, fontSize: 34, fontWeight: 700, color: tp, margin: 0, lineHeight: 1 }}>
+                  {(!ownerName || ownerName === currentUser)
+                    ? <>✦ Your <span style={{ background: 'linear-gradient(90deg, #5eada0, #a89bc2, #c4867a, #c9a15d)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Komo Book</span></>
+                    : <>{ownerName}'s <span style={{ background: 'linear-gradient(90deg, #5eada0, #a89bc2, #c4867a, #c9a15d)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Komo Book</span></>
+                  }
+                </h1>
+                <p style={{ fontSize: 11, color: ts, margin: '3px 0 0', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 500 }}>
+                  {pins.filter(p => p.type !== 'label' && p.type !== 'sticker').length} things pinned
+                  {completedCount > 0 && <span style={{ color: '#c0392b', marginLeft: 6 }}>· {completedCount} dream{completedCount !== 1 ? 's' : ''} completed</span>}
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={autoSort}
+                title="Auto-sort by category"
+                style={{ width: 42, height: 42, borderRadius: '50%', background: darkMode ? 'rgba(139,92,246,0.15)' : '#f5f3ff', border: `1px solid ${darkMode ? 'rgba(139,92,246,0.3)' : 'rgba(139,92,246,0.25)'}`, color: darkMode ? '#c4b5fd' : '#6d28d9', fontSize: 19, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >✦</button>
+              <button
+                onClick={() => setShowAdd(true)}
+                style={{ width: 42, height: 42, borderRadius: '50%', background: '#2dd4bf', border: 'none', color: '#0a1020', fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(45,212,191,0.4)', fontWeight: 700 }}
+              >+</button>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={autoSort}
-              title="Auto-sort by category"
-              style={{ width: 42, height: 42, borderRadius: '50%', background: darkMode ? 'rgba(139,92,246,0.15)' : '#f5f3ff', border: `1px solid ${darkMode ? 'rgba(139,92,246,0.3)' : 'rgba(139,92,246,0.25)'}`, color: darkMode ? '#c4b5fd' : '#6d28d9', fontSize: 19, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            >✦</button>
-            <button
-              onClick={() => setShowAdd(true)}
-              style={{ width: 42, height: 42, borderRadius: '50%', background: '#2dd4bf', border: 'none', color: '#0a1020', fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(45,212,191,0.4)', fontWeight: 700 }}
-            >+</button>
-          </div>
-        </div>
 
-        {/* Category filter pills */}
-        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2 }}>
-          {CATEGORY_FILTERS.map(c => (
-            <button key={c.id} onClick={() => setFilter(c.id)} style={{ flexShrink: 0, padding: '5px 13px', borderRadius: 20, background: filter === c.id ? pillAct : pillIdle, border: `1px solid ${filter === c.id ? pillActBdr : pillIdleBdr}`, color: filter === c.id ? pillActTxt : ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer', transition: 'all .15s', whiteSpace: 'nowrap' }}>
-              {c.emoji} {c.label}
-            </button>
-          ))}
+          {/* Book page tabs — Someday + chapters */}
+          {chapters.length > 0 && (
+            <div style={{ display: 'flex', gap: 0, overflowX: 'auto', scrollbarWidth: 'none', marginBottom: 10, borderBottom: `1px solid ${topBdr}` }}>
+              <button
+                onClick={() => setActiveChapterId(null)}
+                style={{ flexShrink: 0, padding: '7px 14px', background: 'transparent', border: 'none', borderBottom: `2px solid ${activeChapterId === null ? '#2dd4bf' : 'transparent'}`, fontFamily: CAVEAT, fontSize: 15, color: activeChapterId === null ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'color 0.15s' }}
+              >
+                📌 Someday
+              </button>
+              {chapters.map(ch => (
+                <button
+                  key={ch.id}
+                  onClick={() => setActiveChapterId(ch.id)}
+                  style={{ flexShrink: 0, padding: '7px 14px', background: 'transparent', border: 'none', borderBottom: `2px solid ${activeChapterId === ch.id ? '#5eadce' : 'transparent'}`, fontFamily: CAVEAT, fontSize: 15, color: activeChapterId === ch.id ? (darkMode ? '#5eadce' : '#0e7490') : ts, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'color 0.15s' }}
+                >
+                  📖 {ch.title}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Category filter pills */}
+          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2 }}>
+            {CATEGORY_FILTERS.map(c => (
+              <button key={c.id} onClick={() => setFilter(c.id)} style={{ flexShrink: 0, padding: '5px 13px', borderRadius: 20, background: filter === c.id ? pillAct : pillIdle, border: `1px solid ${filter === c.id ? pillActBdr : pillIdleBdr}`, color: filter === c.id ? pillActTxt : ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer', transition: 'all .15s', whiteSpace: 'nowrap' }}>
+                {c.emoji} {c.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -1004,10 +1306,7 @@ const SomedayPage = ({
         return (
           <div style={{ padding: '20px 16px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <p style={{ fontSize: 10, color: darkMode ? '#fbbf24' : '#92400e', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: 12, fontWeight: 700 }}>★ Focus</p>
-            <div
-              onClick={() => setDetailPin(heroPin)}
-              style={{ cursor: 'pointer', transform: `rotate(${(heroPin.rot ?? 0) * 0.3}deg)`, transition: 'transform 0.2s' }}
-            >
+            <div onClick={() => setDetailPin(heroPin)} style={{ cursor: 'pointer', transform: `rotate(${(heroPin.rot ?? 0) * 0.3}deg)`, transition: 'transform 0.2s' }}>
               {isNote ? (
                 <div style={{ background: noteScheme.bg, padding: '18px 18px 20px', boxShadow: '0 10px 36px rgba(0,0,0,0.18)', width: 240, minHeight: 120, position: 'relative', borderRadius: 2 }}>
                   <div style={{ position: 'absolute', top: 0, right: 0, borderWidth: '0 26px 26px 0', borderStyle: 'solid', borderColor: `transparent ${noteScheme.fold} transparent transparent` }} />
@@ -1039,7 +1338,18 @@ const SomedayPage = ({
       })()}
 
       {/* Pin board */}
-      <div ref={canvasRef} style={{ ...boardBg, position: 'relative', zIndex: 1, width: '100%', height: BOARD_HEIGHT, overflowX: 'hidden', touchAction: dragging ? 'none' : 'pan-y' }}>
+      <div
+        ref={canvasRef}
+        style={{ ...boardBg, position: 'relative', zIndex: 1, width: '100%', height: BOARD_HEIGHT, overflowX: 'hidden', touchAction: dragging ? 'none' : 'pan-y' }}
+      >
+        {/* String overlay connecting grouped items */}
+        <StringOverlay
+          groups={groups}
+          pins={nudgedPins}
+          chapters={chapters}
+          width="100%"
+          height={BOARD_HEIGHT}
+        />
 
         {nudgedPins.map(pin => (
           <div
@@ -1060,12 +1370,12 @@ const SomedayPage = ({
             onTouchStart={e => startDrag(e, pin.id)}
           >
             {pin.type === 'note'
-              ? <NotePin    pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
+              ? <NotePin    pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} chapterBadge={getPinChapterBadge(pin.id)} />
               : pin.type === 'label'
               ? <LabelPin   pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} darkMode={darkMode} />
               : pin.type === 'sticker'
               ? <StickerPin pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} />
-              : <PhotoPin   pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
+              : <PhotoPin   pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} chapterBadge={getPinChapterBadge(pin.id)} />
             }
           </div>
         ))}
@@ -1082,6 +1392,15 @@ const SomedayPage = ({
 
       {showAdd && <AddSheet onClose={() => setShowAdd(false)} onAdd={addPin} darkMode={darkMode} />}
       {detailPin && <DetailSheet pin={detailPin} onClose={() => setDetailPin(null)} onConvertToEvent={onConvertToEvent} onConvertToTrip={onConvertToTrip} onMarkDone={markDone} heroId={heroId} onSetHero={setHeroId} darkMode={darkMode} />}
+      {chapterPromptGroup && (
+        <CreateChapterPrompt
+          group={chapterPromptGroup}
+          pins={pins}
+          onConfirm={(title) => createChapter(chapterPromptGroup, title)}
+          onDismiss={dismissChapterPrompt}
+          darkMode={darkMode}
+        />
+      )}
     </div>
   );
 };
