@@ -878,9 +878,9 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
           </div>
           {onDeleteChapter && (
             <button
-              onClick={() => { if (window.confirm(`Delete "${chapter.title}"? Pins will stay on your board.`)) onDeleteChapter(); }}
+              onClick={() => { if (window.confirm(`Remove "${chapter.title}"? Pins will stay on your board.`)) onDeleteChapter(); }}
               style={{ background: 'none', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e0d5'}`, borderRadius: 20, padding: '5px 12px', fontSize: 12, color: '#ef4444', cursor: 'pointer', flexShrink: 0 }}
-            >Delete chapter</button>
+            >Remove chapter</button>
           )}
         </div>
       </div>
@@ -910,13 +910,13 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
             <div key={p.id} style={{ transform: `rotate(${(p.rot || 0) * 0.4}deg)`, position: 'relative', cursor: 'pointer' }} onClick={() => setSelectedPin(p)}>
               {p.type === 'note' ? (
                 <div style={{ background: (NOTE_COLORS[p.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'].bg, padding: '11px 12px', width: 140, minHeight: 80, borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', position: 'relative' }}>
-                  <Pushpin colorKey={p.pinColor} darkMode={darkMode} />
+                  <Pushpin colorKey="purple" darkMode={darkMode} />
                   <p style={{ fontFamily: CAVEAT, fontSize: 13, color: (NOTE_COLORS[p.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'].text, margin: 0, lineHeight: 1.45 }}>{p.text}</p>
                   {p.status === 'done' && <SharpieX size={118} />}
                 </div>
               ) : (
                 <div style={{ background: darkMode ? '#e2e8f0' : '#fff', padding: '5px 5px 0', width: 130, borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', position: 'relative' }}>
-                  <Pushpin colorKey={p.pinColor} darkMode={darkMode} />
+                  <Pushpin colorKey="purple" darkMode={darkMode} />
                   <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 1, position: 'relative' }}>
                     {p.imageUrl ? <img src={p.imageUrl} alt={p.label} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: p.status === 'done' ? 'grayscale(40%) brightness(0.85)' : 'none' }} /> : <div style={{ width: '100%', height: '100%', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30 }}>{p.emoji || '📌'}</div>}
                     {p.status === 'done' && <SharpieX size={120} />}
@@ -942,14 +942,14 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
             <p style={{ fontSize: 10, color: ts, textTransform: 'uppercase', letterSpacing: '0.18em', margin: 0, fontWeight: 600 }}>Memories</p>
             <p style={{ fontFamily: CAVEAT, fontSize: 22, color: tp, margin: '2px 0 0', lineHeight: 1 }}>As it happens…</p>
           </div>
-          <button onClick={() => setShowAddMemory(v => !v)} style={{ width: 36, height: 36, borderRadius: '50%', background: '#2dd4bf', border: 'none', color: '#0a1020', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0 }}>+</button>
+          <button onClick={() => setShowAddMemory(v => !v)} style={{ width: 36, height: 36, borderRadius: '50%', background: '#fbcfe8', border: 'none', color: '#831843', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0 }}>+</button>
         </div>
         {showAddMemory && (
           <div style={{ marginBottom: 16 }}>
             <textarea value={memoryText} onChange={e => setMemoryText(e.target.value)} placeholder="Write a memory, note, or moment…" rows={3} autoFocus style={{ width: '100%', background: cardBg, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : '#e5e0d5'}`, borderRadius: 12, padding: '10px 13px', fontFamily: CAVEAT, fontSize: 16, color: tp, outline: 'none', resize: 'none', boxSizing: 'border-box' }} />
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               <button onClick={() => { setShowAddMemory(false); setMemoryText(''); }} style={{ flex: 1, padding: '10px', borderRadius: 12, background: 'transparent', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : '#e5e0d5'}`, color: ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={submitMemory} disabled={!memoryText.trim()} style={{ flex: 2, padding: '10px', borderRadius: 12, background: '#2dd4bf', border: 'none', color: '#0a1020', fontFamily: CAVEAT, fontSize: 16, fontWeight: 700, cursor: 'pointer', opacity: memoryText.trim() ? 1 : 0.5 }}>Save memory</button>
+              <button onClick={submitMemory} disabled={!memoryText.trim()} style={{ flex: 2, padding: '10px', borderRadius: 12, background: '#fbcfe8', border: 'none', color: '#831843', fontFamily: CAVEAT, fontSize: 16, fontWeight: 700, cursor: 'pointer', opacity: memoryText.trim() ? 1 : 0.5 }}>Save memory</button>
             </div>
           </div>
         )}
@@ -1459,12 +1459,12 @@ const SomedayPage = ({
             onTouchStart={e => startDrag(e, pin.id)}
           >
             {pin.type === 'note'
-              ? <NotePin    pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
+              ? <NotePin    pin={pin.chapterId ? { ...pin, pinColor: 'purple' } : pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
               : pin.type === 'label'
               ? <LabelPin   pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} darkMode={darkMode} />
               : pin.type === 'sticker'
               ? <StickerPin pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} />
-              : <PhotoPin   pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
+              : <PhotoPin   pin={pin.chapterId ? { ...pin, pinColor: 'purple' } : pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
             }
           </div>
         ))}
