@@ -505,7 +505,7 @@ const ScrapbookHomeHybrid = ({
                   backgroundClip: 'text',
                 }}
               >
-                Komo Book
+                Your Komo Book
               </h3>
             </button>
             <button
