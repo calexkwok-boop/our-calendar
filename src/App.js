@@ -24150,18 +24150,29 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     }
   };
 
-  // Called when a pin is dragged to a new position — save it
+  // Called when a pin is updated (dragged, marked done, chapter assigned, etc.)
   const handleSomedayUpdateDream = (pin) => {
-    if (pin.x == null) return;
     if (pin.type === 'label' || pin.type === 'sticker') {
-      // Update x/y/rot in-place within the decor pin record (preserves all style fields)
       setSomedayDecorPins(prev =>
         (Array.isArray(prev) ? prev : []).map(p =>
           p.id === pin.id ? { ...p, x: pin.x, y: pin.y, rot: pin.rot } : p
         )
       );
-    } else {
+      return;
+    }
+    // Persist position if present
+    if (pin.x != null) {
       setSomedayPinPositions(prev => ({ ...prev, [pin.id]: { x: pin.x, y: pin.y, rot: pin.rot } }));
+    }
+    // Persist status changes (mark done / undone) and chapterId back to bucketList
+    if (pin.status != null || pin.chapterId !== undefined) {
+      setBucketList(prev =>
+        (Array.isArray(prev) ? prev : []).map(d =>
+          String(d?.id || '') === String(pin.id)
+            ? { ...d, ...(pin.status != null ? { status: pin.status } : {}), ...(pin.chapterId !== undefined ? { chapterId: pin.chapterId } : {}) }
+            : d
+        )
+      );
     }
   };
 
@@ -29923,7 +29934,8 @@ transform: translateY(0);
                 noteColor: 'yellow',
                 pinColor: 'teal',
                 categoryId: catMap[d.category] || 'experiences',
-                status: 'dreaming',
+                status: d.status || 'dreaming',
+                chapterId: d.chapterId,
                 ...(somedayPinPositions[d.id] || {}),
               })),
               ...(Array.isArray(quickThoughts) ? quickThoughts : []).map(t => ({
