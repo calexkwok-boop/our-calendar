@@ -262,17 +262,20 @@ function MovieCard({ movie, onAddToSomeday, onRemoveFromSomeday, onPageTap, onPl
           <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-0.5">Community pick</p>
         </div>
       </div>
-      <div className="cursor-pointer" onClick={() => onCardTap?.(movie)}>
-        <div className="bg-purple-500/10 border-t border-stone-100 dark:border-white/[0.04]">
+      <div className="flex border-t border-stone-100 dark:border-white/[0.04] cursor-pointer" onClick={() => onCardTap?.(movie)}>
+        <div className="w-[72px] flex-shrink-0 bg-purple-500/10">
           {posterUrl
-            ? <img src={posterUrl} alt={movie.title} className="w-full h-48 object-cover" loading="lazy" />
-            : <div className="w-full h-48 flex items-center justify-center text-5xl">🎬</div>
+            ? <img src={posterUrl} alt={movie.title} className="w-full h-[108px] object-cover" loading="lazy" />
+            : <div className="w-full h-[108px] flex items-center justify-center text-2xl">🎬</div>
           }
         </div>
-        <div className="px-4 py-2.5">
-          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight mb-0.5">{movie.title}</p>
-          <p className="text-[11px] text-gray-400 dark:text-gray-600 mb-1">{year} · ★ {rating}</p>
-          <p className="text-sm text-gray-500 leading-relaxed line-clamp-3">{movie.overview}</p>
+        <div className="flex-1 px-3.5 py-3 flex flex-col justify-between min-w-0">
+          <div>
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight">{movie.title}</p>
+            <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-1">{year} · ★ {rating}</p>
+            <p className="text-[11px] text-gray-500 leading-snug mt-1.5 line-clamp-3">{movie.overview}</p>
+          </div>
+          <p className="text-[10px] text-teal-500 mt-2">▲ {votes} votes</p>
         </div>
       </div>
       <div className="flex items-center gap-2 px-4 pb-4 pt-2.5">
@@ -301,19 +304,34 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
     <div className="rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent shadow-sm dark:shadow-none overflow-hidden">
       <CardHeader post={post} onPageTap={onPageTap} />
       <Divider />
-      {imageUrl && (
-        <div
-          className={`mx-4 mt-3 rounded-2xl overflow-hidden cursor-pointer active:opacity-80 ${post.type === "products" ? "bg-stone-50 dark:bg-white/[0.03]" : "bg-stone-100 dark:bg-white/[0.04]"}`}
-          onClick={() => onCardTap?.(post)}
-        >
-          <img src={imageUrl} alt={post.cardTitle} className={`w-full h-48 ${post.type === "products" ? "object-contain p-5" : "object-cover"}`} loading="lazy" />
+      {post.type === "games" ? (
+        <div className="flex border-t border-stone-100 dark:border-white/[0.04] cursor-pointer active:opacity-80" onClick={() => onCardTap?.(post)}>
+          <div className="w-[72px] h-[108px] flex-shrink-0 bg-amber-500/10 flex items-center justify-center text-3xl">🎲</div>
+          <div className="flex-1 px-3.5 py-3 flex flex-col justify-between min-w-0">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight">{post.cardTitle}</p>
+              <p className="text-[11px] text-gray-500 leading-snug mt-1.5 line-clamp-3">{post.desc}</p>
+            </div>
+            <p className="text-[10px] text-teal-500 mt-2">▲ {post.votes} votes</p>
+          </div>
         </div>
+      ) : (
+        <>
+          {imageUrl && (
+            <div
+              className={`mx-4 mt-3 rounded-2xl overflow-hidden cursor-pointer active:opacity-80 ${post.type === "products" ? "bg-stone-50 dark:bg-white/[0.03]" : "bg-stone-100 dark:bg-white/[0.04]"}`}
+              onClick={() => onCardTap?.(post)}
+            >
+              <img src={imageUrl} alt={post.cardTitle} className={`w-full h-48 ${post.type === "products" ? "object-contain p-5" : "object-cover"}`} loading="lazy" />
+            </div>
+          )}
+          <div className="px-4 py-2.5 cursor-pointer active:opacity-80" onClick={() => onCardTap?.(post)}>
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-0.5">{post.cardTitle}</p>
+            {post.location && <p className="text-[11px] text-gray-400 dark:text-gray-600 mb-1.5">{post.location}</p>}
+            <p className="text-sm text-gray-500 leading-relaxed line-clamp-3">{post.desc}</p>
+          </div>
+        </>
       )}
-      <div className="px-4 py-2.5 cursor-pointer active:opacity-80" onClick={() => onCardTap?.(post)}>
-        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-0.5">{post.cardTitle}</p>
-        {post.location && <p className="text-[11px] text-gray-400 dark:text-gray-600 mb-1.5">{post.location}</p>}
-        <p className="text-sm text-gray-500 leading-relaxed line-clamp-3">{post.desc}</p>
-      </div>
       <div className="flex items-center gap-2 px-4 pb-4 pt-1">
         {post.actions.map((a, i) => {
           const isAmazonLink = post.type === "products" && i === 1 && post.amazonUrl;
