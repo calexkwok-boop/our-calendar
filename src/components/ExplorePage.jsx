@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import MoviesPage from "./MoviesPage";
 import BoardGamePage from "./BoardGamePage";
@@ -702,9 +702,9 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
   }
 
   const anyOff        = Object.values(sources).some(v => !v);
-  const moviePosts    = shuffle(movies.slice(0, 20)).slice(0, 6).map(m => ({ ...m, type: "movies" }));
+  const moviePosts    = useMemo(() => shuffle(movies.slice(0, 20)).slice(0, 6).map(m => ({ ...m, type: "movies" })), [movies]);
   const activeFriends = sources.friends ? FRIEND_POSTS : [];
-  const activeCom     = shuffle(communityPosts.filter(p => sources[p.type]));
+  const activeCom     = useMemo(() => shuffle(communityPosts.filter(p => sources[p.type])), [communityPosts, sources]);
   const activeMovies  = sources.movies && !moviesLoading ? moviePosts : [];
   const allPosts      = interleavePosts(activeFriends, activeMovies, activeCom);
   const visiblePosts  = search.trim()
