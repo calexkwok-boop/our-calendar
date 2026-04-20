@@ -670,6 +670,9 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
   const [activePage, setActivePage]       = useState(null);
   const [selectedPost, setSelectedPost]   = useState(null);
 
+  const moviePosts = useMemo(() => shuffle(movies.slice(0, 20)).slice(0, 6).map(m => ({ ...m, type: "movies" })), [movies]);
+  const activeCom  = useMemo(() => shuffle(communityPosts.filter(p => sources[p.type])), [communityPosts, sources]);
+
   useEffect(() => {
     if (!sources.movies) return;
     let cancelled = false;
@@ -702,9 +705,7 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
   }
 
   const anyOff        = Object.values(sources).some(v => !v);
-  const moviePosts    = useMemo(() => shuffle(movies.slice(0, 20)).slice(0, 6).map(m => ({ ...m, type: "movies" })), [movies]);
   const activeFriends = sources.friends ? FRIEND_POSTS : [];
-  const activeCom     = useMemo(() => shuffle(communityPosts.filter(p => sources[p.type])), [communityPosts, sources]);
   const activeMovies  = sources.movies && !moviesLoading ? moviePosts : [];
   const allPosts      = interleavePosts(activeFriends, activeMovies, activeCom);
   const visiblePosts  = search.trim()
