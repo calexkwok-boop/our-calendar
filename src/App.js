@@ -29933,7 +29933,7 @@ transform: translateY(0);
                 label: t.text,
                 noteColor: ['yellow', 'pink', 'blue', 'green'].includes(t.color) ? t.color : 'yellow',
                 pinColor: 'purple',
-                categoryId: 'experiences',
+                categoryId: 'notes',
                 status: 'dreaming',
                 ...(somedayPinPositions[t.id] || {}),
               })),

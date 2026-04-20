@@ -104,6 +104,7 @@ const CATEGORY_FILTERS = [
   { id: 'experiences', label: 'Experiences',  emoji: '✨' },
   { id: 'home',        label: 'Home',         emoji: '🏡' },
   { id: 'buy',         label: 'Things to buy',emoji: '🛍️' },
+  { id: 'notes',       label: 'Notes',        emoji: '📝' },
 ];
 
 const NOTE_COLOR_OPTIONS = ['yellow', 'pink', 'blue', 'green'];
@@ -555,6 +556,7 @@ const SORT_CATEGORY_META = {
   experiences:  { text: 'Experiences ✨',    textColor: '#7c3aed', styleVariant: 'tape' },
   home:         { text: 'Home 🏡',           textColor: '#db2777', styleVariant: 'tape' },
   buy:          { text: 'Wishlist 🛍️',       textColor: '#2563eb', styleVariant: 'tape' },
+  notes:        { text: 'Notes 📝',          textColor: '#92400e', styleVariant: 'tape' },
 };
 
 function buildAutoSortedPins(pins, onAddDream, onDeleteDream, onUpdateDream) {
@@ -577,8 +579,13 @@ function buildAutoSortedPins(pins, onAddDream, onDeleteDream, onUpdateDream) {
   const orderedCats = Object.keys(SORT_CATEGORY_META);
   const grouped = {};
   contentPins.forEach(p => {
-    const inferredCat = p.categoryId === 'buy' || p.sourceType === 'dreamshelf' || p.sourceType === 'products' ? 'buy' : 'experiences';
-    const cat = orderedCats.includes(p.categoryId) ? p.categoryId : inferredCat;
+    let cat;
+    if (p.type === 'note') {
+      cat = 'notes';
+    } else {
+      const inferredCat = p.categoryId === 'buy' || p.sourceType === 'dreamshelf' || p.sourceType === 'products' ? 'buy' : 'experiences';
+      cat = orderedCats.includes(p.categoryId) ? p.categoryId : inferredCat;
+    }
     if (!grouped[cat]) grouped[cat] = [];
     grouped[cat].push(p);
   });
