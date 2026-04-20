@@ -24142,8 +24142,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         ...(Array.isArray(prev) ? prev : []),
       ]);
     } else {
+      const pinCatToBucketCat = { places: 'travel', food: 'food', experiences: 'adventure', home: 'home', buy: 'buy' };
       setBucketList((prev) => [
-        { id: pin.id, text: pin.label || pin.text || '', category: 'travel', emoji: pin.emoji || '✨', photoUrl: pin.imageUrl || '', createdAt: new Date().toISOString(), sources: [] },
+        { id: pin.id, text: pin.label || pin.text || '', category: pinCatToBucketCat[pin.categoryId] || 'travel', emoji: pin.emoji || '✨', photoUrl: pin.imageUrl || '', createdAt: new Date().toISOString(), sources: [] },
         ...(Array.isArray(prev) ? prev : []),
       ]);
     }
@@ -29906,7 +29907,7 @@ transform: translateY(0);
           )}
 
           {bottomNavTab === 'someday' && (() => {
-            const catMap = { travel: 'places', food: 'food', adventure: 'experiences', culture: 'experiences', home: 'home', wellness: 'experiences', fun: 'experiences', buy: 'buy' };
+            const catMap = { travel: 'places', food: 'food', adventure: 'experiences', culture: 'experiences', home: 'home', wellness: 'experiences', fun: 'experiences', buy: 'buy', dreamshelf: 'buy', products: 'buy', shopping: 'buy' };
             const somedayDreams = [
               ...(Array.isArray(bucketList) ? bucketList : []).map(d => ({
                 id: d.id,

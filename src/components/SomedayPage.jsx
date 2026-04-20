@@ -577,7 +577,8 @@ function buildAutoSortedPins(pins, onAddDream, onDeleteDream, onUpdateDream) {
   const orderedCats = Object.keys(SORT_CATEGORY_META);
   const grouped = {};
   contentPins.forEach(p => {
-    const cat = orderedCats.includes(p.categoryId) ? p.categoryId : 'experiences';
+    const inferredCat = p.categoryId === 'buy' || p.sourceType === 'dreamshelf' || p.sourceType === 'products' ? 'buy' : 'experiences';
+    const cat = orderedCats.includes(p.categoryId) ? p.categoryId : inferredCat;
     if (!grouped[cat]) grouped[cat] = [];
     grouped[cat].push(p);
   });
