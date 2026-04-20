@@ -46,17 +46,22 @@ function useSwipeDownSheet(onClose) {
     dragStartYRef.current = null; dragDistanceRef.current = 0; setDragY(0);
     if (shouldClose) onClose?.();
   };
+  // attach global mouse events so drag works even if pointer leaves the handle
+  React.useEffect(() => {
+    const onMove = (e) => handleMove(e.clientY);
+    const onUp = () => { if (dragStartYRef.current != null) handleEnd(); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  });
   return {
     sheetStyle: { transform: `translateY(${dragY}px)`, transition: dragStartYRef.current ? 'none' : 'transform 180ms ease' },
     handleProps: {
-      onTouchStart: (e) => handleStart(e.touches[0].clientY),
-      onTouchMove: (e) => handleMove(e.touches[0].clientY),
-      onTouchEnd: handleEnd,
+      onTouchStart: (e) => { e.stopPropagation(); handleStart(e.touches[0].clientY); },
+      onTouchMove: (e) => { e.stopPropagation(); handleMove(e.touches[0].clientY); },
+      onTouchEnd: (e) => { e.stopPropagation(); handleEnd(); },
       onMouseDown: (e) => handleStart(e.clientY),
-      onMouseMove: (e) => { if (dragStartYRef.current == null) return; handleMove(e.clientY); },
-      onMouseUp: handleEnd,
-      onMouseLeave: () => { if (dragStartYRef.current != null) handleEnd(); },
-      style: { touchAction: 'none', cursor: 'grab' },
+      style: { touchAction: 'none', cursor: 'grab', padding: '8px 0 6px', display: 'flex', justifyContent: 'center', alignItems: 'center' },
     },
   };
 }
@@ -606,9 +611,11 @@ function AddSheet({ onClose, onAdd, darkMode }) {
   }
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 10020, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', padding: '12px 12px max(12px, env(safe-area-inset-bottom))' }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: sheetBg, borderRadius: '24px 24px 0 0', padding: '20px 18px max(32px, calc(env(safe-area-inset-bottom) + 32px))', width: '100%', maxWidth: 480, margin: '0 auto', borderTop: `1px solid ${divider}`, maxHeight: 'calc(100dvh - 24px - env(safe-area-inset-bottom))', overflowY: 'auto', WebkitOverflowScrolling: 'touch', ...sheetStyle }}>
-        <div {...handleProps} style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 auto 18px', ...handleProps.style }} />
-        <p style={{ fontFamily: CAVEAT, fontSize: 24, fontWeight: 700, color: tp, marginBottom: 16 }}>Pin something new</p>
+      <div onClick={e => e.stopPropagation()} style={{ background: sheetBg, borderRadius: '24px 24px 0 0', padding: '0 18px max(32px, calc(env(safe-area-inset-bottom) + 32px))', width: '100%', maxWidth: 480, margin: '0 auto', borderTop: `1px solid ${divider}`, maxHeight: 'min(85dvh, calc(100dvh - env(safe-area-inset-top) - 24px))', overflowY: 'auto', WebkitOverflowScrolling: 'touch', ...sheetStyle }}>
+        <div {...handleProps}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
+        </div>
+        <div style={{ padding: '4px 0 18px' }}><p style={{ fontFamily: CAVEAT, fontSize: 24, fontWeight: 700, color: tp, margin: 0 }}>Pin something new</p></div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
           {[['photo','📸','Photo / emoji'],['note','📝','Quick note'],['label','🏷️','Label'],['sticker','✦','Sticker']].map(([t, ic, lbl]) => (
             <button key={t} onClick={() => setType(t)} style={{ padding: '9px 6px', borderRadius: 14, border: `1px solid ${type === t ? '#2dd4bf' : inputBdr}`, background: type === t ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', color: type === t ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer' }}>{ic} {lbl}</button>
