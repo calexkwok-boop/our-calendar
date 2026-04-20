@@ -653,10 +653,10 @@ function ShareItemModal({ item, onClose, onSubmit, darkMode }) {
           {/* Category chips */}
           <div className="grid gap-2">
             <span className="text-xs uppercase tracking-widest text-slate-500 font-['Caveat']">Category</span>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
               {CATEGORIES.map(c => (
                 <button key={c.id} type="button" onClick={() => updateField("category", c.id)}
-                  className="px-3 py-1.5 rounded-full text-sm font-['Caveat'] font-bold border transition-all"
+                  className="px-3 py-1.5 rounded-full text-sm font-['Caveat'] font-bold border transition-all flex-shrink-0"
                   style={{ background: draft.category === c.id ? GOLD_MUTED : (dm ? 'rgba(255,255,255,0.05)' : '#f3f4f6'), border: `1px solid ${draft.category === c.id ? GOLD_BORDER : (dm ? 'rgba(255,255,255,0.07)' : '#e5e7eb')}`, color: draft.category === c.id ? GOLD_DARK : (dm ? '#6b7280' : '#9ca3af') }}
                 >
                   {c.emoji} {c.label}
