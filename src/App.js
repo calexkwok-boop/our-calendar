@@ -24151,29 +24151,31 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   };
 
   // Called when a pin is updated (dragged, marked done, chapter assigned, etc.)
+  // NOTE: this may be called from inside a setPins() updater, so all setState calls
+  // are deferred via setTimeout to avoid React's "nested update" error.
   const handleSomedayUpdateDream = (pin) => {
-    if (pin.type === 'label' || pin.type === 'sticker') {
-      setSomedayDecorPins(prev =>
-        (Array.isArray(prev) ? prev : []).map(p =>
-          p.id === pin.id ? { ...p, x: pin.x, y: pin.y, rot: pin.rot } : p
-        )
-      );
-      return;
-    }
-    // Persist position if present
-    if (pin.x != null) {
-      setSomedayPinPositions(prev => ({ ...prev, [pin.id]: { x: pin.x, y: pin.y, rot: pin.rot } }));
-    }
-    // Persist status changes (mark done / undone) and chapterId back to bucketList
-    if (pin.status != null || pin.chapterId !== undefined) {
-      setBucketList(prev =>
-        (Array.isArray(prev) ? prev : []).map(d =>
-          String(d?.id || '') === String(pin.id)
-            ? { ...d, ...(pin.status != null ? { status: pin.status } : {}), ...(pin.chapterId !== undefined ? { chapterId: pin.chapterId } : {}) }
-            : d
-        )
-      );
-    }
+    setTimeout(() => {
+      if (pin.type === 'label' || pin.type === 'sticker') {
+        setSomedayDecorPins(prev =>
+          (Array.isArray(prev) ? prev : []).map(p =>
+            p.id === pin.id ? { ...p, x: pin.x, y: pin.y, rot: pin.rot } : p
+          )
+        );
+        return;
+      }
+      if (pin.x != null) {
+        setSomedayPinPositions(prev => ({ ...prev, [pin.id]: { x: pin.x, y: pin.y, rot: pin.rot } }));
+      }
+      if (pin.status != null || pin.chapterId !== undefined) {
+        setBucketList(prev =>
+          (Array.isArray(prev) ? prev : []).map(d =>
+            String(d?.id || '') === String(pin.id)
+              ? { ...d, ...(pin.status != null ? { status: pin.status } : {}), ...(pin.chapterId !== undefined ? { chapterId: pin.chapterId } : {}) }
+              : d
+          )
+        );
+      }
+    }, 0);
   };
 
   // Called when a pin is deleted from SomedayPage — remove from whichever list owns it

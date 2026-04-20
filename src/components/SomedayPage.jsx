@@ -3,6 +3,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 
 const CAVEAT = '"Caveat", cursive';
 
@@ -123,6 +124,219 @@ function detectGroups(pins) {
     groups.push({ id: `group-${theme}`, theme, pinIds: subset.map(p => p.id), suggestedTitle: THEME_TITLE_SUGGESTIONS[theme] || 'New Chapter' });
   });
   return groups;
+}
+
+// ─── Round-out suggestions ───────────────────────────────────────────────────
+const SUGGESTION_POOL = {
+  japan:    [
+    { label: 'TeamLab Borderless', emoji: '🎨', categoryId: 'experiences', imageUrl: 'https://images.unsplash.com/photo-1583212292454-1fe6229603b7?w=200&q=70', description: 'Immersive digital art museum where boundaries between art and viewer dissolve. Multiple themed rooms with flowing light and sound.', tip: 'Book tickets weeks in advance — it sells out fast. Wear comfortable shoes and expect to stay 2–3 hrs.', mapQuery: 'teamLab Borderless Tokyo' },
+    { label: 'Shibuya Crossing at night', emoji: '🌃', categoryId: 'places', imageUrl: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=200&q=70', description: 'The world\'s busiest pedestrian crossing, surrounded by giant screens and neon. Electric at night when up to 3,000 people cross at once.', tip: 'Head to the Starbucks or Mag\'s Park rooftop for an overhead view. Best right after rush hour.', mapQuery: 'Shibuya Crossing Tokyo' },
+    { label: 'Tsukiji fish market breakfast', emoji: '🐟', categoryId: 'food', imageUrl: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=200&q=70', description: 'The outer market is still alive with sushi stalls, tamagoyaki, and fresh seafood breakfast bites. A quintessential Tokyo morning.', tip: 'Arrive before 8am for the freshest cuts. Try Sushi Dai or Daiwa Sushi — the line is worth it.', mapQuery: 'Tsukiji Outer Market Tokyo' },
+    { label: 'Ryokan stay in Hakone', emoji: '♨️', categoryId: 'places', imageUrl: 'https://images.unsplash.com/photo-1564501049412-61a17c52b51c?w=200&q=70', description: 'Traditional Japanese inn with tatami rooms, yukata robes, kaiseki dinner, and private or communal onsen hot springs. Mt. Fuji views on clear days.', tip: 'Stay at least one night. Book a room with private rotenburo (outdoor bath) for the full experience.', mapQuery: 'Ryokan Hakone Japan' },
+    { label: 'Fushimi Inari hike', emoji: '⛩️', categoryId: 'experiences', imageUrl: 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=200&q=70', description: 'Thousands of vermillion torii gates winding up a forested mountain south of Kyoto. The full hike to the summit takes about 2–3 hours.', tip: 'Go at dawn or after 6pm — the lower gates get crowded midday. The upper trails stay quiet.', mapQuery: 'Fushimi Inari Taisha Kyoto' },
+    { label: 'Izakaya bar-hop, Shinjuku', emoji: '🍶', categoryId: 'food', imageUrl: 'https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=200&q=70', description: 'Duck into the tiny lantern-lit alleys of Omoide Yokocho or Golden Gai — rows of cramped, atmospheric bars serving yakitori, sake, and shochu.', tip: 'Golden Gai has 200+ bars, each with 5–8 seats. Just walk in anywhere that feels right. Cover charge is usually ¥500.', mapQuery: 'Golden Gai Shinjuku Tokyo' },
+    { label: 'Bullet train to Kyoto', emoji: '🚄', categoryId: 'places', imageUrl: 'https://images.unsplash.com/photo-1524413840807-0c3cb6fa808d?w=200&q=70', description: 'The Shinkansen from Tokyo to Kyoto takes just 2h 15min. On a clear day, Mt. Fuji is visible from the right side heading west.', tip: 'Sit on the right (E seats) heading to Kyoto for the Fuji view. Reserve seats on the Nozomi for the fastest ride.', mapQuery: 'Kyoto Station Japan' },
+    { label: 'Konbini breakfast run', emoji: '🥟', categoryId: 'food', imageUrl: 'https://images.unsplash.com/photo-1498931299472-f7a63a5a1cfa?w=200&q=70', description: 'Japanese convenience stores (7-Eleven, FamilyMart, Lawson) are a food experience in themselves — onigiri, egg sandwiches, hot nikuman, and canned coffee.', tip: '7-Eleven is widely considered the best. The tuna mayo onigiri and coffee are legendary. Open 24/7 everywhere.', mapQuery: '7-Eleven FamilyMart Tokyo' },
+  ],
+  europe:   [
+    { label: 'Corner bistro café au lait', emoji: '☕', categoryId: 'food', imageUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=200&q=70', description: 'Standing at a zinc bar with a café crème and a croissant is the quintessential Paris morning. Unhurried, cheap, and deeply local.', tip: 'Always cheaper to stand at the bar (comptoir) than sit at a table. Avoid tourist-trap cafés near major sights.', mapQuery: 'best cafe au lait Paris France' },
+    { label: 'Louvre morning visit', emoji: '🎨', categoryId: 'experiences', imageUrl: 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=200&q=70', description: 'The world\'s largest art museum. Home to the Mona Lisa, Venus de Milo, and tens of thousands of works across 60,000 sq meters.', tip: 'Enter via the Richelieu wing to skip main pyramid crowds. Book timed entry online. Wednesday & Friday open until 9:45pm.', mapQuery: 'Musée du Louvre Paris' },
+    { label: 'Gelato in Trastevere', emoji: '🍦', categoryId: 'food', imageUrl: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=200&q=70', description: 'Wandering Rome\'s cobblestoned Trastevere neighborhood after dinner with a gelato is a rite of passage. The neighborhood stays lively late.', tip: 'Look for gelaterias with covered or metal tubs — mounded gelato in fluorescent colors is usually a tourist trap.', mapQuery: 'best gelato Trastevere Rome' },
+    { label: 'Sunset from Sacré-Cœur', emoji: '🌅', categoryId: 'places', imageUrl: 'https://images.unsplash.com/photo-1509439581779-6298f75bf6e5?w=200&q=70', description: 'The white-domed basilica sits atop Montmartre, Paris\'s highest hill. The steps facing the city are a gathering spot at golden hour with buskers and wine.', tip: 'Bring a bottle of wine from a nearby cave à vins. Arrive 30 min before sunset for a good spot on the steps.', mapQuery: 'Sacré-Cœur Basilica Paris' },
+    { label: 'Aperitivo hour, Milan', emoji: '🍷', categoryId: 'food', imageUrl: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=200&q=70', description: 'Milan\'s pre-dinner ritual: order a Campari Spritz or Negroni and the bar lays out a spread of free snacks — sometimes a full buffet.', tip: 'Navigli and Brera districts are the best areas. Goes from about 6–9pm. Budget €8–12 per drink including snacks.', mapQuery: 'aperitivo Navigli Milan Italy' },
+    { label: 'Canal boat ride, Amsterdam', emoji: '🚤', categoryId: 'experiences', imageUrl: 'https://images.unsplash.com/photo-1534351590666-13e3e96b5017?w=200&q=70', description: 'Amsterdam\'s 165 canals are a UNESCO World Heritage Site. A boat tour or rented pedal boat gives a completely different perspective of the city.', tip: 'Rent a small open boat yourself (no license needed) from Boaty or Mokumboot for a self-guided experience.', mapQuery: 'canal boat tour Amsterdam Netherlands' },
+    { label: 'Tapas bar crawl, Barcelona', emoji: '🥘', categoryId: 'food', imageUrl: 'https://images.unsplash.com/photo-1515443961218-a51367888e4b?w=200&q=70', description: 'Barcelona\'s El Born and Barceloneta neighborhoods are packed with tapas bars. Patatas bravas, pan con tomate, jamón, and croquetas.', tip: 'Catalans eat late — don\'t show up before 9pm for dinner. El Xampanyet in El Born is a classic old-school spot.', mapQuery: 'tapas bars El Born Barcelona Spain' },
+    { label: 'Day trip to Cinque Terre', emoji: '🏘️', categoryId: 'places', imageUrl: 'https://images.unsplash.com/photo-1534430480872-3498386e7856?w=200&q=70', description: 'Five colorful clifftop fishing villages connected by trails and a train along the Italian Riviera. Vernazza and Monterosso are fan favorites.', tip: 'Buy the Cinque Terre Card for trail access and train hops. Go mid-week in shoulder season to dodge the crowds.', mapQuery: 'Cinque Terre Italy' },
+  ],
+  beach:    [
+    { label: 'Sunrise surf session', emoji: '🏄', categoryId: 'experiences', imageUrl: 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?w=200&q=70', description: 'Paddling out at dawn when the water is glassy and the beach is empty. Beginner-friendly beach breaks are a good start for first-timers.', tip: 'Rent a foam longboard if you\'re learning — much more forgiving. Take a lesson first for safety and faster progress.', mapQuery: 'surf lessons beach' },
+    { label: 'Beachside fish tacos', emoji: '🌮', categoryId: 'food', imageUrl: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=200&q=70', description: 'Battered or grilled fresh fish, slaw, crema, and salsa in a warm corn tortilla eaten steps from the water. A beach town staple.', tip: 'Look for the spot with the longest line of locals. Fresh-caught fish changes daily — ask what\'s in season.', mapQuery: 'fish tacos beachside' },
+    { label: 'Sunset cliffside walk', emoji: '🌅', categoryId: 'places', imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=200&q=70', description: 'Coastal cliff paths at golden hour, with waves crashing below and the horizon on fire. One of those simple things that stays with you.', tip: 'Check tide charts — some cliff path sections can be slippery or inaccessible at high tide.', mapQuery: 'coastal cliff walk sunset' },
+    { label: 'Rent a kayak', emoji: '🛶', categoryId: 'experiences', imageUrl: 'https://images.unsplash.com/photo-1506953823976-52e1fdc0149a?w=200&q=70', description: 'Paddling sea caves, coves, and kelp beds from a sit-on-top kayak. A great way to see the coastline from a totally different angle.', tip: 'Morning is calmer — winds pick up in the afternoon. Wear a rash guard even in warm weather; you will get wet.', mapQuery: 'kayak rental beach' },
+    { label: 'Frozen cocktail at beach bar', emoji: '🍹', categoryId: 'food', imageUrl: 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=200&q=70', description: 'Sandy feet, a frozen piña colada or mango daiquiri, and the sound of waves. Not sophisticated, completely perfect.', tip: 'The ones made with fresh fruit are worth the extra dollar. Beachfront bars often have happy hour 3–5pm.', mapQuery: 'beach bar cocktails' },
+    { label: 'Whale watching tour', emoji: '🐋', categoryId: 'experiences', imageUrl: 'https://images.unsplash.com/photo-1568430462989-44163eb1752f?w=200&q=70', description: 'Boat tours to spot humpbacks, blue whales, orcas, or dolphins depending on season and location. One of the most awe-inspiring wildlife encounters.', tip: 'Book with a naturalist-led tour for more educational context. Take Dramamine if you\'re prone to seasickness.', mapQuery: 'whale watching tour' },
+  ],
+  road:     [
+    { label: 'Route 1 coastal stop', emoji: '🌊', categoryId: 'places', imageUrl: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=200&q=70', description: 'California\'s Pacific Coast Highway hugs dramatic cliffs with pull-offs above the ocean. Big Sur is the crown jewel stretch.', tip: 'Pull over often — the best views are from the small turnouts, not the famous overlooks. Gas up in Carmel before heading south.', mapQuery: 'Pacific Coast Highway Route 1 Big Sur' },
+    { label: 'Classic American diner', emoji: '🥞', categoryId: 'food', imageUrl: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=200&q=70', description: 'Vinyl booths, bottomless coffee, egg platters, and pie under fluorescent lights. An American road trip institution.', tip: 'The best diners are in small towns, not highway exits. Look for ones that\'ve been open since the 50s or 60s.', mapQuery: 'classic American diner' },
+    { label: 'Roadside fruit stand', emoji: '🍑', categoryId: 'food', imageUrl: 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=200&q=70', description: 'Farm-fresh peaches, cherries, or strawberries sold from a wooden stand on the side of a country road. Peak-season fruit is incomparable.', tip: 'Central Valley, CA and rural Georgia are legendary for roadside peaches in summer. Cash only is common.', mapQuery: 'roadside farm stand fruit' },
+    { label: 'Scenic overlook photo', emoji: '🏔️', categoryId: 'places', imageUrl: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=200&q=70', description: 'Pullouts with sweeping valley, canyon, or mountain views that put the scale of the landscape in perspective.', tip: 'The "famous" overlooks are always crowded. Drive a mile past them and look for unsigned turnouts for the same view with no people.', mapQuery: 'scenic overlook viewpoint' },
+    { label: 'Night at a quirky motel', emoji: '🏨', categoryId: 'places', imageUrl: 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=200&q=70', description: 'Vintage neon signs, outdoor pools, and rooms that haven\'t changed since 1978. Part of the road trip character.', tip: 'Search "retro motel" or "vintage motor inn" on Google Maps. Many have been lovingly restored and are cheaper than chains.', mapQuery: 'vintage retro motel road trip' },
+    { label: 'State park pit stop', emoji: '🌲', categoryId: 'experiences', imageUrl: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=200&q=70', description: 'A quick detour into a state park for a short hike, a picnic, or just stretching your legs in a forest or meadow.', tip: 'America the Beautiful pass ($80/year) covers entrance to all national parks and many federal recreation areas.', mapQuery: 'state park day hike' },
+    { label: 'Drive-in movie night', emoji: '🎬', categoryId: 'experiences', imageUrl: 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=200&q=70', description: 'One of America\'s last great retro experiences — pull in, tune your radio, and watch a double feature from your car under the stars.', tip: 'Only ~300 drive-ins remain in the US. Check DriveInMovie.com for locations. Bring blankets and arrive early for a good spot.', mapQuery: 'drive-in movie theater near me' },
+  ],
+  outdoors: [
+    { label: 'Sunrise summit attempt', emoji: '🌄', categoryId: 'experiences', imageUrl: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=200&q=70', description: 'Starting a hike at 3am by headlamp to reach the summit at first light. The solitude, the colors, and the sense of scale are worth every step.', tip: 'Check the AllTrails forecast the night before. Layers are essential — summit temps can be 20–30°F colder than the trailhead.', mapQuery: 'sunrise hike summit trail' },
+    { label: 'Trailhead coffee stop', emoji: '☕', categoryId: 'food', imageUrl: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=200&q=70', description: 'The tiny mountain town café or general store near the trailhead that fuels the first miles with fresh coffee and a breakfast sandwich.', tip: 'Many close early on weekdays. Check hours the night before or bring a good travel mug and make your own.', mapQuery: 'coffee cafe near trailhead' },
+    { label: 'Camp under the stars', emoji: '🏕️', categoryId: 'experiences', imageUrl: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=200&q=70', description: 'Waking up inside nature, cooking over a camp stove, and spending a night away from any light pollution. The sky at 2am is worth it.', tip: 'Recreation.gov books up fast for popular campgrounds. Search for dispersed camping on national forest land for a free, uncrowded alternative.', mapQuery: 'campground camping near me' },
+    { label: 'Wildflower meadow loop', emoji: '🌸', categoryId: 'places', imageUrl: 'https://images.unsplash.com/photo-1490750967868-88df5691cc10?w=200&q=70', description: 'A meadow in peak bloom — lupine, poppies, columbine — is a short-lived seasonal spectacle that feels genuinely magical.', tip: 'Bloom timing varies by 2–4 weeks year to year. Follow @TheWildflowerReport or local ranger station social feeds for real-time updates.', mapQuery: 'wildflower meadow hike' },
+    { label: 'Waterfall side trail', emoji: '💦', categoryId: 'places', imageUrl: 'https://images.unsplash.com/photo-1433086966628-d6d9b0560f86?w=200&q=70', description: 'A short detour off the main trail to a falls — sometimes a trickle, sometimes a roaring curtain of water. Always worth the extra 20 minutes.', tip: 'Waterfalls are most impressive in spring snowmelt. Slippery rocks at the base — keep a safe distance and watch your step.', mapQuery: 'waterfall hike trail' },
+    { label: 'Post-hike burger', emoji: '🍔', categoryId: 'food', imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200&q=70', description: 'After 10+ miles, a thick, greasy burger and cold beer at the nearest mountain town pub is one of life\'s great pleasures.', tip: 'Small mountain towns often have surprisingly great local burger joints. Ask the ranger station staff where they eat.', mapQuery: 'burger restaurant mountain town' },
+  ],
+  food:     [
+    { label: 'Omakase splurge dinner', emoji: '🍣', categoryId: 'food', imageUrl: 'https://images.unsplash.com/photo-1553621042-f6e147245754?w=200&q=70', description: 'A chef-led tasting menu where you eat whatever they decide to serve. Intimate counter seating, meticulous technique, and fish you\'ve never seen before.', tip: 'Book 1–2 months out for well-known spots. Mention any dietary restrictions when booking — omakase can accommodate more than you\'d expect.', mapQuery: 'omakase sushi restaurant' },
+    { label: 'Farmers market morning', emoji: '🥦', categoryId: 'experiences', imageUrl: 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=200&q=70', description: 'Rows of seasonal produce, small-batch preserves, fresh bread, and local makers. A slow, sensory Saturday morning ritual.', tip: 'Arrive in the first hour for the best selection, last hour for the best deals. Bring cash and a tote bag.', mapQuery: 'farmers market weekend' },
+    { label: 'Wine tasting afternoon', emoji: '🍷', categoryId: 'food', imageUrl: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=200&q=70', description: 'Spending an afternoon moving between small tasting rooms, learning what you like, and eating cheese in a sunny vineyard.', tip: 'Smaller, family-owned wineries are friendlier and often cheaper than famous ones. Spit if you\'re driving between tastings.', mapQuery: 'wine tasting winery' },
+    { label: 'Cooking class', emoji: '👨‍🍳', categoryId: 'experiences', imageUrl: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=200&q=70', description: 'Learning a dish in someone\'s kitchen — a local chef\'s home, a culinary school, or a market cooking class. You eat what you make.', tip: 'Market-to-table classes in foreign cities are a great combined experience. Look for classes taught by locals, not hotel tour desks.', mapQuery: 'cooking class food experience' },
+    { label: 'Michelin star lunch', emoji: '⭐', categoryId: 'food', imageUrl: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=200&q=70', description: 'Michelin-starred restaurants often offer a significantly cheaper lunch set menu — the same kitchen and technique, more accessible price.', tip: 'The lunch tasting menu is typically 30–50% cheaper than dinner. Book at least 3–4 weeks out for starred spots.', mapQuery: 'Michelin star restaurant lunch menu' },
+    { label: 'Late-night ramen', emoji: '🍜', categoryId: 'food', imageUrl: 'https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=200&q=70', description: 'Slurping a bowl of rich tonkotsu or shoyu ramen at a counter at midnight. The line is part of the experience.', tip: 'In Japan, Ippudo, Ichiran, and local spots in Fukuoka are institutions. In the US, find spots that make their broth in-house daily.', mapQuery: 'best ramen restaurant late night' },
+  ],
+  generic:  [
+    { label: 'Best local coffee spot', emoji: '☕', categoryId: 'food', imageUrl: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=200&q=70', description: 'Every city has that one independent café that regulars swear by — great espresso, good vibes, and a window seat worth lingering in.', tip: 'Ask hotel staff or locals (not Google) for the non-chain, non-tourist spot. Often in residential neighborhoods.', mapQuery: 'best local independent coffee cafe' },
+    { label: 'Hidden gem restaurant', emoji: '🍽️', categoryId: 'food', imageUrl: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=200&q=70', description: 'The place with no sign, no website, and a line down the block at noon. Usually family-run, cash only, and absolutely worth it.', tip: 'Ask your Airbnb host or a local barista. The best recommendations are always word of mouth.', mapQuery: 'hidden gem local restaurant' },
+    { label: 'Rooftop sunset bar', emoji: '🌆', categoryId: 'food', imageUrl: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=200&q=70', description: 'A rooftop with a view, a cocktail menu, and a golden hour skyline. The perfect way to end a day of exploring.', tip: 'Most rooftop bars have a dress code and require reservations after 5pm. Book in advance on weekends.', mapQuery: 'rooftop bar sunset view' },
+    { label: 'Local market morning', emoji: '🛍️', categoryId: 'experiences', imageUrl: 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=200&q=70', description: 'Flea markets, antique halls, and weekend bazaars offer a window into local culture that no museum can replicate.', tip: 'Bring cash and be ready to negotiate on bigger items. Arrive early for best finds; late for price drops.', mapQuery: 'local market flea market weekend' },
+    { label: 'Walking tour of old town', emoji: '🗺️', categoryId: 'experiences', imageUrl: 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=200&q=70', description: 'A free walking tour through the historic center with a knowledgeable local guide who knows the stories behind every street.', tip: 'Free walking tours run on tips — give generously for a great guide. Check Freetour.com or SANDEMANs for reputable options.', mapQuery: 'free walking tour old town historic center' },
+    { label: 'Photography walk', emoji: '📸', categoryId: 'experiences', imageUrl: 'https://images.unsplash.com/photo-1452421822248-d4c2b47f0c81?w=200&q=70', description: 'Slowing down to notice light, texture, and composition changes how you experience a place. Even a phone camera is enough.', tip: 'The hour after sunrise and before sunset (golden hour) transforms ordinary streets into something cinematic.', mapQuery: 'photography walk neighborhood' },
+    { label: 'Cozy stay option', emoji: '🏨', categoryId: 'places', imageUrl: 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=200&q=70', description: 'A boutique hotel, converted farmhouse, or design-led guesthouse where the accommodation itself is part of the experience.', tip: 'Search "boutique hotel" + destination on Google Maps and read recent reviews. Small properties care more about your experience.', mapQuery: 'boutique hotel cozy stay' },
+    { label: 'Bookshop browse', emoji: '📚', categoryId: 'experiences', imageUrl: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=200&q=70', description: 'Independent bookshops with strong local curation, reading nooks, and staff picks are disappearing — worth seeking out wherever you go.', tip: 'Great ones: Shakespeare & Company (Paris), Powell\'s (Portland), Daunt Books (London), City Lights (SF). Ask locals for their favorite.', mapQuery: 'independent bookshop bookstore' },
+  ],
+};
+
+const SUGGESTION_THEME_KEYS = {
+  japan:    ['japan', 'tokyo', 'kyoto', 'osaka', 'sushi', 'ramen', 'sakura', 'onsen', 'teamlab'],
+  europe:   ['paris', 'france', 'italy', 'rome', 'barcelona', 'spain', 'london', 'amsterdam', 'europe', 'gelato'],
+  beach:    ['beach', 'surf', 'ocean', 'coast', 'hawaii', 'bali', 'caribbean', 'island'],
+  road:     ['road trip', 'drive', 'pch', 'highway', 'roadtrip', 'coast highway'],
+  outdoors: ['hike', 'trail', 'camp', 'mountain', 'patagonia', 'trek', 'national park', 'summit'],
+  food:     ['omakase', 'restaurant', 'dining', 'foodie', 'michelin', 'tasting', 'brunch'],
+};
+
+function detectSuggestionTheme(chapter, chapterPins) {
+  const haystack = [chapter.title, ...chapterPins.map(p => `${p.label || ''} ${p.text || ''}`)].join(' ').toLowerCase();
+  for (const [theme, kws] of Object.entries(SUGGESTION_THEME_KEYS)) {
+    if (kws.some(kw => haystack.includes(kw))) return theme;
+  }
+  return 'generic';
+}
+
+function generateSuggestions(chapter, chapterPins, seed = 0) {
+  const theme = detectSuggestionTheme(chapter, chapterPins);
+  const pool = [...(SUGGESTION_POOL[theme] || []), ...SUGGESTION_POOL.generic];
+  const existingLabels = new Set(chapterPins.map(p => (p.label || p.text || '').toLowerCase()));
+  const available = pool.filter(s => !existingLabels.has(s.label.toLowerCase()));
+  // deterministic shuffle with seed so rotation changes on reopen
+  const shuffled = [...available].sort((a, b) => {
+    const ha = ((seed * 31 + 7) ^ (a.label.charCodeAt(0) || 0)) % 97;
+    const hb = ((seed * 31 + 7) ^ (b.label.charCodeAt(0) || 0)) % 97;
+    return ha - hb;
+  });
+  return shuffled.slice(0, 5).map((s, i) => ({
+    ...s,
+    id: `sug-${s.label.replace(/\s+/g, '-').toLowerCase()}`,
+    rot: (((seed + i * 7) % 11) - 5) * 0.55,
+  }));
+}
+
+// ─── Suggestion Strip ─────────────────────────────────────────────────────────
+function SuggestionCardInner({ s, darkMode, shadow }) {
+  const cardBg = darkMode ? '#e2e8f0' : '#ffffff';
+  return (
+    <div style={{ background: cardBg, padding: '4px 4px 0', width: 88, borderRadius: 2, boxShadow: shadow, position: 'relative' }}>
+      <Pushpin colorKey="teal" darkMode={false} />
+      <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 1, background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>
+        {s.imageUrl
+          ? <img src={s.imageUrl} alt={s.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} draggable={false} />
+          : s.emoji}
+      </div>
+      <div style={{ padding: '4px 2px 5px', textAlign: 'center', fontFamily: CAVEAT, fontSize: 10, color: '#1a1a2e', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{s.label}</div>
+    </div>
+  );
+}
+
+function SuggestionCard({ s, onAdd, darkMode }) {
+  const [ghostPos, setGhostPos] = useState(null); // { x, y } fixed screen coords
+  const [dragging, setDragging] = useState(false);
+  const startRef = useRef(null);
+  const anchorRef = useRef(null); // offset from pointer to card top-left
+
+  function onPointerDown(e) {
+    if (e.button !== undefined && e.button !== 0) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const rect = e.currentTarget.getBoundingClientRect();
+    anchorRef.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top };
+    startRef.current = { x: e.clientX, y: e.clientY };
+    setDragging(true);
+    setGhostPos({ x: rect.left, y: rect.top });
+  }
+
+  function onPointerMove(e) {
+    if (!dragging) return;
+    setGhostPos({
+      x: e.clientX - (anchorRef.current?.dx ?? 0),
+      y: e.clientY - (anchorRef.current?.dy ?? 0),
+    });
+  }
+
+  function onPointerUp(e) {
+    if (!dragging) return;
+    const dy = startRef.current ? e.clientY - startRef.current.y : 0;
+    setDragging(false);
+    setGhostPos(null);
+    startRef.current = null;
+    if (dy > 50) onAdd(s);
+  }
+
+  const isDraggingDown = dragging && ghostPos && startRef.current && (ghostPos.y + (anchorRef.current?.dy ?? 0)) - startRef.current.y > 10;
+
+  return (
+    <>
+      {/* Stationary placeholder — dims while ghost is out */}
+      <div
+        style={{ flexShrink: 0, position: 'relative', cursor: dragging ? 'grabbing' : 'grab', userSelect: 'none', touchAction: 'none', opacity: dragging ? 0.35 : 1, transition: 'opacity 0.15s' }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      >
+        <div style={{ transform: `rotate(${s.rot}deg)` }}>
+          <SuggestionCardInner s={s} darkMode={darkMode} shadow="2px 3px 10px rgba(0,0,0,0.14)" />
+        </div>
+        <button
+          onPointerDown={e => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); onAdd(s); }}
+          style={{ position: 'absolute', bottom: -8, right: -8, width: 22, height: 22, borderRadius: '50%', background: '#2dd4bf', border: '2px solid white', color: '#0a1020', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, zIndex: 5, boxShadow: '0 2px 6px rgba(45,212,191,0.4)' }}>+</button>
+      </div>
+
+      {/* Portal ghost — floats above everything, follows pointer */}
+      {dragging && ghostPos && createPortal(
+        <div style={{ position: 'fixed', left: ghostPos.x, top: ghostPos.y, zIndex: 99999, pointerEvents: 'none', transform: `rotate(${s.rot}deg) scale(${isDraggingDown ? 1.1 : 1})`, transition: 'transform 0.1s', filter: 'drop-shadow(0 16px 32px rgba(0,0,0,0.35))' }}>
+          <SuggestionCardInner s={s} darkMode={darkMode} shadow="none" />
+          {isDraggingDown && (
+            <div style={{ textAlign: 'center', marginTop: 4, fontSize: 9, color: '#2dd4bf', fontWeight: 700, letterSpacing: '0.05em' }}>drop to add ↓</div>
+          )}
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
+function SuggestionStrip({ suggestions, onAdd, darkMode }) {
+  const [addedIds, setAddedIds] = useState(new Set());
+  const visible = suggestions.filter(s => !addedIds.has(s.id));
+  if (visible.length === 0) return null;
+  const ts = darkMode ? '#64748b' : '#9ca3af';
+
+  function handleAdd(s) {
+    setAddedIds(prev => new Set([...prev, s.id]));
+    onAdd(s);
+  }
+
+  return (
+    <div style={{ padding: '0 16px 4px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <p style={{ fontSize: 10, color: ts, textTransform: 'uppercase', letterSpacing: '0.18em', margin: 0, fontWeight: 600 }}>Round out your trip</p>
+        <span style={{ fontSize: 10, color: ts, opacity: 0.7 }}>drag down or tap + to add</span>
+      </div>
+      {/* paddingTop: 14 leaves room for the pushpin that overhangs 11px above each card */}
+      <div style={{ display: 'flex', gap: 14, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 18, paddingTop: 14 }}>
+        {visible.map((s) => (
+          <SuggestionCard key={s.id} s={s} onAdd={handleAdd} darkMode={darkMode} />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // ─── Chapter cluster layout helper ───────────────────────────────────────────
@@ -529,11 +743,95 @@ function DetailSheet({ pin, chapters, onClose, onConvertToEvent, onConvertToTrip
   );
 }
 
+// ─── Chapter Pin Sheet ────────────────────────────────────────────────────────
+function ChapterPinSheet({ pin, onClose, onRemove, darkMode }) {
+  const { sheetStyle, handleProps } = useSwipeDownSheet(onClose);
+  const sheetBg  = darkMode ? '#131c2e' : '#ffffff';
+  const tp       = darkMode ? '#e8eaf0' : '#1a1a2e';
+  const ts       = darkMode ? '#64748b' : '#9ca3af';
+  const divider  = darkMode ? 'rgba(255,255,255,0.07)' : '#f0ece4';
+  const inputBdr = darkMode ? 'rgba(255,255,255,0.08)' : '#e5e0d5';
+  const mapsUrl  = pin.mapQuery
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pin.mapQuery)}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pin.label)}`;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 10040, background: 'rgba(0,0,0,0.52)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: sheetBg, borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 480, margin: '0 auto', maxHeight: '88dvh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', ...sheetStyle }}>
+        {/* Drag handle */}
+        <div {...handleProps} style={{ padding: '14px 0 0', display: 'flex', justifyContent: 'center', ...handleProps.style }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
+        </div>
+
+        {/* Cover image */}
+        {pin.imageUrl && (
+          <div style={{ width: '100%', height: 200, overflow: 'hidden', position: 'relative' }}>
+            <img src={pin.imageUrl} alt={pin.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.5))' }} />
+          </div>
+        )}
+
+        <div style={{ padding: '18px 18px max(32px, calc(env(safe-area-inset-bottom) + 32px))' }}>
+          {/* Title */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+            <div>
+              <p style={{ fontSize: 10, color: '#5eadce', textTransform: 'uppercase', letterSpacing: '0.16em', margin: '0 0 4px', fontWeight: 700 }}>
+                {pin.categoryId || 'experience'}
+              </p>
+              <h2 style={{ fontFamily: CAVEAT, fontSize: 26, fontWeight: 700, color: tp, margin: 0, lineHeight: 1.1 }}>
+                {pin.emoji ? `${pin.emoji} ${pin.label}` : pin.label}
+              </h2>
+            </div>
+            <button onClick={onClose} style={{ flexShrink: 0, background: darkMode ? 'rgba(255,255,255,0.06)' : '#f5f3ee', border: 'none', borderRadius: '50%', width: 32, height: 32, color: ts, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          </div>
+
+          {/* Description */}
+          {pin.description ? (
+            <p style={{ fontSize: 14, color: tp, lineHeight: 1.6, margin: '0 0 14px' }}>{pin.description}</p>
+          ) : (
+            <p style={{ fontSize: 14, color: ts, fontStyle: 'italic', lineHeight: 1.6, margin: '0 0 14px' }}>No description yet — tap "Find on Maps" to explore.</p>
+          )}
+
+          {/* Tip */}
+          {pin.tip && (
+            <div style={{ background: darkMode ? 'rgba(45,212,191,0.08)' : '#f0fdfb', border: `1px solid ${darkMode ? 'rgba(45,212,191,0.2)' : 'rgba(45,212,191,0.3)'}`, borderRadius: 12, padding: '10px 14px', marginBottom: 16 }}>
+              <p style={{ fontSize: 10, color: '#0d9488', textTransform: 'uppercase', letterSpacing: '0.14em', fontWeight: 700, margin: '0 0 4px' }}>Tip</p>
+              <p style={{ fontSize: 13, color: tp, lineHeight: 1.55, margin: 0 }}>{pin.tip}</p>
+            </div>
+          )}
+
+          {/* Status badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, borderTop: `1px solid ${divider}`, paddingTop: 16 }}>
+            <div style={{ fontSize: 11, color: ts }}>Status:</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: pin.status === 'done' ? '#0d9488' : pin.status === 'planning' ? '#7c3aed' : '#d97706', background: pin.status === 'done' ? (darkMode ? 'rgba(13,148,136,0.12)' : '#f0fdfb') : pin.status === 'planning' ? (darkMode ? 'rgba(124,58,237,0.12)' : '#f5f3ff') : (darkMode ? 'rgba(217,119,6,0.12)' : '#fffbeb'), padding: '2px 10px', borderRadius: 20 }}>
+              {pin.status === 'done' ? '✓ Done' : pin.status === 'planning' ? 'Planning' : 'Dreaming'}
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '13px', borderRadius: 14, background: '#5eadce', color: '#fff', textDecoration: 'none', fontFamily: CAVEAT, fontSize: 17, fontWeight: 700 }}>
+              🗺️ Find on Maps
+            </a>
+            <button onClick={() => { onRemove?.(pin.id); onClose(); }} style={{ padding: '11px', borderRadius: 14, background: 'transparent', border: `1px solid ${inputBdr}`, color: ts, fontFamily: CAVEAT, fontSize: 15, cursor: 'pointer' }}>
+              Remove from chapter
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Chapter Page ─────────────────────────────────────────────────────────────
-function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, darkMode }) {
+function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, darkMode }) {
   const [showAddMemory, setShowAddMemory] = useState(false);
   const [memoryText, setMemoryText] = useState('');
+  const [selectedPin, setSelectedPin] = useState(null);
+  // seed rotates each time the page mounts (chapter reopened)
+  const [suggestionSeed] = useState(() => Math.floor(Math.random() * 997));
   const chapterPins = pins.filter(p => chapter.itemIds.includes(p.id));
+  const suggestions = generateSuggestions(chapter, chapterPins, suggestionSeed);
   const coverPin = chapterPins.find(p => p.imageUrl) || null;
   const pageBg = darkMode ? '#0e1520' : '#faf8f3';
   const tp     = darkMode ? '#e8eaf0' : '#1a1a2e';
@@ -571,11 +869,18 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, darkM
         </div>
       )}
 
+      {onAddSuggestion && suggestions.length > 0 && (
+        <div style={{ paddingTop: 22 }}>
+          <SuggestionStrip suggestions={suggestions} onAdd={onAddSuggestion} darkMode={darkMode} />
+          <div style={{ margin: '16px 16px 0', borderTop: `1px dashed ${darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}` }} />
+        </div>
+      )}
+
       <div style={{ padding: '22px 16px 0' }}>
         <p style={{ fontSize: 10, color: ts, textTransform: 'uppercase', letterSpacing: '0.18em', margin: '0 0 14px', fontWeight: 600 }}>Pinned · {chapterPins.length} item{chapterPins.length !== 1 ? 's' : ''}</p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
           {chapterPins.map(p => (
-            <div key={p.id} style={{ transform: `rotate(${(p.rot || 0) * 0.4}deg)` }}>
+            <div key={p.id} style={{ transform: `rotate(${(p.rot || 0) * 0.4}deg)`, position: 'relative', cursor: 'pointer' }} onClick={() => setSelectedPin(p)}>
               {p.type === 'note' ? (
                 <div style={{ background: (NOTE_COLORS[p.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'].bg, padding: '11px 12px', width: 140, minHeight: 80, borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', position: 'relative' }}>
                   <Pushpin colorKey={p.pinColor} darkMode={darkMode} />
@@ -591,6 +896,12 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, darkM
                   </div>
                   <div style={{ padding: '5px 2px 6px', textAlign: 'center', fontFamily: CAVEAT, fontSize: 11, color: p.status === 'done' ? '#9ca3af' : '#374151', textDecoration: p.status === 'done' ? 'line-through' : 'none', lineHeight: 1.3 }}>{p.emoji ? `${p.emoji} ${p.label}` : p.label}</div>
                 </div>
+              )}
+              {onRemovePin && (
+                <button
+                  onClick={e => { e.stopPropagation(); onRemovePin(p.id); }}
+                  style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', background: 'rgba(220,38,38,0.85)', border: '1.5px solid white', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, zIndex: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.25)' }}
+                >✕</button>
               )}
             </div>
           ))}
@@ -634,6 +945,15 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, darkM
           </div>
         )}
       </div>
+
+      {selectedPin && (
+        <ChapterPinSheet
+          pin={selectedPin}
+          onClose={() => setSelectedPin(null)}
+          onRemove={id => { onRemovePin?.(id); setSelectedPin(null); }}
+          darkMode={darkMode}
+        />
+      )}
     </div>
   );
 }
@@ -920,6 +1240,25 @@ const SomedayPage = ({
     }));
   }
 
+  function addSuggestionToChapter(suggestion, chapterId) {
+    const newPin = {
+      id: `pin-sug-${Date.now()}`,
+      type: 'photo',
+      label: suggestion.label,
+      emoji: suggestion.emoji,
+      imageUrl: suggestion.imageUrl || '',
+      pinColor: 'teal',
+      categoryId: suggestion.categoryId,
+      status: 'planning',
+      description: suggestion.description || '',
+      tip: suggestion.tip || '',
+      mapQuery: suggestion.mapQuery || '',
+    };
+    setPins(prev => [...prev, newPin]);
+    onAddDream?.(newPin);
+    addPinToChapter(newPin.id, chapterId);
+  }
+
   function addMemoryToChapter(chapterId, memory) {
     setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, memories: [...(c.memories || []), memory] } : c));
   }
@@ -958,7 +1297,7 @@ const SomedayPage = ({
       return (
         <>
           <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
-          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} darkMode={darkMode} />
+          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} darkMode={darkMode} />
         </>
       );
     }
