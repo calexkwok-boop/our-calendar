@@ -667,8 +667,11 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
   const [moviesLoading, setMoviesLoading] = useState(true);
   const [moviesError, setMoviesError]     = useState(false);
   const [moviesRetry, setMoviesRetry]     = useState(0);
-  const [activePage, setActivePage]       = useState(null);
-  const [selectedPost, setSelectedPost]   = useState(null);
+  const [activePage, setActivePage]             = useState(null);
+  const [selectedPost, setSelectedPost]         = useState(null);
+  const [dreamResults, setDreamResults]         = useState([]);
+  const [dreamSearching, setDreamSearching]     = useState(false);
+  const dreamReqRef                             = useRef(0);
 
   const moviePosts = useMemo(() => shuffle(movies.slice(0, 20)).slice(0, 6).map(m => ({ ...m, type: "movies" })), [movies]);
   const activeCom  = useMemo(() => shuffle(communityPosts.filter(p => sources[p.type])), [communityPosts, sources]);
@@ -684,6 +687,40 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
       .catch(() => { if (!cancelled) { setMoviesError(true); setMoviesLoading(false); } });
     return () => { cancelled = true; };
   }, [sources.movies, moviesRetry]);
+
+  // Live product search for DreamShelf items
+  useEffect(() => {
+    const q = search.trim();
+    if (!q || !sources.products) { setDreamResults([]); setDreamSearching(false); return; }
+    const reqId = ++dreamReqRef.current;
+    setDreamSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/product-search?q=${encodeURIComponent(q)}`);
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        if (dreamReqRef.current !== reqId) return;
+        const normalized = (data.items || []).slice(0, 6).map((item, i) => ({
+          id: `dream-search-${i}-${q}`,
+          type: "products",
+          icon: "✨",
+          page: "Dream Shelf",
+          time: "Dream Shelf",
+          cardTitle: item.name || item.title || q,
+          desc: item.description || "",
+          imageUrl: item.image || item.imageUrl || item.thumbnail || "",
+          votes: 0,
+          actions: ["Add to someday", "Open Dream Shelf"],
+        }));
+        setDreamResults(normalized);
+      } catch {
+        if (dreamReqRef.current === reqId) setDreamResults([]);
+      } finally {
+        if (dreamReqRef.current === reqId) setDreamSearching(false);
+      }
+    }, 400);
+    return () => { clearTimeout(timer); };
+  }, [search, sources.products]);
 
   if (activePage === "movies") {
     return <MoviesPage onBack={() => setActivePage(null)} onAddToSomeday={onAddToSomeday} onPlanEvent={onPlanEvent} />;
@@ -709,11 +746,14 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
   const activeMovies  = sources.movies && !moviesLoading ? moviePosts : [];
   const allPosts      = interleavePosts(activeFriends, activeMovies, activeCom);
   const visiblePosts  = search.trim()
-    ? allPosts.filter(p => {
-        const q   = search.toLowerCase();
-        const hay = [p.name, p.page, p.text, p.title, p.cardTitle, p.desc, p.location, p.overview].filter(Boolean).join(" ").toLowerCase();
-        return hay.includes(q);
-      })
+    ? [
+        ...allPosts.filter(p => {
+          const q   = search.toLowerCase();
+          const hay = [p.name, p.page, p.text, p.title, p.cardTitle, p.desc, p.location, p.overview].filter(Boolean).join(" ").toLowerCase();
+          return hay.includes(q);
+        }),
+        ...dreamResults,
+      ]
     : allPosts;
 
   // ─── Discovery sections (non-search, deduplication via Set) ───────────────
@@ -785,10 +825,15 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
             Results for "{search}"
           </p>
           <div className="px-3.5 flex flex-col gap-3">
-            {visiblePosts.length === 0
+            {visiblePosts.length === 0 && !dreamSearching
               ? <div className="text-center py-16 text-gray-400 dark:text-gray-600 text-sm">No results found</div>
               : visiblePosts.map(post => renderCard(post))
             }
+            {dreamSearching && (
+              <div className="flex items-center gap-2 px-2 py-3 text-xs text-gray-400 dark:text-gray-600">
+                <span className="animate-spin">⟳</span> Searching Dream Shelf…
+              </div>
+            )}
           </div>
         </>
       )}
