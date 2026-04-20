@@ -349,6 +349,7 @@ function ItemModal({ item, isSaved, onSomeday, onMilestone, onShare, onClose, da
       className="fixed inset-0 z-[10100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
       <div className={`w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden border ${dm ? 'bg-[#0e1520] border-white/10' : 'bg-white border-slate-200'}`}>
         {/* Image / emoji header */}
         <div className="relative flex-shrink-0">
@@ -380,12 +381,12 @@ function ItemModal({ item, isSaved, onSomeday, onMilestone, onShare, onClose, da
           <p className="text-xs font-semibold tracking-widest uppercase mb-1" style={{ color: SILVER }}>
             {item.brand}
           </p>
-          <h2 className={`font-['Caveat'] text-3xl font-bold leading-tight mb-2 ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
+          <h2 className={`text-3xl font-bold leading-tight mb-2 ${dm ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: "'Caveat', cursive" }}>
             {item.name}
           </h2>
 
           {item.priceRange && (
-            <p className="font-['Caveat'] text-2xl font-bold mb-3" style={{ color: GOLD }}>
+            <p className="text-2xl font-bold mb-3" style={{ color: GOLD, fontFamily: "'Caveat', cursive" }}>
               {item.priceRange}
             </p>
           )}
@@ -399,32 +400,18 @@ function ItemModal({ item, isSaved, onSomeday, onMilestone, onShare, onClose, da
         <div className={`flex-shrink-0 p-6 pt-3 border-t flex flex-col gap-2.5 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] ${dm ? 'border-white/5' : 'border-slate-100'}`}>
           <button
             onClick={handleSomeday}
-            className="w-full rounded-2xl py-3 text-base font-['Caveat'] font-bold border transition-all duration-200"
-            style={{
-              background: dm ? TEAL_MUTED : '#f0fdfa',
-              border: `1px solid ${TEAL_BORDER}`,
-              color: TEAL,
-              fontFamily: "'Caveat', cursive",
-            }}
+            className="w-full rounded-2xl py-3 text-base border transition-all duration-200"
+            style={{ background: dm ? TEAL_MUTED : '#f0fdfa', border: `1px solid ${TEAL_BORDER}`, color: TEAL, fontFamily: "'Caveat', cursive", fontWeight: 700 }}
           >
             {saved ? "✓ On my Someday List" : "+ Add to Someday List"}
           </button>
-          <div className="flex gap-2.5">
-            <button
-              onClick={() => { onMilestone(item); onClose(); }}
-              className="flex-1 rounded-2xl py-3 text-sm font-['Caveat'] font-bold transition-all text-center border"
-              style={{ background: dm ? LAVENDER_DARK_BG : LAVENDER_LIGHT, border: `1px solid ${LAVENDER_BORDER}`, color: dm ? LAVENDER_TEXT_DARK : LAVENDER_TEXT, fontFamily: "'Caveat', cursive" }}
-            >
-              🎯 Make it a milestone
-            </button>
-            <button
-              onClick={() => { onShare(item); onClose(); }}
-              className="flex-1 rounded-2xl py-3 text-sm font-['Caveat'] font-bold transition-all border"
-              style={{ background: dm ? GOLD_MUTED : '#FFFBEB', border: `1px solid ${GOLD_BORDER}`, color: GOLD_DARK }}
-            >
-              Share with friends
-            </button>
-          </div>
+          <button
+            onClick={() => { onMilestone(item); onClose(); }}
+            className="w-full rounded-2xl py-3 text-base transition-all text-center border"
+            style={{ background: dm ? 'rgba(139,92,246,0.12)' : '#f5f3ff', border: '1px solid rgba(139,92,246,0.28)', color: dm ? '#c4b5fd' : '#6d28d9', fontFamily: "'Caveat', cursive", fontWeight: 700 }}
+          >
+            ✨ Make it happen
+          </button>
         </div>
       </div>
     </div>,
@@ -489,7 +476,7 @@ const ItemCard = React.memo(function ItemCard({ item, savedIds, onOpen, darkMode
 });
 
 // ─── Community Post ───────────────────────────────────────────────────────────
-const CommunityPost = React.memo(function CommunityPost({ post, photoUrl, currentUserId, onAddToSomeday, onVote, darkMode }) {
+const CommunityPost = React.memo(function CommunityPost({ post, photoUrl, currentUserId, onAddToSomeday, onVote, onOpen, darkMode }) {
   const dm = darkMode;
   const [vote, setVote]     = useState(0);
   const [likes, setLikes]   = useState(post.likes_count ?? 0);
@@ -528,7 +515,7 @@ const CommunityPost = React.memo(function CommunityPost({ post, photoUrl, curren
       </div>
 
       {/* Product block */}
-      <div className="flex gap-3 mb-3">
+      <div className="flex gap-3 mb-3 cursor-pointer" onClick={() => onOpen?.({ id: post.id, name: post.product_name, brand: post.product_brand, image: resolvedImage, category: post.category, description: post.review, priceRange: post.product_price, emoji: cat?.emoji || "✨" })}>
         {resolvedImage && !imageFailed ? (
           <img
             src={resolvedImage}
@@ -623,16 +610,18 @@ function ShareItemModal({ item, onClose, onSubmit, darkMode }) {
     else setSubmitError("Could not post right now. Try again.");
   };
 
-  const inputCls = `w-full border rounded-xl px-4 py-3 text-sm outline-none transition-colors font-['Caveat'] ${dm ? `bg-[#0e1520] border-white/8 text-slate-200 focus:border-amber-400/40` : `bg-slate-50 border-slate-200 text-slate-800 focus:border-amber-400`}`;
+  const inputCls = `w-full border rounded-xl px-4 py-3 text-sm outline-none transition-colors ${dm ? `bg-[#0e1520] border-white/8 text-slate-200 focus:border-amber-400/40` : `bg-slate-50 border-slate-200 text-slate-800 focus:border-amber-400`}`;
+  const inputStyle = { fontFamily: "'Caveat', cursive" };
 
   return createPortal(
     <div className="fixed inset-0 z-[10100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
       <div className={`w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden border ${dm ? 'bg-[#0e1520] border-white/10' : 'bg-white border-slate-200'}`}>
         {/* Header */}
         <div className={`px-6 pt-6 pb-4 border-b flex items-start justify-between ${dm ? 'border-white/5' : 'border-slate-100'}`}>
           <div>
             <p className="text-[10px] uppercase tracking-widest mb-1 font-semibold" style={{ color: GOLD }}>Dream Shelf ✨</p>
-            <h2 className={`font-['Caveat'] text-2xl font-bold ${dm ? 'text-slate-100' : 'text-slate-900'}`}>Share something you're dreaming of</h2>
+            <h2 className={`text-2xl font-bold ${dm ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: "'Caveat', cursive" }}>Share something you're dreaming of</h2>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-500 text-sm">✕</button>
         </div>
@@ -641,13 +630,13 @@ function ShareItemModal({ item, onClose, onSubmit, darkMode }) {
           {/* Item name */}
           <label className="grid gap-2">
             <span className="text-xs uppercase tracking-widest text-slate-500 font-['Caveat']">Item name *</span>
-            <input type="text" value={draft.name} onChange={e => updateField("name", e.target.value)} placeholder="Rolex Submariner" className={inputCls} />
+            <input type="text" value={draft.name} onChange={e => updateField("name", e.target.value)} placeholder="Rolex Submariner" className={inputCls} style={inputStyle} />
           </label>
 
           {/* Brand */}
           <label className="grid gap-2">
             <span className="text-xs uppercase tracking-widest text-slate-500 font-['Caveat']">Brand</span>
-            <input type="text" value={draft.brand} onChange={e => updateField("brand", e.target.value)} placeholder="Rolex" className={inputCls} />
+            <input type="text" value={draft.brand} onChange={e => updateField("brand", e.target.value)} placeholder="Rolex" className={inputCls} style={inputStyle} />
           </label>
 
           {/* Category chips */}
@@ -656,8 +645,8 @@ function ShareItemModal({ item, onClose, onSubmit, darkMode }) {
             <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
               {CATEGORIES.map(c => (
                 <button key={c.id} type="button" onClick={() => updateField("category", c.id)}
-                  className="px-3 py-1.5 rounded-full text-sm font-['Caveat'] font-bold border transition-all flex-shrink-0"
-                  style={{ background: draft.category === c.id ? GOLD_MUTED : (dm ? 'rgba(255,255,255,0.05)' : '#f3f4f6'), border: `1px solid ${draft.category === c.id ? GOLD_BORDER : (dm ? 'rgba(255,255,255,0.07)' : '#e5e7eb')}`, color: draft.category === c.id ? GOLD_DARK : (dm ? '#6b7280' : '#9ca3af') }}
+                  className="px-3 py-1.5 rounded-full text-sm border transition-all flex-shrink-0"
+                  style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, background: draft.category === c.id ? GOLD_MUTED : (dm ? 'rgba(255,255,255,0.05)' : '#f3f4f6'), border: `1px solid ${draft.category === c.id ? GOLD_BORDER : (dm ? 'rgba(255,255,255,0.07)' : '#e5e7eb')}`, color: draft.category === c.id ? GOLD_DARK : (dm ? '#6b7280' : '#9ca3af') }}
                 >
                   {c.emoji} {c.label}
                 </button>
@@ -668,7 +657,7 @@ function ShareItemModal({ item, onClose, onSubmit, darkMode }) {
           {/* Price */}
           <label className="grid gap-2">
             <span className="text-xs uppercase tracking-widest text-slate-500 font-['Caveat']">Price range</span>
-            <input type="text" value={draft.price} onChange={e => updateField("price", e.target.value)} placeholder="$9,000–$14,000" className={inputCls} />
+            <input type="text" value={draft.price} onChange={e => updateField("price", e.target.value)} placeholder="$9,000–$14,000" className={inputCls} style={inputStyle} />
           </label>
 
           {/* Photo */}
@@ -692,7 +681,7 @@ function ShareItemModal({ item, onClose, onSubmit, darkMode }) {
           {/* Why */}
           <label className="grid gap-2">
             <span className="text-xs uppercase tracking-widest text-slate-500 font-['Caveat']">Why do you dream about this? *</span>
-            <textarea value={draft.review} onChange={e => updateField("review", e.target.value)} placeholder="Tell your friends what makes this worth dreaming about..." rows={4} className={`${inputCls} resize-none`} />
+            <textarea value={draft.review} onChange={e => updateField("review", e.target.value)} placeholder="Tell your friends what makes this worth dreaming about..." rows={4} className={`${inputCls} resize-none`} style={inputStyle} />
           </label>
 
           {submitError && <p className="text-sm text-red-500">{submitError}</p>}
@@ -702,8 +691,8 @@ function ShareItemModal({ item, onClose, onSubmit, darkMode }) {
           <button
             onClick={handleSubmit}
             disabled={!draft.review.trim() || submitting}
-            className="w-full rounded-2xl py-3 text-base font-['Caveat'] font-bold transition-colors disabled:opacity-40 text-white"
-            style={{ background: submitting ? GOLD_BORDER : GOLD }}
+            className="w-full rounded-2xl py-3 text-base transition-colors disabled:opacity-40 text-white"
+            style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, background: submitting ? GOLD_BORDER : GOLD }}
           >
             {submitting ? "Sharing…" : "Share with friends ✨"}
           </button>
@@ -1222,8 +1211,18 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         {featured && (
           <>
             <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">Most dreamed about this week</p>
-            <div className={`border rounded-3xl overflow-hidden mb-8 transition-colors ${dm ? 'bg-[#161f30]' : 'bg-white'}`}
-              style={{ borderColor: dm ? GOLD_BORDER : 'rgba(201,168,76,0.25)' }}>
+            <div className={`border rounded-3xl overflow-hidden mb-8 transition-colors cursor-pointer hover:-translate-y-0.5 transition-transform ${dm ? 'bg-[#161f30]' : 'bg-white'}`}
+              style={{ borderColor: dm ? GOLD_BORDER : 'rgba(201,168,76,0.25)' }}
+              onClick={() => setSelectedItem({
+                id: featured.id,
+                name: featured.product_name,
+                brand: featured.product_brand,
+                image: featuredImage,
+                category: featured.category,
+                description: featured.review,
+                priceRange: featured.product_price,
+                emoji: CATEGORIES.find(c => c.id === featured.category)?.emoji || "✨",
+              })}>
               <div className="grid grid-cols-2 max-sm:grid-cols-1">
                 <div className={`h-52 flex items-center justify-center text-7xl ${dm ? 'bg-[#131c2e]' : 'bg-gradient-to-br from-amber-50 to-yellow-50'}`}>
                   {featuredImage ? (
@@ -1359,6 +1358,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
               currentUserId={currentUserId}
               onAddToSomeday={handleCommunitySomeday}
               onVote={handleVoteCommunityPost}
+              onOpen={setSelectedItem}
               darkMode={dm}
             />
           ))}

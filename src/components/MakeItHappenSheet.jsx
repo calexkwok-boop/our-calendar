@@ -174,12 +174,12 @@ export default function MakeItHappenSheet({ item, onClose, onAddEvent, darkMode 
   const ts        = dm ? '#6b7280' : '#9ca3af';
   const inputBg   = dm ? 'rgba(255,255,255,0.05)' : '#f8f7f2';
   const inputBdr  = dm ? 'rgba(255,255,255,0.08)' : '#e5e0d5';
-  const GOLD      = '#C9A84C';
-  const GOLD_DARK = '#8A6A1F';
-  const GOLD_MUTED = dm ? 'rgba(201,168,76,0.12)' : '#FFFBEB';
-  const GOLD_BORDER = 'rgba(201,168,76,0.35)';
-  const TEAL      = '#2dd4bf';
-  const TEAL_DARK = '#0d9488';
+  const GOLD      = '#8b5cf6';
+  const GOLD_DARK = '#6d28d9';
+  const GOLD_MUTED = dm ? 'rgba(139,92,246,0.12)' : '#f5f3ff';
+  const GOLD_BORDER = 'rgba(139,92,246,0.28)';
+  const TEAL      = '#a78bfa';
+  const TEAL_DARK = '#7c3aed';
 
   // ── State ─────────────────────────────────────────────────────────────────────
   const rawPrice    = item?.priceRange || item?.price || '';
@@ -287,7 +287,7 @@ export default function MakeItHappenSheet({ item, onClose, onAddEvent, darkMode 
           {/* ── Header ── */}
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
             <div style={{ flex: 1 }}>
-              <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: dm ? GOLD : GOLD_DARK, marginBottom: 4 }}>
+              <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: dm ? '#c4b5fd' : '#6d28d9', marginBottom: 4 }}>
                 Make it happen ✨
               </p>
               <h2 style={{ fontFamily: CAVEAT, fontSize: 28, fontWeight: 700, color: tp, margin: 0, lineHeight: 1.1 }}>
@@ -346,8 +346,8 @@ export default function MakeItHappenSheet({ item, onClose, onAddEvent, darkMode 
 
           {/* ── Progress ring (shows when price entered) ── */}
           {parseFloat(price) > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: dm ? 'rgba(45,212,191,0.06)' : '#f0fdfa', borderRadius: 16, padding: '14px 16px', marginBottom: 16, border: `1px solid ${dm ? 'rgba(45,212,191,0.12)' : '#99f6e4'}` }}>
-              <ProgressRing pct={progressPct} size={68} stroke={6} color={TEAL} bg={dm ? 'rgba(45,212,191,0.12)' : 'rgba(45,212,191,0.15)'}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: dm ? 'rgba(139,92,246,0.06)' : '#f5f3ff', borderRadius: 16, padding: '14px 16px', marginBottom: 16, border: `1px solid ${dm ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.2)'}` }}>
+              <ProgressRing pct={progressPct} size={68} stroke={6} color={TEAL} bg={dm ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.12)'}>
                 <span style={{ fontFamily: CAVEAT, fontSize: 15, fontWeight: 700, color: dm ? TEAL : TEAL_DARK }}>{progressPct}%</span>
               </ProgressRing>
               <div>
@@ -447,7 +447,7 @@ export default function MakeItHappenSheet({ item, onClose, onAddEvent, darkMode 
           {/* ── Milestone moment ── always visible */}
           <div style={{
             borderRadius: 20,
-            background: dm ? 'rgba(201,168,76,0.07)' : '#FFFBEB',
+            background: dm ? 'rgba(139,92,246,0.07)' : '#f5f3ff',
             border: `1.5px solid ${GOLD_BORDER}`,
             padding: '20px 18px',
             marginBottom: 16,
@@ -455,8 +455,8 @@ export default function MakeItHappenSheet({ item, onClose, onAddEvent, darkMode 
             overflow: 'hidden',
           }}>
             {/* Decorative circles */}
-            <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: GOLD, opacity: 0.10, pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', bottom: -15, left: -15, width: 50, height: 50, borderRadius: '50%', background: GOLD, opacity: 0.07, pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: '#8b5cf6', opacity: 0.10, pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', bottom: -15, left: -15, width: 50, height: 50, borderRadius: '50%', background: '#8b5cf6', opacity: 0.07, pointerEvents: 'none' }} />
 
             <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: dm ? GOLD : GOLD_DARK }}>
               🎯 Your milestone
@@ -505,7 +505,7 @@ export default function MakeItHappenSheet({ item, onClose, onAddEvent, darkMode 
 
             {/* Add to calendar button */}
             {calendarAdded ? (
-              <div style={{ width: '100%', padding: '12px 0', borderRadius: 14, background: dm ? 'rgba(45,212,191,0.12)' : '#f0fdfa', border: `1px solid ${dm ? 'rgba(45,212,191,0.3)' : '#99f6e4'}`, color: dm ? TEAL : TEAL_DARK, fontFamily: CAVEAT, fontSize: 18, fontWeight: 700, textAlign: 'center' }}>
+              <div style={{ width: '100%', padding: '12px 0', borderRadius: 14, background: dm ? 'rgba(139,92,246,0.12)' : '#f5f3ff', border: `1px solid ${dm ? 'rgba(139,92,246,0.3)' : 'rgba(139,92,246,0.25)'}`, color: dm ? TEAL : TEAL_DARK, fontFamily: CAVEAT, fontSize: 18, fontWeight: 700, textAlign: 'center' }}>
                 ✓ Added to your calendar!
               </div>
             ) : (
@@ -517,7 +517,7 @@ export default function MakeItHappenSheet({ item, onClose, onAddEvent, darkMode 
                   padding: '12px 0',
                   borderRadius: 14,
                   border: 'none',
-                  background: hasGoalDate ? (dm ? GOLD : GOLD_DARK) : (dm ? 'rgba(255,255,255,0.06)' : '#e5e0d5'),
+                  background: hasGoalDate ? (dm ? '#8b5cf6' : '#6d28d9') : (dm ? 'rgba(255,255,255,0.06)' : '#e5e0d5'),
                   color: hasGoalDate ? '#fff' : ts,
                   fontFamily: CAVEAT,
                   fontSize: 18,

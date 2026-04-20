@@ -532,7 +532,7 @@ function DetailSheet({ pin, onClose, onConvertToEvent, onConvertToTrip, onMarkDo
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16 }}>
           {pin.status !== 'done' && (
-            <button onClick={handleTurnIntoPlan} style={{ flex: '1 1 100%', minWidth: 120, padding: '12px', borderRadius: 14, background: darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb', color: darkMode ? '#2dd4bf' : '#0d9488', border: `1px solid ${darkMode ? 'rgba(45,212,191,0.2)' : '#99f6e4'}`, fontFamily: CAVEAT, fontSize: 18, fontWeight: 700, cursor: 'pointer' }}>
+            <button onClick={handleTurnIntoPlan} style={{ flex: '1 1 100%', minWidth: 120, padding: '12px', borderRadius: 14, background: darkMode ? 'rgba(139,92,246,0.12)' : '#f5f3ff', color: darkMode ? '#c4b5fd' : '#6d28d9', border: `1px solid ${darkMode ? 'rgba(139,92,246,0.25)' : 'rgba(139,92,246,0.28)'}`, fontFamily: CAVEAT, fontSize: 18, fontWeight: 700, cursor: 'pointer' }}>
               Make it happen
             </button>
           )}

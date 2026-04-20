@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import MoviesPage from "./MoviesPage";
 import BoardGamePage from "./BoardGamePage";
 import RestaurantPage from "./RestaurantPage";
@@ -235,9 +236,8 @@ function FriendCard({ post }) {
   );
 }
 
-function MovieCard({ movie, onAddToSomeday, onRemoveFromSomeday, onPageTap, onPlanEvent }) {
+function MovieCard({ movie, onAddToSomeday, onRemoveFromSomeday, onPageTap, onPlanEvent, onCardTap }) {
   const [inSomeday, setInSomeday] = useState(false);
-  const [expanded, setExpanded] = useState(false);
   const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : null;
   const year   = movie.release_date ? movie.release_date.slice(0, 4) : "—";
   const rating = movie.vote_average ? movie.vote_average.toFixed(1) : "—";
@@ -262,23 +262,17 @@ function MovieCard({ movie, onAddToSomeday, onRemoveFromSomeday, onPageTap, onPl
           <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-0.5">Community pick</p>
         </div>
       </div>
-      <div className="flex border-t border-stone-100 dark:border-white/[0.04] cursor-pointer" onClick={() => setExpanded(v => !v)}>
-        <div className="w-[72px] flex-shrink-0 bg-purple-500/10">
+      <div className="cursor-pointer" onClick={() => onCardTap?.(movie)}>
+        <div className="bg-purple-500/10 border-t border-stone-100 dark:border-white/[0.04]">
           {posterUrl
-            ? <img src={posterUrl} alt={movie.title} className="w-full h-[108px] object-cover" loading="lazy" />
-            : <div className="w-full h-[108px] flex items-center justify-center text-2xl">🎬</div>
+            ? <img src={posterUrl} alt={movie.title} className="w-full h-48 object-cover" loading="lazy" />
+            : <div className="w-full h-48 flex items-center justify-center text-5xl">🎬</div>
           }
         </div>
-        <div className="flex-1 px-3.5 py-3 flex flex-col justify-between min-w-0">
-          <div>
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight">{movie.title}</p>
-            <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-1">{year} · ★ {rating}</p>
-            <p className={`text-[11px] text-gray-500 leading-snug mt-1.5 ${expanded ? "" : "line-clamp-3"}`}>{movie.overview}</p>
-            {(movie.overview?.length > 120) && (
-              <p className="text-[11px] text-teal-500 mt-1">{expanded ? "Show less" : "More"}</p>
-            )}
-          </div>
-          <p className="text-[10px] text-teal-500 mt-2">▲ {votes} votes</p>
+        <div className="px-4 py-2.5">
+          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight mb-0.5">{movie.title}</p>
+          <p className="text-[11px] text-gray-400 dark:text-gray-600 mb-1">{year} · ★ {rating}</p>
+          <p className="text-sm text-gray-500 leading-relaxed line-clamp-3">{movie.overview}</p>
         </div>
       </div>
       <div className="flex items-center gap-2 px-4 pb-4 pt-2.5">
@@ -299,7 +293,7 @@ function MovieCard({ movie, onAddToSomeday, onRemoveFromSomeday, onPageTap, onPl
 
 const TYPE_EMOJI = { hiking: "🥾", games: "🎲", restaurants: "🍜", products: "✨", destinations: "✈️" };
 
-function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveFromSomeday }) {
+function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveFromSomeday, onCardTap }) {
   const [inSomeday, setInSomeday] = useState(false);
   const imageUrl = getExploreImageUrl(post);
 
@@ -307,42 +301,19 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
     <div className="rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent shadow-sm dark:shadow-none overflow-hidden">
       <CardHeader post={post} onPageTap={onPageTap} />
       <Divider />
-      {imageUrl && post.type === "hiking" ? (
-        <div className="flex mx-4 mt-3 rounded-2xl overflow-hidden bg-stone-50 dark:bg-white/[0.03] border border-stone-100 dark:border-white/[0.04]">
-          <div className="w-[82px] h-[112px] flex-shrink-0 bg-green-500/10">
-            <img
-              src={imageUrl}
-              alt={post.cardTitle}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-          </div>
-          <div className="flex-1 min-w-0 px-3.5 py-3">
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-0.5">{post.cardTitle}</p>
-            {post.location && <p className="text-[11px] text-gray-400 dark:text-gray-600 mb-1.5">{post.location}</p>}
-            <p className="text-sm text-gray-500 leading-relaxed line-clamp-3">{post.desc}</p>
-          </div>
-        </div>
-      ) : imageUrl && (
+      {imageUrl && (
         <div
-          className={`mx-4 mt-3 rounded-2xl overflow-hidden ${post.type === "products" ? "bg-stone-50 dark:bg-white/[0.03]" : "bg-stone-100 dark:bg-white/[0.04]"}`}
-          onClick={() => onPageTap?.(post.type)}
+          className={`mx-4 mt-3 rounded-2xl overflow-hidden cursor-pointer active:opacity-80 ${post.type === "products" ? "bg-stone-50 dark:bg-white/[0.03]" : "bg-stone-100 dark:bg-white/[0.04]"}`}
+          onClick={() => onCardTap?.(post)}
         >
-          <img
-            src={imageUrl}
-            alt={post.cardTitle}
-            className={`w-full h-48 ${post.type === "products" ? "object-contain p-5" : "object-cover"}`}
-            loading="lazy"
-          />
+          <img src={imageUrl} alt={post.cardTitle} className={`w-full h-48 ${post.type === "products" ? "object-contain p-5" : "object-cover"}`} loading="lazy" />
         </div>
       )}
-      {post.type !== "hiking" && (
-        <div className="px-4 py-2.5">
-          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-0.5">{post.cardTitle}</p>
-          {post.location && <p className="text-[11px] text-gray-400 dark:text-gray-600 mb-1.5">{post.location}</p>}
-          <p className="text-sm text-gray-500 leading-relaxed">{post.desc}</p>
-        </div>
-      )}
+      <div className="px-4 py-2.5 cursor-pointer active:opacity-80" onClick={() => onCardTap?.(post)}>
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-0.5">{post.cardTitle}</p>
+        {post.location && <p className="text-[11px] text-gray-400 dark:text-gray-600 mb-1.5">{post.location}</p>}
+        <p className="text-sm text-gray-500 leading-relaxed line-clamp-3">{post.desc}</p>
+      </div>
       <div className="flex items-center gap-2 px-4 pb-4 pt-1">
         {post.actions.map((a, i) => {
           const isAmazonLink = post.type === "products" && i === 1 && post.amazonUrl;
@@ -429,6 +400,109 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
   );
 }
 
+
+function PostDetailSheet({ post, onClose, onAddToSomeday, onRemoveFromSomeday, onPlanEvent, darkMode }) {
+  const dm = darkMode;
+  const [inSomeday, setInSomeday] = useState(false);
+  const isMovie = post.type === 'movies';
+  const imageUrl = isMovie
+    ? (post.poster_path ? `${TMDB_IMG}${post.poster_path}` : null)
+    : getExploreImageUrl(post);
+  const title = isMovie ? post.title : post.cardTitle;
+  const desc  = isMovie ? post.overview : post.desc;
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  const handleSomeday = () => {
+    if (!inSomeday) {
+      if (isMovie) {
+        onAddToSomeday?.(post);
+      } else {
+        onAddToSomeday?.({ title: post.cardTitle, emoji: TYPE_EMOJI[post.type] || '✨', type: post.type, imageUrl, categoryId: post.type === 'products' ? 'buy' : undefined });
+      }
+    } else {
+      if (isMovie) {
+        onRemoveFromSomeday?.({ title: post.title, emoji: '🎬', type: 'movies' });
+      } else {
+        onRemoveFromSomeday?.({ title: post.cardTitle, emoji: TYPE_EMOJI[post.type] || '✨', type: post.type });
+      }
+    }
+    setInSomeday(v => !v);
+  };
+
+  const handlePlan = () => {
+    if (isMovie) {
+      onPlanEvent?.({ title: `Movie night: ${post.title}` });
+    } else if (post.type === 'games') {
+      onPlanEvent?.({ title: `Game night: ${post.cardTitle}` });
+    } else if (post.type === 'hiking') {
+      onPlanEvent?.({ title: `Hike: ${post.cardTitle}`, notes: post.location || '', category: 'outdoors' });
+    } else if (post.type === 'restaurants') {
+      onPlanEvent?.({ title: `Dinner at ${post.cardTitle}`, notes: post.location || '', category: 'dinner', location: post.location || post.cardTitle });
+    } else if (post.type === 'destinations') {
+      onPlanEvent?.({ title: `Trip to ${post.cardTitle}`, notes: post.location || '', category: 'trip', location: post.location || post.cardTitle });
+    }
+    onClose();
+  };
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[10100] flex items-end justify-center bg-black/60 backdrop-blur-sm"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
+      <div className={`w-full max-w-lg rounded-t-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden ${dm ? 'bg-[#0e1520]' : 'bg-white'}`}>
+        {/* Image header */}
+        {imageUrl ? (
+          <div className="relative flex-shrink-0">
+            <img
+              src={imageUrl}
+              alt={title}
+              className={`w-full ${isMovie ? 'h-64 object-cover' : post.type === 'products' ? 'h-56 object-contain p-8 bg-stone-50 dark:bg-white/5' : 'h-56 object-cover'}`}
+            />
+            <button onClick={onClose} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center text-sm">✕</button>
+            {post.location && (
+              <div className="absolute bottom-3 left-4 px-3 py-1 rounded-full bg-black/50 text-white text-xs" style={{ fontFamily: "'Caveat', cursive" }}>{post.location}</div>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center justify-between px-6 pt-6 pb-2 flex-shrink-0">
+            <span className="text-4xl">{post.icon || TYPE_EMOJI[post.type] || '✨'}</span>
+            <button onClick={onClose} className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${dm ? 'bg-white/5 text-slate-400' : 'bg-stone-100 text-stone-500'}`}>✕</button>
+          </div>
+        )}
+        {/* Content */}
+        <div className="overflow-y-auto flex-1 px-6 py-5">
+          {isMovie && <p className="text-xs text-stone-400 mb-1">{post.release_date?.slice(0, 4)} · ★ {post.vote_average?.toFixed(1)}</p>}
+          <h2 className={`text-2xl font-bold leading-tight mb-3 ${dm ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: "'Caveat', cursive" }}>{title}</h2>
+          <p className={`text-sm leading-relaxed ${dm ? 'text-slate-400' : 'text-slate-500'}`}>{desc}</p>
+        </div>
+        {/* Actions */}
+        <div className={`flex-shrink-0 px-6 pt-3 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] border-t flex gap-3 ${dm ? 'border-white/5' : 'border-stone-100'}`}>
+          <button
+            onClick={handleSomeday}
+            className="flex-1 py-3 rounded-2xl text-base transition-colors"
+            style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, background: inSomeday ? '#0d9488' : '#2dd4bf', color: inSomeday ? '#fff' : '#111827' }}
+          >
+            {inSomeday ? '✓ Someday' : '+ Someday'}
+          </button>
+          <button
+            onClick={handlePlan}
+            className="flex-1 py-3 rounded-2xl text-base border transition-colors"
+            style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, background: dm ? 'rgba(139,92,246,0.1)' : '#f5f3ff', border: '1px solid rgba(139,92,246,0.25)', color: dm ? '#c4b5fd' : '#6d28d9' }}
+          >
+            + Plan
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 
 function ToggleRow({ sourceKey, config, enabled, onToggle }) {
   return (
@@ -576,6 +650,7 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
   const [moviesError, setMoviesError]     = useState(false);
   const [moviesRetry, setMoviesRetry]     = useState(0);
   const [activePage, setActivePage]       = useState(null);
+  const [selectedPost, setSelectedPost]   = useState(null);
 
   useEffect(() => {
     if (!sources.movies) return;
@@ -647,9 +722,9 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
   })();
 
   function renderCard(post) {
-    if (post.type === 'movies') return <MovieCard key={`movie-${post.id}`} movie={post} onAddToSomeday={onAddToSomeday} onRemoveFromSomeday={onRemoveFromSomeday} onPageTap={setActivePage} onPlanEvent={onPlanEvent} />;
+    if (post.type === 'movies') return <MovieCard key={`movie-${post.id}`} movie={post} onAddToSomeday={onAddToSomeday} onRemoveFromSomeday={onRemoveFromSomeday} onPageTap={setActivePage} onPlanEvent={onPlanEvent} onCardTap={setSelectedPost} />;
     if (post.type === 'friends') return <FriendCard key={post.id} post={post} />;
-    return <CommunityCard key={post.id} post={post} onPageTap={setActivePage} onPlanEvent={onPlanEvent} onAddToSomeday={onAddToSomeday} onRemoveFromSomeday={onRemoveFromSomeday} />;
+    return <CommunityCard key={post.id} post={post} onPageTap={setActivePage} onPlanEvent={onPlanEvent} onAddToSomeday={onAddToSomeday} onRemoveFromSomeday={onRemoveFromSomeday} onCardTap={setSelectedPost} />;
   }
 
   function toggleSource(key) { setSources(prev => ({ ...prev, [key]: !prev[key] })); }
@@ -762,6 +837,17 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
       )}
 
       <FilterDrawer open={drawerOpen} sources={sources} onToggle={toggleSource} onClose={() => setDrawerOpen(false)} />
+
+      {selectedPost && (
+        <PostDetailSheet
+          post={selectedPost}
+          onClose={() => setSelectedPost(null)}
+          onAddToSomeday={onAddToSomeday}
+          onRemoveFromSomeday={onRemoveFromSomeday}
+          onPlanEvent={onPlanEvent}
+          darkMode={darkMode}
+        />
+      )}
     </div>
   );
 }
