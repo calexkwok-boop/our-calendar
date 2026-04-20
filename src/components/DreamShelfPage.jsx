@@ -623,7 +623,7 @@ function ShareItemModal({ item, onClose, onSubmit, darkMode }) {
     else setSubmitError("Could not post right now. Try again.");
   };
 
-  const inputCls = `w-full border rounded-xl px-4 py-3 text-sm outline-none transition-colors ${dm ? `bg-[#0e1520] border-white/8 text-slate-200 focus:border-amber-400/40` : `bg-slate-50 border-slate-200 text-slate-800 focus:border-amber-400`}`;
+  const inputCls = `w-full border rounded-xl px-4 py-3 text-sm outline-none transition-colors font-['Caveat'] ${dm ? `bg-[#0e1520] border-white/8 text-slate-200 focus:border-amber-400/40` : `bg-slate-50 border-slate-200 text-slate-800 focus:border-amber-400`}`;
 
   return createPortal(
     <div className="fixed inset-0 z-[10100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
@@ -640,19 +640,19 @@ function ShareItemModal({ item, onClose, onSubmit, darkMode }) {
         <div className="overflow-y-auto flex-1 px-6 py-5 flex flex-col gap-4">
           {/* Item name */}
           <label className="grid gap-2">
-            <span className="text-xs uppercase tracking-widest text-slate-500">Item name *</span>
+            <span className="text-xs uppercase tracking-widest text-slate-500 font-['Caveat']">Item name *</span>
             <input type="text" value={draft.name} onChange={e => updateField("name", e.target.value)} placeholder="Rolex Submariner" className={inputCls} />
           </label>
 
           {/* Brand */}
           <label className="grid gap-2">
-            <span className="text-xs uppercase tracking-widest text-slate-500">Brand</span>
+            <span className="text-xs uppercase tracking-widest text-slate-500 font-['Caveat']">Brand</span>
             <input type="text" value={draft.brand} onChange={e => updateField("brand", e.target.value)} placeholder="Rolex" className={inputCls} />
           </label>
 
           {/* Category chips */}
           <div className="grid gap-2">
-            <span className="text-xs uppercase tracking-widest text-slate-500">Category</span>
+            <span className="text-xs uppercase tracking-widest text-slate-500 font-['Caveat']">Category</span>
             <div className="flex flex-wrap gap-2">
               {CATEGORIES.map(c => (
                 <button key={c.id} type="button" onClick={() => updateField("category", c.id)}
@@ -667,13 +667,13 @@ function ShareItemModal({ item, onClose, onSubmit, darkMode }) {
 
           {/* Price */}
           <label className="grid gap-2">
-            <span className="text-xs uppercase tracking-widest text-slate-500">Price range</span>
+            <span className="text-xs uppercase tracking-widest text-slate-500 font-['Caveat']">Price range</span>
             <input type="text" value={draft.price} onChange={e => updateField("price", e.target.value)} placeholder="$9,000–$14,000" className={inputCls} />
           </label>
 
           {/* Photo */}
           <div className="grid gap-2">
-            <span className="text-xs uppercase tracking-widest text-slate-500">Photo</span>
+            <span className="text-xs uppercase tracking-widest text-slate-500 font-['Caveat']">Photo</span>
             {draft.image ? (
               <div className="relative rounded-2xl overflow-hidden h-44">
                 <img src={draft.image} alt="preview" className="w-full h-full object-contain bg-slate-100" />
@@ -683,7 +683,7 @@ function ShareItemModal({ item, onClose, onSubmit, darkMode }) {
             ) : (
               <button type="button" onClick={() => photoInputRef.current?.click()} className={`py-6 rounded-2xl border-2 border-dashed flex flex-col items-center gap-2 ${dm ? 'border-white/10 bg-white/2' : 'border-slate-200 bg-slate-50'}`}>
                 <Camera className="w-6 h-6 text-slate-400" />
-                <span className={`text-sm font-semibold ${dm ? 'text-slate-400' : 'text-slate-600'}`}>Add a photo</span>
+                <span className={`text-sm font-['Caveat'] font-bold ${dm ? 'text-slate-400' : 'text-slate-600'}`}>Add a photo</span>
               </button>
             )}
             <input ref={photoInputRef} type="file" accept="image/*" onChange={handleImagePick} className="hidden" />
@@ -691,7 +691,7 @@ function ShareItemModal({ item, onClose, onSubmit, darkMode }) {
 
           {/* Why */}
           <label className="grid gap-2">
-            <span className="text-xs uppercase tracking-widest text-slate-500">Why do you dream about this? *</span>
+            <span className="text-xs uppercase tracking-widest text-slate-500 font-['Caveat']">Why do you dream about this? *</span>
             <textarea value={draft.review} onChange={e => updateField("review", e.target.value)} placeholder="Tell your friends what makes this worth dreaming about..." rows={4} className={`${inputCls} resize-none`} />
           </label>
 
