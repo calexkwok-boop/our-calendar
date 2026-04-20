@@ -582,9 +582,10 @@ function buildAutoSortedPins(pins, onAddDream, onDeleteDream, onUpdateDream) {
     let cat;
     if (p.type === 'note') {
       cat = 'notes';
+    } else if (p.sourceType === 'dreamshelf' || p.sourceType === 'products' || p.categoryId === 'buy') {
+      cat = 'buy';
     } else {
-      const inferredCat = p.categoryId === 'buy' || p.sourceType === 'dreamshelf' || p.sourceType === 'products' ? 'buy' : 'experiences';
-      cat = orderedCats.includes(p.categoryId) ? p.categoryId : inferredCat;
+      cat = orderedCats.includes(p.categoryId) ? p.categoryId : 'experiences';
     }
     if (!grouped[cat]) grouped[cat] = [];
     grouped[cat].push(p);
