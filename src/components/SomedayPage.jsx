@@ -212,7 +212,9 @@ function detectSuggestionTheme(chapter, chapterPins) {
 
 function generateSuggestions(chapter, chapterPins, seed = 0) {
   const theme = detectSuggestionTheme(chapter, chapterPins);
-  const pool = [...(SUGGESTION_POOL[theme] || []), ...SUGGESTION_POOL.generic];
+  const pool = theme === 'generic'
+    ? [...SUGGESTION_POOL.generic]
+    : [...(SUGGESTION_POOL[theme] || []), ...SUGGESTION_POOL.generic];
   const existingLabels = new Set(chapterPins.map(p => (p.label || p.text || '').toLowerCase()));
   const available = pool.filter(s => !existingLabels.has(s.label.toLowerCase()));
   // deterministic shuffle with seed so rotation changes on reopen
@@ -316,7 +318,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
   const [addedIds, setAddedIds] = useState(new Set());
   const [refreshCount, setRefreshCount] = useState(0);
   const suggestions = generateSuggestions(chapter, chapterPins, initialSeed + refreshCount * 97);
-  const visible = suggestions.filter(s => !addedIds.has(s.id));
+  const visible = suggestions.filter(s => !addedIds.has(s.id)).slice(0, 3);
   const ts = darkMode ? '#64748b' : '#9ca3af';
 
   function handleAdd(s) {
@@ -1251,12 +1253,8 @@ const SomedayPage = ({
 
   function removePinFromChapter(pinId) {
     setChapters(prev => prev.map(c => ({ ...c, itemIds: c.itemIds.filter(id => id !== pinId) })));
-    setPins(prev => prev.map(p => {
-      if (p.id !== pinId) return p;
-      const updated = { ...p, chapterId: undefined };
-      onUpdateDream?.(updated);
-      return updated;
-    }));
+    setPins(prev => prev.filter(p => p.id !== pinId));
+    onDeleteDream?.(pinId);
   }
 
   function addSuggestionToChapter(suggestion, chapterId) {
