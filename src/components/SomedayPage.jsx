@@ -105,6 +105,7 @@ const CATEGORY_FILTERS = [
   { id: 'home',        label: 'Home',         emoji: '🏡' },
   { id: 'buy',         label: 'Things to buy',emoji: '🛍️' },
   { id: 'notes',       label: 'Notes',        emoji: '📝' },
+  { id: 'done',        label: 'Completed',    emoji: '✓'  },
 ];
 
 const NOTE_COLOR_OPTIONS = ['yellow', 'pink', 'blue', 'green'];
@@ -134,11 +135,45 @@ function Pushpin({ colorKey, darkMode }) {
   );
 }
 
+// ─── SharpieX ────────────────────────────────────────────────────────────────
+function SharpieX({ size = 138 }) {
+  const s = size;
+  return (
+    <svg
+      width={s} height={s} viewBox={`0 0 ${s} ${s}`}
+      style={{ position: 'absolute', top: 6, left: 6, pointerEvents: 'none', zIndex: 4 }}
+    >
+      <line
+        x1={s * 0.08} y1={s * 0.08} x2={s * 0.92} y2={s * 0.92}
+        stroke="#c0392b" strokeWidth="7" strokeLinecap="round"
+        strokeDasharray="2,0"
+        style={{ filter: 'url(#wobble)' }}
+        opacity="0.88"
+      />
+      <line
+        x1={s * 0.92} y1={s * 0.08} x2={s * 0.08} y2={s * 0.92}
+        stroke="#c0392b" strokeWidth="6.5" strokeLinecap="round"
+        opacity="0.82"
+      />
+      {/* Slight second pass to give sharpie texture */}
+      <line
+        x1={s * 0.09} y1={s * 0.06} x2={s * 0.93} y2={s * 0.91}
+        stroke="#a93226" strokeWidth="3" strokeLinecap="round"
+        opacity="0.35"
+      />
+      <line
+        x1={s * 0.91} y1={s * 0.07} x2={s * 0.07} y2={s * 0.93}
+        stroke="#a93226" strokeWidth="3" strokeLinecap="round"
+        opacity="0.35"
+      />
+    </svg>
+  );
+}
+
 // ─── PhotoPin ────────────────────────────────────────────────────────────────
 function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode }) {
-  // Polaroids are always white/off-white regardless of dark mode — matches home page style
   const cardBg  = darkMode ? '#e2e8f0' : '#ffffff';
-  const labelCol = '#374151';
+  const labelCol = pin.status === 'done' ? '#9ca3af' : '#374151';
   const shadow  = isDragging
     ? '0 20px 50px rgba(0,0,0,0.5)'
     : '3px 5px 16px rgba(0,0,0,0.22)';
@@ -150,26 +185,24 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode }) {
     >
       <Pushpin colorKey={pin.pinColor} darkMode={darkMode} />
       {/* Square image area */}
-      <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 2 }}>
+      <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 2, position: 'relative' }}>
         {pin.imageUrl ? (
-          <img src={pin.imageUrl} alt={pin.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} draggable={false} />
+          <img src={pin.imageUrl} alt={pin.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: pin.status === 'done' ? 'grayscale(40%) brightness(0.85)' : 'none' }} draggable={false} />
         ) : (
-          <div style={{ width: '100%', height: '100%', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>
+          <div style={{ width: '100%', height: '100%', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, filter: pin.status === 'done' ? 'grayscale(40%)' : 'none' }}>
             {pin.emoji || '📌'}
           </div>
         )}
+        {pin.status === 'done' && <SharpieX size={138} />}
       </div>
-      {/* Caption strip — emoji + label, handwritten font */}
+      {/* Caption strip */}
       <div style={{ padding: '6px 2px 7px', textAlign: 'center' }}>
-        <div style={{ fontFamily: CAVEAT, fontSize: 12, color: labelCol, lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+        <div style={{ fontFamily: CAVEAT, fontSize: 12, color: labelCol, lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', textDecoration: pin.status === 'done' ? 'line-through' : 'none' }}>
           {pin.emoji ? `${pin.emoji} ${pin.label}` : pin.label}
         </div>
       </div>
       {pin.status === 'planning' && (
         <div style={{ position: 'absolute', top: 5, right: 5, background: '#fef3c7', color: '#92400e', fontSize: 8, fontWeight: 700, padding: '2px 4px', borderRadius: 4, letterSpacing: '0.05em' }}>PLANNING</div>
-      )}
-      {pin.status === 'done' && (
-        <div style={{ position: 'absolute', top: 5, right: 5, background: '#d1fae5', color: '#065f46', fontSize: 8, fontWeight: 700, padding: '2px 4px', borderRadius: 4 }}>DONE ✓</div>
       )}
       <button onClick={e => { e.stopPropagation(); onDelete(); }} style={{ position: 'absolute', top: 4, left: 4, background: 'rgba(0,0,0,0.10)', border: 'none', borderRadius: '50%', width: 16, height: 16, color: '#6b7280', fontSize: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>✕</button>
     </div>
@@ -572,7 +605,8 @@ function buildAutoSortedPins(pins, onAddDream, onDeleteDream, onUpdateDream) {
   autoOldLabels.forEach(p => onDeleteDream?.(p.id));
 
   // Separate content pins from stickers (stickers stay put)
-  const contentPins = pins.filter(p => p.type !== 'label' && p.type !== 'sticker' && !p.autoGenerated);
+  const contentPins = pins.filter(p => p.type !== 'label' && p.type !== 'sticker' && !p.autoGenerated && p.status !== 'done');
+  const donePins    = pins.filter(p => p.type !== 'label' && p.type !== 'sticker' && !p.autoGenerated && p.status === 'done');
   const stickers    = pins.filter(p => p.type === 'sticker');
 
   // Group by categoryId, preserving SORT_CATEGORY_META order
@@ -639,6 +673,42 @@ function buildAutoSortedPins(pins, onAddDream, onDeleteDream, onUpdateDream) {
     const rowH   = catPins.some(p => p.type === 'photo') ? PHOTO_ROW_H : NOTE_ROW_H;
     yOffset += rows * rowH + GROUP_GAP;
   });
+
+  // Completed cluster — always last
+  if (donePins.length > 0) {
+    const doneLabelPin = {
+      id: `auto-label-done-${Date.now()}`,
+      type: 'label',
+      autoGenerated: true,
+      text: 'Completed ✓',
+      fontStyle: 'handwritten',
+      fontSize: 'medium',
+      textColor: '#c0392b',
+      styleVariant: 'tape',
+      x: LEFT_X,
+      y: yOffset,
+      rot: (Math.random() - 0.5) * 1.5,
+    };
+    result.push(doneLabelPin);
+    newLabelPins.push(doneLabelPin);
+    yOffset += LABEL_H;
+
+    donePins.forEach((pin, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const rowH = pin.type === 'note' ? NOTE_ROW_H : PHOTO_ROW_H;
+      const jx   = (Math.random() - 0.5) * 10;
+      const jy   = (Math.random() - 0.5) * 8;
+      const updated = {
+        ...pin,
+        x:   (col === 0 ? LEFT_X : RIGHT_X) + jx,
+        y:   yOffset + row * rowH + jy,
+        rot: (col === 0 ? -1 : 1) * (0.5 + Math.random() * 1.8),
+      };
+      result.push(updated);
+      onUpdateDream?.(updated);
+    });
+  }
 
   // Add new label pins to persistent store
   newLabelPins.forEach(lp => onAddDream?.(lp));
@@ -761,7 +831,12 @@ const SomedayPage = ({
     ? { backgroundColor: '#0e1520', backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)', backgroundSize: '28px 28px' }
     : { backgroundColor: '#f5f2eb', backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.07) 1px, transparent 1px)', backgroundSize: '28px 28px' };
 
-  const visiblePins = (filter === 'all' ? pins : pins.filter(p => p.categoryId === filter)).filter(p => p.id !== heroId);
+  const completedCount = pins.filter(p => p.status === 'done' && p.type !== 'label' && p.type !== 'sticker').length;
+  const visiblePins = (
+    filter === 'all'  ? pins :
+    filter === 'done' ? pins.filter(p => p.status === 'done') :
+                        pins.filter(p => p.categoryId === filter && p.status !== 'done')
+  ).filter(p => p.id !== heroId);
   const displayedPins = filter === 'all'
     ? visiblePins
     : [...visiblePins].sort((a, b) => (a.y - b.y) || (a.x - b.x));
@@ -893,6 +968,7 @@ const SomedayPage = ({
             </h1>
               <p style={{ fontSize: 11, color: ts, margin: '3px 0 0', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 500 }}>
                 {pins.filter(p => p.type !== 'label' && p.type !== 'sticker').length} things pinned
+                {completedCount > 0 && <span style={{ color: '#c0392b', marginLeft: 6 }}>· {completedCount} dream{completedCount !== 1 ? 's' : ''} completed</span>}
               </p>
             </div>
           </div>
