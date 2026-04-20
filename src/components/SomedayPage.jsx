@@ -831,7 +831,7 @@ function ChapterPinSheet({ pin, onClose, onRemove, darkMode }) {
 }
 
 // ─── Chapter Page ─────────────────────────────────────────────────────────────
-function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, darkMode }) {
+function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, darkMode }) {
   const [showAddMemory, setShowAddMemory] = useState(false);
   const [memoryText, setMemoryText] = useState('');
   const [selectedPin, setSelectedPin] = useState(null);
@@ -855,12 +855,20 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
     <div style={{ minHeight: '100vh', background: pageBg, paddingBottom: 80 }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
       <div style={{ position: 'sticky', top: 0, zIndex: 30, background: darkMode ? '#131c2e' : '#fff', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.05)' : '#e5e0d5'}`, padding: '16px 16px 12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: ts, fontSize: 26, lineHeight: 1, padding: '0 4px', display: 'flex', alignItems: 'center' }}>‹</button>
-          <div>
-            <p style={{ fontSize: 10, color: '#5eadce', textTransform: 'uppercase', letterSpacing: '0.18em', margin: 0, fontWeight: 700 }}>Chapter</p>
-            <h1 style={{ fontFamily: CAVEAT, fontSize: 26, fontWeight: 700, color: tp, margin: 0, lineHeight: 1.1 }}>{chapter.title}</h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: ts, fontSize: 26, lineHeight: 1, padding: '0 4px', display: 'flex', alignItems: 'center' }}>‹</button>
+            <div>
+              <p style={{ fontSize: 10, color: '#5eadce', textTransform: 'uppercase', letterSpacing: '0.18em', margin: 0, fontWeight: 700 }}>Chapter</p>
+              <h1 style={{ fontFamily: CAVEAT, fontSize: 26, fontWeight: 700, color: tp, margin: 0, lineHeight: 1.1 }}>{chapter.title}</h1>
+            </div>
           </div>
+          {onDeleteChapter && (
+            <button
+              onClick={() => { if (window.confirm(`Delete "${chapter.title}"? Pins will stay on your board.`)) onDeleteChapter(); }}
+              style={{ background: 'none', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e0d5'}`, borderRadius: 20, padding: '5px 12px', fontSize: 12, color: '#ef4444', cursor: 'pointer', flexShrink: 0 }}
+            >Delete chapter</button>
+          )}
         </div>
       </div>
 
@@ -1062,7 +1070,8 @@ const SomedayPage = ({
   const [detailPin, setDetailPin]         = useState(null);
   const [dragging, setDragging]           = useState(null);
   const [heroId, setHeroId]               = useState(() => { try { return localStorage.getItem('someday-hero-id') || null; } catch { return null; } });
-  const [chapters, setChapters]           = useState([]);
+  const chaptersKey = `someday-chapters-${currentUser || 'guest'}`;
+  const [chapters, setChapters]           = useState(() => { try { const s = localStorage.getItem(chaptersKey); return s ? JSON.parse(s) : []; } catch { return []; } });
   const [activeChapterId, setActiveChapterId] = useState(null);
   const [showCreateChapter, setShowCreateChapter] = useState(false);
   const [chapterPromptGroup, setChapterPromptGroup] = useState(null);
@@ -1085,6 +1094,10 @@ const SomedayPage = ({
   useEffect(() => {
     try { if (heroId) localStorage.setItem('someday-hero-id', heroId); else localStorage.removeItem('someday-hero-id'); } catch {}
   }, [heroId]);
+
+  useEffect(() => {
+    try { localStorage.setItem(chaptersKey, JSON.stringify(chapters)); } catch {}
+  }, [chapters, chaptersKey]);
 
   useEffect(() => {
     setPins(prev => {
@@ -1265,6 +1278,17 @@ const SomedayPage = ({
     addPinToChapter(newPin.id, chapterId);
   }
 
+  function deleteChapter(chapterId) {
+    setPins(prev => prev.map(p => {
+      if (p.chapterId !== chapterId) return p;
+      const updated = { ...p, chapterId: undefined };
+      onUpdateDream?.(updated);
+      return updated;
+    }));
+    setChapters(prev => prev.filter(c => c.id !== chapterId));
+    if (activeChapterId === chapterId) setActiveChapterId(null);
+  }
+
   function addMemoryToChapter(chapterId, memory) {
     setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, memories: [...(c.memories || []), memory] } : c));
   }
@@ -1304,7 +1328,7 @@ const SomedayPage = ({
       return (
         <>
           <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
-          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} darkMode={darkMode} />
+          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={() => deleteChapter(activeChapterId)} darkMode={darkMode} />
         </>
       );
     }
