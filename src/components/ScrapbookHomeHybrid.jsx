@@ -506,7 +506,7 @@ const ScrapbookHomeHybrid = ({
               className="flex items-center gap-2 text-left active:opacity-70 transition-opacity"
             >
               <Sparkles className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
-              <h3 className="font-handwritten text-3xl text-white">
+              <h3 className="font-handwritten text-3xl text-gray-950 dark:text-white">
                 On your mind
               </h3>
             </button>

@@ -2126,7 +2126,6 @@ const CALENDAR_REPORT_REASONS = [
 ];
 
 const CONTROL_WIDGET_IDS = Object.freeze([
-  'notifications',
   'list',
   'notes',
   'expenses',
@@ -2139,7 +2138,6 @@ const CONTROL_WIDGET_IDS = Object.freeze([
 ]);
 
 const ALL_CONTROL_WIDGET_ORDER = Object.freeze([
-  'notifications',
   'list',
   'notes',
   'expenses',
@@ -2151,7 +2149,6 @@ const ALL_CONTROL_WIDGET_ORDER = Object.freeze([
   'categories',
 ]);
 const DEFAULT_CONTROL_WIDGET_ORDER = Object.freeze([
-  'notifications',
   'weather',
   'categories',
 ]);
@@ -2160,7 +2157,6 @@ const PICKLEBALL_559_DEFAULT_CONTROL_WIDGET_ORDER = Object.freeze([
   'gauntlet',
   'roundrobin',
   'scramble',
-  'notifications',
   'categories',
 ]);
 const PICKLEBALL_559_PAGE_THEME = Object.freeze({
@@ -22387,7 +22383,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const readInAppCount = inAppNotifications.reduce((sum, n) => sum + (n.read ? 1 : 0), 0);
   const activeChatUnreadCount = Number(chatUnreadCounts[String(activeLayerId || '')] || 0);
   const activeControlWidgets = [...new Set(controlWidgetOrder.filter((id) => CONTROL_WIDGET_IDS.includes(id)))];
-  const todayOverviewWidgetIds = ['notifications', 'categories', 'notes'];
+  const todayOverviewWidgetIds = ['categories', 'notes'];
   const todayOverviewLeftWidgetIds = todayOverviewWidgetIds.slice(0, Math.ceil(todayOverviewWidgetIds.length / 2));
   const todayOverviewRightWidgetIds = todayOverviewWidgetIds.slice(Math.ceil(todayOverviewWidgetIds.length / 2));
   const popupEventDetailsById = (() => {
@@ -25804,8 +25800,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         </div>
 
         {/* Notification Settings Panel */}
-        {showNotificationSettings && (
-          <div className="glass-panel rounded-2xl p-6 mb-6">
+        {showSharePanel && showNotificationSettings && (
+          <div className="account-handwritten glass-panel rounded-2xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold text-green-600 dark:text-green-400">Notification Settings</h3>
               <button onClick={() => setShowNotificationSettings(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
@@ -26126,12 +26122,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         )}
 
         {showSharePanel && (
-          <div className="glass-panel rounded-2xl p-6 mb-6">
+          <div className="account-handwritten glass-panel rounded-2xl p-6 mb-6">
+            <style>{`.account-handwritten, .account-handwritten * { font-family: 'Caveat', cursive !important; }`}</style>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold" style={themeAccentHeadingStyle}>
+              <h3 className="text-xl font-semibold" style={{ ...themeAccentHeadingStyle, fontFamily: "'Caveat', cursive" }}>
                 Account & Sharing
               </h3>
-              <button onClick={() => { setShowSharePanel(false); setShareMessage(''); }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+              <button onClick={() => { setShowSharePanel(false); setShowNotificationSettings(false); setShareMessage(''); }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
             </div>
@@ -26247,6 +26244,29 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   )}
                 </>
               )}
+            </div>
+            <div className="mb-4 p-3 rounded-xl border bg-gray-50 dark:bg-gray-800/70" style={{ borderColor: themeAccentBorder }}>
+              <button
+                onClick={() => setShowNotificationSettings((prev) => !prev)}
+                className="w-full flex items-center justify-between gap-3 text-left"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Notifications</div>
+                    {unreadInAppCount > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                        {unreadInAppCount > 99 ? '99+' : unreadInAppCount}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Manage reminders, invites, and in-app updates
+                  </div>
+                </div>
+                <div className={`text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-600'}`}>
+                  {showNotificationSettings ? 'Hide' : 'Show'}
+                </div>
+              </button>
             </div>
             <div className="mb-5">
               <div className="mb-4 rounded-xl border bg-gray-50 p-3 dark:bg-gray-800/60" style={{ borderColor: themeAccentBorder }}>
@@ -27251,10 +27271,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         />
 
         {showNotesPanel && (
-          <div className="glass-panel rounded-2xl p-4 sm:p-5 mb-6 border" style={{ borderColor: themeAccentBorder }}>
+          <div
+            className="reminders-handwritten glass-panel rounded-2xl p-4 sm:p-5 mb-6 border"
+            style={{ borderColor: themeAccentBorder, fontFamily: "'Caveat', cursive" }}
+          >
+            <style>{`.reminders-handwritten, .reminders-handwritten * { font-family: 'Caveat', cursive !important; }`}</style>
             <div className="flex items-start justify-between gap-3 mb-3">
               <div>
-                <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Reminders & Notes</h3>
+                <h3 className="text-lg sm:text-xl font-semibold" style={{ ...themeAccentHeadingStyle, fontFamily: "'Caveat', cursive" }}>Reminders & Notes</h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Quick notes and checklists for this calendar.</p>
               </div>
               <button onClick={() => setShowNotesPanel(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
@@ -27688,7 +27712,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
       {/* Account section */}
       {calendarSwitcherMode === 'account' && (
-      <div className="p-4">
+      <div className="account-handwritten p-4">
+        <style>{`.account-handwritten, .account-handwritten * { font-family: 'Caveat', cursive !important; }`}</style>
         <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3">Account</h3>
         <div className="flex items-center gap-3 mb-3">
           <UserProfileAvatar
@@ -27708,6 +27733,21 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
         >
           ⚙️ Account settings & sharing
+        </button>
+        <button
+          onClick={() => {
+            setShowCalendarSwitcher(false);
+            setShowSharePanel(true);
+            setShowNotificationSettings(true);
+          }}
+          className="mt-1 w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all flex items-center justify-between gap-3"
+        >
+          <span>Notifications</span>
+          {unreadInAppCount > 0 && (
+            <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold">
+              {unreadInAppCount > 99 ? '99+' : unreadInAppCount}
+            </span>
+          )}
         </button>
         <div className="mt-3 rounded-2xl border border-gray-100 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/50 p-3">
           <div className="mb-2 flex items-center justify-between gap-3">
@@ -30976,9 +31016,11 @@ transform: translateY(0);
         onClick={() => setShowSubCalNotesModal(false)}
       >
         <div
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-md max-h-[80vh] overflow-y-auto"
+          className="reminders-handwritten bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-md max-h-[80vh] overflow-y-auto"
+          style={{ fontFamily: "'Caveat', cursive" }}
               onClick={(e) => e.stopPropagation()}
   >
+  <style>{`.reminders-handwritten, .reminders-handwritten * { font-family: 'Caveat', cursive !important; }`}</style>
   <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
           <div className="flex items-center justify-between mb-4">
             <div>
