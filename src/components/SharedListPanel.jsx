@@ -35,7 +35,7 @@ export default function SharedListPanel({
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
-          <h3 className="text-2xl sm:text-3xl font-bold text-purple-600 dark:text-purple-400">Shared Lists</h3>
+          <h3 className="text-2xl sm:text-3xl font-bold text-purple-600 dark:text-purple-400" style={{ fontFamily: "'Caveat', cursive" }}>Shared Lists</h3>
           <p className="text-base text-gray-500 dark:text-gray-400 mt-0.5">Clean space for groceries, reminders, and quick to-dos.</p>
         </div>
         <button onClick={() => setShowListPanel(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
@@ -56,6 +56,7 @@ export default function SharedListPanel({
           <button
             onClick={createSharedList}
             className="px-3 py-2 text-lg font-bold bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            style={{ fontFamily: "'Caveat', cursive" }}
             title="Create list"
           >
             Create
@@ -68,6 +69,7 @@ export default function SharedListPanel({
           <button
             key={group.id}
             onClick={() => setSelectedSharedListId(group.id)}
+            style={{ fontFamily: "'Caveat', cursive" }}
             className={`shrink-0 px-3 py-1.5 rounded-full text-lg font-bold border transition-all ${
               selectedSharedListId === group.id
                 ? 'bg-purple-600 text-white border-purple-600'
@@ -80,6 +82,7 @@ export default function SharedListPanel({
         <button
           onClick={() => deleteSharedList(selectedSharedListId)}
           disabled={!selectedSharedListId}
+          style={{ fontFamily: "'Caveat', cursive" }}
           className="shrink-0 px-3 py-1.5 rounded-full text-lg font-bold bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-800 disabled:opacity-50"
           title="Delete selected list"
         >
@@ -99,6 +102,7 @@ export default function SharedListPanel({
         />
         <button
           onClick={addSharedListItem}
+          style={{ fontFamily: "'Caveat', cursive" }}
           className="px-3 py-2 text-lg font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
           title="Add item"
           disabled={!selectedSharedListId}

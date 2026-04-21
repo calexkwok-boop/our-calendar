@@ -158,6 +158,7 @@ const ScrapbookHomeHybrid = ({
   primaryJourneyStreak = 0,
   primaryJourneyLoggedToday = false,
   onOpenJourney,
+  onOpenExplore,
 
   // Someday List (NEW - scrapbook enhanced)
   bucketList = [],
@@ -519,7 +520,7 @@ const ScrapbookHomeHybrid = ({
 
           {bucketList.length > 0 ? (
             <div className="flex gap-4 overflow-x-auto overflow-y-hidden pb-2 pl-0.5 pr-5 scrollbar-hide snap-x snap-mandatory [touch-action:pan-x]">
-              {bucketList.map((dream, idx) => (
+              {bucketList.slice(0, 4).map((dream, idx) => (
                 <div
                   key={dream.id || idx}
                   className="group flex-shrink-0 snap-start w-40 sm:w-48 cursor-pointer"
@@ -562,18 +563,30 @@ const ScrapbookHomeHybrid = ({
                   )}
                 </div>
               ))}
+              {/* Discover more polaroid */}
+              <div
+                className="flex-shrink-0 snap-start w-40 sm:w-48 cursor-pointer"
+                style={{ rotate: '1.2deg' }}
+                onClick={onOpenExplore}
+              >
+                <div className="flex min-h-[216px] flex-col items-center justify-center gap-3 rounded-[22px] border-2 border-dashed border-emerald-300 dark:border-emerald-700/50 bg-white/60 dark:bg-black/20 p-4 transition-all hover:-translate-y-0.5 hover:bg-white/90 dark:hover:bg-black/40">
+                  <span className="text-3xl">✨</span>
+                  <span className="font-handwritten text-xl leading-tight text-center text-emerald-700 dark:text-emerald-400">
+                    Discover more
+                  </span>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="py-8 text-center">
               <p className="font-handwritten text-2xl text-gray-600 dark:text-gray-400 italic mb-4">
-                Places to go, things to try, adventures to have...
+                Not sure where to start?
               </p>
               <button
-                onClick={onAddDream}
-                className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold bg-emerald-200 dark:bg-emerald-900/50 text-gray-900 dark:text-white hover:bg-emerald-300 dark:hover:bg-emerald-900/70 transition-colors"
+                onClick={onOpenExplore}
+                className="inline-flex items-center gap-2 rounded-xl px-4 py-2 font-handwritten text-xl bg-emerald-200 dark:bg-emerald-900/50 text-gray-900 dark:text-white hover:bg-emerald-300 dark:hover:bg-emerald-900/70 transition-colors"
               >
-                <Plus className="w-4 h-4" />
-                Add your first dream
+                Explore ideas
               </button>
             </div>
           )}
