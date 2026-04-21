@@ -53,7 +53,8 @@ const inferDreamShelfCategory = (text = "") => {
   if (/(watch|rolex|omega|patek|audemars|cartier santos|iwc|tag heuer|daytona|submariner|hublot|big bang)/.test(q)) return "watches";
   if (/(bag|purse|tote|birkin|kelly|chanel|celine|prada|bottega|louis vuitton|gucci)/.test(q)) return "bags";
   if (/(ring|bracelet|necklace|earring|jewelry|jewellery|tiffany|van cleef|love bracelet)/.test(q)) return "jewelry";
-  if (/(sneaker|shoe|jordan|nike|adidas|new balance|common projects|dunk|samba)/.test(q)) return "sneakers";
+  if (/(sneaker|jordan|nike|adidas|new balance|common projects|dunk|samba)/.test(q)) return "sneakers";
+  if (/(heel|heels|pump|stiletto|louboutin|manolo|jimmy choo|aquazzura|gianvito|sergio rossi|opyum|mule)/.test(q)) return "heels";
   if (/(golf|putter|driver|iron|scotty|taylormade|titleist|footjoy|vokey|bushnell|tennis|pickleball|selkirk|running|marathon|garmin forerunner|peloton|cycling|bike|formula 1|f1|grand prix|nba|courtside|basketball)/.test(q)) return "golf";
   if (/(cookware|cooking|kitchen|dutch oven|le creuset)/.test(q)) return "kitchen";
   if (/(espresso|breville|la marzocco|niche zero|pour over|coffee grinder|coffee machine|stagg kettle|acaia)/.test(q)) return "coffee";
@@ -159,6 +160,7 @@ const CATEGORIES = [
   { id: "jewelry",   label: "Jewelry",    emoji: "💍" },
   { id: "golf",      label: "Sports",     emoji: "⛳" },
   { id: "sneakers",  label: "Sneakers",   emoji: "👟" },
+  { id: "heels",     label: "Heels",      emoji: "👠" },
   { id: "hobbies",   label: "Hobbies",    emoji: "🎸" },
   { id: "kitchen",   label: "Kitchen",    emoji: "🍳" },
   { id: "home",      label: "Home",       emoji: "🪴" },
@@ -177,7 +179,7 @@ const DREAM_WORLDS = [
     label: "Style",
     title: "Quiet choices, your identity",
     emoji: "✦",
-    categoryIds: ["watches", "bags", "jewelry", "sneakers"],
+    categoryIds: ["watches", "bags", "jewelry", "sneakers", "heels"],
   },
   {
     id: "pursuits",
@@ -248,6 +250,13 @@ const SUB_FILTERS = {
     { id: "grail",    label: "Grail"     },
     { id: "classic",  label: "Classic"   },
     { id: "collab",   label: "Collab"    },
+  ],
+  heels: [
+    { id: "all",       label: "All"       },
+    { id: "classic",   label: "Classic"   },
+    { id: "party",     label: "Party"     },
+    { id: "everyday",  label: "Everyday"  },
+    { id: "grail",     label: "Grail"     },
   ],
   hobbies: [
     { id: "all",      label: "All"       },
@@ -424,6 +433,16 @@ const CURATED_ITEMS = {
     { id: "s6",  name: "Jordan 4 Retro",               brand: "Jordan",  priceRange: "$200–$1,000+",     subFilter: ["jordan","grail"],         emoji: "👟", description: "The shoe from Do the Right Thing. Every retro release sells out in minutes. For good reason." },
     { id: "s7",  name: "Common Projects Achilles Low", brand: "Common Projects", priceRange: "$500–$750", subFilter: ["grail"],                  emoji: "👟", description: "Minimal, Italian-made, and quietly iconic. The white sneaker that makes everything look more considered." },
     { id: "s8",  name: "Nike Dunk Low Panda",          brand: "Nike",    priceRange: "$110–$200+",       subFilter: ["nike"],                   emoji: "👟", description: "Black and white, simple as it gets, and somehow still the hardest dunk to keep in stock." },
+  ],
+  heels: [
+    { id: "hl1", name: "Manolo Blahnik Hangisi",        brand: "Manolo Blahnik", priceRange: "$900–$1,200",  subFilter: ["classic","grail"],        emoji: "👠", imageQuery: "Manolo Blahnik Hangisi satin pump jewel buckle", description: "The buckle pump that became a cultural symbol. Carrie Bradshaw's wedding shoe. An heirloom you wear." },
+    { id: "hl2", name: "Christian Louboutin So Kate",   brand: "Louboutin",      priceRange: "$700–$900",    subFilter: ["classic","grail"],        emoji: "👠", imageQuery: "Christian Louboutin So Kate red sole stiletto heel", description: "120mm of red-soled intention. The heel that started a thousand imitations and can't be replicated." },
+    { id: "hl3", name: "Jimmy Choo Romy 100",           brand: "Jimmy Choo",     priceRange: "$650–$850",    subFilter: ["classic","party"],        emoji: "👠", imageQuery: "Jimmy Choo Romy 100 pointed toe pump suede", description: "Pointed toe, kitten-to-stiletto range, no frills — just the shape that works every time." },
+    { id: "hl4", name: "Bottega Veneta Stretch Mule",   brand: "Bottega Veneta", priceRange: "$750–$1,100",  subFilter: ["everyday","classic"],     emoji: "👠", imageQuery: "Bottega Veneta stretch mule heel leather", description: "The heel you wear like a flat. Intrecciato leather, no logo, and somehow impossible to miss." },
+    { id: "hl5", name: "Gianvito Rossi 105 Pumps",      brand: "Gianvito Rossi", priceRange: "$700–$900",    subFilter: ["classic","everyday"],     emoji: "👠", imageQuery: "Gianvito Rossi 105 leather pump nude", description: "The Italian pump that walks better than anything. Nude pairs with everything; the heel height is forgiving." },
+    { id: "hl6", name: "Saint Laurent Opyum Sandal",    brand: "Saint Laurent",  priceRange: "$900–$1,300",  subFilter: ["party","grail"],          emoji: "👠", imageQuery: "Saint Laurent Opyum YSL sandal stiletto logo heel", description: "The logo is the heel. Audacious, architectural, and the kind of shoe that owns the room before you do." },
+    { id: "hl7", name: "Aquazzura Deneuve Bow Pump",    brand: "Aquazzura",      priceRange: "$650–$850",    subFilter: ["party","classic"],        emoji: "👠", imageQuery: "Aquazzura Deneuve bow satin pump heel", description: "A bow at the toe, a pointed heel, satin finish. The party shoe that photographs as well as it wears." },
+    { id: "hl8", name: "Sergio Rossi SR1 Pumps",        brand: "Sergio Rossi",   priceRange: "$500–$700",    subFilter: ["everyday","classic"],     emoji: "👠", imageQuery: "Sergio Rossi SR1 leather pump pointed heel", description: "The understated Italian heel. No logo, no buckle — just a beautifully proportioned shoe that goes with everything." },
   ],
   hobbies: [
     { id: "h1",  name: "Gibson Les Paul Standard",     brand: "Gibson",  priceRange: "$2,500–$4,000",   subFilter: ["music"],                  emoji: "🎸", description: "The guitar Page, Slash, and Clapton chose. If you're going to learn, learn on the real thing." },
@@ -653,6 +672,12 @@ function itemMatchesSubFilter(categoryId, item, subId) {
       grail: () => filters.includes("grail") || has("jordan", "sacai", "silver bullet"),
       classic: () => has("jordan", "samba", "air max", "achilles", "dunk"),
       collab: () => filters.includes("collab") || has("sacai", "aime leon dore"),
+    },
+    heels: {
+      classic: () => has("manolo", "louboutin", "gianvito", "sergio rossi", "bottega"),
+      party: () => filters.includes("party") || has("louboutin", "saint laurent", "opyum", "aquazzura", "jimmy choo"),
+      everyday: () => has("bottega", "gianvito", "sergio rossi"),
+      grail: () => filters.includes("grail") || has("manolo", "louboutin", "saint laurent"),
     },
     hobbies: {
       creative: () => has("guitar", "camera", "piano", "screen print", "art", "hasselblad", "leica", "fender", "gibson", "warhol"),
