@@ -10,6 +10,8 @@ import DestinationsPage from "./DestinationsPage";
 const TMDB_KEY = "b66752afda91b8258d32f4388f049a22";
 const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
 
+const exploreGameImageCache = {};
+
 const FRIEND_POSTS = [];
 
 const COMMUNITY_POOL = {
@@ -567,9 +569,24 @@ function FilterDrawer({ open, sources, onToggle, onClose }) {
 function WeekendCard({ post, onAddToSomeday, onRemoveFromSomeday, onPlanEvent, onPageTap, onCardTap }) {
   const [inSomeday, setInSomeday] = useState(false);
   const isMovie = post.type === 'movies';
-  const imageUrl = isMovie
+  const isGame = post.type === 'games';
+  const staticImageUrl = isMovie
     ? (post.poster_path ? `${TMDB_IMG}${post.poster_path}` : null)
     : getExploreImageUrl(post);
+  const [gameImgUrl, setGameImgUrl] = useState(isGame ? (exploreGameImageCache[post.cardTitle] || "") : "");
+
+  useEffect(() => {
+    if (!isGame || exploreGameImageCache[post.cardTitle]) return;
+    fetch(`/api/google-image-search?query=${encodeURIComponent(post.cardTitle + ' board game box')}&num=1`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const url = data?.results?.[0]?.displayUrl || data?.results?.[0]?.thumbnail || data?.results?.[0]?.url || "";
+        if (url) { exploreGameImageCache[post.cardTitle] = url; setGameImgUrl(url); }
+      })
+      .catch(() => {});
+  }, [isGame, post.cardTitle]);
+
+  const imageUrl = isGame ? (gameImgUrl || staticImageUrl) : staticImageUrl;
   const title = isMovie ? post.title : post.cardTitle;
 
   function handleSomeday(e) {
