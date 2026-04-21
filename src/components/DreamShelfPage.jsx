@@ -1326,7 +1326,10 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
           const productResponse = await fetch(`/api/product-search?q=${encodeURIComponent(query)}`);
           if (productResponse.ok) {
             const productData = await productResponse.json();
-            const productResult = normalizeSearchItems(productData.items || [], query).find(result => result?.image);
+            const productItems = Array.isArray(productData)
+              ? productData
+              : (productData?.items || productData?.results || productData?.products || []);
+            const productResult = normalizeSearchItems(productItems, query).find(result => result?.image);
             imageUrl = productResult?.image || "";
           }
         }
@@ -1468,7 +1471,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
   useEffect(() => {
     const imageTargets = [
-      ...items.slice(0, 24),
+      ...items.slice(0, 72),
       ...searchResults.slice(0, 8),
       featuredPost,
       ...communityPosts.slice(0, 8),
