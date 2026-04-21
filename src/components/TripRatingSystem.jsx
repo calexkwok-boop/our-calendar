@@ -1190,6 +1190,7 @@ const BadgeCard = ({ badge, darkMode }) => (
 const TabButton = ({ active, onClick, children }) => (
   <button
     onClick={onClick}
+    style={{ fontFamily: "'Caveat', cursive" }}
     className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${
       active
         ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'

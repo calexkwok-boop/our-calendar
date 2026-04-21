@@ -88,3 +88,14 @@ body.journey-overlay-active,
   background: var(--journey-underlay, rgba(15, 23, 42, 0.18)) !important;
   background-color: var(--journey-underlay, rgba(15, 23, 42, 0.18)) !important;
 }
+
+.memories-gallery,
+.memories-gallery *,
+.memory-creator,
+.memory-creator *,
+.memory-viewer,
+.memory-viewer *,
+.memories-events-panel,
+.memories-events-panel * {
+  font-family: 'Caveat', cursive !important;
+}

@@ -24645,7 +24645,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   const renderEventsMemoriesPanel = () => {
     const recentMemoryEvents = eligibleMemoryEvents.slice(0, 3);
     return (
-      <div className="mb-5 rounded-3xl border border-stone-200/80 dark:border-white/10 bg-gradient-to-br from-white/95 via-amber-50/40 to-white/90 dark:from-slate-900/80 dark:via-amber-900/10 dark:to-slate-900/75 p-5">
+      <div className="memories-events-panel mb-5 rounded-3xl border border-stone-200/80 dark:border-white/10 bg-gradient-to-br from-white/95 via-amber-50/40 to-white/90 dark:from-slate-900/80 dark:via-amber-900/10 dark:to-slate-900/75 p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-xl">
             <div className="text-[11px] uppercase tracking-[0.24em] text-amber-900/55 dark:text-amber-100/55">Memories</div>
@@ -31080,7 +31080,7 @@ transform: translateY(0);
 
     {/* -- Sub-Calendar Full View -- */}
     {activeSubCalendar && (
-      <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 z-40 flex flex-col overflow-hidden isolate" style={activeTripBackgroundStyle}>
+      <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 z-40 flex flex-col overflow-hidden isolate" style={{ ...activeTripBackgroundStyle, fontFamily: "'Caveat', cursive" }}>
 
         {/* Cleaner mobile trip header */}
         <div
@@ -31112,18 +31112,20 @@ transform: translateY(0);
               ) : (
                 <div
                   className="font-semibold text-[1.6rem] leading-tight tracking-[-0.03em] text-gray-900 dark:text-white cursor-pointer hover:text-purple-600 dark:hover:text-purple-300"
+                  style={{ fontFamily: "'Caveat', cursive" }}
                   onClick={() => setEditingSubCalTitle(true)}
                 >
                   {activeSubCalendar.name}
                 </div>
               )}
-              <div className="mt-1 text-sm text-gray-500 dark:text-gray-300/80">
+              <div className="mt-1 text-sm text-gray-500 dark:text-gray-300/80" style={{ fontFamily: "'Caveat', cursive" }}>
                 {new Date(activeSubCalendar.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(activeSubCalendar.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </div>
             </div>
             <button
               onClick={() => setShowSubCalInviteModal(true)}
               className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white text-sm rounded-2xl font-semibold shadow-[0_10px_30px_rgba(139,92,246,0.28)]"
+              style={{ fontFamily: "'Caveat', cursive" }}
             >
               <Plus className="w-4 h-4" /> Invite
             </button>
@@ -31148,7 +31150,7 @@ transform: translateY(0);
                   </div>
                 ))}
               </div>
-              <span>{subCalMembers.length + 1} members</span>
+              <span style={{ fontFamily: "'Caveat', cursive" }}>{subCalMembers.length + 1} members</span>
             </button>
 
             {subCalWeatherLocation && !subCalWeatherExpanded ? (
@@ -31157,7 +31159,7 @@ transform: translateY(0);
                 className={`shrink-0 inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm ${tripHeaderPillClassName}`}
               >
                 <span>📍</span>
-                <span className="max-w-[160px] truncate">{subCalWeatherLocation}</span>
+                <span className="max-w-[160px] truncate" style={{ fontFamily: "'Caveat', cursive" }}>{subCalWeatherLocation}</span>
               </button>
             ) : !subCalWeatherExpanded ? (
               <button
@@ -31280,7 +31282,7 @@ transform: translateY(0);
           {!subCalMembersCollapsed && (
             <div className="mt-3 rounded-3xl border border-white/10 bg-white/75 p-3 dark:bg-slate-900/70" style={tripHeaderPanelStyle}>
               <div className="flex items-center justify-between mb-2">
-                <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Travel crew</h4>
+                <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400" style={{ fontFamily: "'Caveat', cursive" }}>Travel crew</h4>
                 <button
                   onClick={() => setSubCalMembersCollapsed(true)}
                   className="text-xs font-medium text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-300"
@@ -31289,7 +31291,7 @@ transform: translateY(0);
                 </button>
               </div>
               <div className="flex flex-wrap gap-2">
-                <span className="px-2.5 py-1.5 rounded-full bg-purple-100 text-purple-700 text-xs flex items-center gap-2 dark:bg-purple-500/15 dark:text-purple-200">
+                <span className="px-2.5 py-1.5 rounded-full bg-purple-100 text-purple-700 text-xs flex items-center gap-2 dark:bg-purple-500/15 dark:text-purple-200" style={{ fontFamily: "'Caveat', cursive" }}>
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-[10px] font-semibold text-purple-700 dark:bg-purple-500/20 dark:text-purple-100">
                     {getTripMemberBadge(currentUser)}
                   </span>
@@ -31303,6 +31305,7 @@ transform: translateY(0);
                     <div
                       key={memberIdentity}
                       className="flex items-center gap-2 rounded-2xl border border-gray-200/80 bg-gray-100 px-2.5 py-2 text-xs text-gray-700 dark:border-white/10 dark:bg-white/5 dark:text-gray-200"
+                      style={{ fontFamily: "'Caveat', cursive" }}
                     >
                       <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[10px] font-semibold text-gray-600 dark:bg-slate-800 dark:text-gray-200">
                         {getTripMemberBadge(memberLabel)}
@@ -31648,10 +31651,12 @@ transform: translateY(0);
           <button
             onClick={() => setSubCalTab('itinerary')}
             className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${subCalTab === 'itinerary' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+            style={{ fontFamily: "'Caveat', cursive" }}
           >Itinerary</button>
           <button
             onClick={() => setSubCalTab('photos')}
             className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium transition-all relative ${subCalTab === 'photos' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+            style={{ fontFamily: "'Caveat', cursive" }}
           >
             Photos
             {tripPhotos.length > 0 && <span className="ml-1.5 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300 text-xs rounded-full">{tripPhotos.length}</span>}
@@ -31659,6 +31664,7 @@ transform: translateY(0);
   <button
     onClick={() => setSubCalTab('ratings')}
     className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium transition-all relative ${subCalTab === 'ratings' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+    style={{ fontFamily: "'Caveat', cursive" }}
   >
     Ratings
     {(() => {
@@ -31687,6 +31693,7 @@ transform: translateY(0);
           <button
             onClick={() => setSubCalTab('expenses')}
             className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${subCalTab === 'expenses' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+            style={{ fontFamily: "'Caveat', cursive" }}
           >Expenses</button>
           </div>
           {subCalTabsShowRightHint && (
@@ -31825,6 +31832,7 @@ transform: translateY(0);
                           setSubCalNewEventForm({ title: '', startTime: '', endTime: '', location: '', category: 'other' });
                         }}
                         className="flex-1 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 px-3 py-2 text-sm font-medium text-white"
+                        style={{ fontFamily: "'Caveat', cursive" }}
                       >
                         Add plan
                       </button>
@@ -32086,7 +32094,7 @@ transform: translateY(0);
                       <div key={section.key} className="rounded-[28px] border border-white/10 bg-white/72 p-4 shadow-sm dark:bg-slate-900/68">
                         <div className="flex items-center justify-between gap-3">
                           <div>
-                            <div className="text-lg font-semibold text-gray-900 dark:text-white">{section.label}</div>
+                            <div className="text-lg font-semibold text-gray-900 dark:text-white" style={{ fontFamily: "'Caveat', cursive" }}>{section.label}</div>
                             <div className="text-sm text-gray-400 dark:text-gray-500">
                               {section.events.length > 0 ? `${section.events.length} ${section.events.length === 1 ? 'plan' : 'plans'}` : 'Nothing locked in yet'}
                             </div>
@@ -32535,7 +32543,7 @@ transform: translateY(0);
           <div>
 
             {/* Upload bar */}
-            <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex flex-wrap items-center gap-3">
+            <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex flex-wrap items-center gap-3" style={{ fontFamily: "'Caveat', cursive" }}>
               <button
                 onClick={() => photoInputRef.current?.click()}
                 disabled={uploadingPhoto || photoDeleteMode}
@@ -32616,6 +32624,7 @@ transform: translateY(0);
                       setSelectedPhotoIds([]);
                     }}
                     className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+                    style={{ fontFamily: "'Caveat', cursive" }}
                   >
                     Select
                   </button>
@@ -32627,7 +32636,7 @@ transform: translateY(0);
                       setShowPhotoSortMenu(false);
                     }}
                     className="min-h-[2rem] px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300"
-                    style={{ WebkitTapHighlightColor: 'transparent' }}
+                    style={{ WebkitTapHighlightColor: 'transparent', fontFamily: "'Caveat', cursive" }}
                   >
                     Edit
                   </button>
@@ -32671,8 +32680,8 @@ transform: translateY(0);
                     </span>
                   </button>
                   {showPhotoSortMenu && (
-                    <div className="absolute right-0 top-full mt-2 w-44 rounded-2xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl overflow-hidden z-20">
-                      <div className="px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                    <div className="absolute right-0 top-full mt-2 w-44 rounded-2xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl overflow-hidden z-20" style={{ fontFamily: "'Caveat', cursive" }}>
+                      <div className="px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500" style={{ fontFamily: "'Caveat', cursive" }}>
                         Sort by
                       </div>
                       <button

@@ -58,7 +58,7 @@ const SmartAddPlan = ({
                  transition-all duration-200
                  flex items-center gap-2">
         <Sparkles className="w-5 h-5 text-white group-hover:rotate-12 transition-transform duration-200" />
-        <span className="font-bold text-white text-sm">
+        <span className="font-bold text-white text-sm" style={{ fontFamily: "'Caveat', cursive" }}>
           Add Plan
         </span>
         <ChevronDown className={`w-4 h-4 text-white transition-transform duration-200 ${
@@ -126,7 +126,7 @@ const SuggestionButton = ({ icon, label, description, gradient, onClick, darkMod
     
     {/* Text */}
     <div className="flex-1 min-w-0">
-      <div className="font-semibold text-gray-900 dark:text-white text-sm">
+      <div className="font-semibold text-gray-900 dark:text-white text-sm" style={{ fontFamily: "'Caveat', cursive" }}>
         {label}
       </div>
       <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -162,10 +162,11 @@ const SmartAddPlanCompact = ({
         <button
           key={suggestion.category}
           onClick={() => handleSelectCategory(suggestion.category)}
+          style={{ fontFamily: "'Caveat', cursive" }}
           className={`rounded-full px-4 py-2 text-white text-sm font-semibold
                    bg-gradient-to-r ${suggestion.gradient}
                    hover:shadow-lg hover:scale-105 active:scale-95
-                   transition-all duration-200 
+                   transition-all duration-200
                    flex items-center gap-2`}>
           <span className="text-base leading-none">{suggestion.icon}</span>
           <span>{suggestion.label}</span>

@@ -176,7 +176,7 @@ const TripsTab = ({
           
           {/* Trip Name & Date at Bottom */}
           <div className="absolute bottom-0 left-0 right-0 p-4">
-            <h3 className="text-white font-bold text-lg mb-1 drop-shadow-lg">
+            <h3 className="text-white font-bold text-lg mb-1 drop-shadow-lg" style={{ fontFamily: "'Caveat', cursive" }}>
               {trip.name}
             </h3>
             <div className="flex items-center gap-3 text-white/90 text-sm">
@@ -214,7 +214,7 @@ const TripsTab = ({
       className="w-full flex items-center justify-between mb-3 group">
       <div className="flex items-center gap-2">
         <span className="text-lg">{icon}</span>
-        <h4 className="text-xs uppercase tracking-widest font-bold text-gray-700 dark:text-gray-300">
+        <h4 className="text-xs uppercase tracking-widest font-bold text-gray-700 dark:text-gray-300" style={{ fontFamily: "'Caveat', cursive", fontSize: '0.85rem' }}>
           {title}
         </h4>
         {count > 0 && (
@@ -239,7 +239,7 @@ const TripsTab = ({
       {/* Hero Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight" style={themeAccentHeadingStyle}>
+          <h2 className="text-3xl font-bold tracking-tight" style={{ ...themeAccentHeadingStyle, fontFamily: "'Caveat', cursive" }}>
             Your Trips
           </h2>
           <JourneyQuoteDisplay
@@ -265,7 +265,7 @@ const TripsTab = ({
       {hasNoTrips && (
         <div className="text-center py-16">
           <div className="text-7xl mb-4">🗺️</div>
-          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2" style={{ fontFamily: "'Caveat', cursive" }}>
             No trips yet
           </h3>
           <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-sm mx-auto">
@@ -354,26 +354,26 @@ const TripsTab = ({
         <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400" style={{ fontFamily: "'Caveat', cursive" }}>
                 {activeTrips.length + upcomingTrips.length + archivedTrips.length}
               </div>
-              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1" style={{ fontFamily: "'Caveat', cursive" }}>
                 Total Trips
               </div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400" style={{ fontFamily: "'Caveat', cursive" }}>
                 {upcomingTrips.length}
               </div>
-              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1" style={{ fontFamily: "'Caveat', cursive" }}>
                 Coming Up
               </div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+              <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400" style={{ fontFamily: "'Caveat', cursive" }}>
                 {archivedTrips.length}
               </div>
-              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1" style={{ fontFamily: "'Caveat', cursive" }}>
                 Completed
               </div>
             </div>

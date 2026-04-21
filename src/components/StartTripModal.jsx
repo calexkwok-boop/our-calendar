@@ -196,10 +196,10 @@ const StartTripModal = ({
                   New Trip
                 </div>
               </div>
-              <h2 className="text-3xl font-bold tracking-tight" style={themeAccentHeadingStyle}>
+              <h2 className="text-3xl font-bold tracking-tight" style={{ ...themeAccentHeadingStyle, fontFamily: "'Caveat', cursive" }}>
                 Start a Trip
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2" style={{ fontFamily: "'Caveat', cursive" }}>
                 Keep all your travel plans in one place
               </p>
             </div>
@@ -270,7 +270,7 @@ const StartTripModal = ({
                     <ChevronLeft className="w-4 h-4" />
                   </button>
                   <div className="text-center">
-                    <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                    <div className="text-sm font-semibold text-gray-900 dark:text-white" style={{ fontFamily: "'Caveat', cursive" }}>
                       {displayMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                     </div>
                     <div className="text-[11px] uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400 mt-1">
@@ -410,7 +410,7 @@ const StartTripModal = ({
           >
             <div className="flex items-center justify-between gap-4">
               <div>
-                <div className="text-sm font-semibold">
+                <div className="text-sm font-semibold" style={{ fontFamily: "'Caveat', cursive" }}>
                   + Create & Invite Friends
                 </div>
                 <div className={`mt-1 text-[11px] italic ${hasEnoughDates ? 'text-white/75' : 'text-gray-400 dark:text-gray-500'}`}>
@@ -431,7 +431,7 @@ const StartTripModal = ({
             className={`flex-1 px-5 py-3.5 rounded-xl font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 ${
               hasEnoughDates ? 'text-white hover:shadow-lg active:scale-[0.98]' : 'opacity-50 cursor-not-allowed'
             }`}
-            style={hasEnoughDates ? themeAccentButtonStyle : { backgroundColor: '#9ca3af', color: 'white' }}
+            style={{ ...(hasEnoughDates ? themeAccentButtonStyle : { backgroundColor: '#9ca3af', color: 'white' }), fontFamily: "'Caveat', cursive" }}
           >
             + Create Trip
           </button>
