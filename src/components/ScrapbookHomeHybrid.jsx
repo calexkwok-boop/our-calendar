@@ -53,23 +53,6 @@ const areHomePropsEqual = (prevProps, nextProps) => {
   return true;
 };
 
-/**
- * HYBRID SCRAPBOOK HOME PAGE
- * 
- * Mix of:
- * - Handwritten header (scrapbook enhanced)
- * - Moments This Week (current clean style)
- * - What's Next Today (current)
- * - Coming Up This Week (current)
- * - Quick Thoughts (scrapbook enhanced - NEW)
- * - Latest Memories (current)
- * - Someday List (scrapbook enhanced - NEW)
- * 
- * Philosophy: Warm handwritten header sets the tone, 
- * then clean functional sections for planning,
- * sprinkled with playful sticky notes and dream lists
- */
-
 const formatDisplayDate = (value) => {
   if (!value) return '';
   const date = new Date(value);
@@ -132,21 +115,21 @@ const ScrapbookHomeHybrid = ({
   greetingName = 'there',
   greetingEmoji = '',
   todayLabel = '',
-  
+
   // Year stats for header
   yearStats = { year: new Date().getFullYear(), events: 0, trips: 0, photos: 0, streak: 0, streakHelpText: '' },
-  
-  // Moments This Week (current)
+
+  // Moments / Photo of the Day
   momentsThisWeek = [],
   onCaptureQuickMoment,
   onAddMomentForDate,
   onOpenMemory,
   onDeleteMoment,
   onConfirmAction,
-  
+
   // What's Next Today (current)
   todaySpotlightEvent = null,
-  
+
   // Coming Up This Week (current)
   upcomingPreviewEvents = [],
   onAddEvent = () => {},
@@ -154,12 +137,12 @@ const ScrapbookHomeHybrid = ({
   tripSpotlight = null,
   onOpenTripsTab,
   onStartTrip,
-  
+
   // Quick Thoughts (NEW - scrapbook enhanced)
   quickThoughts = [],
   onAddThought,
   onDeleteThought,
-  
+
   // Latest Memories (current)
   recentMemory = null,
   memoryCollagePhotos = [],
@@ -168,26 +151,26 @@ const ScrapbookHomeHybrid = ({
   memoryOpportunities = [],
   onOpenMemories,
   onCreateMemoryFromEvent,
-  
+
   // Journey (mini card)
   primaryJourneyGoal = null,
   primaryJourneyProgressText = '',
   primaryJourneyStreak = 0,
   primaryJourneyLoggedToday = false,
   onOpenJourney,
-  
+
   // Someday List (NEW - scrapbook enhanced)
   bucketList = [],
   onAddDream,
   onPlanFromDream,
   onDeleteDream,
   onOpenSomeday,
-  
+
   // Theme
   themeAccentHeadingStyle,
   themeAccentEllieChipButtonStyle,
   themeAccentTextStyle,
-  
+
   // Account / avatar
   profilePhotoUrl = '',
   onOpenAccountMenu,
@@ -197,13 +180,18 @@ const ScrapbookHomeHybrid = ({
   const todaySpotlightPhoto = getVisualPreviewUrl(todaySpotlightEvent);
   const memoryCover = getMemoryCover(recentMemory);
 
+  const todayKey = toLocalDateKey(new Date());
+  const todayMoment = momentsThisWeek.find(
+    (m) => String(m?.date || '').trim().slice(0, 10) === todayKey
+  ) || null;
+
   return (
     <div className="min-h-screen bg-[#faf8f3] dark:bg-slate-950 p-4 sm:p-6">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');
-        
+
         .font-handwritten { font-family: 'Caveat', cursive; }
-        
+
         .scrollbar-hide {
           -ms-overflow-style: none;
           scrollbar-width: none;
@@ -211,9 +199,9 @@ const ScrapbookHomeHybrid = ({
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
         }
-        
+
         .paper-texture {
-          background-image: 
+          background-image:
             repeating-linear-gradient(0deg, rgba(0,0,0,.02) 0px, transparent 1px, transparent 2px, rgba(0,0,0,.02) 3px),
             repeating-linear-gradient(90deg, rgba(0,0,0,.02) 0px, transparent 1px, transparent 2px, rgba(0,0,0,.02) 3px);
         }
@@ -224,9 +212,9 @@ const ScrapbookHomeHybrid = ({
             repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.03) 3px);
           background-blend-mode: screen, normal, normal;
         }
-        
+
         .sticky-note {
-          box-shadow: 
+          box-shadow:
             0 4px 6px rgba(0,0,0,0.1),
             inset 0 -2px 4px rgba(0,0,0,0.05);
           transform: rotate(-2deg);
@@ -243,7 +231,7 @@ const ScrapbookHomeHybrid = ({
       `}</style>
 
       <div className="mx-auto max-w-5xl space-y-6 rounded-[36px] border border-black/5 dark:border-white/8 bg-white/35 dark:bg-white/[0.03] p-3 sm:p-4 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
-        
+
         {/* SCRAPBOOK HEADER */}
         <div className="relative overflow-hidden rounded-[32px] border-2 border-amber-900/20 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 px-5 pb-5 pt-9 sm:px-10 sm:pb-8 sm:pt-10 shadow-2xl paper-texture">
           {/* Profile avatar button */}
@@ -281,7 +269,7 @@ const ScrapbookHomeHybrid = ({
               </div>
             </div>
           )}
-          
+
           <div className="relative">
             <h1 className="font-handwritten text-4xl sm:text-6xl text-gray-900 dark:text-white mb-2 leading-tight pl-8 sm:pl-0">
               {greeting}, {greetingName} {greetingEmoji}
@@ -294,7 +282,7 @@ const ScrapbookHomeHybrid = ({
           </div>
         </div>
 
-        {/* WHAT'S NEXT TODAY - Current style */}
+        {/* WHAT'S NEXT TODAY */}
         <button
           type="button"
           onClick={onAddEvent}
@@ -339,13 +327,13 @@ const ScrapbookHomeHybrid = ({
           )}
         </button>
 
-        {/* MOMENTS THIS WEEK - Current clean style with polaroids */}
+        {/* PHOTO OF THE DAY */}
         <div className="rounded-[28px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-white/95 via-amber-50/40 to-white/90 dark:from-slate-900/80 dark:via-amber-900/10 dark:to-slate-900/75 p-5 shadow-lg">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Camera className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-              <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-gray-700 dark:text-gray-300">
-                Moments This Week
+              <h3 className="font-handwritten text-2xl text-gray-700 dark:text-gray-300">
+                Photo of the Day
               </h3>
             </div>
             {yearStats.streak > 0 && (
@@ -355,95 +343,74 @@ const ScrapbookHomeHybrid = ({
             )}
           </div>
 
-          <div className="flex gap-3 overflow-x-auto overflow-y-hidden pb-2 scrollbar-hide snap-x snap-mandatory [touch-action:pan-x]">
-            {getDaysOfWeek().map((day) => {
-              const momentForDay = momentsThisWeek.find(m =>
-                String(m?.date || '').trim().slice(0, 10) === day.dateKey
-              );
-
-              return (
-                <div
-                  key={day.dateKey}
-                  className="group flex-shrink-0 snap-start w-28"
-                  style={{ rotate: `${day.dateKey.charCodeAt(9) % 2 === 0 ? '-1.5deg' : '1.2deg'}` }}
+          {todayMoment ? (
+            <div className="flex justify-center">
+              <div
+                className="bg-white dark:bg-slate-100 rounded-sm shadow-xl p-3 pb-0 w-full max-w-sm relative"
+                style={{ transform: 'rotate(-0.8deg)' }}
+              >
+                <button
+                  onClick={() => onOpenMemory?.(todayMoment)}
+                  className="w-full"
                 >
-                  {momentForDay ? (
-                    <div className="bg-white dark:bg-slate-100 rounded-sm shadow-md p-1.5 pb-0 transition-all group-hover:shadow-lg group-hover:-translate-y-0.5 relative">
-                      <button
-                        onClick={() => onOpenMemory?.(momentForDay)}
-                        className="w-full"
-                      >
-                        <div className="aspect-square w-full overflow-hidden rounded-[2px]">
-                          <div
-                            className="w-full h-full bg-cover bg-center"
-                            style={{ backgroundImage: `url(${momentForDay.photoUrl})` }}
-                          />
-                        </div>
-                        <div className="py-2 px-0.5 text-center">
-                          <p className={`font-handwritten text-[13px] leading-tight ${
-                            day.isToday ? 'text-amber-700' : 'text-gray-600'
-                          }`}>
-                            {day.isToday ? 'Today' : day.label}
-                          </p>
-                        </div>
-                      </button>
-                      {onDeleteMoment && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteMoment?.(momentForDay);
-                          }}
-                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 rounded-full bg-white/90 p-1 shadow-sm hover:bg-red-50 transition-all"
-                        >
-                          <Trash2 className="w-3 h-3 text-red-500" />
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="bg-white/60 dark:bg-slate-800/30 rounded-sm shadow-sm p-1.5 pb-0 border border-dashed border-gray-300 dark:border-gray-600">
-                      <div className="aspect-square w-full overflow-hidden rounded-[2px] flex items-center justify-center bg-gray-50/60 dark:bg-slate-700/20">
-                        {day.isToday ? (
-                          <button
-                            onClick={() => {
-                              if (typeof onAddMomentForDate === 'function') {
-                                onAddMomentForDate(day.dateKey);
-                                return;
-                              }
-                              onCaptureQuickMoment?.();
-                            }}
-                            className="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                          >
-                            <Plus className="w-6 h-6" />
-                            <span className="text-[10px] font-medium">Add</span>
-                          </button>
-                        ) : (
-                          <div className="w-8 h-8 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600" />
-                        )}
+                  <div className="aspect-[4/3] w-full overflow-hidden rounded-[2px]">
+                    {todayMoment.photoUrl ? (
+                      <img
+                        src={todayMoment.photoUrl}
+                        alt="Today's moment"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-gradient-to-br from-amber-100 to-rose-100 dark:from-amber-900/40 dark:to-rose-900/30 flex items-center justify-center">
+                        <Camera className="w-12 h-12 text-amber-400/60" />
                       </div>
-                      <div className="py-2 px-0.5 text-center">
-                        <p className={`font-handwritten text-[13px] leading-tight ${
-                          day.isToday ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500'
-                        }`}>
-                          {day.isToday ? 'Today' : day.label}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {momentsThisWeek.length === 0 && (
-            <div className="mt-4 text-center">
-              <p className="font-handwritten text-xl text-gray-600 dark:text-gray-400 italic">
-                A blank week is an invitation ✨
-              </p>
+                    )}
+                  </div>
+                  <div className="py-4 px-2 text-center">
+                    <p className="font-handwritten text-xl text-gray-700" style={{ fontFamily: "'Caveat', cursive" }}>
+                      {todayMoment.title || todayMoment.note || formatDisplayDate(todayMoment.date)}
+                    </p>
+                  </div>
+                </button>
+                {onDeleteMoment && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteMoment?.(todayMoment);
+                    }}
+                    className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 rounded-full bg-white/90 p-1 shadow-sm hover:bg-red-50 transition-all"
+                  >
+                    <Trash2 className="w-3 h-3 text-red-500" />
+                  </button>
+                )}
+              </div>
             </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof onAddMomentForDate === 'function') {
+                  onAddMomentForDate(todayKey);
+                } else {
+                  onCaptureQuickMoment?.();
+                }
+              }}
+              className="w-full flex flex-col items-center justify-center gap-3 rounded-[18px] border-2 border-dashed border-amber-300 dark:border-amber-700/50 py-14 bg-amber-50/50 dark:bg-amber-900/10 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+            >
+              <div className="rounded-full bg-amber-100 dark:bg-amber-900/40 p-4">
+                <Camera className="w-8 h-8 text-amber-500 dark:text-amber-400" />
+              </div>
+              <p className="font-handwritten text-2xl text-amber-700 dark:text-amber-400">
+                Capture today's moment
+              </p>
+              <p className="text-xs text-amber-600/70 dark:text-amber-400/60">
+                Add a photo that captures your day
+              </p>
+            </button>
           )}
         </div>
 
-        {/* COMING UP THIS WEEK - Current style */}
+        {/* COMING UP THIS WEEK */}
         <div className="rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-4">
           <div className="flex items-center justify-between mb-3">
             <button
@@ -488,7 +455,49 @@ const ScrapbookHomeHybrid = ({
           )}
         </div>
 
-        {/* SOMEDAY LIST - NEW scrapbook enhanced */}
+        {/* YOUR NEXT ADVENTURE */}
+        <button
+          type="button"
+          onClick={tripSpotlight ? onOpenTripsTab : onStartTrip}
+          className="w-full rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-4 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
+        >
+          <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">
+            Your Next Adventure
+          </div>
+          {tripSpotlight ? (
+            <div className="overflow-hidden rounded-[18px] border border-white/50 dark:border-white/10 bg-white/80 dark:bg-white/[0.05]">
+              <div className="relative h-[152px] w-full bg-gradient-to-br from-sky-200 via-cyan-100 to-emerald-100 dark:from-sky-900/40 dark:via-slate-900 dark:to-emerald-900/30">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.45),transparent_38%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.22),transparent_32%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_38%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.08),transparent_32%)]" />
+                <div className="absolute inset-x-0 bottom-0 px-4 py-4">
+                  <div className="truncate text-lg text-gray-900 dark:text-white" style={{ fontFamily: '"Comic Sans MS", "Bradley Hand", cursive' }}>
+                    {tripSpotlight?.weather_location || tripSpotlight?.name || 'Your next destination'}
+                  </div>
+                  <div className="mt-1 truncate text-xs text-gray-700/80 dark:text-gray-300">
+                    {formatDisplayDate(tripSpotlight.startDateLabel || tripSpotlight.startDate || tripSpotlight.start)} - {formatDisplayDate(tripSpotlight.endDateLabel || tripSpotlight.endDate || tripSpotlight.end)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex min-h-[152px] flex-col items-start justify-between rounded-[18px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-sky-100 via-cyan-50 to-emerald-100 p-4 dark:from-sky-900/30 dark:via-slate-900 dark:to-emerald-900/20">
+              <div>
+                <div className="text-sm font-semibold text-gray-900 dark:text-white">Where do you want to go?</div>
+                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Plan a trip and it will show up here as your next adventure.
+                </div>
+              </div>
+              <div
+                className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold"
+                style={themeAccentEllieChipButtonStyle}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Plan trip
+              </div>
+            </div>
+          )}
+        </button>
+
+        {/* ON YOUR MIND (formerly Your Komo Book) */}
         <div className="rounded-[28px] border-2 border-emerald-900/20 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-emerald-950/30 dark:via-slate-900 dark:to-cyan-950/20 p-6 shadow-xl">
           <div className="flex items-center justify-between mb-4">
             <button
@@ -496,18 +505,8 @@ const ScrapbookHomeHybrid = ({
               className="flex items-center gap-2 text-left active:opacity-70 transition-opacity"
             >
               <Sparkles className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
-              <h3 className="font-handwritten text-3xl">
-                <span className="text-white">Your </span>
-                <span
-                  style={{
-                    background: 'linear-gradient(90deg, #5eada0, #a89bc2, #c4867a, #c9a15d)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                  }}
-                >
-                  Komo Book
-                </span>
+              <h3 className="font-handwritten text-3xl text-white">
+                On your mind
               </h3>
             </button>
             <button
@@ -580,46 +579,20 @@ const ScrapbookHomeHybrid = ({
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={tripSpotlight ? onOpenTripsTab : onStartTrip}
-          className="w-full rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-4 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
-        >
-          <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">
-            Your Next Adventure
+        {/* 2026 SO FAR */}
+        <div className="rounded-[24px] border border-amber-900/10 bg-white/70 px-4 py-3 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-black/20 sm:px-6 sm:py-4">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-900/55 dark:text-amber-100/55">
+            {(yearStats.year || new Date().getFullYear())} so far
           </div>
-          {tripSpotlight ? (
-            <div className="overflow-hidden rounded-[18px] border border-white/50 dark:border-white/10 bg-white/80 dark:bg-white/[0.05]">
-              <div className="relative h-[152px] w-full bg-gradient-to-br from-sky-200 via-cyan-100 to-emerald-100 dark:from-sky-900/40 dark:via-slate-900 dark:to-emerald-900/30">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.45),transparent_38%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.22),transparent_32%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_38%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.08),transparent_32%)]" />
-                <div className="absolute inset-x-0 bottom-0 px-4 py-4">
-                  <div className="truncate text-lg text-gray-900 dark:text-white" style={{ fontFamily: '"Comic Sans MS", "Bradley Hand", cursive' }}>
-                    {tripSpotlight?.weather_location || tripSpotlight?.name || 'Your next destination'}
-                  </div>
-                  <div className="mt-1 truncate text-xs text-gray-700/80 dark:text-gray-300">
-                    {formatDisplayDate(tripSpotlight.startDateLabel || tripSpotlight.startDate || tripSpotlight.start)} - {formatDisplayDate(tripSpotlight.endDateLabel || tripSpotlight.endDate || tripSpotlight.end)}
-                  </div>
-                </div>
-              </div>
+          <div className="mt-1 text-sm text-gray-700 dark:text-gray-200 sm:text-base">
+            {yearStats.events} events · {yearStats.trips} trips · {yearStats.photos} photos
+          </div>
+          {yearStats.streakHelpText ? (
+            <div className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+              {yearStats.streakHelpText}
             </div>
-          ) : (
-            <div className="flex min-h-[152px] flex-col items-start justify-between rounded-[18px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-sky-100 via-cyan-50 to-emerald-100 p-4 dark:from-sky-900/30 dark:via-slate-900 dark:to-emerald-900/20">
-              <div>
-                <div className="text-sm font-semibold text-gray-900 dark:text-white">Where do you want to go?</div>
-                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Plan a trip and it will show up here as your next adventure.
-                </div>
-              </div>
-              <div
-                className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold"
-                style={themeAccentEllieChipButtonStyle}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Plan trip
-              </div>
-            </div>
-          )}
-        </button>
+          ) : null}
+        </div>
 
         {/* LATEST MEMORIES - Collage 2x2 */}
         <div className="rounded-[28px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-purple-50/60 via-white/90 to-pink-50/60 dark:from-purple-950/30 dark:via-slate-900/80 dark:to-pink-950/20 p-5 shadow-lg">
@@ -684,20 +657,6 @@ const ScrapbookHomeHybrid = ({
               ))}
             </div>
           )}
-        </div>
-
-        <div className="rounded-[24px] border border-amber-900/10 bg-white/70 px-4 py-3 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-black/20 sm:px-6 sm:py-4">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-900/55 dark:text-amber-100/55">
-            {(yearStats.year || new Date().getFullYear())} so far
-          </div>
-          <div className="mt-1 text-sm text-gray-700 dark:text-gray-200 sm:text-base">
-            {yearStats.events} events · {yearStats.trips} trips · {yearStats.photos} photos
-          </div>
-          {yearStats.streakHelpText ? (
-            <div className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-              {yearStats.streakHelpText}
-            </div>
-          ) : null}
         </div>
 
         <QuickThoughtsSection

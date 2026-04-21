@@ -28,11 +28,15 @@ export default function SharedListPanel({
   if (!showListPanel) return null;
 
   return (
-    <div className="glass-panel rounded-2xl p-4 sm:p-5 mb-6 border border-purple-100 dark:border-gray-700">
+    <div
+      className="glass-panel rounded-2xl p-4 sm:p-5 mb-6 border border-purple-100 dark:border-gray-700"
+      style={{ fontFamily: "'Caveat', cursive" }}
+    >
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
-          <h3 className="text-lg sm:text-xl font-semibold text-purple-600 dark:text-purple-400">Shared Lists</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Clean space for groceries, reminders, and quick to-dos.</p>
+          <h3 className="text-2xl sm:text-3xl font-bold text-purple-600 dark:text-purple-400">Shared Lists</h3>
+          <p className="text-base text-gray-500 dark:text-gray-400 mt-0.5">Clean space for groceries, reminders, and quick to-dos.</p>
         </div>
         <button onClick={() => setShowListPanel(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
           <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
@@ -46,12 +50,12 @@ export default function SharedListPanel({
             value={newSharedListTitle}
             onChange={(e) => setNewSharedListTitle(e.target.value)}
             placeholder="Create new list title"
-            className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-1 focus:ring-purple-400"
+            className="flex-1 px-3 py-2 text-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-1 focus:ring-purple-400"
             onKeyPress={(e) => e.key === 'Enter' && createSharedList()}
           />
           <button
             onClick={createSharedList}
-            className="px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            className="px-3 py-2 text-lg font-bold bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
             title="Create list"
           >
             Create
@@ -64,7 +68,7 @@ export default function SharedListPanel({
           <button
             key={group.id}
             onClick={() => setSelectedSharedListId(group.id)}
-            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+            className={`shrink-0 px-3 py-1.5 rounded-full text-lg font-bold border transition-all ${
               selectedSharedListId === group.id
                 ? 'bg-purple-600 text-white border-purple-600'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'
@@ -76,7 +80,7 @@ export default function SharedListPanel({
         <button
           onClick={() => deleteSharedList(selectedSharedListId)}
           disabled={!selectedSharedListId}
-          className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-800 disabled:opacity-50"
+          className="shrink-0 px-3 py-1.5 rounded-full text-lg font-bold bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-800 disabled:opacity-50"
           title="Delete selected list"
         >
           Delete
@@ -89,13 +93,13 @@ export default function SharedListPanel({
           value={newListItemText}
           onChange={(e) => setNewListItemText(e.target.value)}
           placeholder="Add an item..."
-          className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-1 focus:ring-purple-400"
+          className="flex-1 px-3 py-2 text-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-1 focus:ring-purple-400"
           onKeyPress={(e) => e.key === 'Enter' && addSharedListItem()}
           disabled={!selectedSharedListId}
         />
         <button
           onClick={addSharedListItem}
-          className="px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+          className="px-3 py-2 text-lg font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
           title="Add item"
           disabled={!selectedSharedListId}
         >
@@ -104,17 +108,17 @@ export default function SharedListPanel({
       </div>
 
       {listError && (
-        <div className="mb-3 p-2.5 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-xs text-red-600 dark:text-red-300">
+        <div className="mb-3 p-2.5 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-base text-red-600 dark:text-red-300">
           {listError}
         </div>
       )}
 
       <div className="space-y-1.5">
         {sharedListGroups.length === 0 && (
-          <p className="text-sm text-gray-400 dark:text-gray-500 italic">Create your first list to get started.</p>
+          <p className="text-lg text-gray-400 dark:text-gray-500 italic">Create your first list to get started.</p>
         )}
         {sharedListItems.length === 0 && selectedSharedListId && (
-          <p className="text-sm text-gray-400 dark:text-gray-500 italic">No items yet.</p>
+          <p className="text-lg text-gray-400 dark:text-gray-500 italic">No items yet.</p>
         )}
         {sharedListItems.map(item => (
           <div key={item.id} className="flex items-center gap-2.5 p-2.5 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600">
@@ -135,10 +139,10 @@ export default function SharedListPanel({
                   if (e.key === 'Enter') saveSharedListItemText(item);
                   if (e.key === 'Escape') { setEditingListItemId(null); setEditingListText(''); }
                 }}
-                className="flex-1 text-sm px-2 py-1 border border-purple-300 dark:border-purple-600 dark:bg-gray-800 dark:text-white rounded-md focus:ring-1 focus:ring-purple-400"
+                className="flex-1 text-lg px-2 py-1 border border-purple-300 dark:border-purple-600 dark:bg-gray-800 dark:text-white rounded-md focus:ring-1 focus:ring-purple-400"
               />
             ) : (
-              <span className={`flex-1 text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-200'}`}>
+              <span className={`flex-1 text-lg ${item.done ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-200'}`}>
                 {item.text}
               </span>
             )}
