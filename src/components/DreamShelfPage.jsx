@@ -54,12 +54,12 @@ const inferDreamShelfCategory = (text = "") => {
   if (/(bag|purse|tote|birkin|kelly|chanel|celine|prada|bottega|louis vuitton|gucci)/.test(q)) return "bags";
   if (/(ring|bracelet|necklace|earring|jewelry|jewellery|tiffany|van cleef|love bracelet)/.test(q)) return "jewelry";
   if (/(sneaker|shoe|jordan|nike|adidas|new balance|common projects|dunk|samba)/.test(q)) return "sneakers";
-  if (/(golf|putter|driver|iron|scotty|taylormade|titleist)/.test(q)) return "golf";
+  if (/(golf|putter|driver|iron|scotty|taylormade|titleist|footjoy|vokey|bushnell|tennis|pickleball|selkirk|running|marathon|garmin forerunner|peloton|cycling|bike|formula 1|f1|grand prix|nba|courtside|basketball)/.test(q)) return "golf";
   if (/(cookware|cooking|kitchen|dutch oven|le creuset|espresso|breville|coffee machine)/.test(q)) return "kitchen";
   if (/(camera|guitar|piano|art|leica|fender|gibson)/.test(q)) return "hobbies";
   if (/(whiskey|whisky|bourbon|macallan|yamazaki|hibiki|pappy|van winkle|clase azul|don julio|cognac|louis xiii)/.test(q)) return "whiskey";
   if (/(wine|champagne|cellar|bordeaux|burgundy)/.test(q)) return "cellar";
-  if (/(ski|bike|snowboard|tent|kayak|adventure)/.test(q)) return "adventure";
+  if (/(ski|snowboard|tent|kayak|adventure)/.test(q)) return "adventure";
   return "watches";
 };
 
@@ -152,7 +152,7 @@ const CATEGORIES = [
   { id: "watches",   label: "Watches",    emoji: "⌚" },
   { id: "bags",      label: "Bags",       emoji: "👜" },
   { id: "jewelry",   label: "Jewelry",    emoji: "💍" },
-  { id: "golf",      label: "Golf",       emoji: "⛳" },
+  { id: "golf",      label: "Sports",     emoji: "⛳" },
   { id: "sneakers",  label: "Sneakers",   emoji: "👟" },
   { id: "hobbies",   label: "Hobbies",    emoji: "🎸" },
   { id: "kitchen",   label: "Kitchen",    emoji: "🍳" },
@@ -222,11 +222,14 @@ const SUB_FILTERS = {
     { id: "gold",      label: "Warm Gold" },
   ],
   golf: [
-    { id: "all",      label: "All"             },
-    { id: "weekend",  label: "Weekend Rounds"  },
-    { id: "practice", label: "Practice Ritual" },
-    { id: "course",   label: "Dream Course"    },
-    { id: "setup",    label: "The Bag"         },
+    { id: "all",        label: "All"        },
+    { id: "golf",       label: "Golf"       },
+    { id: "tennis",     label: "Tennis"     },
+    { id: "pickleball", label: "Pickleball" },
+    { id: "running",    label: "Running"    },
+    { id: "cycling",    label: "Cycling"    },
+    { id: "training",   label: "Training"   },
+    { id: "events",     label: "Events"     },
   ],
   sneakers: [
     { id: "all",      label: "All"       },
@@ -307,13 +310,32 @@ const CURATED_ITEMS = {
     { id: "j8",  name: "Harry Winston Round Diamond Solitaire", brand: "Harry Winston", priceRange: "$10,000+", subFilter: ["anniversary"], emoji: "💍", description: "The King of Diamonds. When the moment demands something truly extraordinary." },
   ],
   golf: [
-    { id: "g1",  name: "Scotty Cameron Newport 2",     brand: "Scotty Cameron",priceRange: "$400–$600",  subFilter: ["putters","u500"],         emoji: "⛳", image: DREAMSHELF_IMAGES.g1, description: "The putter Tour pros hoard and collectors obsess over. Feel unlike anything else on the green." },
-    { id: "g2",  name: "Titleist TSR3 Driver",         brand: "Titleist",priceRange: "$550–$650",        subFilter: ["drivers","500_2k"],       emoji: "⛳", image: DREAMSHELF_IMAGES.g2, description: "The driver that the best players in the world trust when it actually matters." },
-    { id: "g3",  name: "Callaway Paradym Custom Irons",brand: "Callaway",priceRange: "$1,500–$2,500",   subFilter: ["irons","500_2k"],         emoji: "⛳", image: DREAMSHELF_IMAGES.g3, description: "Custom fit, custom look. The set you commission when you're serious about the game." },
-    { id: "g4",  name: "Ping G430 Full Set",           brand: "Ping",    priceRange: "$2,500–$3,500",   subFilter: ["sets","2kp"],             emoji: "⛳", image: DREAMSHELF_IMAGES.g4, description: "The complete bag upgrade. Everything matched, everything fitted, everything right." },
-    { id: "g5",  name: "Round at Pebble Beach",        brand: "Pebble Beach",priceRange: "$600–$1,000",  subFilter: ["exp","500_2k"],           emoji: "⛳", image: DREAMSHELF_IMAGES.g5, description: "The 18th green borders the Pacific Ocean. One of the greatest rounds of golf anyone will ever play." },
-    { id: "g7",  name: "TaylorMade Stealth 2 HD Driver",brand: "TaylorMade",priceRange: "$450–$600",    subFilter: ["drivers","u500"],         emoji: "⛳", image: DREAMSHELF_IMAGES.g7, description: "Carbon face technology that genuinely changes what a golf ball can do in the air." },
-    { id: "g8",  name: "FootJoy Tour Setup Bag",       brand: "FootJoy", priceRange: "$350–$500",        subFilter: ["u500"],                   emoji: "⛳", image: DREAMSHELF_IMAGES.g8, description: "The bag that says you take this seriously. Organized, beautiful, and built for the long game." },
+    { id: "g1",  name: "Scotty Cameron Newport 2",     brand: "Scotty Cameron",priceRange: "$400–$600",  subFilter: ["golf"],                   emoji: "⛳", imageQuery: "Scotty Cameron Newport 2 putter", image: DREAMSHELF_IMAGES.g1, description: "The putter Tour pros hoard and collectors obsess over. Feel unlike anything else on the green." },
+    { id: "g2",  name: "Titleist TSR3 Driver",         brand: "Titleist",priceRange: "$550–$650",        subFilter: ["golf"],                   emoji: "⛳", imageQuery: "Titleist TSR3 driver golf course", image: DREAMSHELF_IMAGES.g2, description: "The driver that the best players in the world trust when it actually matters." },
+    { id: "g3",  name: "Callaway Paradym Custom Irons",brand: "Callaway",priceRange: "$1,500–$2,500",   subFilter: ["golf"],                   emoji: "⛳", imageQuery: "Callaway Paradym custom irons golf", image: DREAMSHELF_IMAGES.g3, description: "Custom fit, custom look. The set you commission when you're serious about the game." },
+    { id: "g4",  name: "Ping G430 Full Set",           brand: "Ping",    priceRange: "$2,500–$3,500",   subFilter: ["golf"],                   emoji: "⛳", imageQuery: "Ping G430 golf clubs full set", image: DREAMSHELF_IMAGES.g4, description: "The complete bag upgrade. Everything matched, everything fitted, everything right." },
+    { id: "g5",  name: "Round at Pebble Beach",        brand: "Pebble Beach",priceRange: "$600–$1,000",  subFilter: ["golf","events"],          emoji: "⛳", imageQuery: "pebble beach", image: DREAMSHELF_IMAGES.g5, description: "The 18th green borders the Pacific Ocean. One of the greatest rounds of golf anyone will ever play." },
+    { id: "g7",  name: "TaylorMade Stealth 2 HD Driver",brand: "TaylorMade",priceRange: "$450–$600",    subFilter: ["golf"],                   emoji: "⛳", imageQuery: "golf driver club course luxury golfing", image: DREAMSHELF_IMAGES.g7, description: "Carbon face technology that genuinely changes what a golf ball can do in the air." },
+    { id: "g8",  name: "FootJoy Tour Setup Bag",       brand: "FootJoy", priceRange: "$350–$500",        subFilter: ["golf"],                   emoji: "⛳", imageQuery: "golf bag clubs course sunrise", image: DREAMSHELF_IMAGES.g8, description: "The bag that says you take this seriously. Organized, beautiful, and built for the long game." },
+    { id: "sp1", name: "Titleist Vokey SM10 Wedges",   brand: "Titleist",priceRange: "$190–$220",        subFilter: ["golf"],                   emoji: "⛳", imageQuery: "Titleist Vokey SM10 wedges golf", description: "A short-game upgrade for the kind of touch that makes a round feel personal." },
+    { id: "sp2", name: "Bushnell Pro X3 Rangefinder",  brand: "Bushnell",priceRange: "$550–$600",        subFilter: ["golf","training"],        emoji: "⛳", imageQuery: "Bushnell Pro X3 rangefinder golf course", description: "A quiet little confidence tool for picking a number and committing to the shot." },
+    { id: "sp3", name: "Garmin Approach R50 Launch Monitor", brand: "Garmin",priceRange: "$4,999",       subFilter: ["golf","training"],        emoji: "⛳", imageQuery: "Garmin Approach R50 launch monitor golf", description: "Practice that feels like a private studio session, even when you're working on one swing at a time." },
+    { id: "sp4", name: "Custom Club Fitting Session",  brand: "Golf Studio",priceRange: "$150–$400",     subFilter: ["golf","training"],        emoji: "⛳", imageQuery: "custom golf club fitting session", description: "A measured afternoon of finding the clubs that make your swing feel more like yours." },
+    { id: "sp5", name: "Pinehurst No. 2 Round",        brand: "Pinehurst",priceRange: "$400–$700",        subFilter: ["golf","events"],          emoji: "⛳", imageQuery: "Pinehurst No. 2 golf course", description: "A legendary walk through crowned greens, history, and a scorecard you'll keep." },
+    { id: "sp6", name: "Bandon Dunes Golf Trip",       brand: "Bandon Dunes",priceRange: "$1,500+",       subFilter: ["golf","events"],          emoji: "⛳", imageQuery: "Bandon Dunes golf course", description: "Wind, ocean, walking-only golf, and the kind of trip people talk about for years." },
+    { id: "sp7", name: "Masters Sunday Watch Party",   brand: "Augusta Sunday",priceRange: "Experience", subFilter: ["golf","events"],          emoji: "🏆", imageQuery: "Masters golf Sunday watch party", description: "Clear the afternoon, make the snacks, and let the final nine become a little ritual." },
+    { id: "sp8", name: "FootJoy Premiere Series Shoes",brand: "FootJoy", priceRange: "$200–$250",        subFilter: ["golf"],                   emoji: "⛳", imageQuery: "FootJoy Premiere Series golf shoes", description: "A crisp first-tee feeling for the rounds you want to dress up for." },
+    { id: "sp9", name: "Vessel Player IV Bag",         brand: "Vessel",  priceRange: "$395–$450",        subFilter: ["golf"],                   emoji: "⛳", imageQuery: "Vessel Player IV golf bag", description: "A beautiful everyday bag for the version of you that keeps clubs by the door." },
+    { id: "sp10",name: "Scotty Cameron Phantom X Putter",brand: "Scotty Cameron",priceRange: "$450–$550", subFilter: ["golf"],                  emoji: "⛳", imageQuery: "Scotty Cameron Phantom X putter", description: "A modern mallet for the calm little ritual of lining up a putt." },
+    { id: "sp11",name: "Wilson Pro Staff RF97",        brand: "Wilson",  priceRange: "$250–$300",        subFilter: ["tennis"],                 emoji: "🎾", imageQuery: "Wilson Pro Staff RF97 tennis racket", description: "The kind of racquet that makes a Saturday hit feel a little more serious." },
+    { id: "sp12",name: "US Open Weekend",              brand: "USTA",    priceRange: "$500+",            subFilter: ["tennis","events"],        emoji: "🎾", imageQuery: "US Open tennis stadium weekend", description: "A late-summer city weekend built around night matches, big serves, and one more set." },
+    { id: "sp13",name: "Private Tennis Lesson Package",brand: "Local Pro",priceRange: "$400–$1,200",     subFilter: ["tennis","training"],      emoji: "🎾", imageQuery: "private tennis lesson court", description: "A few focused mornings to make the game feel smoother, lighter, and more yours." },
+    { id: "sp14",name: "Selkirk Pickleball Paddle",    brand: "Selkirk", priceRange: "$150–$250",        subFilter: ["pickleball"],             emoji: "🏓", imageQuery: "Selkirk pickleball paddle", description: "Easy to bring, quick to share, and perfect for the hobby that keeps becoming a plan." },
+    { id: "sp15",name: "Run a Half Marathon",          brand: "Race Day",priceRange: "$80–$200",         subFilter: ["running","events"],       emoji: "🏃", imageQuery: "half marathon race finish line", description: "A date on the calendar that turns ordinary mornings into training miles." },
+    { id: "sp16",name: "Garmin Forerunner 965",        brand: "Garmin",  priceRange: "$600",             subFilter: ["running","training"],     emoji: "⌚", imageQuery: "Garmin Forerunner 965 running watch", description: "A tiny coach on your wrist for the season where you decide to get consistent." },
+    { id: "sp17",name: "Peloton Bike+",                brand: "Peloton", priceRange: "$2,495",           subFilter: ["cycling","training"],     emoji: "🚴", imageQuery: "Peloton Bike Plus home workout", description: "A home ritual for rainy days, reset days, and the days you still show up." },
+    { id: "sp18",name: "Formula 1 Grand Prix Weekend", brand: "Formula 1",priceRange: "$500+",           subFilter: ["events"],                 emoji: "🏁", imageQuery: "Formula 1 Grand Prix weekend", description: "A full-throttle travel weekend with engines, grandstands, and a reason to plan ahead." },
+    { id: "sp19",name: "NBA Courtside Game",           brand: "NBA",     priceRange: "$1,000+",          subFilter: ["events"],                 emoji: "🏀", imageQuery: "NBA courtside game seats", description: "One night close enough to hear the sneakers, the bench, and the buzz in the room." },
   ],
   sneakers: [
     { id: "s1",  name: "Air Jordan 1 Retro High OG",   brand: "Nike/Jordan",priceRange: "$170–$2,000+", subFilter: ["jordan","grail"],         emoji: "👟", description: "The shoe that started everything. Every colorway tells a story. The grail for a reason." },
@@ -328,7 +350,7 @@ const CURATED_ITEMS = {
   hobbies: [
     { id: "h1",  name: "Gibson Les Paul Standard",     brand: "Gibson",  priceRange: "$2,500–$4,000",   subFilter: ["music"],                  emoji: "🎸", description: "The guitar Page, Slash, and Clapton chose. If you're going to learn, learn on the real thing." },
     { id: "h2",  name: "Leica M11 Rangefinder",        brand: "Leica",   priceRange: "$8,000–$10,000",  subFilter: ["camera"],                 emoji: "📷", description: "The camera Cartier-Bresson used. Manual, quiet, and the reason photographers make pilgrimages to Wetzlar." },
-    { id: "h3",  name: "Porsche 911 Carrera",          brand: "Porsche", priceRange: "$110,000+",        subFilter: ["auto"],                   emoji: "🏎️", description: "Sixty years of the same shape, infinitely refined. The car that rewards the driver who learns it." },
+    { id: "h3",  name: "Porsche 911 Carrera",          brand: "Porsche", priceRange: "$110,000+",        subFilter: ["auto"],                   emoji: "🏎️", imageQuery: "real Porsche 911 Carrera car road", description: "Sixty years of the same shape, infinitely refined. The car that rewards the driver who learns it." },
     { id: "h4",  name: "Steinway Model O Grand Piano", brand: "Steinway",priceRange: "$60,000–$90,000", subFilter: ["music"],                  emoji: "🎹", description: "Every concert hall has one. If you're going to have a piano in your home, have this piano." },
     { id: "h5",  name: "Hasselblad X2D 100C",          brand: "Hasselblad",priceRange: "$8,000–$10,000",subFilter: ["camera"],                 emoji: "📷", description: "Medium format. 100 megapixels. The camera that makes professional photographers emotional." },
     { id: "h6",  name: "Fender Custom Shop Stratocaster",brand: "Fender",priceRange: "$3,000–$6,000",  subFilter: ["music"],                  emoji: "🎸", description: "Built by master builders in Corona, California. The instrument you commission, not just buy." },
@@ -368,8 +390,8 @@ const CURATED_ITEMS = {
     { id: "a7",  name: "Hobie Mirage Pro Angler Kayak",brand: "Hobie",   priceRange: "$3,500–$4,500",   subFilter: ["water"],                  emoji: "🛶", description: "Pedal-powered fishing kayak with hands-free steering. The serious angler's dream craft." },
     { id: "a8",  name: "Garmin Fenix 7X Solar",        brand: "Garmin",  priceRange: "$700–$900",       subFilter: ["ski","climb","bike"],     emoji: "⌚", description: "Solar charging, topographic maps, and a battery that lasts longer than any expedition." },
     { id: "a9",  name: "Parasailing Over Clear Water", brand: "Ocean Day",priceRange: "$80–$180",        subFilter: ["water"],                  emoji: "🪂", description: "Floating above bright water with nothing but wind, sunlight, and the kind of view you remember years later." },
-    { id: "a10", name: "Skydiving First Jump",         brand: "Drop Zone",priceRange: "$250–$400",       subFilter: ["mountain"],               emoji: "🪂", description: "The leap you talk about for the rest of your life. A few wild seconds that make everything feel bigger." },
-    { id: "a11", name: "Bungee Jumping",               brand: "Adventure Day",priceRange: "$120–$300",   subFilter: ["climb"],                  emoji: "🌉", description: "A bridge, a cord, a countdown, and the clean shock of doing something you were scared to do." },
+    { id: "a10", name: "Skydiving First Jump",         brand: "Drop Zone",priceRange: "$250–$400",       subFilter: ["mountain"],               emoji: "🪂", imageQuery: "skydiving", description: "The leap you talk about for the rest of your life. A few wild seconds that make everything feel bigger." },
+    { id: "a11", name: "Bungee Jumping",               brand: "Adventure Day",priceRange: "$120–$300",   subFilter: ["climb"],                  emoji: "🌉", imageQuery: "bungee jumping", description: "A bridge, a cord, a countdown, and the clean shock of doing something you were scared to do." },
   ],
 };
 
@@ -461,10 +483,13 @@ function itemMatchesSubFilter(categoryId, item, subId) {
       gold: () => filters.includes("gold") || has("gold", "cartier", "van cleef"),
     },
     golf: {
-      weekend: () => has("driver", "putter", "bag", "round", "pebble"),
-      practice: () => has("putter", "irons", "driver"),
-      course: () => has("pebble", "round", "experience"),
-      setup: () => has("set", "bag", "irons", "driver", "putter"),
+      golf: () => filters.includes("golf") || has("golf", "putter", "driver", "iron", "pebble", "scotty", "taylormade", "titleist", "footjoy", "vokey", "bushnell", "vessel", "pinehurst", "bandon", "masters"),
+      tennis: () => filters.includes("tennis") || has("tennis", "wilson", "pro staff", "us open"),
+      pickleball: () => filters.includes("pickleball") || has("pickleball", "selkirk"),
+      running: () => filters.includes("running") || has("run", "running", "marathon", "forerunner"),
+      cycling: () => filters.includes("cycling") || has("cycling", "bike", "peloton"),
+      training: () => filters.includes("training") || has("training", "lesson", "fitting", "rangefinder", "launch monitor", "garmin", "forerunner", "peloton"),
+      events: () => filters.includes("events") || has("pebble", "pinehurst", "bandon", "masters", "us open", "half marathon", "formula 1", "f1", "grand prix", "nba", "courtside"),
     },
     sneakers: {
       everyday: () => has("samba", "common projects", "panda", "new balance"),
@@ -511,7 +536,11 @@ function getDreamShelfVibe(item = {}) {
   const text = `${item.name || ""} ${item.brand || ""} ${item.description || ""}`.toLowerCase();
   if (text.includes("espresso") || text.includes("coffee")) return "Morning ritual";
   if (text.includes("dutch oven") || text.includes("le creuset")) return "Dinner with friends";
-  if (text.includes("golf") || text.includes("pebble")) return "A day worth clearing";
+  if (text.includes("formula 1") || text.includes("grand prix") || text.includes("nba") || text.includes("us open")) return "A day worth clearing";
+  if (text.includes("half marathon") || text.includes("running") || text.includes("forerunner")) return "The next training arc";
+  if (text.includes("tennis") || text.includes("pickleball") || text.includes("lesson")) return "A game to grow into";
+  if (text.includes("peloton") || text.includes("cycling")) return "A rhythm worth keeping";
+  if (text.includes("golf") || text.includes("pebble") || text.includes("putter") || text.includes("driver")) return "A day worth clearing";
   if (text.includes("wine") || text.includes("champagne") || text.includes("krug") || text.includes("dom")) return "Saved for a celebration";
   if (text.includes("whisky") || text.includes("whiskey") || text.includes("bourbon") || text.includes("tequila") || text.includes("cognac") || text.includes("pour")) return "Celebration pour";
   if (text.includes("guitar") || text.includes("piano")) return "Creative life";
