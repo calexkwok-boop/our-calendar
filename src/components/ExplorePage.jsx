@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import useGoogleImage from "../hooks/useGoogleImage";
 import { createPortal } from "react-dom";
 import MoviesPage from "./MoviesPage";
 import BoardGamePage from "./BoardGamePage";
@@ -10,7 +11,6 @@ import DestinationsPage from "./DestinationsPage";
 const TMDB_KEY = "b66752afda91b8258d32f4388f049a22";
 const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
 
-const exploreGameImageCache = {};
 
 const FRIEND_POSTS = [];
 
@@ -23,10 +23,10 @@ const COMMUNITY_POOL = {
     { id: "h5", type: "hiking", icon: "🥾", page: "Hiking & Outdoors", time: "Trending", cardTitle: "Skyline Trail Loop", location: "Mt. Rainier NP · 5.6 mi", desc: "Wildflowers, glaciers, and Rainier dominating the skyline. A Pacific Northwest classic.", votes: 301, tag: "Hiking", imageUrl: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan it"] },
   ],
   games: [
-    { id: "g1", type: "games", icon: "🎲", page: "Board Games", time: "Community pick", cardTitle: "Wingspan",        desc: "Elegant engine-builder about birds. Perfect for 2–5 players, around 90 minutes.",                     actions: ["Add to someday", "Plan game night"], imageUrl: "https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?w=900&q=80" },
-    { id: "g2", type: "games", icon: "🎲", page: "Board Games", time: "Trending",       cardTitle: "Catan",           desc: "The gateway game that started it all. Trade, build, settle — and ruin a friendship or two.",        actions: ["Add to someday", "Plan game night"], imageUrl: "https://images.unsplash.com/photo-1611032806874-35b924aa8cc2?w=900&q=80" },
-    { id: "g3", type: "games", icon: "🎲", page: "Board Games", time: "Community pick", cardTitle: "Ticket to Ride",  desc: "Collect cards, claim routes, connect cities. Easy to learn, impossible to put down.",               actions: ["Add to someday", "Plan game night"], imageUrl: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?w=900&q=80" },
-    { id: "g4", type: "games", icon: "🎲", page: "Board Games", time: "Trending",       cardTitle: "Codenames",       desc: "The perfect party game. One word clues, big laughs, competitive enough to keep score.",           actions: ["Add to someday", "Plan game night"], imageUrl: "https://images.unsplash.com/photo-1593305841991-05c297ba4575?w=900&q=80" },
+    { id: "g1", type: "games", icon: "🎲", page: "Board Games", time: "Community pick", cardTitle: "Wingspan",       desc: "Elegant engine-builder about birds. Perfect for 2–5 players, around 90 minutes.",              actions: ["Add to someday", "Plan game night"], imageQuery: "Wingspan board game box" },
+    { id: "g2", type: "games", icon: "🎲", page: "Board Games", time: "Trending",       cardTitle: "Catan",          desc: "The gateway game that started it all. Trade, build, settle — and ruin a friendship or two.", actions: ["Add to someday", "Plan game night"], imageQuery: "Catan board game box" },
+    { id: "g3", type: "games", icon: "🎲", page: "Board Games", time: "Community pick", cardTitle: "Ticket to Ride", desc: "Collect cards, claim routes, connect cities. Easy to learn, impossible to put down.",          actions: ["Add to someday", "Plan game night"], imageQuery: "Ticket to Ride board game box" },
+    { id: "g4", type: "games", icon: "🎲", page: "Board Games", time: "Trending",       cardTitle: "Codenames",      desc: "The perfect party game. One word clues, big laughs, competitive enough to keep score.",       actions: ["Add to someday", "Plan game night"], imageQuery: "Codenames board game box" },
   ],
   restaurants: [
     { id: "r1", type: "restaurants", icon: "🍜", page: "Restaurants", time: "New addition", cardTitle: "Dumpling Time", location: "SoMa, San Francisco", desc: "Handcrafted dumplings, beautiful space. The XLB are unmissable.", votes: 198, tag: "Restaurants", imageUrl: "https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan dinner"] },
@@ -298,7 +298,8 @@ const TYPE_EMOJI = { hiking: "🥾", games: "🎲", restaurants: "🍜", product
 
 function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveFromSomeday, onCardTap }) {
   const [inSomeday, setInSomeday] = useState(false);
-  const imageUrl = getExploreImageUrl(post);
+  const googleImgUrl = useGoogleImage(post.type === 'games' ? (post.imageQuery || `${post.cardTitle} board game box`) : null);
+  const imageUrl = post.type === 'games' ? googleImgUrl : getExploreImageUrl(post);
 
   return (
     <div className="rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent shadow-sm dark:shadow-none overflow-hidden">
@@ -570,23 +571,10 @@ function WeekendCard({ post, onAddToSomeday, onRemoveFromSomeday, onPlanEvent, o
   const [inSomeday, setInSomeday] = useState(false);
   const isMovie = post.type === 'movies';
   const isGame = post.type === 'games';
-  const staticImageUrl = isMovie
+  const googleImgUrl = useGoogleImage(isGame ? (post.imageQuery || `${post.cardTitle} board game box`) : null);
+  const imageUrl = isMovie
     ? (post.poster_path ? `${TMDB_IMG}${post.poster_path}` : null)
-    : getExploreImageUrl(post);
-  const [gameImgUrl, setGameImgUrl] = useState(isGame ? (exploreGameImageCache[post.cardTitle] || "") : "");
-
-  useEffect(() => {
-    if (!isGame || exploreGameImageCache[post.cardTitle]) return;
-    fetch(`/api/google-image-search?query=${encodeURIComponent(post.cardTitle + ' board game box')}&num=1`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        const url = data?.results?.[0]?.displayUrl || data?.results?.[0]?.thumbnail || data?.results?.[0]?.url || "";
-        if (url) { exploreGameImageCache[post.cardTitle] = url; setGameImgUrl(url); }
-      })
-      .catch(() => {});
-  }, [isGame, post.cardTitle]);
-
-  const imageUrl = isGame ? (gameImgUrl || staticImageUrl) : staticImageUrl;
+    : isGame ? googleImgUrl : getExploreImageUrl(post);
   const title = isMovie ? post.title : post.cardTitle;
 
   function handleSomeday(e) {

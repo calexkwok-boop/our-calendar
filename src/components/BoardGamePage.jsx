@@ -17,9 +17,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-
-// ─── module-level image cache (persists across re-renders) ───────────────────
-const gameImageCache = {};
+import useGoogleImage from '../hooks/useGoogleImage';
 
 // ─── fallback data (shown while API loads or on error) ────────────────────────
 const FALLBACK_GAMES = [
@@ -170,19 +168,8 @@ const GameCard = ({ game, onAddEvent, onAddToSomeday, darkMode, stagger, initInS
   const [expanded, setExpanded] = useState(false);
   const [addedToNight, setAddedToNight] = useState(false);
   const [inSomeday, setInSomeday] = useState(initInSomeday || false);
-  const [imgUrl, setImgUrl] = useState(gameImageCache[game.name] || "");
+  const imgUrl = useGoogleImage(`${game.name} board game box`);
   const catStyle = CAT_STYLES[game.category] || CAT_STYLES.strategy;
-
-  useEffect(() => {
-    if (gameImageCache[game.name]) { setImgUrl(gameImageCache[game.name]); return; }
-    fetch(`/api/google-image-search?query=${encodeURIComponent(game.name + ' board game box')}&num=1`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        const url = data?.results?.[0]?.displayUrl || data?.results?.[0]?.thumbnail || data?.results?.[0]?.url || "";
-        if (url) { gameImageCache[game.name] = url; setImgUrl(url); }
-      })
-      .catch(() => {});
-  }, [game.name]);
   const links = retailLinks(game.name);
 
   useEffect(() => { setInSomeday(initInSomeday || false); }, [initInSomeday]);
