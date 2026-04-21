@@ -21,10 +21,10 @@ const COMMUNITY_POOL = {
     { id: "h5", type: "hiking", icon: "🥾", page: "Hiking & Outdoors", time: "Trending", cardTitle: "Skyline Trail Loop", location: "Mt. Rainier NP · 5.6 mi", desc: "Wildflowers, glaciers, and Rainier dominating the skyline. A Pacific Northwest classic.", votes: 301, tag: "Hiking", imageUrl: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan it"] },
   ],
   games: [
-    { id: "g1", type: "games", icon: "🎲", page: "Board Games", time: "Community pick", cardTitle: "Wingspan", desc: "Elegant engine-builder about birds. Perfect for 2–5 players, around 90 minutes.", votes: 312, tag: "Games", actions: ["Add to someday", "Plan game night"] },
-    { id: "g2", type: "games", icon: "🎲", page: "Board Games", time: "Trending", cardTitle: "Catan", desc: "The gateway game that started it all. Trade, build, settle — and ruin a friendship or two.", votes: 489, tag: "Games", actions: ["Add to someday", "Plan game night"] },
-    { id: "g3", type: "games", icon: "🎲", page: "Board Games", time: "Hidden gem", cardTitle: "Ticket to Ride", desc: "Collect cards, claim routes, connect cities. Easy to learn, impossible to put down.", votes: 276, tag: "Games", actions: ["Add to someday", "Plan game night"] },
-    { id: "g4", type: "games", icon: "🎲", page: "Board Games", time: "Community pick", cardTitle: "Codenames", desc: "The perfect party game. One word clues, big laughs, competitive enough to keep score.", votes: 351, tag: "Games", actions: ["Add to someday", "Plan game night"] },
+    { id: "g1", type: "games", icon: "🎲", page: "Board Games", time: "Community pick", cardTitle: "Wingspan",        desc: "Elegant engine-builder about birds. Perfect for 2–5 players, around 90 minutes.",                     actions: ["Add to someday", "Plan game night"], imageUrl: "https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?w=900&q=80" },
+    { id: "g2", type: "games", icon: "🎲", page: "Board Games", time: "Trending",       cardTitle: "Catan",           desc: "The gateway game that started it all. Trade, build, settle — and ruin a friendship or two.",        actions: ["Add to someday", "Plan game night"], imageUrl: "https://images.unsplash.com/photo-1611032806874-35b924aa8cc2?w=900&q=80" },
+    { id: "g3", type: "games", icon: "🎲", page: "Board Games", time: "Community pick", cardTitle: "Ticket to Ride",  desc: "Collect cards, claim routes, connect cities. Easy to learn, impossible to put down.",               actions: ["Add to someday", "Plan game night"], imageUrl: "https://images.unsplash.com/photo-1569701813229-33284b643e3c?w=900&q=80" },
+    { id: "g4", type: "games", icon: "🎲", page: "Board Games", time: "Trending",       cardTitle: "Codenames",       desc: "The perfect party game. One word clues, big laughs, competitive enough to keep score.",           actions: ["Add to someday", "Plan game night"], imageUrl: "https://images.unsplash.com/photo-1593305841991-05c297ba4575?w=900&q=80" },
   ],
   restaurants: [
     { id: "r1", type: "restaurants", icon: "🍜", page: "Restaurants", time: "New addition", cardTitle: "Dumpling Time", location: "SoMa, San Francisco", desc: "Handcrafted dumplings, beautiful space. The XLB are unmissable.", votes: 198, tag: "Restaurants", imageUrl: "https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan dinner"] },
@@ -34,16 +34,16 @@ const COMMUNITY_POOL = {
     { id: "r5", type: "restaurants", icon: "🍜", page: "Restaurants", time: "Community pick", cardTitle: "Bestia", location: "Downtown LA", desc: "House-made pastas and whole-animal roasts in a buzzy Arts District space. A dinner you talk about.", votes: 253, tag: "Restaurants", imageUrl: "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan dinner"] },
   ],
   products: [
-    { id: "p1",  type: "products", icon: "✨", page: "Someday", time: "Most dreamed about", cardTitle: "Rolex Submariner",         desc: "A forever watch with quiet presence — the kind of piece people save for and keep for life.",                                       votes: 247, tag: "Someday", imageUrl: "https://source.unsplash.com/featured/?rolex,submariner,watch,luxury,black,wrist",       actions: ["Add to someday", "Open Someday"] },
-    { id: "p2",  type: "products", icon: "✨", page: "Someday", time: "Trending",           cardTitle: "Porsche 911",               desc: "The car that never gets old. Every decade they refine something that already felt finished.",                                   votes: 318, tag: "Someday", imageUrl: "https://source.unsplash.com/featured/?porsche,911,sports,car,white,road",                actions: ["Add to someday", "Open Someday"] },
-    { id: "p3",  type: "products", icon: "✨", page: "Someday", time: "Community pick",     cardTitle: "Le Creuset Dutch Oven",      desc: "The heirloom kitchen piece. Once you cook in it you understand why people pass these down.",                                   votes: 201, tag: "Someday", imageUrl: "https://source.unsplash.com/featured/?dutch,oven,cast,iron,kitchen,cooking",           actions: ["Add to someday", "Open Someday"] },
-    { id: "p4",  type: "products", icon: "✨", page: "Someday", time: "Hidden gem",         cardTitle: "La Marzocco Linea Mini",     desc: "The home espresso machine for people who take coffee seriously. Used in the world's best cafés.",                              votes: 156, tag: "Someday", imageUrl: "https://source.unsplash.com/featured/?espresso,machine,barista,coffee,cafe,home",      actions: ["Add to someday", "Open Someday"] },
-    { id: "p5",  type: "products", icon: "✨", page: "Someday", time: "Most dreamed about", cardTitle: "Hermès Birkin 30",           desc: "The bag that started a waiting list. Quiet, rare, and somehow still the most recognized in any room.",                         votes: 274, tag: "Someday", imageUrl: "https://source.unsplash.com/featured/?leather,bag,luxury,tan,minimal,fashion",          actions: ["Add to someday", "Open Someday"] },
-    { id: "p6",  type: "products", icon: "✨", page: "Someday", time: "Trending",           cardTitle: "Eight Sleep Pod 4",          desc: "Temperature-controlled sleep. Once you understand how much sleep quality matters, this is the upgrade.",                         votes: 203, tag: "Someday", imageUrl: "https://source.unsplash.com/featured/?bedroom,minimal,white,cozy,sleep,modern",         actions: ["Add to someday", "Open Someday"] },
-    { id: "p7",  type: "products", icon: "✨", page: "Someday", time: "Community pick",     cardTitle: "Peloton Bike+",              desc: "The bike that turned home fitness into a habit. Great instructors, real results, zero commute.",                                votes: 167, tag: "Someday", imageUrl: "https://source.unsplash.com/featured/?indoor,cycling,bike,gym,fitness,home",            actions: ["Add to someday", "Open Someday"] },
-    { id: "p8",  type: "products", icon: "✨", page: "Someday", time: "Hidden gem",         cardTitle: "Vitamix 5200",               desc: "The blender that does everything. Smoothies, soups, nut butter — it just works, for decades.",                                 votes: 142, tag: "Someday", imageUrl: "https://source.unsplash.com/featured/?blender,smoothie,kitchen,morning,healthy",        actions: ["Add to someday", "Open Someday"] },
-    { id: "p9",  type: "products", icon: "✨", page: "Someday", time: "Most dreamed about", cardTitle: "Patek Philippe Nautilus",    desc: "The watch that defined a generation's taste. Integrated bracelet, brushed steel, and 40 years of waiting lists.",               votes: 389, tag: "Someday", imageUrl: "https://source.unsplash.com/featured/?patek,philippe,watch,luxury,nautilus,silver",    actions: ["Add to someday", "Open Someday"] },
-    { id: "p10", type: "products", icon: "✨", page: "Someday", time: "Trending",           cardTitle: "Theragun Pro",               desc: "Recovery that works. Professional-grade percussion therapy for athletes and anyone who trains hard.",                            votes: 178, tag: "Someday", imageUrl: "https://source.unsplash.com/featured/?massage,recovery,fitness,athlete,muscle,tool",    actions: ["Add to someday", "Open Someday"] },
+    { id: "p1",  type: "products", icon: "✨", page: "Someday", time: "Most dreamed about", cardTitle: "Rolex Submariner",         desc: "A forever watch with quiet presence — the kind of piece people save for and keep for life.",                              actions: ["Add to someday", "Open Someday"], imageUrl: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=900&q=80" },
+    { id: "p2",  type: "products", icon: "✨", page: "Someday", time: "Trending",           cardTitle: "Porsche 911",               desc: "The car that never gets old. Every decade they refine something that already felt finished.",                          actions: ["Add to someday", "Open Someday"], imageUrl: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=900&q=80" },
+    { id: "p3",  type: "products", icon: "✨", page: "Someday", time: "Community pick",     cardTitle: "Le Creuset Dutch Oven",      desc: "The heirloom kitchen piece. Once you cook in it you understand why people pass these down.",                          actions: ["Add to someday", "Open Someday"], imageUrl: "https://images.unsplash.com/photo-1585515320310-259814833e62?w=900&q=80" },
+    { id: "p4",  type: "products", icon: "✨", page: "Someday", time: "Hidden gem",         cardTitle: "La Marzocco Linea Mini",     desc: "The home espresso machine for people who take coffee seriously. Used in the world's best cafés.",                     actions: ["Add to someday", "Open Someday"], imageUrl: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=900&q=80" },
+    { id: "p5",  type: "products", icon: "✨", page: "Someday", time: "Most dreamed about", cardTitle: "Hermès Birkin 30",           desc: "The bag that started a waiting list. Quiet, rare, and somehow still the most recognized in any room.",                  actions: ["Add to someday", "Open Someday"], imageUrl: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=900&q=80" },
+    { id: "p6",  type: "products", icon: "✨", page: "Someday", time: "Trending",           cardTitle: "Eight Sleep Pod 4",          desc: "Temperature-controlled sleep. Once you understand how much sleep quality matters, this is the upgrade.",                actions: ["Add to someday", "Open Someday"], imageUrl: "https://images.unsplash.com/photo-1540518614846-7eded433c457?w=900&q=80" },
+    { id: "p7",  type: "products", icon: "✨", page: "Someday", time: "Community pick",     cardTitle: "Peloton Bike+",              desc: "The bike that turned home fitness into a habit. Great instructors, real results, zero commute.",                       actions: ["Add to someday", "Open Someday"], imageUrl: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=900&q=80" },
+    { id: "p8",  type: "products", icon: "✨", page: "Someday", time: "Hidden gem",         cardTitle: "Vitamix 5200",               desc: "The blender that does everything. Smoothies, soups, nut butter — it just works, for decades.",                        actions: ["Add to someday", "Open Someday"], imageUrl: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=900&q=80" },
+    { id: "p9",  type: "products", icon: "✨", page: "Someday", time: "Most dreamed about", cardTitle: "Patek Philippe Nautilus",    desc: "The watch that defined a generation's taste. Integrated bracelet, brushed steel, and 40 years of waiting lists.",      actions: ["Add to someday", "Open Someday"], imageUrl: "https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=900&q=80" },
+    { id: "p10", type: "products", icon: "✨", page: "Someday", time: "Trending",           cardTitle: "Theragun Pro",               desc: "Recovery that works. Professional-grade percussion therapy for athletes and anyone who trains hard.",                   actions: ["Add to someday", "Open Someday"], imageUrl: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=900&q=80" },
   ],
   destinations: [
     { id: "d1", type: "destinations", icon: "✈️", page: "Destinations", time: "Dream trip", cardTitle: "Kyoto in Cherry Blossom Season", location: "Japan", desc: "Temples, lantern-lit alleys, and a city transformed by spring. Save this one for the kind of trip you plan around.", votes: 276, tag: "Destinations", imageUrl: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan trip"] },
@@ -302,33 +302,21 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
     <div className="rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent shadow-sm dark:shadow-none overflow-hidden">
       <CardHeader post={post} onPageTap={onPageTap} />
       <Divider />
-      {post.type === "games" ? (
-        <div className="flex border-t border-stone-100 dark:border-white/[0.04] cursor-pointer active:opacity-80" onClick={() => onCardTap?.(post)}>
-          <div className="w-[72px] h-[108px] flex-shrink-0 bg-amber-500/10 flex items-center justify-center text-3xl">🎲</div>
-          <div className="flex-1 px-3.5 py-3 flex flex-col justify-between min-w-0">
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight">{post.cardTitle}</p>
-              <p className="text-[11px] text-gray-500 leading-snug mt-1.5 line-clamp-3">{post.desc}</p>
-            </div>
+      <>
+        {imageUrl && (
+          <div
+            className={`mx-4 mt-3 rounded-2xl overflow-hidden cursor-pointer active:opacity-80 ${post.type === "products" ? "bg-stone-50 dark:bg-white/[0.03]" : "bg-stone-100 dark:bg-white/[0.04]"}`}
+            onClick={() => onCardTap?.(post)}
+          >
+            <img src={imageUrl} alt={post.cardTitle} className="w-full h-48 object-cover" loading="lazy" />
           </div>
+        )}
+        <div className="px-4 py-2.5 cursor-pointer active:opacity-80" onClick={() => onCardTap?.(post)}>
+          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-0.5">{post.cardTitle}</p>
+          {post.location && <p className="text-[11px] text-gray-400 dark:text-gray-600 mb-1.5">{post.location}</p>}
+          <p className="text-sm text-gray-500 leading-relaxed line-clamp-3">{post.desc}</p>
         </div>
-      ) : (
-        <>
-          {imageUrl && (
-            <div
-              className={`mx-4 mt-3 rounded-2xl overflow-hidden cursor-pointer active:opacity-80 ${post.type === "products" ? "bg-stone-50 dark:bg-white/[0.03]" : "bg-stone-100 dark:bg-white/[0.04]"}`}
-              onClick={() => onCardTap?.(post)}
-            >
-              <img src={imageUrl} alt={post.cardTitle} className={`w-full h-48 ${post.type === "products" ? "object-contain p-5" : "object-cover"}`} loading="lazy" />
-            </div>
-          )}
-          <div className="px-4 py-2.5 cursor-pointer active:opacity-80" onClick={() => onCardTap?.(post)}>
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-0.5">{post.cardTitle}</p>
-            {post.location && <p className="text-[11px] text-gray-400 dark:text-gray-600 mb-1.5">{post.location}</p>}
-            <p className="text-sm text-gray-500 leading-relaxed line-clamp-3">{post.desc}</p>
-          </div>
-        </>
-      )}
+      </>
       <div className="flex items-center gap-2 px-4 pb-4 pt-1">
         {post.actions.map((a, i) => {
           const isAmazonLink = post.type === "products" && i === 1 && post.amazonUrl;
@@ -576,6 +564,72 @@ function FilterDrawer({ open, sources, onToggle, onClose }) {
   );
 }
 
+function WeekendCard({ post, onAddToSomeday, onRemoveFromSomeday, onPlanEvent, onPageTap, onCardTap }) {
+  const [inSomeday, setInSomeday] = useState(false);
+  const isMovie = post.type === 'movies';
+  const imageUrl = isMovie
+    ? (post.poster_path ? `${TMDB_IMG}${post.poster_path}` : null)
+    : getExploreImageUrl(post);
+  const title = isMovie ? post.title : post.cardTitle;
+
+  function handleSomeday(e) {
+    e.stopPropagation();
+    if (!inSomeday) {
+      isMovie
+        ? onAddToSomeday?.(post)
+        : onAddToSomeday?.({ title: post.cardTitle, emoji: TYPE_EMOJI[post.type] || '✨', type: post.type, imageUrl });
+    } else {
+      isMovie
+        ? onRemoveFromSomeday?.({ title: post.title, emoji: '🎬', type: 'movies' })
+        : onRemoveFromSomeday?.({ title: post.cardTitle, emoji: TYPE_EMOJI[post.type] || '✨', type: post.type });
+    }
+    setInSomeday(v => !v);
+  }
+
+  function handlePlan(e) {
+    e.stopPropagation();
+    if (isMovie) onPlanEvent?.({ title: `Movie night: ${post.title}` });
+    else onPlanEvent?.({ title: `Game night: ${post.cardTitle}`, category: 'hangout' });
+  }
+
+  return (
+    <div
+      className="flex-shrink-0 w-64 rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent shadow-sm overflow-hidden cursor-pointer active:opacity-80"
+      onClick={() => onCardTap?.(post)}
+    >
+      <div className="relative h-40 bg-stone-100 dark:bg-white/[0.04]">
+        {imageUrl
+          ? <img src={imageUrl} alt={title} className="w-full h-full object-cover" loading="lazy" />
+          : <div className="w-full h-full flex items-center justify-center text-4xl">{isMovie ? '🎬' : '🎲'}</div>
+        }
+        <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/50 text-white text-[10px] font-medium">
+          {isMovie ? '🎬 Movie' : '🎲 Board Game'}
+        </div>
+      </div>
+      <div className="px-3 pt-2.5 pb-1">
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight line-clamp-1">{title}</p>
+        {isMovie && post.vote_average && (
+          <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-0.5">★ {post.vote_average.toFixed(1)}</p>
+        )}
+      </div>
+      <div className="flex gap-2 px-3 pb-3 pt-1">
+        <button
+          onClick={handleSomeday}
+          className={`flex-1 text-xs font-handwritten font-bold py-1.5 rounded-xl transition-all active:opacity-70 ${inSomeday ? 'bg-teal-600 text-white' : 'bg-teal-400 text-gray-900'}`}
+        >
+          {inSomeday ? '✓ Saved' : '+ Someday'}
+        </button>
+        <button
+          onClick={handlePlan}
+          className="flex-1 text-xs font-handwritten font-bold py-1.5 rounded-xl bg-violet-500/10 dark:bg-violet-400/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 dark:border-violet-400/25 active:opacity-70"
+        >
+          + Plan
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function SkeletonCard() {
   return (
     <div className="rounded-2xl bg-stone-50 dark:bg-[#161f30] border border-stone-100 dark:border-transparent overflow-hidden animate-pulse">
@@ -606,7 +660,7 @@ function SkeletonCard() {
 // ─── Section header ───────────────────────────────────────────────────────────
 function SectionHeader({ label }) {
   const tone =
-    label === "Good for this weekend"
+    label === "For this weekend"
       ? "text-amber-700 dark:text-amber-300"
       : label === "Dreaming of"
         ? "text-violet-700 dark:text-violet-300"
@@ -764,15 +818,13 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
       }
       return out;
     }
-    // "Good for this weekend" — hiking, restaurants, destinations + top-rated movies
-    const weekend  = take([...activeCom.filter(p => ['hiking', 'restaurants', 'destinations'].includes(p.type)), ...moviesByRating], 5);
+    // "For this weekend" — movies + board games only
+    const weekend  = take([...moviesByRating, ...activeCom.filter(p => p.type === 'games')], 5);
     // "From your friends" — friend activity posts (omit if empty)
     const friends  = activeFriends.length > 0 ? take(activeFriends, 4) : [];
-    // "Dreaming of" — products/Someday cards only
-    const dreaming = take([...activeCom.filter(p => p.type === 'products')], 4);
-    // "Trending" — remaining community + remaining movies
-    const trending = take([...activeCom.filter(p => !['products'].includes(p.type)), ...moviesByRating], 6);
-    return { weekend, friends, dreaming, trending };
+    // "Dreaming of" — products + hiking + restaurants + destinations
+    const dreaming = take([...activeCom.filter(p => ['products', 'hiking', 'restaurants', 'destinations'].includes(p.type))], 8);
+    return { weekend, friends, dreaming };
   })();
 
   function renderCard(post) {
@@ -850,9 +902,20 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
 
           {sectionData.weekend.length > 0 && (
             <>
-              <SectionHeader label="Good for this weekend" />
-              <div className="px-3.5 flex flex-col gap-3">
-                {sectionData.weekend.map(post => renderCard(post))}
+              <SectionHeader label="For this weekend" />
+              <div className="flex gap-3 overflow-x-auto px-3.5 pb-1" style={{ scrollbarWidth: 'none' }}>
+                {sectionData.weekend.map(post => (
+                  <WeekendCard
+                    key={post.type === 'movies' ? `movie-${post.id}` : post.id}
+                    post={post}
+                    onAddToSomeday={onAddToSomeday}
+                    onRemoveFromSomeday={onRemoveFromSomeday}
+                    onPlanEvent={onPlanEvent}
+                    onPageTap={setActivePage}
+                    onCardTap={setSelectedPost}
+                  />
+                ))}
+                <div className="flex-shrink-0 w-4" />
               </div>
             </>
           )}
@@ -878,16 +941,7 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
             </>
           )}
 
-          {sectionData.trending.length > 0 && (
-            <>
-              <SectionHeader label="Trending" />
-              <div className="px-3.5 flex flex-col gap-3">
-                {sectionData.trending.map(post => renderCard(post))}
-              </div>
-            </>
-          )}
-
-          {!moviesLoading && sectionData.weekend.length === 0 && sectionData.trending.length === 0 && (
+          {!moviesLoading && sectionData.weekend.length === 0 && sectionData.dreaming.length === 0 && (
             <div className="text-center py-16 text-gray-400 dark:text-gray-600 text-sm">
               All sources hidden — open Filter to turn some back on
             </div>

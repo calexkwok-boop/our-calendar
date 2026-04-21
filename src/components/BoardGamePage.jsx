@@ -18,39 +18,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 
-// ─── static cover images ──────────────────────────────────────────────────────
-const GAME_COVERS = {
-  'Gloomhaven':            'https://upload.wikimedia.org/wikipedia/en/4/43/Gloomhaven_cover.jpg',
-  'Pandemic Legacy S1':    'https://upload.wikimedia.org/wikipedia/en/3/3e/Pandemic_Legacy_Season_1.jpg',
-  'Terraforming Mars':     'https://upload.wikimedia.org/wikipedia/en/f/fc/Terraforming_Mars_box_cover.jpg',
-  'Brass: Birmingham':     'https://upload.wikimedia.org/wikipedia/en/7/7f/Brass_Birmingham.jpg',
-  'Twilight Imperium 4':   'https://upload.wikimedia.org/wikipedia/en/a/a5/Twilight_Imperium_Fourth_Edition_box.jpg',
-  'Ark Nova':              'https://upload.wikimedia.org/wikipedia/en/b/b2/Ark_Nova_game.jpg',
-  'Dune: Imperium':        'https://upload.wikimedia.org/wikipedia/en/4/4e/Dune_Imperium_cover.jpg',
-  'Star Wars: Rebellion':  'https://upload.wikimedia.org/wikipedia/en/1/1e/Star_Wars_Rebellion_board_game.jpg',
-  'Twilight Struggle':     'https://upload.wikimedia.org/wikipedia/en/b/b7/Twilight_Struggle_cover.jpg',
-  'Ticket to Ride':        'https://upload.wikimedia.org/wikipedia/en/9/92/Ticket_to_Ride_board_game_box_EN.jpg',
-  'Catan':                 'https://upload.wikimedia.org/wikipedia/en/a/a3/Catan-2015box.jpg',
-  'Carcassonne':           'https://upload.wikimedia.org/wikipedia/en/4/4c/Carcassonne_Cover.jpg',
-  'Pandemic':              'https://upload.wikimedia.org/wikipedia/en/e/e5/Pandemic_board_game_box.jpg',
-  '7 Wonders':             'https://upload.wikimedia.org/wikipedia/en/7/7e/7_Wonders_board_game_cover.jpg',
-  'Codenames':             'https://upload.wikimedia.org/wikipedia/en/3/3d/Codenames_board_game_cover.jpg',
-  'Wingspan':              'https://upload.wikimedia.org/wikipedia/en/a/a1/Wingspan-board-game.jpg',
-  'Azul':                  'https://upload.wikimedia.org/wikipedia/en/3/32/Azul_board_game.jpg',
-  'Gaia Project':          'https://upload.wikimedia.org/wikipedia/en/5/5e/Gaia_Project_box.jpg',
-  'Vindication':           'https://upload.wikimedia.org/wikipedia/en/v/va/Vindication_board_game.jpg',
-  'Dominion':              'https://upload.wikimedia.org/wikipedia/en/7/7e/DominionGameBox.png',
-  'Viticulture EE':        'https://upload.wikimedia.org/wikipedia/en/4/44/Viticulture_board_game.jpg',
-  'Gloomhaven: Jaws':      'https://upload.wikimedia.org/wikipedia/en/c/c5/Gloomhaven_Jaws_of_the_Lion.jpg',
-  'War of the Ring 2e':    'https://upload.wikimedia.org/wikipedia/en/7/74/War_of_the_Ring_2nd_edition.jpg',
-  "Tzolk'in":              'https://upload.wikimedia.org/wikipedia/en/0/05/Tzolkin_The_Mayan_Calendar.jpg',
-  'The Crew':              'https://upload.wikimedia.org/wikipedia/en/0/0e/The_Crew_board_game.jpg',
-  'Lost Ruins of Arnak':   'https://upload.wikimedia.org/wikipedia/en/4/41/Lost_Ruins_of_Arnak.jpg',
-  'Dixit':                 'https://upload.wikimedia.org/wikipedia/en/1/1b/Dixit_board_game.jpg',
-  'Pandemic: Iberia':      'https://upload.wikimedia.org/wikipedia/en/2/28/Pandemic_Iberia.jpg',
-  'Heat: Pedal to Metal':  'https://upload.wikimedia.org/wikipedia/en/0/0e/Heat_Pedal_to_Metal.jpg',
-  'Cascadia':              'https://upload.wikimedia.org/wikipedia/en/a/a8/Cascadia_board_game.jpg',
-};
+// ─── module-level image cache (persists across re-renders) ───────────────────
+const gameImageCache = {};
 
 // ─── fallback data (shown while API loads or on error) ────────────────────────
 const FALLBACK_GAMES = [
@@ -201,8 +170,19 @@ const GameCard = ({ game, onAddEvent, onAddToSomeday, darkMode, stagger, initInS
   const [expanded, setExpanded] = useState(false);
   const [addedToNight, setAddedToNight] = useState(false);
   const [inSomeday, setInSomeday] = useState(initInSomeday || false);
-  const [imgError, setImgError] = useState(false);
+  const [imgUrl, setImgUrl] = useState(gameImageCache[game.name] || "");
   const catStyle = CAT_STYLES[game.category] || CAT_STYLES.strategy;
+
+  useEffect(() => {
+    if (gameImageCache[game.name]) { setImgUrl(gameImageCache[game.name]); return; }
+    fetch(`/api/google-image-search?query=${encodeURIComponent(game.name + ' board game box')}&num=1`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const url = data?.results?.[0]?.displayUrl || data?.results?.[0]?.thumbnail || data?.results?.[0]?.url || "";
+        if (url) { gameImageCache[game.name] = url; setImgUrl(url); }
+      })
+      .catch(() => {});
+  }, [game.name]);
   const links = retailLinks(game.name);
 
   useEffect(() => { setInSomeday(initInSomeday || false); }, [initInSomeday]);
@@ -242,11 +222,11 @@ const GameCard = ({ game, onAddEvent, onAddToSomeday, darkMode, stagger, initInS
         }}
         onClick={() => setExpanded(e => !e)}
       >
-        {GAME_COVERS[game.name] && !imgError ? (
+        {imgUrl ? (
           <img
-            src={`https://images.weserv.nl/?url=${encodeURIComponent(GAME_COVERS[game.name])}&w=300`}
+            src={imgUrl}
             alt={game.name}
-            onError={() => setImgError(true)}
+            onError={() => setImgUrl("")}
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
           />
         ) : (
