@@ -5,23 +5,23 @@ import { supabase } from "../supabaseClient";
 
 // ─── Color tokens ─────────────────────────────────────────────────────────────
 // Someday palette: Oat, Linen, Stone, Amber, Char.
-const OAT          = "#F1E6D8";
-const LINEN        = "#FFF8ED";
+const OAT          = "#F0E6D6";
+const LINEN        = "#FAF6F0";
 const STONE        = "#8A8178";
-const STONE_LIGHT  = "#D8CFC3";
-const STONE_MUTED  = "rgba(138,129,120,0.14)";
-const CHAR         = "#2F2923";
-const CHAR_SOFT    = "#473F37";
+const STONE_LIGHT  = "#D4C9BB";
+const STONE_MUTED  = "rgba(138,129,120,0.12)";
+const CHAR         = "#2A2420";
+const CHAR_SOFT    = "#3E3630";
 const AMBER        = "#C88435";
 const AMBER_DARK   = "#8B5725";
-const AMBER_MUTED  = "rgba(200,132,53,0.15)";
-const AMBER_BORDER = "rgba(200,132,53,0.35)";
+const AMBER_MUTED  = "rgba(200,132,53,0.10)";
+const AMBER_BORDER = "rgba(200,132,53,0.28)";
 const TEAL        = "#0d9488";
-const TEAL_MUTED  = "rgba(45,212,191,0.15)";
-const TEAL_BORDER = "rgba(45,212,191,0.35)";
+const TEAL_MUTED  = "rgba(13,148,136,0.10)";
+const TEAL_BORDER = "rgba(13,148,136,0.30)";
 const LAVENDER_LIGHT = "#f5f3ff";
-const LAVENDER_DARK_BG = "rgba(168,85,247,0.12)";
-const LAVENDER_BORDER = "rgba(168,85,247,0.28)";
+const LAVENDER_DARK_BG = "rgba(168,85,247,0.10)";
+const LAVENDER_BORDER = "rgba(168,85,247,0.25)";
 const LAVENDER_TEXT = "#7c3aed";
 const LAVENDER_TEXT_DARK = "#c4b5fd";
 
@@ -77,14 +77,14 @@ const DREAMSHELF_IMAGES = {
   b6: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=600&q=80",
   b7: "https://www.prada.com/content/dam/pradabkg_products/1/1BA/1BA457/NZVF0046/1BA457_NZV_F0046_V_EOM_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg",
   b8: "https://assets.hermes.com/is/image/hermesedito/P_169_KELLY_HEADER?fit=wrap%2C0&wid=1920&resMode=sharp2&op_usm=1%2C1%2C6%2C0",
-  j1: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80",
-  j2: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&q=80",
-  j3: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=80",
-  j4: "https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=600&q=80",
-  j5: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=600&q=80",
-  j6: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&q=80",
-  j7: "https://images.unsplash.com/photo-1506630448388-4e683c67ddb0?w=600&q=80",
-  j8: "https://images.unsplash.com/photo-1531995811006-35cb42e1a022?w=600&q=80",
+  j1: "https://source.unsplash.com/featured/?gold,bracelet,hand,luxury",
+  j2: "https://source.unsplash.com/featured/?diamond,ring,engagement,hand",
+  j3: "https://source.unsplash.com/featured/?gold,necklace,elegant,jewelry",
+  j4: "https://source.unsplash.com/featured/?bracelet,stacked,jewelry,style",
+  j5: "https://source.unsplash.com/featured/?chain,necklace,fashion,editorial",
+  j6: "https://source.unsplash.com/featured/?bracelet,silver,jewelry,closeup",
+  j7: "https://source.unsplash.com/featured/?snake,ring,luxury,jewelry",
+  j8: "https://source.unsplash.com/featured/?gold,hoop,earrings,minimal",
   s1: "https://images.stockx.com/images/Air-Jordan-1-Retro-High-OG-Chicago-Reimagined-Product.jpg?fit=fill&bg=FFFFFF&w=140&h=75&q=57&dpr=2&trim=color&updated_at=1738193358",
   s2: "https://encrypted-tbn3.gstatic.com/shopping?q=tbn:ANd9GcQhynJlN1yrf037AvDWWDJYI5wC6c8CMshpSyIYM1g90oPfwzSlqUr25x1gNiQSmlfjKeIIxZYrJEfmubsRbgcK54vE7L_ZewlPuLmYVAlPnODL85ERZwoW",
   s3: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=600&q=80",
@@ -101,22 +101,14 @@ const DREAMSHELF_IMAGES = {
   a6: "https://images.unsplash.com/photo-1483721310020-03333e577078?w=600&q=80",
   a7: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80",
   a8: "https://images.unsplash.com/photo-1517336714739-489689fd1ca8?w=600&q=80",
-  h1: "https://images.unsplash.com/photo-1516924962500-2b4b3b99ea02?w=600&q=80",
-  h2: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600&q=80",
-  h3: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&q=80",
-  h4: "https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=600&q=80",
-  h5: "https://images.unsplash.com/photo-1495707902641-75cac588d2e9?w=600&q=80",
-  h6: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80",
-  h7: "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?w=600&q=80",
-  h8: "https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?w=600&q=80",
-  c1: "https://source.unsplash.com/featured/?red,wine,opus,one,glass,moody",
-  c2: "https://source.unsplash.com/featured/?champagne,domperignon,celebration,toast",
-  c3: "https://source.unsplash.com/featured/?fine,wine,cellar,bottle,aged",
-  c4: "https://source.unsplash.com/featured/?cabernet,wine,luxury,table,dinner",
-  c5: "https://source.unsplash.com/featured/?champagne,krug,bubbles,glass,elegant",
-  c6: "https://source.unsplash.com/featured/?italian,wine,tuscany,vineyard,goldenhour",
-  c7: "https://source.unsplash.com/featured/?white,wine,burgundy,restaurant,fine,dining",
-  c8: "https://source.unsplash.com/featured/?wine,cellar,cabinet,luxury,interior",
+  h1: "https://source.unsplash.com/featured/?guitar,lespaul,vintage,studio",
+  h2: "https://source.unsplash.com/featured/?rangefinder,camera,street,photography",
+  h3: "https://source.unsplash.com/featured/?porsche,911,car,drive,coastal",
+  h4: "https://source.unsplash.com/featured/?grand,piano,steinway,interior,luxury",
+  h5: "https://source.unsplash.com/featured/?mediumformat,camera,photography,editorial",
+  h6: "https://source.unsplash.com/featured/?electric,guitar,stratocaster,stage",
+  h7: "https://source.unsplash.com/featured/?ferrari,sports,car,red,luxury",
+  h8: "https://source.unsplash.com/featured/?art,screenprint,warhol,modern,gallery",
 };
 
 // ─── Category config ──────────────────────────────────────────────────────────
@@ -374,66 +366,73 @@ function ItemModal({ item, isSaved, onSomeday, onMilestone, onShare, onClose, da
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[10100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-[10100] flex items-end sm:items-center justify-center bg-black/55 backdrop-blur-sm"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
-      <div className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden border" style={{ background: dm ? CHAR : LINEN, borderColor: dm ? "rgba(241,230,216,0.16)" : STONE_LIGHT }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap');`}</style>
+      <div className="w-full max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[92vh] flex flex-col overflow-hidden border"
+        style={{
+          background: dm ? CHAR : LINEN,
+          borderColor: dm ? "rgba(250,246,240,0.10)" : STONE_LIGHT,
+          boxShadow: dm ? '0 8px 40px rgba(0,0,0,0.40)' : '0 8px 32px rgba(42,36,32,0.12)',
+        }}>
         {/* Image / emoji header */}
         <div className="relative flex-shrink-0">
           {item.image && !imageFailed ? (
             <img
               src={item.image}
               alt={item.name}
-              className="w-full h-56 object-contain p-8"
+              className="w-full h-60 object-contain p-8"
               style={{ background: dm ? CHAR_SOFT : OAT }}
               onError={() => setImageFailed(true)}
             />
           ) : (
-            <div className="w-full h-56 flex flex-col items-center justify-center gap-3" style={{ background: dm ? CHAR_SOFT : `linear-gradient(135deg, ${LINEN}, ${OAT})` }}>
-              <span className="text-7xl">{item.emoji || cat.emoji}</span>
-              <span className="text-xs uppercase tracking-widest font-medium" style={{ color: AMBER_DARK }}>{item.brand}</span>
+            <div className="w-full h-60 flex flex-col items-center justify-center gap-3" style={{ background: dm ? CHAR_SOFT : OAT }}>
+              <span className="text-6xl">{item.emoji || cat.emoji}</span>
+              <span className="text-[10px] uppercase tracking-[0.22em] font-semibold" style={{ color: AMBER_DARK }}>{item.brand}</span>
             </div>
           )}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/50 text-slate-300 hover:text-white flex items-center justify-center text-sm transition-colors"
+            className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-sm transition-colors"
+            style={{ background: 'rgba(0,0,0,0.35)', color: 'rgba(255,255,255,0.75)' }}
           >✕</button>
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto flex-1 p-6 pb-2">
-          <p className="text-xs font-semibold tracking-widest uppercase mb-1" style={{ color: STONE }}>
+        <div className="overflow-y-auto flex-1 px-6 pt-5 pb-2">
+          <p className="text-[10px] font-semibold tracking-[0.2em] uppercase mb-1.5" style={{ color: STONE }}>
             {item.brand}
           </p>
-          <h2 className={`text-3xl font-bold leading-tight mb-2 ${dm ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: "'Caveat', cursive" }}>
+          <h2 className="leading-snug mb-2" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '1.75rem', fontWeight: 600, color: dm ? LINEN : CHAR }}>
             {item.name}
           </h2>
 
           {item.priceRange && (
-            <p className="text-2xl font-bold mb-3" style={{ color: AMBER_DARK, fontFamily: "'Caveat', cursive" }}>
+            <p className="text-xl font-medium mb-3" style={{ color: AMBER_DARK, fontFamily: "'Cormorant Garamond', serif" }}>
               {item.priceRange}
             </p>
           )}
 
-          <p className={`text-sm leading-relaxed mb-4 italic ${dm ? 'text-slate-400' : 'text-slate-500'}`}>
+          <p className="text-sm leading-relaxed mb-4 italic" style={{ color: dm ? "rgba(250,246,240,0.55)" : STONE }}>
             {item.description}
           </p>
         </div>
 
         {/* Actions */}
-        <div className={`flex-shrink-0 p-6 pt-3 border-t flex flex-col gap-2.5 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] ${dm ? 'border-white/5' : 'border-slate-100'}`}>
+        <div className="flex-shrink-0 px-6 pt-3 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] flex flex-col gap-2.5 border-t"
+          style={{ borderColor: dm ? 'rgba(250,246,240,0.07)' : 'rgba(212,201,187,0.4)' }}>
           <button
             onClick={handleSomeday}
-            className="w-full rounded-2xl py-3 text-base border transition-all duration-200"
+            className="w-full rounded-xl py-3 text-base border transition-all duration-200"
             style={{ background: dm ? TEAL_MUTED : '#f0fdfa', border: `1px solid ${TEAL_BORDER}`, color: TEAL, fontFamily: "'Caveat', cursive", fontWeight: 700 }}
           >
             {saved ? "✓ On my Someday List" : "+ Add to Someday List"}
           </button>
           <button
             onClick={() => { onMilestone(item); onClose(); }}
-            className="w-full rounded-2xl py-3 text-base transition-all text-center border"
-            style={{ background: dm ? 'rgba(139,92,246,0.12)' : '#f5f3ff', border: '1px solid rgba(139,92,246,0.28)', color: dm ? '#c4b5fd' : '#6d28d9', fontFamily: "'Caveat', cursive", fontWeight: 700 }}
+            className="w-full rounded-xl py-3 text-base transition-all text-center border"
+            style={{ background: dm ? LAVENDER_DARK_BG : LAVENDER_LIGHT, border: `1px solid ${LAVENDER_BORDER}`, color: dm ? LAVENDER_TEXT_DARK : LAVENDER_TEXT, fontFamily: "'Caveat', cursive", fontWeight: 700 }}
           >
             ✨ Make it happen
           </button>
@@ -455,45 +454,46 @@ const ItemCard = React.memo(function ItemCard({ item, savedIds, onOpen, darkMode
   return (
     <div
       onClick={() => onOpen(item)}
-      className="border rounded-[26px] overflow-hidden transition-all duration-200 flex flex-col cursor-pointer group hover:-translate-y-1"
+      className="border overflow-hidden transition-all duration-200 flex flex-col cursor-pointer group hover:-translate-y-0.5"
       style={{
         background: dm ? CHAR_SOFT : LINEN,
-        borderColor: dm ? "rgba(241,230,216,0.12)" : STONE_LIGHT,
+        borderColor: dm ? "rgba(250,246,240,0.09)" : STONE_LIGHT,
+        borderRadius: '16px',
         boxShadow: dm
-          ? '0 16px 34px rgba(0,0,0,0.24)'
-          : '0 14px 32px rgba(47,41,35,0.08)',
+          ? '0 4px 20px rgba(0,0,0,0.18)'
+          : '0 2px 12px rgba(42,36,32,0.06)',
       }}
     >
       {/* Image / emoji */}
-      <div className={`w-full h-52 flex flex-col items-center justify-center gap-2 relative`} style={{ background: dm ? CHAR : `linear-gradient(135deg, ${LINEN}, ${OAT})` }}>
+      <div className={`w-full h-56 flex flex-col items-center justify-center gap-2 relative`} style={{ background: dm ? CHAR : OAT, borderRadius: '16px 16px 0 0' }}>
         {item.image && !imageFailed ? (
           <img
             src={item.image}
             alt={item.name}
-            className="w-full h-52 object-contain p-6 transition-transform duration-300 group-hover:scale-[1.03]"
+            className="w-full h-56 object-contain p-7 transition-transform duration-300 group-hover:scale-[1.02]"
             onError={() => setImageFailed(true)}
           />
         ) : (
           <>
-            <span className="text-6xl">{item.emoji}</span>
-            <span className="dream-shelf-product-text text-[11px] uppercase tracking-[0.18em] font-semibold" style={{ color: AMBER_DARK }}>{item.brand}</span>
+            <span className="text-5xl">{item.emoji}</span>
+            <span className="dream-shelf-product-text text-[10px] uppercase tracking-[0.22em] font-semibold" style={{ color: AMBER_DARK }}>{item.brand}</span>
           </>
         )}
         {isSaved && (
-          <div className="dream-shelf-product-text absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-md text-white" style={{ background: '#0d9488' }}>
+          <div className="dream-shelf-product-text absolute top-3 right-3 text-[9px] font-bold px-2 py-0.5 rounded-md text-white" style={{ background: '#0d9488', letterSpacing: '0.06em' }}>
             ✓ Someday
           </div>
         )}
       </div>
 
-      <div className="p-5 flex flex-col flex-1">
-        <p className="dream-shelf-product-text text-[11px] uppercase tracking-[0.2em] mb-1 font-semibold" style={{ color: STONE }}>{item.brand}</p>
-        <h3 className={`dream-shelf-product-text text-2xl font-semibold leading-tight mb-2 flex-1 line-clamp-2 ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
+      <div className="px-5 pt-4 pb-5 flex flex-col flex-1">
+        <p className="dream-shelf-product-text text-[10px] uppercase tracking-[0.22em] mb-1.5 font-semibold" style={{ color: STONE }}>{item.brand}</p>
+        <h3 className={`dream-shelf-product-text text-[1.35rem] font-semibold leading-snug mb-2 flex-1 line-clamp-2 ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
           {item.name}
         </h3>
 
         {item.priceRange && (
-          <p className="dream-shelf-product-text text-xl font-semibold mb-0" style={{ color: AMBER_DARK }}>
+          <p className="dream-shelf-product-text text-lg font-medium mb-0" style={{ color: AMBER_DARK }}>
             {item.priceRange}
           </p>
         )}
@@ -736,7 +736,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   const dm = darkMode;
   const communityFeedRef = useRef(null);
 
-  const [activeCategory, setActiveCategory] = useState(null);
+  const [activeCategory, setActiveCategory] = useState(CATEGORIES[0]);
   const [activeSubFilter, setActiveSubFilter] = useState("all");
   const [items, setItems]                   = useState([]);
   const [communityPosts, setCommunityPosts] = useState([]);
@@ -751,6 +751,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   const [searchResults, setSearchResults]   = useState([]);
   const [searching, setSearching]           = useState(false);
   const [searchError, setSearchError]       = useState("");
+  const hasFetchedRef = useRef(false);
   const imageFetchedRef = useRef(new Set());
   const imageRequestsRef = useRef(new Map());
   const searchRequestIdRef = useRef(0);
@@ -801,6 +802,12 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
       setLoading(false);
     }, 250);
   }, []);
+
+  useEffect(() => {
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+    loadCategory(CATEGORIES[0]);
+  }, [loadCategory]);
 
   // ── Handlers ──
   const normalizeSearchItems = useCallback((rawItems = [], query = "") => (
@@ -1074,37 +1081,21 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen font-['DM_Sans']" style={{ background: dm ? CHAR : OAT, color: dm ? LINEN : CHAR }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Cormorant+Garamond:wght@400;500;600;700&display=swap'); .font-handwritten, .dream-shelf-pill { font-family: 'Caveat', cursive !important; } .dream-shelf-product-text { font-family: 'Cormorant Garamond', serif !important; }`}</style>
-      <div className="max-w-3xl mx-auto px-4 py-6 pb-24">
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap'); .font-handwritten { font-family: 'Caveat', cursive !important; } .dream-shelf-pill { font-family: 'Caveat', cursive !important; } .dream-shelf-product-text { font-family: 'Cormorant Garamond', serif !important; }`}</style>
+      <div className="max-w-3xl mx-auto px-5 py-5 pb-24">
 
         {/* ── Hero ── */}
-        <div className="relative rounded-3xl p-8 mb-6 overflow-hidden border"
-          style={{
-            background: dm
-              ? `linear-gradient(135deg, ${CHAR} 0%, ${CHAR_SOFT} 46%, ${AMBER_DARK} 100%)`
-              : `linear-gradient(135deg, ${LINEN} 0%, ${OAT} 48%, ${STONE_LIGHT} 100%)`,
-            borderColor: dm ? "rgba(241,230,216,0.24)" : STONE_LIGHT,
-            borderWidth: 1.5,
-            boxShadow: dm
-              ? '0 24px 64px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.18)'
-              : '0 20px 50px rgba(47,41,35,0.12), inset 0 1px 0 rgba(255,255,255,0.82)',
-          }}>
-          <div className="absolute right-10 top-8 text-2xl opacity-30 -rotate-6 select-none pointer-events-none">✨</div>
-
+        <div className="relative px-1 pt-2 pb-7 mb-5">
           <div className="relative z-10">
             {onBack && (
-              <button onClick={onBack} className={`w-9 h-9 rounded-xl flex items-center justify-center active:opacity-70 flex-shrink-0 mb-4 ${dm ? 'bg-white/12 text-white border border-white/15' : 'bg-white/80 text-slate-600 border border-slate-200/70'}`} aria-label="Back">
+              <button onClick={onBack} className={`w-9 h-9 rounded-xl flex items-center justify-center active:opacity-70 flex-shrink-0 mb-5 ${dm ? 'bg-white/8 text-white border border-white/12' : 'bg-white/70 text-slate-600 border border-slate-200/60'}`} aria-label="Back">
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 4l-5 5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </button>
             )}
-            <h1 className="font-handwritten text-5xl font-bold leading-tight mb-2 bg-gradient-to-r bg-clip-text text-transparent"
-              style={{
-                backgroundImage: dm ? `linear-gradient(90deg, ${LINEN}, ${OAT})` : `linear-gradient(90deg, ${CHAR}, ${AMBER_DARK})`,
-                fontFamily: "'Caveat', cursive",
-              }}>
+            <h1 className="font-handwritten text-6xl font-bold leading-none mb-3" style={{ color: dm ? LINEN : CHAR }}>
               Someday
             </h1>
-            <p className="text-sm leading-relaxed max-w-sm" style={{ color: dm ? "rgba(255,248,237,0.82)" : STONE }}>
+            <p className="text-sm leading-relaxed max-w-xs" style={{ color: dm ? "rgba(250,246,240,0.55)" : STONE, letterSpacing: '0.01em' }}>
               Some dreams take you somewhere. Others you take with you.
             </p>
           </div>
@@ -1112,13 +1103,14 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
         {/* ── Category strip ── */}
         {/* Search / add your own */}
+        {/* ── Search / add your own ── */}
         <form
           onSubmit={handleProductSearch}
-          className="rounded-3xl border p-3 mb-4"
+          className="rounded-2xl border p-3 mb-5"
           style={{
             background: dm ? CHAR_SOFT : LINEN,
-            borderColor: dm ? "rgba(241,230,216,0.10)" : STONE_LIGHT,
-            boxShadow: dm ? '0 14px 30px rgba(0,0,0,0.20)' : '0 12px 28px rgba(47,41,35,0.08)',
+            borderColor: dm ? "rgba(250,246,240,0.08)" : STONE_LIGHT,
+            boxShadow: dm ? '0 2px 12px rgba(0,0,0,0.16)' : '0 2px 10px rgba(42,36,32,0.05)',
           }}
         >
           <div className="flex gap-2">
@@ -1126,14 +1118,14 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search a dream item..."
-              className="flex-1 min-w-0 rounded-2xl px-4 py-3 text-sm outline-none border"
-              style={{ background: dm ? CHAR : OAT, borderColor: dm ? "rgba(241,230,216,0.12)" : STONE_LIGHT, color: dm ? LINEN : CHAR }}
+              className="flex-1 min-w-0 rounded-xl px-4 py-2.5 text-sm outline-none border"
+              style={{ background: dm ? CHAR : OAT, borderColor: dm ? "rgba(250,246,240,0.10)" : STONE_LIGHT, color: dm ? LINEN : CHAR }}
             />
             <button
               type="submit"
               disabled={!searchQuery.trim() || searching}
-              className="dream-shelf-pill flex-shrink-0 rounded-2xl px-4 py-2 text-base font-bold border disabled:opacity-40"
-              style={{ background: dm ? AMBER_MUTED : OAT, border: `1px solid ${AMBER_BORDER}`, color: dm ? LINEN : AMBER_DARK }}
+              className="dream-shelf-pill flex-shrink-0 rounded-xl px-4 py-2 text-base font-bold border disabled:opacity-40"
+              style={{ background: 'transparent', border: `1px solid ${AMBER_BORDER}`, color: dm ? AMBER : AMBER_DARK }}
             >
               {searching ? "Finding..." : "Find it"}
             </button>
@@ -1161,19 +1153,19 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         {searchResults.length > 0 && (
           <>
             <div className="flex items-center justify-between gap-3 mb-3">
-              <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500">
+              <p className="text-[10px] uppercase tracking-[0.16em]" style={{ color: STONE }}>
                 Search results for "{searchQuery.trim()}"
               </p>
               <button
                 type="button"
                 onClick={clearProductSearch}
                 className="dream-shelf-pill text-sm font-bold"
-                style={{ color: dm ? '#9ca3af' : '#78716c' }}
+                style={{ color: STONE }}
               >
                 Back to curated shelf
               </button>
             </div>
-            <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-5 mb-6">
+            <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-4 mb-6">
               {searchResults.map(item => {
                 const itemWithImage = { ...item, image: item.image || itemImages[getDreamShelfImageKey(item)] || "" };
                 return (
@@ -1190,58 +1182,43 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
           </>
         )}
 
-        <div className="flex gap-1.5 mb-4 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+        <div className="flex gap-2 mb-4 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
           {CATEGORIES.map(cat => (
             <button
               key={cat.id}
               onClick={() => handleCategoryClick(cat)}
-              className="dream-shelf-pill flex-shrink-0 rounded-full px-2.5 py-0.5 text-sm font-bold transition-all duration-200 border focus:outline-none relative overflow-hidden"
+              className="dream-shelf-pill flex-shrink-0 rounded-full px-3 py-1 text-sm font-bold transition-all duration-200 border focus:outline-none"
               style={{
                 background: activeCategory?.id === cat.id
-                  ? (dm
-                    ? `linear-gradient(135deg, ${CHAR_SOFT}, ${AMBER_DARK})`
-                    : `linear-gradient(135deg, ${LINEN}, ${OAT}, ${STONE_LIGHT})`)
-                  : (dm ? "rgba(241,230,216,0.06)" : LINEN),
+                  ? (dm ? CHAR_SOFT : LINEN)
+                  : 'transparent',
                 border: activeCategory?.id === cat.id
-                  ? `1px solid ${dm ? "rgba(241,230,216,0.28)" : "rgba(138,129,120,0.42)"}`
-                  : `1px solid ${dm ? "rgba(241,230,216,0.10)" : STONE_LIGHT}`,
+                  ? `1px solid ${dm ? "rgba(250,246,240,0.22)" : STONE_LIGHT}`
+                  : `1px solid ${dm ? "rgba(250,246,240,0.08)" : "rgba(212,201,187,0.5)"}`,
                 color: activeCategory?.id === cat.id ? (dm ? LINEN : CHAR) : STONE,
                 fontFamily: "'Caveat', cursive",
                 boxShadow: activeCategory?.id === cat.id
-                  ? (dm
-                    ? '0 3px 10px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.20)'
-                    : '0 3px 10px rgba(47,41,35,0.08), inset 0 1px 0 rgba(255,255,255,0.72)')
+                  ? (dm ? '0 2px 8px rgba(0,0,0,0.18)' : '0 2px 8px rgba(42,36,32,0.07)')
                   : 'none',
               }}
             >
-              {activeCategory?.id === cat.id && (
-                <span
-                  aria-hidden="true"
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    background: `linear-gradient(116deg, transparent 0%, transparent 28%, ${dm ? "rgba(255,248,237,0.18)" : "rgba(255,248,237,0.72)"} 42%, transparent 56%, transparent 100%)`,
-                  }}
-                />
-              )}
-              <span className="relative z-10">
               {cat.emoji} {cat.label}
-              </span>
             </button>
           ))}
         </div>
 
         {/* ── Sub-filter strip (contextual) ── */}
         {subFilters.length > 0 && (
-          <div className="flex gap-1.5 mb-6 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          <div className="flex gap-2 mb-6 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
             {subFilters.map(sf => (
               <button
                 key={sf.id}
                 onClick={() => handleSubFilter(sf.id)}
-                className="dream-shelf-pill flex-shrink-0 rounded-full px-2.5 py-0.5 text-sm font-bold transition-all duration-200 border focus:outline-none"
+                className="dream-shelf-pill flex-shrink-0 rounded-full px-3 py-0.5 text-sm font-bold transition-all duration-200 border focus:outline-none"
                 style={{
                   background: activeSubFilter === sf.id ? STONE_MUTED : 'transparent',
-                  border: `1px solid ${activeSubFilter === sf.id ? STONE : (dm ? "rgba(241,230,216,0.10)" : STONE_LIGHT)}`,
-                  color: activeSubFilter === sf.id ? (dm ? LINEN : CHAR) : STONE,
+                  border: `1px solid ${activeSubFilter === sf.id ? STONE_LIGHT : (dm ? "rgba(250,246,240,0.08)" : "rgba(212,201,187,0.4)")}`,
+                  color: activeSubFilter === sf.id ? (dm ? LINEN : CHAR_SOFT) : STONE,
                   fontFamily: "'Caveat', cursive",
                 }}
               >
@@ -1254,9 +1231,9 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         {/* ── Featured community post ── */}
         {featured && (
           <>
-            <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">Most dreamed about this week</p>
-            <div className="border rounded-3xl overflow-hidden mb-8 transition-colors cursor-pointer hover:-translate-y-0.5 transition-transform"
-              style={{ background: dm ? CHAR_SOFT : LINEN, borderColor: dm ? "rgba(241,230,216,0.12)" : STONE_LIGHT }}
+            <p className="text-[10px] uppercase tracking-[0.16em] mb-3" style={{ color: STONE }}>Most dreamed about this week</p>
+            <div className="border overflow-hidden mb-8 transition-transform duration-200 cursor-pointer hover:-translate-y-0.5"
+              style={{ background: dm ? CHAR_SOFT : LINEN, borderColor: dm ? "rgba(250,246,240,0.09)" : STONE_LIGHT, borderRadius: '16px', boxShadow: dm ? '0 4px 20px rgba(0,0,0,0.16)' : '0 2px 12px rgba(42,36,32,0.06)' }}
               onClick={() => setSelectedItem({
                 id: featured.id,
                 name: featured.product_name,
@@ -1268,34 +1245,34 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                 emoji: CATEGORIES.find(c => c.id === featured.category)?.emoji || "✨",
               })}>
               <div className="grid grid-cols-2 max-sm:grid-cols-1">
-                <div className="h-52 flex items-center justify-center text-7xl" style={{ background: dm ? CHAR : `linear-gradient(135deg, ${LINEN}, ${OAT})` }}>
+                <div className="h-52 flex items-center justify-center" style={{ background: dm ? CHAR : OAT }}>
                   {featuredImage ? (
-                    <img src={featuredImage} alt={featured.product_name} className="w-full h-full object-contain p-5" />
+                    <img src={featuredImage} alt={featured.product_name} className="w-full h-full object-contain p-6" />
                   ) : (
-                    CATEGORIES.find(c => c.id === featured.category)?.emoji || "✨"
+                    <span className="text-6xl">{CATEGORIES.find(c => c.id === featured.category)?.emoji || "✨"}</span>
                   )}
                 </div>
                 <div className="p-6 flex flex-col justify-center">
-                  <p className="dream-shelf-product-text text-[11px] uppercase tracking-[0.2em] mb-1 font-semibold" style={{ color: AMBER_DARK }}>
-                    ✨ Most dreamed
+                  <p className="dream-shelf-product-text text-[10px] uppercase tracking-[0.2em] mb-1.5 font-semibold" style={{ color: AMBER_DARK }}>
+                    Most dreamed
                   </p>
-                  <h2 className={`dream-shelf-product-text text-2xl font-semibold leading-tight mb-1 ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
+                  <h2 className={`dream-shelf-product-text text-xl font-semibold leading-snug mb-1 ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
                     {featured.product_name}
                   </h2>
-                  {featured.product_brand && <p className="dream-shelf-product-text text-[11px] uppercase tracking-[0.2em] mb-2 font-semibold" style={{ color: STONE }}>{featured.product_brand}</p>}
+                  {featured.product_brand && <p className="dream-shelf-product-text text-[10px] uppercase tracking-[0.2em] mb-2 font-semibold" style={{ color: STONE }}>{featured.product_brand}</p>}
                   {featured.review && (
                     <p className="text-sm text-slate-500 italic leading-relaxed mb-4 line-clamp-3">"{featured.review}"</p>
                   )}
-                  <div className="flex gap-3 flex-wrap mb-4">
+                  <div className="flex gap-4 flex-wrap mb-4">
                     {featured.product_price && (
                       <div className="flex flex-col">
-                        <span className="dream-shelf-product-text text-xl font-semibold" style={{ color: AMBER_DARK }}>{featured.product_price}</span>
-                        <span className="text-[10px] uppercase text-slate-500 tracking-wide">Price</span>
+                        <span className="dream-shelf-product-text text-lg font-medium" style={{ color: AMBER_DARK }}>{featured.product_price}</span>
+                        <span className="text-[10px] uppercase tracking-wide" style={{ color: STONE }}>Price</span>
                       </div>
                     )}
                     <div className="flex flex-col">
-                      <span className="dream-shelf-product-text text-xl font-semibold" style={{ color: STONE }}>{featured.likes_count ?? 0}</span>
-                      <span className="text-[10px] uppercase text-slate-500 tracking-wide">Saves</span>
+                      <span className="dream-shelf-product-text text-lg font-medium" style={{ color: STONE }}>{featured.likes_count ?? 0}</span>
+                      <span className="text-[10px] uppercase tracking-wide" style={{ color: STONE }}>Saves</span>
                     </div>
                   </div>
                   <button
@@ -1303,7 +1280,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                       event.stopPropagation();
                       if (!featuredSaved) handleFeaturedSomeday(featured, featuredImage);
                     }}
-                    className="self-start px-4 py-2 rounded-xl text-sm font-['Caveat'] font-bold border transition-all"
+                    className="self-start px-4 py-1.5 rounded-xl text-sm font-['Caveat'] font-bold border transition-all"
                     style={{ background: dm ? TEAL_MUTED : '#f0fdfa', border: `1px solid ${TEAL_BORDER}`, color: TEAL, fontFamily: "'Caveat', cursive" }}
                   >
                     {featuredSaved ? "✓ Someday" : "+ Someday"}
@@ -1315,20 +1292,20 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         )}
 
         {/* ── Item grid ── */}
-        <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">
+        <p className="text-[10px] uppercase tracking-[0.16em] mb-3" style={{ color: STONE }}>
           {activeCategory
             ? `${activeCategory.emoji} ${activeCategory.label}${activeSubFilter !== "all" ? ` · ${SUB_FILTERS[activeCategory.id]?.find(f => f.id === activeSubFilter)?.label || ""}` : ""}`
             : "No category selected"}
         </p>
 
         {loading ? (
-          <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-5 mb-8">
+          <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-4 mb-8">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="rounded-[26px] h-80 animate-pulse border" style={{ background: dm ? CHAR_SOFT : OAT, borderColor: dm ? "rgba(241,230,216,0.10)" : STONE_LIGHT }} />
+              <div key={i} className="h-80 animate-pulse border" style={{ borderRadius: '16px', background: dm ? CHAR_SOFT : OAT, borderColor: dm ? "rgba(250,246,240,0.08)" : STONE_LIGHT }} />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-5 mb-8">
+          <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-4 mb-8">
             {items.length > 0 ? items.map(item => {
               const itemWithImage = { ...item, image: item.image || itemImages[getDreamShelfImageKey(item)] || "" };
               return (
@@ -1341,10 +1318,10 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                 />
               );
             }) : (
-              <div className="col-span-2 max-sm:col-span-1 text-center py-16 text-slate-400">
-                <div className="text-5xl mb-4">✨</div>
+              <div className="col-span-2 max-sm:col-span-1 text-center py-16" style={{ color: STONE }}>
+                <div className="text-4xl mb-4 opacity-40">✦</div>
                 <p className="font-['Caveat'] text-2xl mb-1">{activeCategory ? "Nothing here yet" : "Search or choose a category"}</p>
-                <p className="text-sm">{activeCategory ? "Try a different filter" : "Category filters can stay turned off."}</p>
+                <p className="text-sm opacity-60">{activeCategory ? "Try a different filter" : "Category filters can stay turned off."}</p>
               </div>
             )}
           </div>
@@ -1352,50 +1329,34 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
         {/* ── CTA Card ── */}
         <div style={{
-          borderRadius: '24px',
-          background: dm
-            ? `linear-gradient(135deg, ${CHAR} 0%, ${CHAR_SOFT} 45%, ${AMBER_DARK} 100%)`
-            : `linear-gradient(135deg, ${LINEN} 0%, ${OAT} 46%, ${STONE_LIGHT} 100%)`,
-          border: `1.5px solid ${dm ? "rgba(241,230,216,0.22)" : "rgba(138,129,120,0.38)"}`,
-          boxShadow: dm
-            ? '0 20px 56px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.16)'
-            : '0 18px 44px rgba(47,41,35,0.12), inset 0 1px 0 rgba(255,255,255,0.72)',
-          padding: '30px 24px',
+          borderRadius: '16px',
+          background: dm ? CHAR_SOFT : LINEN,
+          border: `1px solid ${dm ? "rgba(250,246,240,0.10)" : STONE_LIGHT}`,
+          boxShadow: dm ? '0 4px 20px rgba(0,0,0,0.16)' : '0 2px 12px rgba(42,36,32,0.06)',
+          padding: '28px 24px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: '6px',
           textAlign: 'center',
-          position: 'relative',
-          overflow: 'hidden',
           marginBottom: '32px',
         }}>
-          <div style={{
-            position: 'absolute',
-            inset: 0,
-            background: [
-              `radial-gradient(ellipse at 18% 8%, ${dm ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.68)'}, transparent 40%)`,
-              `linear-gradient(116deg, transparent 0%, transparent 30%, ${dm ? "rgba(255,248,237,0.16)" : "rgba(255,248,237,0.62)"} 41%, ${dm ? "rgba(200,132,53,0.10)" : "rgba(216,207,195,0.28)"} 47%, transparent 58%, transparent 100%)`,
-            ].join(', '),
-            pointerEvents: 'none',
-          }} />
-          <div style={{ position: 'relative', zIndex: 1, fontSize: '22px', marginBottom: '2px', opacity: 0.72 }}>✨</div>
-          <p style={{ position: 'relative', zIndex: 1, fontSize: '20px', fontWeight: 700, color: dm ? LINEN : CHAR, fontFamily: "'Caveat', cursive", margin: 0, textShadow: dm ? '0 1px 12px rgba(0,0,0,0.35)' : '0 1px 8px rgba(255,255,255,0.55)' }}>
+          <p style={{ fontSize: '20px', fontWeight: 700, color: dm ? LINEN : CHAR, fontFamily: "'Caveat', cursive", margin: 0 }}>
             Something on your dream list?
           </p>
-          <p style={{ position: 'relative', zIndex: 1, fontSize: '15px', color: dm ? "rgba(255,248,237,0.72)" : STONE, margin: '0 0 12px', fontFamily: "'Caveat', cursive" }}>
+          <p style={{ fontSize: '14px', color: STONE, margin: '0 0 14px', letterSpacing: '0.01em' }}>
             Share what you're saving for with your friends
           </p>
           <button
             onClick={() => setSharingItem({ name: "", brand: "", image: "", priceRange: "", category: activeCategory?.id || "watches", description: "" })}
-            style={{ position: 'relative', zIndex: 1, background: dm ? 'rgba(47,41,35,0.72)' : 'rgba(255,248,237,0.76)', color: dm ? LINEN : CHAR, border: `1px solid ${dm ? "rgba(255,248,237,0.24)" : "rgba(138,129,120,0.28)"}`, borderRadius: '50px', padding: '11px 28px', fontSize: '18px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: "'Caveat', cursive", boxShadow: dm ? 'inset 0 1px 0 rgba(255,255,255,0.12)' : '0 8px 20px rgba(47,41,35,0.10), inset 0 1px 0 rgba(255,255,255,0.9)' }}
+            style={{ background: 'transparent', color: dm ? LINEN : CHAR, border: `1px solid ${dm ? "rgba(250,246,240,0.18)" : STONE_LIGHT}`, borderRadius: '50px', padding: '9px 26px', fontSize: '17px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: "'Caveat', cursive" }}
           >
             Add to Someday
           </button>
         </div>
 
         {/* ── Community feed ── */}
-        <p ref={communityFeedRef} className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">
+        <p ref={communityFeedRef} className="text-[10px] uppercase tracking-[0.16em] mb-3" style={{ color: STONE }}>
           What friends are dreaming about
         </p>
         <div className="flex flex-col gap-2.5">
