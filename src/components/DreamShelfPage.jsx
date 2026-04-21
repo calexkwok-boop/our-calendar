@@ -4,14 +4,18 @@ import { Camera } from "lucide-react";
 import { supabase } from "../supabaseClient";
 
 // ─── Color tokens ─────────────────────────────────────────────────────────────
-// Gold/silver aspirational palette replaces purple
-const GOLD        = "#C9A84C";
-const GOLD_LIGHT  = "#F5E6B8";
-const GOLD_DARK   = "#8A6A1F";
-const GOLD_MUTED  = "rgba(201,168,76,0.15)";
-const GOLD_BORDER = "rgba(201,168,76,0.35)";
-const SILVER      = "#A8B0BC";
-const SILVER_MUTED = "rgba(168,176,188,0.12)";
+// Someday palette: Oat, Linen, Stone, Amber, Char.
+const OAT          = "#F1E6D8";
+const LINEN        = "#FFF8ED";
+const STONE        = "#8A8178";
+const STONE_LIGHT  = "#D8CFC3";
+const STONE_MUTED  = "rgba(138,129,120,0.14)";
+const CHAR         = "#2F2923";
+const CHAR_SOFT    = "#473F37";
+const AMBER        = "#C88435";
+const AMBER_DARK   = "#8B5725";
+const AMBER_MUTED  = "rgba(200,132,53,0.15)";
+const AMBER_BORDER = "rgba(200,132,53,0.35)";
 const TEAL        = "#0d9488";
 const TEAL_MUTED  = "rgba(45,212,191,0.15)";
 const TEAL_BORDER = "rgba(45,212,191,0.35)";
@@ -53,7 +57,7 @@ const inferDreamShelfCategory = (text = "") => {
 };
 
 const getDreamShelfFallbackDescription = (query = "") => (
-  `A searched Dream Shelf find for "${query}". Add your own photo if this is the exact piece you want to save.`
+  `A searched Someday find for "${query}". Add your own photo if this is the exact piece you want to save.`
 );
 
 const DREAMSHELF_IMAGES = {
@@ -73,6 +77,14 @@ const DREAMSHELF_IMAGES = {
   b6: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=600&q=80",
   b7: "https://www.prada.com/content/dam/pradabkg_products/1/1BA/1BA457/NZVF0046/1BA457_NZV_F0046_V_EOM_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg",
   b8: "https://assets.hermes.com/is/image/hermesedito/P_169_KELLY_HEADER?fit=wrap%2C0&wid=1920&resMode=sharp2&op_usm=1%2C1%2C6%2C0",
+  j1: "https://source.unsplash.com/featured/?gold,bracelet,hand,luxury",
+  j2: "https://source.unsplash.com/featured/?diamond,ring,engagement,hand",
+  j3: "https://source.unsplash.com/featured/?gold,necklace,elegant,jewelry",
+  j4: "https://source.unsplash.com/featured/?bracelet,stacked,jewelry,style",
+  j5: "https://source.unsplash.com/featured/?chain,necklace,fashion,editorial",
+  j6: "https://source.unsplash.com/featured/?bracelet,silver,jewelry,closeup",
+  j7: "https://source.unsplash.com/featured/?snake,ring,luxury,jewelry",
+  j8: "https://source.unsplash.com/featured/?gold,hoop,earrings,minimal",
   s1: "https://images.stockx.com/images/Air-Jordan-1-Retro-High-OG-Chicago-Reimagined-Product.jpg?fit=fill&bg=FFFFFF&w=140&h=75&q=57&dpr=2&trim=color&updated_at=1738193358",
   s2: "https://encrypted-tbn3.gstatic.com/shopping?q=tbn:ANd9GcQhynJlN1yrf037AvDWWDJYI5wC6c8CMshpSyIYM1g90oPfwzSlqUr25x1gNiQSmlfjKeIIxZYrJEfmubsRbgcK54vE7L_ZewlPuLmYVAlPnODL85ERZwoW",
   s3: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=600&q=80",
@@ -89,6 +101,14 @@ const DREAMSHELF_IMAGES = {
   a6: "https://images.unsplash.com/photo-1483721310020-03333e577078?w=600&q=80",
   a7: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80",
   a8: "https://images.unsplash.com/photo-1517336714739-489689fd1ca8?w=600&q=80",
+  h1: "https://source.unsplash.com/featured/?guitar,lespaul,vintage,studio",
+  h2: "https://source.unsplash.com/featured/?rangefinder,camera,street,photography",
+  h3: "https://source.unsplash.com/featured/?porsche,911,car,drive,coastal",
+  h4: "https://source.unsplash.com/featured/?grand,piano,steinway,interior,luxury",
+  h5: "https://source.unsplash.com/featured/?mediumformat,camera,photography,editorial",
+  h6: "https://source.unsplash.com/featured/?electric,guitar,stratocaster,stage",
+  h7: "https://source.unsplash.com/featured/?ferrari,sports,car,red,luxury",
+  h8: "https://source.unsplash.com/featured/?art,screenprint,warhol,modern,gallery",
 };
 
 // ─── Category config ──────────────────────────────────────────────────────────
@@ -350,35 +370,32 @@ function ItemModal({ item, isSaved, onSomeday, onMilestone, onShare, onClose, da
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
-      <div className={`w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden border ${dm ? 'bg-[#0e1520] border-white/10' : 'bg-white border-slate-200'}`}>
+      <div className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden border" style={{ background: dm ? CHAR : LINEN, borderColor: dm ? "rgba(241,230,216,0.16)" : STONE_LIGHT }}>
         {/* Image / emoji header */}
         <div className="relative flex-shrink-0">
           {item.image && !imageFailed ? (
             <img
               src={item.image}
               alt={item.name}
-              className={`w-full h-56 object-contain p-8 ${dm ? 'bg-[#131c2e]' : 'bg-slate-50'}`}
+              className="w-full h-56 object-contain p-8"
+              style={{ background: dm ? CHAR_SOFT : OAT }}
               onError={() => setImageFailed(true)}
             />
           ) : (
-            <div className={`w-full h-56 flex flex-col items-center justify-center gap-3 ${dm ? 'bg-[#131c2e]' : 'bg-gradient-to-br from-amber-50 to-yellow-50'}`}>
+            <div className="w-full h-56 flex flex-col items-center justify-center gap-3" style={{ background: dm ? CHAR_SOFT : `linear-gradient(135deg, ${LINEN}, ${OAT})` }}>
               <span className="text-7xl">{item.emoji || cat.emoji}</span>
-              <span className="text-xs uppercase tracking-widest font-medium" style={{ color: GOLD }}>{item.brand}</span>
+              <span className="text-xs uppercase tracking-widest font-medium" style={{ color: AMBER_DARK }}>{item.brand}</span>
             </div>
           )}
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/50 text-slate-300 hover:text-white flex items-center justify-center text-sm transition-colors"
           >✕</button>
-          {/* Gold shimmer badge */}
-          <div className="absolute top-4 left-4 px-3 py-1 rounded-full text-[11px] font-semibold" style={{ background: dm ? 'rgba(201,168,76,0.2)' : '#FFF8E1', color: GOLD_DARK, border: `1px solid ${GOLD_BORDER}` }}>
-            {cat.emoji} {cat.label}
-          </div>
         </div>
 
         {/* Content */}
         <div className="overflow-y-auto flex-1 p-6 pb-2">
-          <p className="text-xs font-semibold tracking-widest uppercase mb-1" style={{ color: SILVER }}>
+          <p className="text-xs font-semibold tracking-widest uppercase mb-1" style={{ color: STONE }}>
             {item.brand}
           </p>
           <h2 className={`text-3xl font-bold leading-tight mb-2 ${dm ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: "'Caveat', cursive" }}>
@@ -386,7 +403,7 @@ function ItemModal({ item, isSaved, onSomeday, onMilestone, onShare, onClose, da
           </h2>
 
           {item.priceRange && (
-            <p className="text-2xl font-bold mb-3" style={{ color: GOLD, fontFamily: "'Caveat', cursive" }}>
+            <p className="text-2xl font-bold mb-3" style={{ color: AMBER_DARK, fontFamily: "'Caveat', cursive" }}>
               {item.priceRange}
             </p>
           )}
@@ -430,15 +447,17 @@ const ItemCard = React.memo(function ItemCard({ item, savedIds, onOpen, darkMode
   return (
     <div
       onClick={() => onOpen(item)}
-      className={`border rounded-[26px] overflow-hidden transition-all duration-200 flex flex-col cursor-pointer group ${dm ? 'bg-[#161f30] border-white/5 hover:border-amber-400/25' : 'bg-white border-amber-100/70 hover:border-amber-300/50'} hover:-translate-y-1`}
+      className="border rounded-[26px] overflow-hidden transition-all duration-200 flex flex-col cursor-pointer group hover:-translate-y-1"
       style={{
+        background: dm ? CHAR_SOFT : LINEN,
+        borderColor: dm ? "rgba(241,230,216,0.12)" : STONE_LIGHT,
         boxShadow: dm
           ? '0 16px 34px rgba(0,0,0,0.24)'
-          : '0 14px 32px rgba(143,113,66,0.10)',
+          : '0 14px 32px rgba(47,41,35,0.08)',
       }}
     >
       {/* Image / emoji */}
-      <div className={`w-full h-52 flex flex-col items-center justify-center gap-2 relative ${dm ? 'bg-[#131c2e]' : 'bg-gradient-to-br from-[#fffaf0] via-[#fffdf7] to-[#f3e7ce]'}`}>
+      <div className={`w-full h-52 flex flex-col items-center justify-center gap-2 relative`} style={{ background: dm ? CHAR : `linear-gradient(135deg, ${LINEN}, ${OAT})` }}>
         {item.image && !imageFailed ? (
           <img
             src={item.image}
@@ -449,7 +468,7 @@ const ItemCard = React.memo(function ItemCard({ item, savedIds, onOpen, darkMode
         ) : (
           <>
             <span className="text-6xl">{item.emoji}</span>
-            <span className="dream-shelf-product-text text-[11px] uppercase tracking-[0.18em] font-semibold" style={{ color: GOLD }}>{item.brand}</span>
+            <span className="dream-shelf-product-text text-[11px] uppercase tracking-[0.18em] font-semibold" style={{ color: AMBER_DARK }}>{item.brand}</span>
           </>
         )}
         {isSaved && (
@@ -460,13 +479,13 @@ const ItemCard = React.memo(function ItemCard({ item, savedIds, onOpen, darkMode
       </div>
 
       <div className="p-5 flex flex-col flex-1">
-        <p className="dream-shelf-product-text text-[11px] uppercase tracking-[0.2em] mb-1 font-semibold" style={{ color: SILVER }}>{item.brand}</p>
+        <p className="dream-shelf-product-text text-[11px] uppercase tracking-[0.2em] mb-1 font-semibold" style={{ color: STONE }}>{item.brand}</p>
         <h3 className={`dream-shelf-product-text text-2xl font-semibold leading-tight mb-2 flex-1 line-clamp-2 ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
           {item.name}
         </h3>
 
         {item.priceRange && (
-          <p className="dream-shelf-product-text text-xl font-semibold mb-0" style={{ color: GOLD }}>
+          <p className="dream-shelf-product-text text-xl font-semibold mb-0" style={{ color: AMBER_DARK }}>
             {item.priceRange}
           </p>
         )}
@@ -500,17 +519,17 @@ const CommunityPost = React.memo(function CommunityPost({ post, photoUrl, curren
   const cat = CATEGORIES.find(c => c.id === post.category);
 
   return (
-    <div className={`border rounded-2xl p-4 ${dm ? 'bg-[#161f30] border-white/5' : 'bg-white border-slate-200'}`}>
+    <div className="border rounded-2xl p-4" style={{ background: dm ? CHAR_SOFT : LINEN, borderColor: dm ? "rgba(241,230,216,0.10)" : STONE_LIGHT }}>
       {/* Header */}
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-10 h-10 rounded-full flex items-center justify-center font-['Caveat'] text-base font-bold text-white flex-shrink-0" style={{ background: `linear-gradient(135deg, ${GOLD}, ${GOLD_DARK})` }}>
+        <div className="w-10 h-10 rounded-full flex items-center justify-center font-['Caveat'] text-base font-bold text-white flex-shrink-0" style={{ background: `linear-gradient(135deg, ${AMBER}, ${CHAR})` }}>
           {initials}
         </div>
         <div className="flex-1 min-w-0">
           <p className={`text-sm font-medium leading-tight ${dm ? 'text-slate-200' : 'text-slate-800'}`}>
-            {displayName} added to their Dream Shelf
+            {displayName} added to their Someday
           </p>
-          <p className="text-xs text-slate-500">{cat ? `${cat.emoji} ${cat.label}` : 'Dream Shelf'} · {formatTime(post.created_at)}</p>
+          <p className="text-xs text-slate-500">{cat ? `${cat.emoji} ${cat.label}` : 'Someday'} · {formatTime(post.created_at)}</p>
         </div>
       </div>
 
@@ -520,11 +539,12 @@ const CommunityPost = React.memo(function CommunityPost({ post, photoUrl, curren
           <img
             src={resolvedImage}
             alt={post.product_name}
-            className={`w-20 h-20 rounded-xl object-contain p-1.5 flex-shrink-0 ${dm ? 'bg-[#131c2e]' : 'bg-amber-50'}`}
+            className="w-20 h-20 rounded-xl object-contain p-1.5 flex-shrink-0"
+            style={{ background: dm ? CHAR : OAT }}
             onError={() => setImageFailed(true)}
           />
         ) : (
-          <div className={`w-20 h-20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 ${dm ? 'bg-[#131c2e]' : 'bg-amber-50'}`}>
+          <div className="w-20 h-20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0" style={{ background: dm ? CHAR : OAT }}>
             {cat?.emoji || "✨"}
           </div>
         )}
@@ -535,7 +555,7 @@ const CommunityPost = React.memo(function CommunityPost({ post, photoUrl, curren
           {post.product_brand && <p className="text-xs text-slate-500 mb-1">{post.product_brand}</p>}
           {post.review && <p className="text-sm text-slate-500 italic leading-relaxed line-clamp-2">"{post.review}"</p>}
           {post.product_price && (
-            <p className="font-['Caveat'] text-lg font-bold mt-1" style={{ color: GOLD }}>{post.product_price}</p>
+            <p className="font-['Caveat'] text-lg font-bold mt-1" style={{ color: AMBER_DARK }}>{post.product_price}</p>
           )}
         </div>
       </div>
@@ -610,17 +630,17 @@ function ShareItemModal({ item, onClose, onSubmit, darkMode }) {
     else setSubmitError("Could not post right now. Try again.");
   };
 
-  const inputCls = `w-full border rounded-xl px-4 py-3 text-sm outline-none transition-colors ${dm ? `bg-[#0e1520] border-white/8 text-slate-200 focus:border-amber-400/40` : `bg-slate-50 border-slate-200 text-slate-800 focus:border-amber-400`}`;
-  const inputStyle = { fontFamily: "'Caveat', cursive" };
+  const inputCls = "w-full border rounded-xl px-4 py-3 text-sm outline-none transition-colors";
+  const inputStyle = { fontFamily: "'Caveat', cursive", background: dm ? CHAR_SOFT : OAT, borderColor: dm ? "rgba(241,230,216,0.12)" : STONE_LIGHT, color: dm ? LINEN : CHAR };
 
   return createPortal(
     <div className="fixed inset-0 z-[10100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
-      <div className={`w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden border ${dm ? 'bg-[#0e1520] border-white/10' : 'bg-white border-slate-200'}`}>
+      <div className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden border" style={{ background: dm ? CHAR : LINEN, borderColor: dm ? "rgba(241,230,216,0.16)" : STONE_LIGHT }}>
         {/* Header */}
         <div className={`px-6 pt-6 pb-4 border-b flex items-start justify-between ${dm ? 'border-white/5' : 'border-slate-100'}`}>
           <div>
-            <p className="text-[10px] uppercase tracking-widest mb-1 font-semibold" style={{ color: GOLD }}>Dream Shelf ✨</p>
+            <p className="text-[10px] uppercase tracking-widest mb-1 font-semibold" style={{ color: AMBER_DARK }}>Someday ✨</p>
             <h2 className={`text-2xl font-bold ${dm ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: "'Caveat', cursive" }}>Share something you're dreaming of</h2>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-500 text-sm">✕</button>
@@ -646,7 +666,7 @@ function ShareItemModal({ item, onClose, onSubmit, darkMode }) {
               {CATEGORIES.map(c => (
                 <button key={c.id} type="button" onClick={() => updateField("category", c.id)}
                   className="px-3 py-1.5 rounded-full text-sm border transition-all flex-shrink-0"
-                  style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, background: draft.category === c.id ? GOLD_MUTED : (dm ? 'rgba(255,255,255,0.05)' : '#f3f4f6'), border: `1px solid ${draft.category === c.id ? GOLD_BORDER : (dm ? 'rgba(255,255,255,0.07)' : '#e5e7eb')}`, color: draft.category === c.id ? GOLD_DARK : (dm ? '#6b7280' : '#9ca3af') }}
+                  style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, background: draft.category === c.id ? AMBER_MUTED : (dm ? "rgba(241,230,216,0.06)" : OAT), border: `1px solid ${draft.category === c.id ? AMBER_BORDER : (dm ? "rgba(241,230,216,0.10)" : STONE_LIGHT)}`, color: draft.category === c.id ? AMBER_DARK : STONE }}
                 >
                   {c.emoji} {c.label}
                 </button>
@@ -670,7 +690,7 @@ function ShareItemModal({ item, onClose, onSubmit, darkMode }) {
                 <button type="button" onClick={() => photoInputRef.current?.click()} className="absolute bottom-2 left-2 px-3 py-1 rounded-lg bg-white/90 text-xs font-semibold text-slate-700">Change photo</button>
               </div>
             ) : (
-              <button type="button" onClick={() => photoInputRef.current?.click()} className={`py-6 rounded-2xl border-2 border-dashed flex flex-col items-center gap-2 ${dm ? 'border-white/10 bg-white/2' : 'border-slate-200 bg-slate-50'}`}>
+              <button type="button" onClick={() => photoInputRef.current?.click()} className="py-6 rounded-2xl border-2 border-dashed flex flex-col items-center gap-2" style={{ background: dm ? CHAR_SOFT : OAT, borderColor: dm ? "rgba(241,230,216,0.14)" : STONE_LIGHT }}>
                 <Camera className="w-6 h-6 text-slate-400" />
                 <span className={`text-sm font-['Caveat'] font-bold ${dm ? 'text-slate-400' : 'text-slate-600'}`}>Add a photo</span>
               </button>
@@ -687,12 +707,12 @@ function ShareItemModal({ item, onClose, onSubmit, darkMode }) {
           {submitError && <p className="text-sm text-red-500">{submitError}</p>}
         </div>
 
-        <div className={`px-6 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] border-t ${dm ? 'border-white/10 bg-[#161f30]' : 'border-slate-100 bg-white'}`}>
+        <div className="px-6 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] border-t" style={{ background: dm ? CHAR_SOFT : LINEN, borderColor: dm ? "rgba(241,230,216,0.12)" : STONE_LIGHT }}>
           <button
             onClick={handleSubmit}
             disabled={!draft.review.trim() || submitting}
             className="w-full rounded-2xl py-3 text-base transition-colors disabled:opacity-40 text-white"
-            style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, background: submitting ? GOLD_BORDER : GOLD }}
+            style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, background: submitting ? AMBER_BORDER : AMBER }}
           >
             {submitting ? "Sharing…" : "Share with friends ✨"}
           </button>
@@ -727,6 +747,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   const imageFetchedRef = useRef(new Set());
   const imageRequestsRef = useRef(new Map());
   const searchRequestIdRef = useRef(0);
+  const categoryLoadIdRef = useRef(0);
 
   // ── Auth ──
   useEffect(() => {
@@ -757,6 +778,8 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   const loadCategory = useCallback((cat, subFilter = "all") => {
     setLoading(true);
     setActiveSubFilter(subFilter);
+    const loadId = categoryLoadIdRef.current + 1;
+    categoryLoadIdRef.current = loadId;
     const allItems = (CURATED_ITEMS[cat.id] || []).map(item => ({
       ...item,
       category: cat.id,
@@ -765,7 +788,11 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     const filtered = subFilter === "all"
       ? allItems
       : allItems.filter(item => item.subFilter?.includes(subFilter));
-    setTimeout(() => { setItems(filtered); setLoading(false); }, 250);
+    setTimeout(() => {
+      if (categoryLoadIdRef.current !== loadId) return;
+      setItems(filtered);
+      setLoading(false);
+    }, 250);
   }, []);
 
   useEffect(() => {
@@ -879,7 +906,6 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         if (results.length) {
           if (requestId !== searchRequestIdRef.current) return;
           setSearchResults(results);
-          setActiveCategory(getDreamShelfCategoryMeta(results[0].category));
           setSearching(false);
           return;
         }
@@ -930,7 +956,6 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     const localMatches = getCuratedDreamShelfMatches(query);
     setSearchResults(localMatches.length ? localMatches : [getDraftDreamShelfMatch(query)]);
     setSearchError(localMatches.length ? "" : "Press Find it to search wider, or add your own photo.");
-    if (localMatches[0]?.category) setActiveCategory(getDreamShelfCategoryMeta(localMatches[0].category));
 
     const timeout = window.setTimeout(() => {
       runProductSearch(query, { allowFallback: false });
@@ -951,12 +976,21 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   }, [communityPosts, featuredPost, fetchDreamShelfImage, items, searchResults]);
 
   const handleCategoryClick = (cat) => {
+    if (activeCategory?.id === cat.id) {
+      categoryLoadIdRef.current += 1;
+      setActiveCategory(null);
+      setActiveSubFilter("all");
+      setItems([]);
+      setLoading(false);
+      return;
+    }
     setActiveCategory(cat);
     setActiveSubFilter("all");
     loadCategory(cat, "all");
   };
 
   const handleSubFilter = (subId) => {
+    if (!activeCategory) return;
     setActiveSubFilter(subId);
     loadCategory(activeCategory, subId);
   };
@@ -981,7 +1015,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   }, [cacheDreamShelfImage, onAddToSomeday]);
 
   const handleMilestone = useCallback((item) => {
-    onAddEvent?.({ title: `🎯 Get my ${item.name}`, notes: `${item.brand} · ${item.priceRange || ""} · Dream Shelf milestone`, category: "milestone" });
+    onAddEvent?.({ title: `🎯 Get my ${item.name}`, notes: `${item.brand} · ${item.priceRange || ""} · Someday milestone`, category: "milestone" });
   }, [onAddEvent]);
 
   const handleShareSubmit = async (draft) => {
@@ -1038,7 +1072,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className={`min-h-screen font-['DM_Sans'] ${dm ? 'bg-[#0e1520] text-slate-200' : 'bg-[#faf8f3] text-slate-800'}`}>
+    <div className="min-h-screen font-['DM_Sans']" style={{ background: dm ? CHAR : OAT, color: dm ? LINEN : CHAR }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Cormorant+Garamond:wght@400;500;600;700&display=swap'); .font-handwritten, .dream-shelf-pill { font-family: 'Caveat', cursive !important; } .dream-shelf-product-text { font-family: 'Cormorant Garamond', serif !important; }`}</style>
       <div className="max-w-3xl mx-auto px-4 py-6 pb-24">
 
@@ -1046,13 +1080,13 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         <div className="relative rounded-3xl p-8 mb-6 overflow-hidden border"
           style={{
             background: dm
-              ? 'linear-gradient(135deg, #1b2433 0%, #334155 22%, #f1dfad 45%, #8f7142 58%, #243247 78%, #111827 100%)'
-              : 'linear-gradient(135deg, #fffdf7 0%, #d8be7f 16%, #ffffff 31%, #c7b68d 43%, #f8efe0 56%, #fef9ec 74%, #b9954f 100%)',
-            borderColor: dm ? 'rgba(216,190,127,0.55)' : 'rgba(143,113,66,0.48)',
+              ? `linear-gradient(135deg, ${CHAR} 0%, ${CHAR_SOFT} 46%, ${AMBER_DARK} 100%)`
+              : `linear-gradient(135deg, ${LINEN} 0%, ${OAT} 48%, ${STONE_LIGHT} 100%)`,
+            borderColor: dm ? "rgba(241,230,216,0.24)" : STONE_LIGHT,
             borderWidth: 1.5,
             boxShadow: dm
-              ? '0 24px 64px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -1px 0 rgba(216,190,127,0.28)'
-              : '0 20px 50px rgba(143,113,66,0.18), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(143,113,66,0.18)',
+              ? '0 24px 64px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.18)'
+              : '0 20px 50px rgba(47,41,35,0.12), inset 0 1px 0 rgba(255,255,255,0.82)',
           }}>
           <div className="absolute right-10 top-8 text-2xl opacity-30 -rotate-6 select-none pointer-events-none">✨</div>
 
@@ -1064,12 +1098,12 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
             )}
             <h1 className="font-handwritten text-5xl font-bold leading-tight mb-2 bg-gradient-to-r bg-clip-text text-transparent"
               style={{
-                backgroundImage: dm ? 'linear-gradient(90deg, #ffffff, #fff4c7)' : `linear-gradient(90deg, #1a1208, ${GOLD_DARK})`,
+                backgroundImage: dm ? `linear-gradient(90deg, ${LINEN}, ${OAT})` : `linear-gradient(90deg, ${CHAR}, ${AMBER_DARK})`,
                 fontFamily: "'Caveat', cursive",
               }}>
-              Dream Shelf
+              Someday
             </h1>
-            <p className="text-sm leading-relaxed max-w-sm" style={{ color: dm ? 'rgba(255,255,255,0.82)' : '#78716c' }}>
+            <p className="text-sm leading-relaxed max-w-sm" style={{ color: dm ? "rgba(255,248,237,0.82)" : STONE }}>
               Some dreams take you somewhere. Others you take with you.
             </p>
           </div>
@@ -1079,9 +1113,11 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         {/* Search / add your own */}
         <form
           onSubmit={handleProductSearch}
-          className={`rounded-3xl border p-3 mb-4 ${dm ? 'bg-[#161f30] border-white/5' : 'bg-white border-amber-100/70'}`}
+          className="rounded-3xl border p-3 mb-4"
           style={{
-            boxShadow: dm ? '0 14px 30px rgba(0,0,0,0.20)' : '0 12px 28px rgba(143,113,66,0.08)',
+            background: dm ? CHAR_SOFT : LINEN,
+            borderColor: dm ? "rgba(241,230,216,0.10)" : STONE_LIGHT,
+            boxShadow: dm ? '0 14px 30px rgba(0,0,0,0.20)' : '0 12px 28px rgba(47,41,35,0.08)',
           }}
         >
           <div className="flex gap-2">
@@ -1089,13 +1125,14 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search a dream item..."
-              className={`flex-1 min-w-0 rounded-2xl px-4 py-3 text-sm outline-none border ${dm ? 'bg-[#0e1520] border-white/8 text-slate-100 placeholder:text-slate-600 focus:border-amber-400/35' : 'bg-[#faf8f3] border-amber-100 text-slate-800 placeholder:text-slate-400 focus:border-amber-300'}`}
+              className="flex-1 min-w-0 rounded-2xl px-4 py-3 text-sm outline-none border"
+              style={{ background: dm ? CHAR : OAT, borderColor: dm ? "rgba(241,230,216,0.12)" : STONE_LIGHT, color: dm ? LINEN : CHAR }}
             />
             <button
               type="submit"
               disabled={!searchQuery.trim() || searching}
               className="dream-shelf-pill flex-shrink-0 rounded-2xl px-4 py-2 text-base font-bold border disabled:opacity-40"
-              style={{ background: dm ? GOLD_MUTED : '#FFFBEB', border: `1px solid ${GOLD_BORDER}`, color: dm ? '#fff7d6' : GOLD_DARK }}
+              style={{ background: dm ? AMBER_MUTED : OAT, border: `1px solid ${AMBER_BORDER}`, color: dm ? LINEN : AMBER_DARK }}
             >
               {searching ? "Finding..." : "Find it"}
             </button>
@@ -1114,7 +1151,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
             </button>
           </div>
           {searchError && (
-            <p className="px-1 pt-2 text-xs" style={{ color: GOLD }}>
+            <p className="px-1 pt-2 text-xs" style={{ color: AMBER_DARK }}>
               {searchError}
             </p>
           )}
@@ -1161,18 +1198,18 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
               style={{
                 background: activeCategory?.id === cat.id
                   ? (dm
-                    ? 'linear-gradient(135deg, #1b2433 0%, #334155 22%, #f1dfad 45%, #8f7142 58%, #243247 78%, #111827 100%)'
-                    : 'linear-gradient(135deg, #fffdf7 0%, #d8be7f 16%, #ffffff 31%, #c7b68d 43%, #f8efe0 56%, #fef9ec 74%, #b9954f 100%)')
-                  : (dm ? 'rgba(255,255,255,0.05)' : '#f3f4f6'),
+                    ? `linear-gradient(135deg, ${CHAR_SOFT}, ${AMBER_DARK})`
+                    : `linear-gradient(135deg, ${LINEN}, ${OAT}, ${STONE_LIGHT})`)
+                  : (dm ? "rgba(241,230,216,0.06)" : LINEN),
                 border: activeCategory?.id === cat.id
-                  ? `1px solid ${dm ? 'rgba(216,190,127,0.50)' : 'rgba(143,113,66,0.42)'}`
-                  : `1px solid ${dm ? 'rgba(255,255,255,0.07)' : '#e5e7eb'}`,
-                color: activeCategory?.id === cat.id ? (dm ? '#ffffff' : '#4a3210') : (dm ? '#6b7280' : '#9ca3af'),
+                  ? `1px solid ${dm ? "rgba(241,230,216,0.28)" : "rgba(138,129,120,0.42)"}`
+                  : `1px solid ${dm ? "rgba(241,230,216,0.10)" : STONE_LIGHT}`,
+                color: activeCategory?.id === cat.id ? (dm ? LINEN : CHAR) : STONE,
                 fontFamily: "'Caveat', cursive",
                 boxShadow: activeCategory?.id === cat.id
                   ? (dm
-                    ? '0 3px 10px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.32), inset 0 -1px 0 rgba(216,190,127,0.20)'
-                    : '0 3px 10px rgba(143,113,66,0.10), inset 0 1px 0 rgba(255,255,255,0.82), inset 0 -1px 0 rgba(143,113,66,0.10)')
+                    ? '0 3px 10px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.20)'
+                    : '0 3px 10px rgba(47,41,35,0.08), inset 0 1px 0 rgba(255,255,255,0.72)')
                   : 'none',
               }}
             >
@@ -1181,7 +1218,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                   aria-hidden="true"
                   className="absolute inset-0 pointer-events-none"
                   style={{
-                    background: `linear-gradient(116deg, transparent 0%, transparent 28%, ${dm ? 'rgba(255,255,255,0.26)' : 'rgba(255,255,255,0.62)'} 42%, transparent 56%, transparent 100%)`,
+                    background: `linear-gradient(116deg, transparent 0%, transparent 28%, ${dm ? "rgba(255,248,237,0.18)" : "rgba(255,248,237,0.72)"} 42%, transparent 56%, transparent 100%)`,
                   }}
                 />
               )}
@@ -1201,9 +1238,9 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                 onClick={() => handleSubFilter(sf.id)}
                 className="dream-shelf-pill flex-shrink-0 rounded-full px-2.5 py-0.5 text-sm font-bold transition-all duration-200 border focus:outline-none"
                 style={{
-                  background: activeSubFilter === sf.id ? (dm ? 'rgba(168,176,188,0.15)' : 'rgba(168,176,188,0.12)') : 'transparent',
-                  border: `1px solid ${activeSubFilter === sf.id ? SILVER : (dm ? 'rgba(255,255,255,0.07)' : '#e5e7eb')}`,
-                  color: activeSubFilter === sf.id ? (dm ? '#e2e8f0' : '#374151') : (dm ? '#6b7280' : '#9ca3af'),
+                  background: activeSubFilter === sf.id ? STONE_MUTED : 'transparent',
+                  border: `1px solid ${activeSubFilter === sf.id ? STONE : (dm ? "rgba(241,230,216,0.10)" : STONE_LIGHT)}`,
+                  color: activeSubFilter === sf.id ? (dm ? LINEN : CHAR) : STONE,
                   fontFamily: "'Caveat', cursive",
                 }}
               >
@@ -1217,8 +1254,8 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         {featured && (
           <>
             <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">Most dreamed about this week</p>
-            <div className={`border rounded-3xl overflow-hidden mb-8 transition-colors cursor-pointer hover:-translate-y-0.5 transition-transform ${dm ? 'bg-[#161f30]' : 'bg-white'}`}
-              style={{ borderColor: dm ? GOLD_BORDER : 'rgba(201,168,76,0.25)' }}
+            <div className="border rounded-3xl overflow-hidden mb-8 transition-colors cursor-pointer hover:-translate-y-0.5 transition-transform"
+              style={{ background: dm ? CHAR_SOFT : LINEN, borderColor: dm ? "rgba(241,230,216,0.12)" : STONE_LIGHT }}
               onClick={() => setSelectedItem({
                 id: featured.id,
                 name: featured.product_name,
@@ -1230,7 +1267,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                 emoji: CATEGORIES.find(c => c.id === featured.category)?.emoji || "✨",
               })}>
               <div className="grid grid-cols-2 max-sm:grid-cols-1">
-                <div className={`h-52 flex items-center justify-center text-7xl ${dm ? 'bg-[#131c2e]' : 'bg-gradient-to-br from-amber-50 to-yellow-50'}`}>
+                <div className="h-52 flex items-center justify-center text-7xl" style={{ background: dm ? CHAR : `linear-gradient(135deg, ${LINEN}, ${OAT})` }}>
                   {featuredImage ? (
                     <img src={featuredImage} alt={featured.product_name} className="w-full h-full object-contain p-5" />
                   ) : (
@@ -1238,25 +1275,25 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                   )}
                 </div>
                 <div className="p-6 flex flex-col justify-center">
-                  <p className="text-[10px] uppercase tracking-widest mb-2 font-semibold" style={{ color: GOLD }}>
+                  <p className="dream-shelf-product-text text-[11px] uppercase tracking-[0.2em] mb-1 font-semibold" style={{ color: AMBER_DARK }}>
                     ✨ Most dreamed
                   </p>
-                  <h2 className={`font-['Caveat'] text-2xl font-bold leading-tight mb-1 ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
+                  <h2 className={`dream-shelf-product-text text-2xl font-semibold leading-tight mb-1 ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
                     {featured.product_name}
                   </h2>
-                  {featured.product_brand && <p className="text-xs text-slate-500 mb-2">{featured.product_brand}</p>}
+                  {featured.product_brand && <p className="dream-shelf-product-text text-[11px] uppercase tracking-[0.2em] mb-2 font-semibold" style={{ color: STONE }}>{featured.product_brand}</p>}
                   {featured.review && (
                     <p className="text-sm text-slate-500 italic leading-relaxed mb-4 line-clamp-3">"{featured.review}"</p>
                   )}
                   <div className="flex gap-3 flex-wrap mb-4">
                     {featured.product_price && (
                       <div className="flex flex-col">
-                        <span className="font-['Caveat'] text-xl font-semibold" style={{ color: GOLD }}>{featured.product_price}</span>
+                        <span className="dream-shelf-product-text text-xl font-semibold" style={{ color: AMBER_DARK }}>{featured.product_price}</span>
                         <span className="text-[10px] uppercase text-slate-500 tracking-wide">Price</span>
                       </div>
                     )}
                     <div className="flex flex-col">
-                      <span className="font-['Caveat'] text-xl font-semibold" style={{ color: SILVER }}>{featured.likes_count ?? 0}</span>
+                      <span className="dream-shelf-product-text text-xl font-semibold" style={{ color: STONE }}>{featured.likes_count ?? 0}</span>
                       <span className="text-[10px] uppercase text-slate-500 tracking-wide">Saves</span>
                     </div>
                   </div>
@@ -1278,13 +1315,15 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
         {/* ── Item grid ── */}
         <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">
-          {activeCategory?.emoji} {activeCategory?.label}{activeSubFilter !== "all" ? ` · ${SUB_FILTERS[activeCategory?.id]?.find(f => f.id === activeSubFilter)?.label || ""}` : ""}
+          {activeCategory
+            ? `${activeCategory.emoji} ${activeCategory.label}${activeSubFilter !== "all" ? ` · ${SUB_FILTERS[activeCategory.id]?.find(f => f.id === activeSubFilter)?.label || ""}` : ""}`
+            : "No category selected"}
         </p>
 
         {loading ? (
           <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-5 mb-8">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className={`rounded-[26px] h-80 animate-pulse border ${dm ? 'bg-[#161f30] border-white/5' : 'bg-amber-50/60 border-amber-100'}`} />
+              <div key={i} className="rounded-[26px] h-80 animate-pulse border" style={{ background: dm ? CHAR_SOFT : OAT, borderColor: dm ? "rgba(241,230,216,0.10)" : STONE_LIGHT }} />
             ))}
           </div>
         ) : (
@@ -1303,8 +1342,8 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
             }) : (
               <div className="col-span-2 max-sm:col-span-1 text-center py-16 text-slate-400">
                 <div className="text-5xl mb-4">✨</div>
-                <p className="font-['Caveat'] text-2xl mb-1">Nothing here yet</p>
-                <p className="text-sm">Try a different filter</p>
+                <p className="font-['Caveat'] text-2xl mb-1">{activeCategory ? "Nothing here yet" : "Search or choose a category"}</p>
+                <p className="text-sm">{activeCategory ? "Try a different filter" : "Category filters can stay turned off."}</p>
               </div>
             )}
           </div>
@@ -1314,12 +1353,12 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         <div style={{
           borderRadius: '24px',
           background: dm
-            ? 'linear-gradient(135deg, #070a12 0%, #1c2432 18%, #f8fafc 31%, #8f7142 39%, #151a24 52%, #d8be7f 66%, #080b12 100%)'
-            : 'linear-gradient(135deg, #fffdf7 0%, #d8be7f 16%, #ffffff 31%, #c7b68d 43%, #f8efe0 56%, #fef9ec 74%, #b9954f 100%)',
-          border: `1.5px solid ${dm ? 'rgba(216,190,127,0.55)' : 'rgba(143,113,66,0.48)'}`,
+            ? `linear-gradient(135deg, ${CHAR} 0%, ${CHAR_SOFT} 45%, ${AMBER_DARK} 100%)`
+            : `linear-gradient(135deg, ${LINEN} 0%, ${OAT} 46%, ${STONE_LIGHT} 100%)`,
+          border: `1.5px solid ${dm ? "rgba(241,230,216,0.22)" : "rgba(138,129,120,0.38)"}`,
           boxShadow: dm
-            ? '0 20px 56px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.32), inset 0 -1px 0 rgba(216,190,127,0.22)'
-            : '0 18px 44px rgba(143,113,66,0.14), inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(143,113,66,0.16)',
+            ? '0 20px 56px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.16)'
+            : '0 18px 44px rgba(47,41,35,0.12), inset 0 1px 0 rgba(255,255,255,0.72)',
           padding: '30px 24px',
           display: 'flex',
           flexDirection: 'column',
@@ -1335,22 +1374,22 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
             inset: 0,
             background: [
               `radial-gradient(ellipse at 18% 8%, ${dm ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.68)'}, transparent 40%)`,
-              `linear-gradient(116deg, transparent 0%, transparent 30%, ${dm ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.58)'} 41%, ${dm ? 'rgba(216,190,127,0.10)' : 'rgba(216,190,127,0.20)'} 47%, transparent 58%, transparent 100%)`,
+              `linear-gradient(116deg, transparent 0%, transparent 30%, ${dm ? "rgba(255,248,237,0.16)" : "rgba(255,248,237,0.62)"} 41%, ${dm ? "rgba(200,132,53,0.10)" : "rgba(216,207,195,0.28)"} 47%, transparent 58%, transparent 100%)`,
             ].join(', '),
             pointerEvents: 'none',
           }} />
           <div style={{ position: 'relative', zIndex: 1, fontSize: '22px', marginBottom: '2px', opacity: 0.72 }}>✨</div>
-          <p style={{ position: 'relative', zIndex: 1, fontSize: '20px', fontWeight: 700, color: dm ? '#fff7d6' : '#4a3210', fontFamily: "'Caveat', cursive", margin: 0, textShadow: dm ? '0 1px 12px rgba(0,0,0,0.35)' : '0 1px 8px rgba(255,255,255,0.55)' }}>
+          <p style={{ position: 'relative', zIndex: 1, fontSize: '20px', fontWeight: 700, color: dm ? LINEN : CHAR, fontFamily: "'Caveat', cursive", margin: 0, textShadow: dm ? '0 1px 12px rgba(0,0,0,0.35)' : '0 1px 8px rgba(255,255,255,0.55)' }}>
             Something on your dream list?
           </p>
-          <p style={{ position: 'relative', zIndex: 1, fontSize: '15px', color: dm ? 'rgba(255,247,214,0.72)' : 'rgba(74,50,16,0.68)', margin: '0 0 12px', fontFamily: "'Caveat', cursive" }}>
+          <p style={{ position: 'relative', zIndex: 1, fontSize: '15px', color: dm ? "rgba(255,248,237,0.72)" : STONE, margin: '0 0 12px', fontFamily: "'Caveat', cursive" }}>
             Share what you're saving for with your friends
           </p>
           <button
             onClick={() => setSharingItem({ name: "", brand: "", image: "", priceRange: "", category: activeCategory?.id || "watches", description: "" })}
-            style={{ position: 'relative', zIndex: 1, background: dm ? 'rgba(8,11,18,0.62)' : 'rgba(255,255,255,0.72)', color: dm ? '#fff7d6' : '#4a3210', border: `1px solid ${dm ? 'rgba(255,247,214,0.28)' : 'rgba(143,113,66,0.28)'}`, borderRadius: '50px', padding: '11px 28px', fontSize: '18px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: "'Caveat', cursive", boxShadow: dm ? 'inset 0 1px 0 rgba(255,255,255,0.12)' : '0 8px 20px rgba(143,113,66,0.12), inset 0 1px 0 rgba(255,255,255,0.9)' }}
+            style={{ position: 'relative', zIndex: 1, background: dm ? 'rgba(47,41,35,0.72)' : 'rgba(255,248,237,0.76)', color: dm ? LINEN : CHAR, border: `1px solid ${dm ? "rgba(255,248,237,0.24)" : "rgba(138,129,120,0.28)"}`, borderRadius: '50px', padding: '11px 28px', fontSize: '18px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: "'Caveat', cursive", boxShadow: dm ? 'inset 0 1px 0 rgba(255,255,255,0.12)' : '0 8px 20px rgba(47,41,35,0.10), inset 0 1px 0 rgba(255,255,255,0.9)' }}
           >
-            Add to the Dream Shelf
+            Add to Someday
           </button>
         </div>
 

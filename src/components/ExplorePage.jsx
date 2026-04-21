@@ -34,10 +34,10 @@ const COMMUNITY_POOL = {
     { id: "r5", type: "restaurants", icon: "🍜", page: "Restaurants", time: "Community pick", cardTitle: "Bestia", location: "Downtown LA", desc: "House-made pastas and whole-animal roasts in a buzzy Arts District space. A dinner you talk about.", votes: 253, tag: "Restaurants", imageUrl: "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan dinner"] },
   ],
   products: [
-    { id: "p1", type: "products", icon: "✨", page: "Dream Shelf", time: "Most dreamed about", cardTitle: "Rolex Submariner", desc: "A forever watch with quiet presence — the kind of piece people save for and keep for life.", votes: 247, tag: "Dream Shelf", imageUrl: "https://media.rolex.com/image/upload/q_auto/f_auto/t_v7-cover-majesty-landscape/c_limit,w_1200/v1/a677b2c664f6/catalogue/2026/upright-c/m124060-0001", actions: ["Add to someday", "Open Dream Shelf"] },
-    { id: "p2", type: "products", icon: "✨", page: "Dream Shelf", time: "Trending", cardTitle: "Sonos Era 300", desc: "Spatial audio in every room. The speaker that makes staying home feel like a choice.", votes: 189, tag: "Dream Shelf", imageUrl: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Open Dream Shelf"] },
-    { id: "p3", type: "products", icon: "✨", page: "Dream Shelf", time: "Community pick", cardTitle: "Patagonia Black Hole Duffel", desc: "The bag that goes everywhere — carry-on, basecamp, weekend. Built to outlast everything else you own.", votes: 164, tag: "Dream Shelf", imageUrl: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Open Dream Shelf"] },
-    { id: "p4", type: "products", icon: "✨", page: "Dream Shelf", time: "Most dreamed about", cardTitle: "Le Creuset Dutch Oven", desc: "The heirloom kitchen piece. Once you cook in it you understand why people pass these down.", votes: 201, tag: "Dream Shelf", imageUrl: "https://images.unsplash.com/photo-1584990347449-39ce96f6528f?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Open Dream Shelf"] },
+    { id: "p1", type: "products", icon: "✨", page: "Someday", time: "Most dreamed about", cardTitle: "Rolex Submariner", desc: "A forever watch with quiet presence — the kind of piece people save for and keep for life.", votes: 247, tag: "Someday", imageUrl: "https://media.rolex.com/image/upload/q_auto/f_auto/t_v7-cover-majesty-landscape/c_limit,w_1200/v1/a677b2c664f6/catalogue/2026/upright-c/m124060-0001", actions: ["Add to someday", "Open Someday"] },
+    { id: "p2", type: "products", icon: "✨", page: "Someday", time: "Trending", cardTitle: "Sonos Era 300", desc: "Spatial audio in every room. The speaker that makes staying home feel like a choice.", votes: 189, tag: "Someday", imageUrl: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Open Someday"] },
+    { id: "p3", type: "products", icon: "✨", page: "Someday", time: "Community pick", cardTitle: "Patagonia Black Hole Duffel", desc: "The bag that goes everywhere — carry-on, basecamp, weekend. Built to outlast everything else you own.", votes: 164, tag: "Someday", imageUrl: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Open Someday"] },
+    { id: "p4", type: "products", icon: "✨", page: "Someday", time: "Most dreamed about", cardTitle: "Le Creuset Dutch Oven", desc: "The heirloom kitchen piece. Once you cook in it you understand why people pass these down.", votes: 201, tag: "Someday", imageUrl: "https://images.unsplash.com/photo-1584990347449-39ce96f6528f?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Open Someday"] },
   ],
   destinations: [
     { id: "d1", type: "destinations", icon: "✈️", page: "Destinations", time: "Dream trip", cardTitle: "Kyoto in Cherry Blossom Season", location: "Japan", desc: "Temples, lantern-lit alleys, and a city transformed by spring. Save this one for the kind of trip you plan around.", votes: 276, tag: "Destinations", imageUrl: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan trip"] },
@@ -100,7 +100,7 @@ const SOURCE_CONFIG = {
   hiking:      { label: "Hiking & Outdoors", sub: "1.8k members",            icon: "🥾", bg: "bg-green-500/10" },
   games:       { label: "Board Games",       sub: "892 members",             icon: "🎲", bg: "bg-amber-500/10" },
   restaurants: { label: "Restaurants",       sub: "3.1k members",            icon: "🍜", bg: "bg-pink-500/10" },
-  products:    { label: "Dream Shelf",        sub: "Someday-worthy finds", icon: "✨", bg: "bg-violet-500/10" },
+  products:    { label: "Someday",            sub: "Someday-worthy finds", icon: "✨", bg: "bg-violet-500/10" },
   destinations:{ label: "Destinations",       sub: "Trips worth dreaming about", icon: "✈️", bg: "bg-indigo-500/10" },
 };
 
@@ -110,7 +110,7 @@ const TAG_STYLES = {
   Hiking:      "bg-green-500/10 text-green-600 dark:text-green-400",
   Games:       "bg-amber-500/10 text-amber-600 dark:text-amber-400",
   Restaurants: "bg-pink-500/10 text-pink-600 dark:text-pink-400",
-  "Dream Shelf": "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+  Someday: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
   Destinations:"bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
 };
 
@@ -636,7 +636,7 @@ function CategoryGrid({ onPageTap }) {
     { key: 'games',       icon: '🎲', label: 'Board Games',       page: 'games' },
     { key: 'hiking',      icon: '🥾', label: 'Hiking & Outdoors', page: 'hiking' },
     { key: 'restaurants', icon: '🍜', label: 'Restaurants',       page: 'restaurants' },
-    { key: 'products',    icon: '✨', label: 'Dream Shelf',        page: 'products' },
+    { key: 'products',    icon: '✨', label: 'Someday',            page: 'products' },
     { key: 'destinations',icon: '✈️', label: 'Destinations',      page: 'destinations' },
   ];
   return (
@@ -688,7 +688,7 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
     return () => { cancelled = true; };
   }, [sources.movies, moviesRetry]);
 
-  // Live product search for DreamShelf items
+  // Live product search for Someday items
   useEffect(() => {
     const q = search.trim();
     if (!q || !sources.products) { setDreamResults([]); setDreamSearching(false); return; }
@@ -704,13 +704,13 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
           id: `dream-search-${i}-${q}`,
           type: "products",
           icon: "✨",
-          page: "Dream Shelf",
-          time: "Dream Shelf",
+          page: "Someday",
+          time: "Someday",
           cardTitle: item.name || item.title || q,
           desc: item.description || "",
           imageUrl: item.image || item.imageUrl || item.thumbnail || "",
           votes: 0,
-          actions: ["Add to someday", "Open Dream Shelf"],
+          actions: ["Add to someday", "Open Someday"],
         }));
         setDreamResults(normalized);
       } catch {
@@ -831,7 +831,7 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
             }
             {dreamSearching && (
               <div className="flex items-center gap-2 px-2 py-3 text-xs text-gray-400 dark:text-gray-600">
-                <span className="animate-spin">⟳</span> Searching Dream Shelf…
+                <span className="animate-spin">⟳</span> Searching Someday…
               </div>
             )}
           </div>

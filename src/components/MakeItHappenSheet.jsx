@@ -2,7 +2,7 @@
  * MakeItHappenSheet.jsx — Dream budgeting card
  *
  * Slides up as a bottom sheet when user taps "Make it happen"
- * on any Someday / Dream Shelf item.
+ * on any Someday item.
  *
  * Props:
  *   item            – { name, priceRange, emoji, brand, category }
