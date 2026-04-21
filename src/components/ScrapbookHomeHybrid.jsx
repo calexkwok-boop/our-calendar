@@ -496,16 +496,18 @@ const ScrapbookHomeHybrid = ({
               className="flex items-center gap-2 text-left active:opacity-70 transition-opacity"
             >
               <Sparkles className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
-              <h3
-                className="font-handwritten text-3xl"
-                style={{
-                  background: 'linear-gradient(90deg, #5eada0, #a89bc2, #c4867a, #c9a15d)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
-              >
-                Your Komo Book
+              <h3 className="font-handwritten text-3xl">
+                <span className="text-white">Your </span>
+                <span
+                  style={{
+                    background: 'linear-gradient(90deg, #5eada0, #a89bc2, #c4867a, #c9a15d)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}
+                >
+                  Komo Book
+                </span>
               </h3>
             </button>
             <button

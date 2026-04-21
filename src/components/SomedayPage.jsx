@@ -380,7 +380,8 @@ function getChapterClusterY(chapters, targetChapterId, pins) {
   let y = 20;
   for (const ch of chapters) {
     if (ch.id === targetChapterId) return y;
-    const chPins = pins.filter(p => p.chapterId === ch.id && p.type !== 'label' && p.type !== 'sticker');
+    const chapterItemIds = new Set((ch.itemIds || []).map(id => String(id || '')));
+    const chPins = pins.filter(p => (p.chapterId === ch.id || chapterItemIds.has(String(p.id || ''))) && p.type !== 'label' && p.type !== 'sticker');
     const rows = Math.ceil(Math.max(chPins.length, 1) / 2);
     const rowH = chPins.some(p => p.type === 'photo') ? CLUSTER_PHOTO_ROW_H : CLUSTER_NOTE_ROW_H;
     y += CLUSTER_LABEL_H + rows * rowH + CLUSTER_GAP;
@@ -392,7 +393,8 @@ function computeChapterLayout(chapters, pins) {
   const layout = {};
   let y = 20;
   chapters.forEach(ch => {
-    const chPins = pins.filter(p => p.chapterId === ch.id && p.type !== 'label' && p.type !== 'sticker');
+    const chapterItemIds = new Set((ch.itemIds || []).map(id => String(id || '')));
+    const chPins = pins.filter(p => (p.chapterId === ch.id || chapterItemIds.has(String(p.id || ''))) && p.type !== 'label' && p.type !== 'sticker');
     layout[ch.id] = { labelY: y };
     const rows = Math.ceil(Math.max(chPins.length, 1) / 2);
     const rowH = chPins.some(p => p.type === 'photo') ? CLUSTER_PHOTO_ROW_H : CLUSTER_NOTE_ROW_H;
@@ -1172,12 +1174,21 @@ const SomedayPage = ({
     : { backgroundColor: '#f5f2eb', backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.07) 1px, transparent 1px)', backgroundSize: '28px 28px' };
 
   const completedCount = pins.filter(p => p.status === 'done' && p.type !== 'label' && p.type !== 'sticker').length;
+  const getPinChapterId = (pin) => {
+    const directChapterId = String(pin?.chapterId || '').trim();
+    if (directChapterId) return directChapterId;
+    const pinId = String(pin?.id || '').trim();
+    if (!pinId) return '';
+    const matchedChapter = chapters.find(ch => (ch.itemIds || []).some(id => String(id || '') === pinId));
+    return String(matchedChapter?.id || '').trim();
+  };
+  const isPinInChapter = (pin) => Boolean(getPinChapterId(pin));
 
   // Chapter pins excluded from category filter pills; only show in 'all'
   const visiblePins = (
     filter === 'all'  ? pins :
-    filter === 'done' ? pins.filter(p => p.status === 'done' && !p.chapterId) :
-                        pins.filter(p => p.categoryId === filter && p.status !== 'done' && !p.chapterId)
+    filter === 'done' ? pins.filter(p => p.status === 'done' && !isPinInChapter(p)) :
+                        pins.filter(p => p.categoryId === filter && p.status !== 'done' && !isPinInChapter(p))
   ).filter(p => p.id !== heroId);
 
   const displayedPins = filter === 'all' ? visiblePins : [...visiblePins].sort((a, b) => (a.y - b.y) || (a.x - b.x));
@@ -1188,7 +1199,7 @@ const SomedayPage = ({
         return { ...pin, x: Math.min(220 + col * 170, pin.x), y: 24 + row * 210 };
       });
 
-  const lowestPinBottom = pins.filter(p => !p.chapterId).reduce((max, pin) => Math.max(max, (Number(pin.y) || 0) + estimatedPinHeight(pin)), 0);
+  const lowestPinBottom = pins.filter(p => !isPinInChapter(p)).reduce((max, pin) => Math.max(max, (Number(pin.y) || 0) + estimatedPinHeight(pin)), 0);
   const BOARD_HEIGHT = Math.max(600, chapterTotalHeight + Math.ceil(pins.length / 2) * 240 + 240, chapterTotalHeight + lowestPinBottom + 120);
 
   // ─── Drag ──────────────────────────────────────────────────────────────────
@@ -1467,7 +1478,8 @@ const SomedayPage = ({
         {filter === 'all' && chapters.map(chapter => {
           const cl = chapterLayout[chapter.id];
           if (!cl) return null;
-          const chPinCount = pins.filter(p => p.chapterId === chapter.id).length;
+          const chapterItemIds = new Set((chapter.itemIds || []).map(id => String(id || '')));
+          const chPinCount = pins.filter(p => p.chapterId === chapter.id || chapterItemIds.has(String(p.id || ''))).length;
           return (
             <div
               key={`cluster-label-${chapter.id}`}
@@ -1490,12 +1502,12 @@ const SomedayPage = ({
             onTouchStart={e => startDrag(e, pin.id)}
           >
             {pin.type === 'note'
-              ? <NotePin    pin={pin.chapterId ? { ...pin, pinColor: 'purple' } : pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
+              ? <NotePin    pin={isPinInChapter(pin) ? { ...pin, pinColor: 'purple', chapterId: getPinChapterId(pin) } : pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
               : pin.type === 'label'
               ? <LabelPin   pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} darkMode={darkMode} />
               : pin.type === 'sticker'
               ? <StickerPin pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} />
-              : <PhotoPin   pin={pin.chapterId ? { ...pin, pinColor: 'purple' } : pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
+              : <PhotoPin   pin={isPinInChapter(pin) ? { ...pin, pinColor: 'purple', chapterId: getPinChapterId(pin) } : pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
             }
           </div>
         ))}

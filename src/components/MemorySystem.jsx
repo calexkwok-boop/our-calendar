@@ -418,8 +418,11 @@ const MemorySystem = ({
 const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, onToggleFavorite, onDeleteMemory, darkMode }) => {
   const safeMemories = Array.isArray(memories) ? memories : [];
   const [deleteReadyMemoryId, setDeleteReadyMemoryId] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
+  const favoriteMemories = safeMemories.filter((memory) => Boolean(memory?.isFavorite));
+  const visibleMemories = activeTab === 'favorites' ? favoriteMemories : safeMemories;
   // Group memories by year
-  const memoriesByYear = safeMemories.reduce((acc, memory) => {
+  const memoriesByYear = visibleMemories.reduce((acc, memory) => {
     const year = new Date(memory.date).getFullYear();
     if (!acc[year]) acc[year] = [];
     acc[year].push(memory);
@@ -461,6 +464,51 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, onTog
           </button>
         )}
       </div>
+
+      {safeMemories.length > 0 && (
+        <div className="grid grid-cols-2 gap-2 rounded-2xl border border-rose-200/70 bg-white/70 p-1 shadow-sm dark:border-rose-400/10 dark:bg-slate-900/70">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('all');
+              setDeleteReadyMemoryId('');
+            }}
+            className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition-all ${
+              activeTab === 'all'
+                ? 'bg-[#D4A5A5] text-rose-50 shadow-sm'
+                : 'text-[#C4848A] hover:bg-rose-50 dark:text-[#D4A5A5] dark:hover:bg-rose-950/30'
+            }`}
+          >
+            <Sparkles className="h-4 w-4" />
+            All
+            <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${
+              activeTab === 'all' ? 'bg-white/20 text-white' : 'bg-rose-100 text-[#C4848A] dark:bg-rose-950/40 dark:text-[#D4A5A5]'
+            }`}>
+              {safeMemories.length}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('favorites');
+              setDeleteReadyMemoryId('');
+            }}
+            className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition-all ${
+              activeTab === 'favorites'
+                ? 'bg-[#D4A5A5] text-rose-50 shadow-sm'
+                : 'text-[#C4848A] hover:bg-rose-50 dark:text-[#D4A5A5] dark:hover:bg-rose-950/30'
+            }`}
+          >
+            <Star className="h-4 w-4" fill={activeTab === 'favorites' ? 'currentColor' : 'none'} />
+            Favorited
+            <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${
+              activeTab === 'favorites' ? 'bg-white/20 text-white' : 'bg-rose-100 text-[#C4848A] dark:bg-rose-950/40 dark:text-[#D4A5A5]'
+            }`}>
+              {favoriteMemories.length}
+            </span>
+          </button>
+        </div>
+      )}
       
       {/* Empty state */}
       {safeMemories.length === 0 && (
@@ -471,6 +519,18 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, onTog
           </h3>
           <p className="text-[#C4848A]/80 dark:text-[#D4A5A5]/70 mb-6">
             Preserve your special moments with photos, highlights, and more!
+          </p>
+        </div>
+      )}
+
+      {safeMemories.length > 0 && activeTab === 'favorites' && favoriteMemories.length === 0 && (
+        <div className="rounded-3xl border border-dashed border-rose-200 bg-white/60 px-5 py-10 text-center dark:border-rose-400/15 dark:bg-slate-900/60">
+          <Star className="mx-auto mb-3 h-8 w-8 text-[#D4A5A5]" />
+          <h3 className="text-xl font-bold text-[#C4848A] dark:text-[#D4A5A5] mb-2">
+            No favorited memories yet
+          </h3>
+          <p className="text-sm text-[#C4848A]/80 dark:text-[#D4A5A5]/70">
+            Tap the star on a memory to keep it in this tab.
           </p>
         </div>
       )}
