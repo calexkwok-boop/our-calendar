@@ -50,8 +50,10 @@ const inferDreamShelfCategory = (text = "") => {
   if (/(ring|bracelet|necklace|earring|jewelry|jewellery|tiffany|van cleef|love bracelet)/.test(q)) return "jewelry";
   if (/(sneaker|shoe|jordan|nike|adidas|new balance|common projects|dunk|samba)/.test(q)) return "sneakers";
   if (/(golf|putter|driver|iron|scotty|taylormade|titleist)/.test(q)) return "golf";
-  if (/(camera|guitar|piano|art|leica|fender|gibson|cookware|cooking|kitchen|dutch oven|le creuset|espresso|breville|coffee machine)/.test(q)) return "hobbies";
-  if (/(wine|champagne|whiskey|whisky|cellar|bordeaux|burgundy)/.test(q)) return "cellar";
+  if (/(cookware|cooking|kitchen|dutch oven|le creuset|espresso|breville|coffee machine)/.test(q)) return "kitchen";
+  if (/(camera|guitar|piano|art|leica|fender|gibson)/.test(q)) return "hobbies";
+  if (/(whiskey|whisky|bourbon|macallan|yamazaki|hibiki|pappy|van winkle|clase azul|don julio|cognac|louis xiii)/.test(q)) return "whiskey";
+  if (/(wine|champagne|cellar|bordeaux|burgundy)/.test(q)) return "cellar";
   if (/(ski|bike|snowboard|tent|kayak|adventure)/.test(q)) return "adventure";
   return "watches";
 };
@@ -131,6 +133,13 @@ const DREAMSHELF_IMAGES = {
   c6: "https://images.unsplash.com/photo-1506377585622-bedcbb027afc?w=600&q=80",
   c7: "https://images.unsplash.com/photo-1474722883778-792e7990302f?w=600&q=80",
   c8: "https://images.unsplash.com/photo-1516594798947-e65505dbb29d?w=600&q=80",
+  wh1: "https://source.unsplash.com/featured/?macallan,whisky,scotch,bottle,warm,bar",
+  wh2: "https://source.unsplash.com/featured/?yamazaki,japanese,whisky,bottle,minimal",
+  wh3: "https://source.unsplash.com/featured/?hibiki,whisky,glass,decanter,japanese",
+  wh4: "https://source.unsplash.com/featured/?bourbon,rare,whiskey,bottle,wood,shelf",
+  wh5: "https://source.unsplash.com/featured/?clase,azul,tequila,ceramic,bottle,luxury",
+  wh6: "https://source.unsplash.com/featured/?don,julio,tequila,bottle,elegant,bar",
+  wh7: "https://source.unsplash.com/featured/?louis,xiii,cognac,decanter,luxury,crystal",
 };
 
 // ─── Category config ──────────────────────────────────────────────────────────
@@ -141,7 +150,9 @@ const CATEGORIES = [
   { id: "golf",      label: "Golf",       emoji: "⛳" },
   { id: "sneakers",  label: "Sneakers",   emoji: "👟" },
   { id: "hobbies",   label: "Hobbies",    emoji: "🎸" },
+  { id: "kitchen",   label: "Kitchen",    emoji: "🍳" },
   { id: "cellar",    label: "Cellar",     emoji: "🍷" },
+  { id: "whiskey",   label: "Whiskey",    emoji: "🥃" },
   { id: "adventure", label: "Adventure",  emoji: "🎿" },
 ];
 
@@ -149,34 +160,30 @@ const DREAM_WORLDS = [
   {
     id: "style",
     label: "Style",
-    title: "The way I want to move through the world",
-    description: "Pieces that feel like identity, ritual, and personal polish.",
+    title: "Quiet choices, your identity",
     emoji: "✦",
     categoryIds: ["watches", "bags", "jewelry", "sneakers"],
   },
   {
-    id: "experiences",
-    label: "Experiences",
-    title: "Days worth planning around",
-    description: "Rounds, mountains, water, and the moments that become stories.",
+    id: "pursuits",
+    label: "Pursuits",
+    title: "The things that draw you in",
     emoji: "⛰️",
-    categoryIds: ["golf", "adventure"],
+    categoryIds: ["golf", "adventure", "hobbies"],
   },
   {
     id: "lifestyle",
     label: "Lifestyle",
-    title: "Rituals I want in my everyday life",
-    description: "Creative tools, cooking rituals, coffee corners, and weekend passions.",
+    title: "The rhythm of your life",
     emoji: "☕",
-    categoryIds: ["hobbies"],
+    categoryIds: ["hobbies", "kitchen"],
   },
   {
     id: "collection",
     label: "Collection",
-    title: "The cellar I build slowly",
-    description: "Bottles, cabinets, and celebration pieces gathered over time.",
+    title: "Built over time",
     emoji: "🍷",
-    categoryIds: ["cellar"],
+    categoryIds: ["watches", "sneakers", "cellar", "whiskey"],
   },
 ];
 
@@ -229,7 +236,12 @@ const SUB_FILTERS = {
     { id: "ritual",   label: "Ritual"    },
     { id: "studio",   label: "Studio"    },
     { id: "drive",    label: "Drive"     },
+  ],
+  kitchen: [
+    { id: "all",      label: "All"       },
     { id: "cooking",  label: "Cooking"   },
+    { id: "coffee",   label: "Coffee"    },
+    { id: "ritual",   label: "Ritual"    },
   ],
   cellar: [
     { id: "all",         label: "All"          },
@@ -237,6 +249,14 @@ const SUB_FILTERS = {
     { id: "celebration", label: "Celebration"  },
     { id: "cellar",      label: "Cellar Build" },
     { id: "rare",        label: "Special Bottle" },
+  ],
+  whiskey: [
+    { id: "all",      label: "All"          },
+    { id: "neat",     label: "Neat Pour"    },
+    { id: "japanese", label: "Japanese"     },
+    { id: "bourbon",  label: "Bourbon"      },
+    { id: "tequila",  label: "Tequila"      },
+    { id: "cognac",   label: "Cognac"       },
   ],
   adventure: [
     { id: "all",      label: "All"       },
@@ -282,13 +302,13 @@ const CURATED_ITEMS = {
     { id: "j8",  name: "Harry Winston Round Diamond Solitaire", brand: "Harry Winston", priceRange: "$10,000+", subFilter: ["anniversary"], emoji: "💍", description: "The King of Diamonds. When the moment demands something truly extraordinary." },
   ],
   golf: [
-    { id: "g1",  name: "Scotty Cameron Newport 2",     brand: "Scotty Cameron",priceRange: "$400–$600",  subFilter: ["putters","u500"],         emoji: "⛳", description: "The putter Tour pros hoard and collectors obsess over. Feel unlike anything else on the green." },
-    { id: "g2",  name: "Titleist TSR3 Driver",         brand: "Titleist",priceRange: "$550–$650",        subFilter: ["drivers","500_2k"],       emoji: "⛳", description: "The driver that the best players in the world trust when it actually matters." },
-    { id: "g3",  name: "Callaway Paradym Custom Irons",brand: "Callaway",priceRange: "$1,500–$2,500",   subFilter: ["irons","500_2k"],         emoji: "⛳", description: "Custom fit, custom look. The set you commission when you're serious about the game." },
-    { id: "g4",  name: "Ping G430 Full Set",           brand: "Ping",    priceRange: "$2,500–$3,500",   subFilter: ["sets","2kp"],             emoji: "⛳", description: "The complete bag upgrade. Everything matched, everything fitted, everything right." },
-    { id: "g5",  name: "Round at Pebble Beach",        brand: "Pebble Beach",priceRange: "$600–$1,000",  subFilter: ["exp","500_2k"],           emoji: "⛳", description: "The 18th green borders the Pacific Ocean. One of the greatest rounds of golf anyone will ever play." },
-    { id: "g7",  name: "TaylorMade Stealth 2 HD Driver",brand: "TaylorMade",priceRange: "$450–$600",    subFilter: ["drivers","u500"],         emoji: "⛳", description: "Carbon face technology that genuinely changes what a golf ball can do in the air." },
-    { id: "g8",  name: "FootJoy Tour Setup Bag",       brand: "FootJoy", priceRange: "$350–$500",        subFilter: ["u500"],                   emoji: "⛳", description: "The bag that says you take this seriously. Organized, beautiful, and built for the long game." },
+    { id: "g1",  name: "Scotty Cameron Newport 2",     brand: "Scotty Cameron",priceRange: "$400–$600",  subFilter: ["putters","u500"],         emoji: "⛳", image: DREAMSHELF_IMAGES.g1, description: "The putter Tour pros hoard and collectors obsess over. Feel unlike anything else on the green." },
+    { id: "g2",  name: "Titleist TSR3 Driver",         brand: "Titleist",priceRange: "$550–$650",        subFilter: ["drivers","500_2k"],       emoji: "⛳", image: DREAMSHELF_IMAGES.g2, description: "The driver that the best players in the world trust when it actually matters." },
+    { id: "g3",  name: "Callaway Paradym Custom Irons",brand: "Callaway",priceRange: "$1,500–$2,500",   subFilter: ["irons","500_2k"],         emoji: "⛳", image: DREAMSHELF_IMAGES.g3, description: "Custom fit, custom look. The set you commission when you're serious about the game." },
+    { id: "g4",  name: "Ping G430 Full Set",           brand: "Ping",    priceRange: "$2,500–$3,500",   subFilter: ["sets","2kp"],             emoji: "⛳", image: DREAMSHELF_IMAGES.g4, description: "The complete bag upgrade. Everything matched, everything fitted, everything right." },
+    { id: "g5",  name: "Round at Pebble Beach",        brand: "Pebble Beach",priceRange: "$600–$1,000",  subFilter: ["exp","500_2k"],           emoji: "⛳", image: DREAMSHELF_IMAGES.g5, description: "The 18th green borders the Pacific Ocean. One of the greatest rounds of golf anyone will ever play." },
+    { id: "g7",  name: "TaylorMade Stealth 2 HD Driver",brand: "TaylorMade",priceRange: "$450–$600",    subFilter: ["drivers","u500"],         emoji: "⛳", image: DREAMSHELF_IMAGES.g7, description: "Carbon face technology that genuinely changes what a golf ball can do in the air." },
+    { id: "g8",  name: "FootJoy Tour Setup Bag",       brand: "FootJoy", priceRange: "$350–$500",        subFilter: ["u500"],                   emoji: "⛳", image: DREAMSHELF_IMAGES.g8, description: "The bag that says you take this seriously. Organized, beautiful, and built for the long game." },
   ],
   sneakers: [
     { id: "s1",  name: "Air Jordan 1 Retro High OG",   brand: "Nike/Jordan",priceRange: "$170–$2,000+", subFilter: ["jordan","grail"],         emoji: "👟", description: "The shoe that started everything. Every colorway tells a story. The grail for a reason." },
@@ -309,18 +329,29 @@ const CURATED_ITEMS = {
     { id: "h6",  name: "Fender Custom Shop Stratocaster",brand: "Fender",priceRange: "$3,000–$6,000",  subFilter: ["music"],                  emoji: "🎸", description: "Built by master builders in Corona, California. The instrument you commission, not just buy." },
     { id: "h7",  name: "Ferrari 488 GTB",              brand: "Ferrari", priceRange: "$250,000+",        subFilter: ["auto"],                   emoji: "🏎️", description: "Twin-turbo V8, 660 horsepower, and a sound that makes grown adults cry. A pure dream." },
     { id: "h8",  name: "Warhol Screen Print (Authenticated)",brand: "Andy Warhol",priceRange: "$5,000–$50,000+",subFilter: ["art"],            emoji: "🖼️", description: "A piece of art history you can hang in your home. Pop art that only gets more meaningful with time." },
-    { id: "h9",  name: "Le Creuset Dutch Oven",        brand: "Le Creuset",priceRange: "$300-$500",      subFilter: ["cooking"],                emoji: "🍳", description: "The heirloom kitchen piece. Braises, soups, bread, and Sunday sauces all feel more special in enameled cast iron." },
-    { id: "h10", name: "Breville Espresso Machine",    brand: "Breville", priceRange: "$500-$900",      subFilter: ["cooking"],                emoji: "☕", description: "A countertop ritual machine for dialing in espresso, steaming milk, and making every morning feel a little more intentional." },
+  ],
+  kitchen: [
+    { id: "h9",  name: "Le Creuset Dutch Oven",        brand: "Le Creuset",priceRange: "$300-$500",      subFilter: ["cooking","ritual"],       emoji: "🍳", image: "https://source.unsplash.com/featured/?dutch,oven,cooking,kitchen,cozy", description: "The heirloom kitchen piece. Braises, soups, bread, and Sunday sauces all feel more special in enameled cast iron." },
+    { id: "h10", name: "Breville Espresso Machine",    brand: "Breville", priceRange: "$500-$900",      subFilter: ["coffee","ritual"],        emoji: "☕", image: "https://source.unsplash.com/featured/?espresso,machine,home,coffee,barista", description: "A countertop ritual machine for dialing in espresso, steaming milk, and making every morning feel a little more intentional." },
   ],
   cellar: [
-    { id: "c1",  name: "Opus One 2018",                brand: "Opus One",priceRange: "$350–$450 /bottle",subFilter: ["red","rare"],            emoji: "🍷", description: "The Napa Valley Bordeaux blend that made California wine taken seriously worldwide." },
-    { id: "c2",  name: "Dom Pérignon Vintage 2013",    brand: "Moët",    priceRange: "$200–$280 /bottle",subFilter: ["champagne"],             emoji: "🥂", description: "The vintage that only happens when Dom's cellar master decides conditions were perfect." },
-    { id: "c3",  name: "Pétrus 2015",                  brand: "Pétrus",  priceRange: "$3,000–$5,000 /bottle",subFilter: ["red","rare"],        emoji: "🍷", description: "The most coveted Bordeaux on earth. Pure Merlot from a single patch of iron-rich clay in Pomerol." },
-    { id: "c4",  name: "Screaming Eagle Cabernet",     brand: "Screaming Eagle",priceRange: "$3,000–$5,000 /bottle",subFilter: ["red","rare"], emoji: "🍷", description: "Napa Valley cult wine with a mailing list years long. Getting a bottle means knowing someone." },
-    { id: "c5",  name: "Krug Grande Cuvée",            brand: "Krug",    priceRange: "$180–$250 /bottle",subFilter: ["champagne"],             emoji: "🥂", description: "The champagne house that refuses to compromise. Every bottle is a blend of up to 120 reserve wines." },
-    { id: "c6",  name: "Sassicaia 2019",               brand: "Tenuta San Guido",priceRange: "$200–$300 /bottle",subFilter: ["red"],          emoji: "🍷", description: "The original Super Tuscan. A wine that invented a category and still defines it sixty years later." },
-    { id: "c7",  name: "Puligny-Montrachet Premier Cru",brand: "Various",priceRange: "$100–$200 /bottle",subFilter: ["white"],                emoji: "🥂", description: "Burgundy's greatest white. Minerality, precision, and the kind of complexity that takes years to understand." },
-    { id: "c8",  name: "EuroCave Wine Cabinet",        brand: "EuroCave",priceRange: "$1,500–$4,000",   subFilter: [],                         emoji: "🪣", description: "Because the bottles you're collecting deserve the right temperature, humidity, and darkness." },
+    { id: "c1",  name: "Opus One 2018",                brand: "Opus One",priceRange: "$350–$450 /bottle",subFilter: ["red","rare"],            emoji: "🍷", image: DREAMSHELF_IMAGES.c1, description: "The Napa Valley Bordeaux blend that made California wine taken seriously worldwide." },
+    { id: "c2",  name: "Dom Pérignon Vintage 2013",    brand: "Moët",    priceRange: "$200–$280 /bottle",subFilter: ["champagne"],             emoji: "🥂", image: DREAMSHELF_IMAGES.c2, description: "The vintage that only happens when Dom's cellar master decides conditions were perfect." },
+    { id: "c3",  name: "Pétrus 2015",                  brand: "Pétrus",  priceRange: "$3,000–$5,000 /bottle",subFilter: ["red","rare"],        emoji: "🍷", image: DREAMSHELF_IMAGES.c3, description: "The most coveted Bordeaux on earth. Pure Merlot from a single patch of iron-rich clay in Pomerol." },
+    { id: "c4",  name: "Screaming Eagle Cabernet",     brand: "Screaming Eagle",priceRange: "$3,000–$5,000 /bottle",subFilter: ["red","rare"], emoji: "🍷", image: DREAMSHELF_IMAGES.c4, description: "Napa Valley cult wine with a mailing list years long. Getting a bottle means knowing someone." },
+    { id: "c5",  name: "Krug Grande Cuvée",            brand: "Krug",    priceRange: "$180–$250 /bottle",subFilter: ["champagne"],             emoji: "🥂", image: DREAMSHELF_IMAGES.c5, description: "The champagne house that refuses to compromise. Every bottle is a blend of up to 120 reserve wines." },
+    { id: "c6",  name: "Sassicaia 2019",               brand: "Tenuta San Guido",priceRange: "$200–$300 /bottle",subFilter: ["red"],          emoji: "🍷", image: DREAMSHELF_IMAGES.c6, description: "The original Super Tuscan. A wine that invented a category and still defines it sixty years later." },
+    { id: "c7",  name: "Puligny-Montrachet Premier Cru",brand: "Various",priceRange: "$100–$200 /bottle",subFilter: ["white"],                emoji: "🥂", image: DREAMSHELF_IMAGES.c7, description: "Burgundy's greatest white. Minerality, precision, and the kind of complexity that takes years to understand." },
+    { id: "c8",  name: "EuroCave Wine Cabinet",        brand: "EuroCave",priceRange: "$1,500–$4,000",   subFilter: [],                         emoji: "🪣", image: DREAMSHELF_IMAGES.c8, description: "Because the bottles you're collecting deserve the right temperature, humidity, and darkness." },
+  ],
+  whiskey: [
+    { id: "wh1", name: "Macallan 18",                  brand: "The Macallan",priceRange: "$350-$500 /bottle",subFilter: ["neat"],              emoji: "🥃", image: DREAMSHELF_IMAGES.wh1, description: "A slow, sherried pour for the nightcap shelf. Rich, polished, and made for quiet celebrations." },
+    { id: "wh2", name: "Yamazaki 18",                  brand: "Suntory",    priceRange: "$900-$1,500 /bottle",subFilter: ["japanese","neat"], emoji: "🥃", image: DREAMSHELF_IMAGES.wh2, description: "Japanese whisky with patience built into it. The kind of bottle you open when the moment deserves ceremony." },
+    { id: "wh3", name: "Hibiki Harmony",               brand: "Suntory",    priceRange: "$90-$130 /bottle", subFilter: ["japanese","neat"],    emoji: "🥃", image: DREAMSHELF_IMAGES.wh3, description: "Soft, floral, and balanced. A beautiful everyday-celebration bottle for sharing with people who notice details." },
+    { id: "wh4", name: "Pappy Van Winkle",             brand: "Old Rip Van Winkle",priceRange: "$1,000+ /bottle",subFilter: ["bourbon","rare"],emoji: "🥃", image: DREAMSHELF_IMAGES.wh4, description: "The impossible bourbon. Part bottle, part legend, part story you tell before the cork even moves." },
+    { id: "wh5", name: "Clase Azul",                   brand: "Clase Azul", priceRange: "$150-$200 /bottle",subFilter: ["tequila"],            emoji: "🥃", image: DREAMSHELF_IMAGES.wh5, description: "The sculptural bottle for a celebratory pour. It looks as intentional on the shelf as it tastes in the glass." },
+    { id: "wh6", name: "Don Julio 1942",               brand: "Don Julio",  priceRange: "$170-$220 /bottle",subFilter: ["tequila"],            emoji: "🥃", image: DREAMSHELF_IMAGES.wh6, description: "A golden after-dinner pour that makes the table linger a little longer." },
+    { id: "wh7", name: "Louis XIII Cognac",            brand: "Rémy Martin",priceRange: "$4,000+ /bottle",subFilter: ["cognac","rare"],        emoji: "🥃", image: DREAMSHELF_IMAGES.wh7, description: "A decanter-level dream. The kind of bottle that feels less like a purchase and more like an occasion waiting to happen." },
   ],
   adventure: [
     { id: "a1",  name: "Völkl Mantra M6 Skis",        brand: "Völkl",   priceRange: "$800–$1,000",     subFilter: ["ski"],                    emoji: "🎿", description: "The all-mountain benchmark. Skis that make every run feel intentional and every turn feel earned." },
@@ -437,16 +468,27 @@ function itemMatchesSubFilter(categoryId, item, subId) {
     },
     hobbies: {
       creative: () => has("guitar", "camera", "piano", "screen print", "art", "hasselblad", "leica", "fender", "gibson", "warhol"),
-      ritual: () => has("espresso", "coffee", "dutch oven", "le creuset", "piano", "camera"),
+      ritual: () => has("piano", "camera"),
       studio: () => has("guitar", "piano", "camera", "hasselblad", "leica", "fender", "gibson"),
       drive: () => has("porsche", "ferrari", "911", "gtb"),
-      cooking: () => filters.includes("cooking") || has("dutch oven", "le creuset", "espresso", "breville", "coffee"),
+    },
+    kitchen: {
+      cooking: () => filters.includes("cooking") || has("dutch oven", "le creuset", "cookware", "cooking"),
+      coffee: () => filters.includes("coffee") || has("espresso", "breville", "coffee"),
+      ritual: () => filters.includes("ritual") || has("dutch oven", "le creuset", "espresso", "breville", "coffee"),
     },
     cellar: {
       dinner: () => has("red", "white", "cabernet", "sassicaia", "puligny", "opus"),
       celebration: () => has("champagne", "dom", "krug", "cuvée", "cuvee"),
       cellar: () => has("cabinet", "eurocave", "cellar"),
       rare: () => filters.includes("rare") || has("pétrus", "petrus", "screaming eagle", "opus"),
+    },
+    whiskey: {
+      neat: () => has("macallan", "yamazaki", "hibiki", "pappy", "whisky", "whiskey", "bourbon", "pour"),
+      japanese: () => filters.includes("japanese") || has("yamazaki", "hibiki", "suntory", "japanese"),
+      bourbon: () => filters.includes("bourbon") || has("pappy", "van winkle", "bourbon"),
+      tequila: () => filters.includes("tequila") || has("clase azul", "don julio", "tequila"),
+      cognac: () => filters.includes("cognac") || has("louis xiii", "cognac", "rémy", "remy"),
     },
     adventure: {
       mountain: () => has("ski", "snowboard", "jacket", "mountain", "snow"),
@@ -465,6 +507,7 @@ function getDreamShelfVibe(item = {}) {
   if (text.includes("dutch oven") || text.includes("le creuset")) return "Dinner with friends";
   if (text.includes("golf") || text.includes("pebble")) return "A day worth clearing";
   if (text.includes("wine") || text.includes("champagne") || text.includes("krug") || text.includes("dom")) return "Saved for a celebration";
+  if (text.includes("whisky") || text.includes("whiskey") || text.includes("bourbon") || text.includes("tequila") || text.includes("cognac") || text.includes("pour")) return "Celebration pour";
   if (text.includes("guitar") || text.includes("piano")) return "Creative life";
   if (text.includes("camera") || text.includes("leica") || text.includes("hasselblad")) return "Seeing more closely";
   if (text.includes("porsche") || text.includes("ferrari")) return "The long drive";
@@ -940,6 +983,28 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     }, 250);
   }, []);
 
+  const loadWorld = useCallback((world) => {
+    if (!world) return;
+    setLoading(true);
+    setActiveSubFilter("all");
+    const loadId = categoryLoadIdRef.current + 1;
+    categoryLoadIdRef.current = loadId;
+    const worldItems = world.categoryIds.flatMap((categoryId) => {
+      const cat = getDreamShelfCategoryMeta(categoryId);
+      return (CURATED_ITEMS[categoryId] || []).map(item => ({
+        ...item,
+        category: cat.id,
+        emoji: item.emoji || cat.emoji,
+        image: item.image || DREAMSHELF_IMAGES[item.id] || "",
+      }));
+    });
+    setTimeout(() => {
+      if (categoryLoadIdRef.current !== loadId) return;
+      setItems(worldItems);
+      setLoading(false);
+    }, 250);
+  }, []);
+
   useEffect(() => {
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
@@ -1129,14 +1194,20 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
   const handleCategoryClick = (cat) => {
     if (activeCategory?.id === cat.id) {
-      categoryLoadIdRef.current += 1;
       setActiveCategory(null);
       setActiveSubFilter("all");
-      setItems([]);
-      setLoading(false);
+      if (activeWorld) {
+        loadWorld(activeWorld);
+      } else {
+        categoryLoadIdRef.current += 1;
+        setItems([]);
+        setLoading(false);
+      }
       return;
     }
-    const world = getDreamWorldForCategory(cat.id);
+    const world = activeWorld?.categoryIds.includes(cat.id)
+      ? activeWorld
+      : getDreamWorldForCategory(cat.id);
     if (world) setActiveWorld(world);
     setActiveCategory(cat);
     setActiveSubFilter("all");
@@ -1145,11 +1216,9 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
   const handleWorldClick = (world) => {
     setActiveWorld(world);
-    categoryLoadIdRef.current += 1;
     setActiveCategory(null);
     setActiveSubFilter("all");
-    setItems([]);
-    setLoading(false);
+    loadWorld(world);
   };
 
   const handleSubFilter = (subId) => {
@@ -1235,6 +1304,13 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   const selectedItemWithImage = selectedItem
     ? { ...selectedItem, image: selectedItem.image || itemImages[getDreamShelfImageKey(selectedItem)] || "" }
     : null;
+  const categoryItemsWithImages = items.map(item => ({
+    ...item,
+    image: item.image || itemImages[getDreamShelfImageKey(item)] || "",
+  }));
+  const firstCategoryItems = categoryItemsWithImages.slice(0, 2);
+  const secondCategoryItems = categoryItemsWithImages.slice(2, 4);
+  const remainingCategoryItems = categoryItemsWithImages.slice(4);
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -1342,7 +1418,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
         <div className="mb-5">
           <p className="text-[10px] uppercase tracking-[0.16em] mb-3" style={{ color: STONE }}>
-            Choose a world
+            What moves you?
           </p>
           <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-3">
             {DREAM_WORLDS.map(world => (
@@ -1424,6 +1500,69 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
           </div>
         )}
 
+        {/* ── CTA Card ── */}
+        <div style={{
+          borderRadius: '16px',
+          background: dm ? CHAR_SOFT : LINEN,
+          border: `1px solid ${dm ? "rgba(250,246,240,0.10)" : STONE_LIGHT}`,
+          boxShadow: dm ? '0 4px 20px rgba(0,0,0,0.16)' : '0 2px 12px rgba(42,36,32,0.06)',
+          padding: '28px 24px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '6px',
+          textAlign: 'center',
+          marginBottom: '28px',
+        }}>
+          <p style={{ fontSize: '20px', fontWeight: 700, color: dm ? LINEN : CHAR, fontFamily: "'Caveat', cursive", margin: 0 }}>
+            Something on your dream list?
+          </p>
+          <p style={{ fontSize: '14px', color: STONE, margin: '0 0 14px', letterSpacing: '0.01em' }}>
+            Share what you're saving for with your friends
+          </p>
+          <button
+            onClick={() => setSharingItem({ name: "", brand: "", image: "", priceRange: "", category: activeCategory?.id || "watches", description: "" })}
+            style={{ background: 'transparent', color: dm ? LINEN : CHAR, border: `1px solid ${dm ? "rgba(250,246,240,0.18)" : STONE_LIGHT}`, borderRadius: '50px', padding: '9px 26px', fontSize: '17px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: "'Caveat', cursive" }}
+          >
+            Add to Someday
+          </button>
+        </div>
+
+        {/* ── First category cards ── */}
+        <p className="text-[10px] uppercase tracking-[0.16em] mb-3" style={{ color: STONE }}>
+          {activeCategory
+            ? `${activeWorld?.label ? `${activeWorld.label} · ` : ""}${activeCategory.emoji} ${activeCategory.label}${activeSubFilter !== "all" ? ` · ${SUB_FILTERS[activeCategory.id]?.find(f => f.id === activeSubFilter)?.label || ""}` : ""}`
+            : activeWorld
+              ? `${activeWorld.label} · All`
+              : "Start with a world above"}
+        </p>
+
+        {loading ? (
+          <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-4 mb-8">
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="h-80 animate-pulse border" style={{ borderRadius: '16px', background: dm ? CHAR_SOFT : OAT, borderColor: dm ? "rgba(250,246,240,0.08)" : STONE_LIGHT }} />
+            ))}
+          </div>
+        ) : firstCategoryItems.length > 0 ? (
+          <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-4 mb-8">
+            {firstCategoryItems.map(item => (
+              <ItemCard
+                key={item.id}
+                item={item}
+                savedIds={savedIds}
+                onOpen={setSelectedItem}
+                darkMode={dm}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-16 mb-8" style={{ color: STONE }}>
+            <div className="text-4xl mb-4 opacity-40">✦</div>
+            <p className="font-['Caveat'] text-2xl mb-1">{activeCategory ? "Nothing here yet" : "Choose a life chapter"}</p>
+            <p className="text-sm opacity-60">{activeCategory ? "Try a different mood filter" : "Pick Style, Experiences, Lifestyle, or Collection to begin."}</p>
+          </div>
+        )}
+
         {/* ── Featured community post ── */}
         {featured && (
           <>
@@ -1487,69 +1626,19 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
           </>
         )}
 
-        {/* ── Item grid ── */}
-        <p className="text-[10px] uppercase tracking-[0.16em] mb-3" style={{ color: STONE }}>
-          {activeCategory
-            ? `${activeWorld?.label ? `${activeWorld.label} · ` : ""}${activeCategory.emoji} ${activeCategory.label}${activeSubFilter !== "all" ? ` · ${SUB_FILTERS[activeCategory.id]?.find(f => f.id === activeSubFilter)?.label || ""}` : ""}`
-            : "Start with a world above"}
-        </p>
-
-        {loading ? (
+        {!loading && secondCategoryItems.length > 0 && (
           <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-4 mb-8">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-80 animate-pulse border" style={{ borderRadius: '16px', background: dm ? CHAR_SOFT : OAT, borderColor: dm ? "rgba(250,246,240,0.08)" : STONE_LIGHT }} />
+            {secondCategoryItems.map(item => (
+              <ItemCard
+                key={item.id}
+                item={item}
+                savedIds={savedIds}
+                onOpen={setSelectedItem}
+                darkMode={dm}
+              />
             ))}
           </div>
-        ) : (
-          <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-4 mb-8">
-            {items.length > 0 ? items.map(item => {
-              const itemWithImage = { ...item, image: item.image || itemImages[getDreamShelfImageKey(item)] || "" };
-              return (
-                <ItemCard
-                  key={item.id}
-                  item={itemWithImage}
-                  savedIds={savedIds}
-                  onOpen={setSelectedItem}
-                  darkMode={dm}
-                />
-              );
-            }) : (
-              <div className="col-span-2 max-sm:col-span-1 text-center py-16" style={{ color: STONE }}>
-                <div className="text-4xl mb-4 opacity-40">✦</div>
-                <p className="font-['Caveat'] text-2xl mb-1">{activeCategory ? "Nothing here yet" : "Choose a life chapter"}</p>
-                <p className="text-sm opacity-60">{activeCategory ? "Try a different mood filter" : "Pick Style, Experiences, Lifestyle, or Collection to begin."}</p>
-              </div>
-            )}
-          </div>
         )}
-
-        {/* ── CTA Card ── */}
-        <div style={{
-          borderRadius: '16px',
-          background: dm ? CHAR_SOFT : LINEN,
-          border: `1px solid ${dm ? "rgba(250,246,240,0.10)" : STONE_LIGHT}`,
-          boxShadow: dm ? '0 4px 20px rgba(0,0,0,0.16)' : '0 2px 12px rgba(42,36,32,0.06)',
-          padding: '28px 24px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '6px',
-          textAlign: 'center',
-          marginBottom: '32px',
-        }}>
-          <p style={{ fontSize: '20px', fontWeight: 700, color: dm ? LINEN : CHAR, fontFamily: "'Caveat', cursive", margin: 0 }}>
-            Something on your dream list?
-          </p>
-          <p style={{ fontSize: '14px', color: STONE, margin: '0 0 14px', letterSpacing: '0.01em' }}>
-            Share what you're saving for with your friends
-          </p>
-          <button
-            onClick={() => setSharingItem({ name: "", brand: "", image: "", priceRange: "", category: activeCategory?.id || "watches", description: "" })}
-            style={{ background: 'transparent', color: dm ? LINEN : CHAR, border: `1px solid ${dm ? "rgba(250,246,240,0.18)" : STONE_LIGHT}`, borderRadius: '50px', padding: '9px 26px', fontSize: '17px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: "'Caveat', cursive" }}
-          >
-            Add to Someday
-          </button>
-        </div>
 
         {/* ── Community feed ── */}
         <p ref={communityFeedRef} className="text-[10px] uppercase tracking-[0.16em] mb-3" style={{ color: STONE }}>
@@ -1569,6 +1658,25 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
             />
           ))}
         </div>
+
+        {!loading && remainingCategoryItems.length > 0 && (
+          <div className="mt-8">
+            <p className="text-[10px] uppercase tracking-[0.16em] mb-3" style={{ color: STONE }}>
+              More from this category
+            </p>
+            <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-4 mb-8">
+              {remainingCategoryItems.map(item => (
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  savedIds={savedIds}
+                  onOpen={setSelectedItem}
+                  darkMode={dm}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
       </div>
 
