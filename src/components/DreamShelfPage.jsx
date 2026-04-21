@@ -971,6 +971,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     const allItems = (CURATED_ITEMS[cat.id] || []).map(item => ({
       ...item,
       category: cat.id,
+      preferResolvedImage: true,
       image: item.image || DREAMSHELF_IMAGES[item.id] || "",
     }));
     const filtered = subFilter === "all"
@@ -995,6 +996,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         ...item,
         category: cat.id,
         emoji: item.emoji || cat.emoji,
+        preferResolvedImage: true,
         image: item.image || DREAMSHELF_IMAGES[item.id] || "",
       }));
     });
@@ -1037,7 +1039,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
   const fetchDreamShelfImage = useCallback(async (item) => {
     const key = getDreamShelfImageKey(item);
-    const cachedImage = item?.image || item?.product_image || itemImagesRef.current[key] || "";
+    const cachedImage = itemImagesRef.current[key] || (!item?.preferResolvedImage ? (item?.image || item?.product_image || "") : "");
     if (!key || cachedImage) return cachedImage;
     if (imageRequestsRef.current.has(key)) return imageRequestsRef.current.get(key);
     if (imageFetchedRef.current.has(key)) return "";
@@ -1302,11 +1304,18 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     : "";
   const featuredSaved = featured ? savedIds.has(featured.id) : false;
   const selectedItemWithImage = selectedItem
-    ? { ...selectedItem, image: selectedItem.image || itemImages[getDreamShelfImageKey(selectedItem)] || "" }
+    ? {
+        ...selectedItem,
+        image: selectedItem.preferResolvedImage
+          ? (itemImages[getDreamShelfImageKey(selectedItem)] || selectedItem.image || "")
+          : (selectedItem.image || itemImages[getDreamShelfImageKey(selectedItem)] || "")
+      }
     : null;
   const categoryItemsWithImages = items.map(item => ({
     ...item,
-    image: item.image || itemImages[getDreamShelfImageKey(item)] || "",
+    image: item.preferResolvedImage
+      ? (itemImages[getDreamShelfImageKey(item)] || item.image || "")
+      : (item.image || itemImages[getDreamShelfImageKey(item)] || ""),
   }));
   const categoryItemPairs = Array.from(
     { length: Math.ceil(categoryItemsWithImages.length / 2) },
@@ -1369,10 +1378,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
               {searching ? "Finding..." : "Find it"}
             </button>
           </div>
-          <div className="flex items-center justify-between gap-3 px-1 pt-2">
-            <p className={`text-xs ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
-              Search pulls possible matches when configured. You can always add your own photo.
-            </p>
+          <div className="flex items-center justify-end gap-3 px-1 pt-2">
             <button
               type="button"
               onClick={() => setSharingItem({ name: searchQuery.trim(), brand: "", image: "", priceRange: "", category: inferDreamShelfCategory(searchQuery), description: "" })}
