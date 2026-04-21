@@ -24860,7 +24860,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           <div className="flex items-start justify-between gap-3 border-b border-gray-200 bg-white px-5 pb-4 pt-[max(1rem,calc(env(safe-area-inset-top)+0.5rem))] dark:border-white/10 dark:bg-slate-950 sm:px-6">
             <div>
               <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Memories</div>
-              <div className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100" style={{ fontFamily: "'Caveat', cursive" }}>
                 {memorySystemView === 'create' ? 'Create a memory' : memorySystemView === 'edit' ? 'Edit memory' : 'Your memory gallery'}
               </div>
             </div>

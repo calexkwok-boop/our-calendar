@@ -629,7 +629,7 @@ const ScrapbookHomeHybrid = ({
             </div>
             <button
               onClick={onOpenMemories}
-              className="rounded-xl border border-white/50 dark:border-white/10 bg-white/70 dark:bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-100"
+              className="font-handwritten rounded-xl border border-white/50 dark:border-white/10 bg-white/70 dark:bg-white/[0.05] px-3 py-1.5 text-lg font-bold leading-none text-gray-700 dark:text-gray-100"
             >
               Open gallery
             </button>

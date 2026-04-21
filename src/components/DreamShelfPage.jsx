@@ -1017,6 +1017,11 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
   const handleFeaturedSomeday = useCallback(async (featured, imageUrl) => {
     if (!featured) return;
+    setSavedIds(prev => {
+      const next = new Set(prev);
+      next.add(featured.id);
+      return next;
+    });
     const stableImageUrl = await cacheDreamShelfImage(imageUrl || "", featured.product_name || "dream-item");
     onAddToSomeday?.({ title: featured.product_name, imageUrl: stableImageUrl, emoji: "✨", type: "dreamshelf", categoryId: "buy" });
   }, [cacheDreamShelfImage, onAddToSomeday]);
@@ -1026,6 +1031,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   const featuredImage = featured
     ? (featured.product_image || itemImages[getDreamShelfImageKey(featured)] || "")
     : "";
+  const featuredSaved = featured ? savedIds.has(featured.id) : false;
   const selectedItemWithImage = selectedItem
     ? { ...selectedItem, image: selectedItem.image || itemImages[getDreamShelfImageKey(selectedItem)] || "" }
     : null;
@@ -1255,11 +1261,14 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                     </div>
                   </div>
                   <button
-                    onClick={() => handleFeaturedSomeday(featured, featuredImage)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (!featuredSaved) handleFeaturedSomeday(featured, featuredImage);
+                    }}
                     className="self-start px-4 py-2 rounded-xl text-sm font-['Caveat'] font-bold border transition-all"
                     style={{ background: dm ? TEAL_MUTED : '#f0fdfa', border: `1px solid ${TEAL_BORDER}`, color: TEAL, fontFamily: "'Caveat', cursive" }}
                   >
-                    + Someday
+                    {featuredSaved ? "✓ Someday" : "+ Someday"}
                   </button>
                 </div>
               </div>
