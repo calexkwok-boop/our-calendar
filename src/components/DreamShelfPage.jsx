@@ -769,8 +769,13 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   const hasFetchedRef = useRef(false);
   const imageFetchedRef = useRef(new Set());
   const imageRequestsRef = useRef(new Map());
+  const itemImagesRef = useRef({});
   const searchRequestIdRef = useRef(0);
   const categoryLoadIdRef = useRef(0);
+
+  useEffect(() => {
+    itemImagesRef.current = itemImages;
+  }, [itemImages]);
 
   // ── Auth ──
   useEffect(() => {
@@ -848,7 +853,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
   const fetchDreamShelfImage = useCallback(async (item) => {
     const key = getDreamShelfImageKey(item);
-    const cachedImage = item?.image || item?.product_image || itemImages[key] || "";
+    const cachedImage = item?.image || item?.product_image || itemImagesRef.current[key] || "";
     if (!key || cachedImage) return cachedImage;
     if (imageRequestsRef.current.has(key)) return imageRequestsRef.current.get(key);
     if (imageFetchedRef.current.has(key)) return "";
@@ -865,7 +870,12 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         const imageUrl = result?.displayUrl || result?.thumbnail || result?.url || "";
         if (!imageUrl) return "";
 
-        setItemImages(prev => prev[key] ? prev : { ...prev, [key]: imageUrl });
+        setItemImages(prev => {
+          if (prev[key]) return prev;
+          const next = { ...prev, [key]: imageUrl };
+          itemImagesRef.current = next;
+          return next;
+        });
         return imageUrl;
       } catch (error) {
         // Keep the emoji fallback if image search is unavailable.
@@ -878,7 +888,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
     imageRequestsRef.current.set(key, request);
     return request;
-  }, [itemImages]);
+  }, []);
 
   const buildManualSearchItem = useCallback(async (query) => {
     const category = inferDreamShelfCategory(query);

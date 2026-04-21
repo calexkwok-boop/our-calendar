@@ -8274,9 +8274,25 @@ function App() {
     return isUuidLike(id) ? `User ${id.slice(0, 8)}` : id;
   };
   const activeLayerIdRef = useRef(activeLayerId);
+  const inAppRealtimeSnapshotRef = useRef({
+    activeLayerId: null,
+    activeSubCalendar: null,
+    currentUser: '',
+    layers: [],
+    subCalendars: [],
+  });
   useEffect(() => {
     activeLayerIdRef.current = activeLayerId;
   }, [activeLayerId]);
+  useEffect(() => {
+    inAppRealtimeSnapshotRef.current = {
+      activeLayerId,
+      activeSubCalendar,
+      currentUser,
+      layers,
+      subCalendars,
+    };
+  }, [activeLayerId, activeSubCalendar, currentUser, layers, subCalendars]);
   useEffect(() => {
     setSubCalendars([]);
     setActiveSubCalendar(null);
@@ -15355,17 +15371,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const myPhone = normalizePhoneNumber(user?.phone);
     const memberRecipientFilter = buildMemberRecipientFilter(myEmail, myPhone);
     const shareRecipientFilter = buildShareRecipientFilter(me, myEmail, myPhone);
-    const subCalIdSet = new Set((subCalendars || []).map(sc => String(sc.id)));
-    const subCalNameMap = {};
-    (subCalendars || []).forEach(sc => { subCalNameMap[String(sc.id)] = sc.name || 'Trip'; });
+    const latestSnapshot = () => inAppRealtimeSnapshotRef.current || {};
+    const subCalIdSet = new Set((latestSnapshot().subCalendars || []).map(sc => String(sc.id)));
+    const getSubCalName = (subCalIdValue) => {
+      const subCalId = String(subCalIdValue || '');
+      const subCal = (latestSnapshot().subCalendars || []).find(sc => String(sc?.id || '') === subCalId);
+      return subCal?.name || 'trip';
+    };
     const accessibleSubCalIdCache = new Set(subCalIdSet);
     const accessibleOwnerIdCache = new Set([me]);
-    const accessibleLayerIdCache = new Set((layers || []).map((layer) => String(layer?.id || '')).filter(Boolean));
+    const accessibleLayerIdCache = new Set((latestSnapshot().layers || []).map((layer) => String(layer?.id || '')).filter(Boolean));
 
     const isOwnRow = (row) => {
       const rowUserId = row?.user_id ? String(row.user_id) : '';
       const rowCreatedBy = String(row?.created_by || '').trim().toLowerCase();
-      const myName = String(currentUser || '').trim().toLowerCase();
+      const myName = String(latestSnapshot().currentUser || '').trim().toLowerCase();
       return (rowUserId && rowUserId === me) || (rowCreatedBy && (rowCreatedBy === myEmail || rowCreatedBy === myName));
     };
 
@@ -15373,6 +15393,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const normalizedId = String(subCalId || '');
       if (!normalizedId) return false;
       if (accessibleSubCalIdCache.has(normalizedId)) return true;
+      if ((latestSnapshot().subCalendars || []).some(sc => String(sc?.id || '') === normalizedId)) {
+        accessibleSubCalIdCache.add(normalizedId);
+        return true;
+      }
 
       const memberRowsQuery = supabase
         .from('sub_calendar_members')
@@ -15441,6 +15465,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const layerId = String(layerIdValue || '').trim();
       if (!layerId) return false;
       if (accessibleLayerIdCache.has(layerId)) return true;
+      if ((latestSnapshot().layers || []).some(layer => String(layer?.id || '') === layerId)) {
+        accessibleLayerIdCache.add(layerId);
+        return true;
+      }
 
       const { data: layerRow, error: layerErr } = await supabase
         .from('calendar_layers')
@@ -15506,13 +15534,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const refreshTripCrewForSharedAccessRow = async (row) => {
       const rowLayerId = String(row?.layer_id || row?.calendar_id || '').trim();
       if (!rowLayerId) return;
-      if (rowLayerId === String(activeLayerId || '').trim()) {
+      const snapshot = latestSnapshot();
+      if (rowLayerId === String(snapshot.activeLayerId || '').trim()) {
         setLayerRefreshToken((prev) => prev + 1);
       }
-      const activeTripLayerId = String(activeSubCalendar?.layer_id || activeSubCalendar?.calendar_id || '').trim();
-      if (!activeSubCalendar?.id || !activeTripLayerId || activeTripLayerId !== rowLayerId) return;
-      await syncSubCalendarMembersFromLayer(activeSubCalendar);
-      await loadSubCalendarMembers(activeSubCalendar.id);
+      const activeTrip = snapshot.activeSubCalendar;
+      const activeTripLayerId = String(activeTrip?.layer_id || activeTrip?.calendar_id || '').trim();
+      if (!activeTrip?.id || !activeTripLayerId || activeTripLayerId !== rowLayerId) return;
+      await syncSubCalendarMembersFromLayer(activeTrip);
+      await loadSubCalendarMembers(activeTrip.id);
     };
 
     const updatesChannel = supabase
@@ -15533,7 +15563,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         const subCalId = String(row.sub_calendar_id || '');
         if (!(await canAccessSubCalId(subCalId))) return;
         const who = String(row.created_by || 'Someone');
-        const tripName = subCalNameMap[subCalId] || 'trip';
+        const tripName = getSubCalName(subCalId);
         addInAppNotification({
           key: `sub_calendar_events:${row.id}`,
           type: 'event',
@@ -15545,7 +15575,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         if (!row || isOwnRow(row)) return;
         const subCalId = String(row.sub_calendar_id || '');
         const who = String(row.uploaded_by || 'Someone');
-        const tripName = subCalNameMap[subCalId] || 'trip';
+        const tripName = getSubCalName(subCalId);
         addInAppNotification({
           key: `trip_photos:${row.id}`,
           type: 'photo',
@@ -15576,7 +15606,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         if (row?.accepted_at) return;
         const subCalId = String(row.sub_calendar_id || '');
         if (!subCalId) return;
-        const tripName = subCalNameMap[subCalId] || 'a trip';
+        const tripName = getSubCalName(subCalId) || 'a trip';
         const stamp = String(row?.invited_at || row?.created_at || '');
         addInAppNotification({
           key: `trip_invite:${subCalId}:${inviteIdentity}:${stamp}`,
@@ -15680,7 +15710,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return () => {
       updatesChannel.unsubscribe();
     };
-  }, [user?.id, user?.email, user?.phone, currentUser, subCalendars, layers, activeLayerId, activeSubCalendar]);
+  }, [user?.id, user?.email, user?.phone]);
 
   useEffect(() => {
     if (!user?.id) {
