@@ -213,16 +213,6 @@ function Divider() {
   return <div className="mx-4 h-px bg-stone-100 dark:bg-white/[0.04]" />;
 }
 
-function VoteButtons({ initialVotes }) {
-  const [votes, setVotes] = useState(initialVotes);
-  return (
-    <div className="ml-auto flex items-center gap-0.5">
-      <button onClick={() => setVotes(v => v + 1)} className="text-gray-400 dark:text-gray-600 text-sm px-2 py-1 rounded-lg hover:bg-stone-100 dark:hover:bg-white/5 hover:text-teal-600 dark:hover:text-teal-400 transition-colors">▲</button>
-      <span className="text-[11px] text-gray-400 dark:text-gray-600 min-w-[28px] text-center">{votes}</span>
-      <button onClick={() => setVotes(v => Math.max(0, v - 1))} className="text-gray-400 dark:text-gray-600 text-sm px-2 py-1 rounded-lg hover:bg-stone-100 dark:hover:bg-white/5 transition-colors">▼</button>
-    </div>
-  );
-}
 
 function FriendCard({ post }) {
   return (
@@ -252,7 +242,6 @@ function MovieCard({ movie, onAddToSomeday, onRemoveFromSomeday, onPageTap, onPl
   const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : null;
   const year   = movie.release_date ? movie.release_date.slice(0, 4) : "—";
   const rating = movie.vote_average ? movie.vote_average.toFixed(1) : "—";
-  const votes  = Math.max(10, Math.floor((movie.vote_count || 100) / 10));
 
   function handleSomeday(e) {
     e.stopPropagation();
@@ -286,7 +275,6 @@ function MovieCard({ movie, onAddToSomeday, onRemoveFromSomeday, onPageTap, onPl
             <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-1">{year} · ★ {rating}</p>
             <p className="text-[11px] text-gray-500 leading-snug mt-1.5 line-clamp-3">{movie.overview}</p>
           </div>
-          <p className="text-[10px] text-teal-500 mt-2">▲ {votes} votes</p>
         </div>
       </div>
       <div className="flex items-center gap-2 px-4 pb-4 pt-2.5">
@@ -299,7 +287,6 @@ function MovieCard({ movie, onAddToSomeday, onRemoveFromSomeday, onPageTap, onPl
         >
           + Plan
         </button>
-        <VoteButtons initialVotes={votes} />
       </div>
     </div>
   );
@@ -323,7 +310,6 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight">{post.cardTitle}</p>
               <p className="text-[11px] text-gray-500 leading-snug mt-1.5 line-clamp-3">{post.desc}</p>
             </div>
-            <p className="text-[10px] text-teal-500 mt-2">▲ {post.votes} votes</p>
           </div>
         </div>
       ) : (
@@ -423,7 +409,6 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
             </button>
           );
         })}
-        <VoteButtons initialVotes={post.votes} />
       </div>
     </div>
   );
@@ -623,7 +608,7 @@ function SectionHeader({ label }) {
   const tone =
     label === "Good for this weekend"
       ? "text-amber-700 dark:text-amber-300"
-      : label === "Hidden gems"
+      : label === "Dreaming of"
         ? "text-violet-700 dark:text-violet-300"
         : label === "Trending"
           ? "text-rose-700 dark:text-rose-300"
@@ -643,12 +628,12 @@ function SectionHeader({ label }) {
 // ─── Browse by interest grid ──────────────────────────────────────────────────
 function CategoryGrid({ onPageTap }) {
   const cats = [
-    { key: 'movies',      icon: '🎬', label: 'Movies',            page: 'movies' },
-    { key: 'games',       icon: '🎲', label: 'Board Games',       page: 'games' },
-    { key: 'hiking',      icon: '🥾', label: 'Hiking & Outdoors', page: 'hiking' },
-    { key: 'restaurants', icon: '🍜', label: 'Restaurants',       page: 'restaurants' },
-    { key: 'products',    icon: '✨', label: 'Someday',            page: 'products' },
-    { key: 'destinations',icon: '✈️', label: 'Destinations',      page: 'destinations' },
+    { key: 'movies',       icon: '🎬', label: 'Movies',             sub: 'Find your next watch',    page: 'movies' },
+    { key: 'games',        icon: '🎲', label: 'Board Games',        sub: 'Plan a game night',       page: 'games' },
+    { key: 'hiking',       icon: '🥾', label: 'Hiking & Outdoors',  sub: 'Get outside',             page: 'hiking' },
+    { key: 'restaurants',  icon: '🍜', label: 'Restaurants',        sub: 'Discover new spots',      page: 'restaurants' },
+    { key: 'products',     icon: '✨', label: 'Someday',             sub: 'Build your dream shelf',  page: 'products' },
+    { key: 'destinations', icon: '✈️', label: 'Destinations',       sub: 'Trip inspiration',        page: 'destinations' },
   ];
   return (
     <div className="px-3.5 grid grid-cols-2 gap-2.5">
@@ -661,7 +646,7 @@ function CategoryGrid({ onPageTap }) {
           <span className="text-2xl">{c.icon}</span>
           <div className="min-w-0">
             <p className="text-sm font-medium text-gray-800 dark:text-gray-200 leading-tight">{c.label}</p>
-            <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-0.5">{SOURCE_CONFIG[c.key]?.sub || ''}</p>
+            <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-0.5">{c.sub}</p>
           </div>
         </button>
       ))}
@@ -770,7 +755,6 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
   // ─── Discovery sections (non-search, deduplication via Set) ───────────────
   const sectionData = (() => {
     const moviesByRating = [...activeMovies].sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
-    const comByVotesDesc = [...activeCom].sort((a, b) => (b.votes || 0) - (a.votes || 0));
     const used = new Set();
     function take(items, limit) {
       const out = [];
@@ -780,15 +764,15 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
       }
       return out;
     }
-    // "Good for this weekend" — casual/quick community items + top-rated movies
+    // "Good for this weekend" — hiking, restaurants, destinations + top-rated movies
     const weekend  = take([...activeCom.filter(p => ['hiking', 'restaurants', 'destinations'].includes(p.type)), ...moviesByRating], 5);
     // "From your friends" — friend activity posts (omit if empty)
     const friends  = activeFriends.length > 0 ? take(activeFriends, 4) : [];
-    // "Hidden gems" — lower-voted community + lower-popularity movies
-    const gems     = take([...[...comByVotesDesc].reverse(), ...[...moviesByRating].reverse()], 4);
-    // "Trending" — highest-voted community + top movies by rating
-    const trending = take([...comByVotesDesc, ...moviesByRating], 6);
-    return { weekend, friends, gems, trending };
+    // "Dreaming of" — products/Someday cards only
+    const dreaming = take([...activeCom.filter(p => p.type === 'products')], 4);
+    // "Trending" — remaining community + remaining movies
+    const trending = take([...activeCom.filter(p => !['products'].includes(p.type)), ...moviesByRating], 6);
+    return { weekend, friends, dreaming, trending };
   })();
 
   function renderCard(post) {
@@ -882,11 +866,14 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
             </>
           )}
 
-          {sectionData.gems.length > 0 && (
+          <SectionHeader label="Browse by interest" />
+          <CategoryGrid onPageTap={setActivePage} />
+
+          {sectionData.dreaming.length > 0 && (
             <>
-              <SectionHeader label="Hidden gems" />
+              <SectionHeader label="Dreaming of" />
               <div className="px-3.5 flex flex-col gap-3">
-                {sectionData.gems.map(post => renderCard(post))}
+                {sectionData.dreaming.map(post => renderCard(post))}
               </div>
             </>
           )}
@@ -905,9 +892,6 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
               All sources hidden — open Filter to turn some back on
             </div>
           )}
-
-          <SectionHeader label="Browse by interest" />
-          <CategoryGrid onPageTap={setActivePage} />
         </>
       )}
 
