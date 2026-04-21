@@ -3249,6 +3249,8 @@ function App() {
   const seenInAppNotificationSignaturesRef = useRef(new Set());
   const dismissedCalendarInviteIdsRef = useRef(new Set());
   const inAppSyncCursorRef = useRef({ events: null, subCalEvents: null, tripPhotos: null, sharedListItems: null, tripInvites: null });
+  const openingSubCalendarRequestRef = useRef(0);
+  const skipInitialTripPhotoReloadRef = useRef('');
   const seenExpenseIdsRef = useRef(new Set());
   const attemptedGoogleAvatarFetchRef = useRef(new Set());
   const attemptedStoredAvatarRecoveryRef = useRef(new Set());
@@ -5344,33 +5346,55 @@ function App() {
   };
 
   const openSubCalendar = async (sc) => {
+    const openRequestId = openingSubCalendarRequestRef.current + 1;
+    openingSubCalendarRequestRef.current = openRequestId;
+    const subCalId = String(sc?.id || '').trim();
     setActiveSubCalendar(sc);
     setCanEditActiveSubCalendar(false);
     setSubCalWeather({});
     setSubCalWeatherSuggestions([]);
     setSubCalWeatherExpanded(false);
     setSubCalendarEvents({});
+    setSubCalTab('itinerary');
+    const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
+    const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
+    const todayWithinTrip = startTs !== null && endTs !== null && todayTs !== null
+      && todayTs >= startTs
+      && todayTs <= endTs;
+    const storedDateKey = readStoredTripSelectedDateKey(user?.id, sc?.id);
+    const storedDateTs = toDateOnlyTs(storedDateKey);
+    const storedDateWithinTrip = storedDateTs !== null && startTs !== null && endTs !== null
+      && storedDateTs >= startTs
+      && storedDateTs <= endTs;
+    const immediateDateKey = storedDateWithinTrip
+      ? storedDateKey
+      : todayWithinTrip
+        ? todayKey
+        : getSubCalStartRaw(sc);
+    if (immediateDateKey) setSubCalSelectedDate(new Date(`${immediateDateKey}T00:00:00`));
     if (sc.weather_location && sc.weather_lat && sc.weather_lon) {
       setSubCalWeatherLocation(sc.weather_location);
       setSubCalWeatherInput(sc.weather_location);
-      // Re-fetch fresh forecast using saved coords
-      try {
-        const res = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${sc.weather_lat}&longitude=${sc.weather_lon}&daily=weathercode,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto&forecast_days=16`
-        );
-        const data = await res.json();
-        const weatherMap = {};
-        data.daily.time.forEach((dateStr, i) => {
-          const display = weatherDisplay(data.daily.weathercode[i]);
-          weatherMap[dateStr] = { icon: display.icon, color: display.color, high: Math.round(data.daily.temperature_2m_max[i]), low: Math.round(data.daily.temperature_2m_min[i]) };
-        });
-        setSubCalWeather(weatherMap);
-      } catch {}
+      // Re-fetch fresh forecast without blocking the itinerary shell.
+      (async () => {
+        try {
+          const res = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${sc.weather_lat}&longitude=${sc.weather_lon}&daily=weathercode,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto&forecast_days=16`
+          );
+          const data = await res.json();
+          if (openingSubCalendarRequestRef.current !== openRequestId) return;
+          const weatherMap = {};
+          data.daily.time.forEach((dateStr, i) => {
+            const display = weatherDisplay(data.daily.weathercode[i]);
+            weatherMap[dateStr] = { icon: display.icon, color: display.color, high: Math.round(data.daily.temperature_2m_max[i]), low: Math.round(data.daily.temperature_2m_min[i]) };
+          });
+          setSubCalWeather(weatherMap);
+        } catch {}
+      })();
     } else {
       setSubCalWeatherLocation('');
       setSubCalWeatherInput('');
     }
-      setSubCalTab('itinerary');
   // Load per-trip ratings/tags/reviews from localStorage
   try {
     const ratingsRaw = localStorage.getItem(`subcal-ratings-${sc.id}`);
@@ -5391,6 +5415,7 @@ function App() {
     setTripChatMessages([]);
     setTripChatUnreadCounts((prev) => ({ ...prev, [String(sc?.id || '')]: 0 }));
     setTripPhotos(readLocalTripPhotosCache(sc.id));
+    skipInitialTripPhotoReloadRef.current = subCalId;
     setTripCoverPhoto(null);
     setTripCoverPhotoNoteId(null);
     setDeletedPhotoIds([]);
@@ -5404,20 +5429,13 @@ function App() {
     await loadSubCalendarMembers(sc.id);
     const noteState = await loadSubCalNotes(sc.id);
     const loadedPhotos = await loadMergedTripPhotos(sc, noteState?.deletedPhotoIds || []);
+    if (openingSubCalendarRequestRef.current === openRequestId) {
+      skipInitialTripPhotoReloadRef.current = '';
+    }
     const itineraryDateKeys = Object.keys(loadedEvents || {}).filter(Boolean).sort();
     const photoDateKeys = Array.from(new Set(
       (loadedPhotos || []).map((photo) => String(photo?.date || '').trim()).filter(Boolean)
     )).sort();
-    const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
-    const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
-    const todayWithinTrip = startTs !== null && endTs !== null && todayTs !== null
-      && todayTs >= startTs
-      && todayTs <= endTs;
-    const storedDateKey = readStoredTripSelectedDateKey(user?.id, sc?.id);
-    const storedDateTs = toDateOnlyTs(storedDateKey);
-    const storedDateWithinTrip = storedDateTs !== null && startTs !== null && endTs !== null
-      && storedDateTs >= startTs
-      && storedDateTs <= endTs;
     const selectedDateKey = storedDateWithinTrip
       ? storedDateKey
       : todayWithinTrip
@@ -5427,7 +5445,9 @@ function App() {
           || photoDateKeys[0]
           || getSubCalStartRaw(sc)
         );
-    setSubCalSelectedDate(new Date(`${selectedDateKey}T00:00:00`));
+    if (openingSubCalendarRequestRef.current === openRequestId) {
+      setSubCalSelectedDate(new Date(`${selectedDateKey}T00:00:00`));
+    }
   };
 
   const ensureCurrentUserTripMembership = async (subCal) => {
@@ -5954,6 +5974,10 @@ function App() {
 
   useEffect(() => {
     if (!activeSubCalendar?.id) return;
+    const subCalId = String(activeSubCalendar.id || '').trim();
+    if (skipInitialTripPhotoReloadRef.current === subCalId) {
+      return;
+    }
     loadMergedTripPhotos(activeSubCalendar, deletedPhotoIds);
   }, [activeSubCalendar?.id, deletedPhotoIds]);
 
