@@ -376,7 +376,7 @@ const CURATED_ITEMS = {
     { id: "sp15e",name: "Hoka Speedgoat 6",           brand: "Hoka",    priceRange: "$155",              subFilter: ["running","training"],     emoji: "🏔️", imageQuery: "Hoka Speedgoat trail running shoe", description: "Grip, cushion, and confidence on any trail. The shoe that makes you want to find a harder route." },
     { id: "sp15f",name: "Salomon Active Skin Vest",   brand: "Salomon", priceRange: "$110–$140",         subFilter: ["running","training"],     emoji: "🏃", imageQuery: "Salomon running vest trail hydration", description: "Carry water, gels, and your phone without thinking about them. Built for when you add an hour to the run." },
     { id: "sp16",name: "Garmin Forerunner 965",        brand: "Garmin",  priceRange: "$600",             subFilter: ["running","training"],     emoji: "⌚", imageQuery: "Garmin Forerunner 965 running watch", description: "A tiny coach on your wrist for the season where you decide to get consistent." },
-    { id: "sp17",name: "Peloton Bike+",                brand: "Peloton", priceRange: "$2,495",           subFilter: ["cycling","training"],     emoji: "🚴", imageQuery: "Peloton Bike Plus home workout", description: "A home ritual for rainy days, reset days, and the days you still show up." },
+    { id: "sp17",name: "Peloton Bike+",                brand: "Peloton", priceRange: "$2,495",           subFilter: ["cycling","training","home"], emoji: "🚴", imageQuery: "Peloton Bike Plus home workout", description: "A home ritual for rainy days, reset days, and the days you still show up." },
     { id: "sp17b",name: "Cervélo R5",                brand: "Cervélo", priceRange: "$8,000–$12,000",   subFilter: ["cycling"],                emoji: "🚴", imageQuery: "Cervelo R5 road bike carbon climbing", description: "The climber's bike. Stiff, light, and beautiful in a way that makes every elevation gain feel earned." },
     { id: "sp17c",name: "Canyon Aeroad CF SLX",      brand: "Canyon",  priceRange: "$5,000–$8,000",    subFilter: ["cycling"],                emoji: "🚴", imageQuery: "Canyon Aeroad road bike aero carbon", description: "UCI WorldTour geometry at a fraction of the price. The bike that wins races and confuses people who ask what it cost." },
     { id: "sp17d",name: "Wahoo KICKR Core Trainer",  brand: "Wahoo",   priceRange: "$900–$1,100",      subFilter: ["cycling","training"],     emoji: "🚴", imageQuery: "Wahoo KICKR smart trainer indoor cycling", description: "Winter training, Zwift intervals, and the reason you don't lose your fitness between October and March." },
@@ -631,7 +631,7 @@ function itemMatchesSubFilter(categoryId, item, subId) {
     },
     home: {
       bedroom: () => filters.includes("bedroom") || has("sheet", "linen", "parachute", "sleep"),
-      living: () => filters.includes("living") || has("sofa", "chair", "speaker", "sonos", "hay", "rh", "restoration"),
+      living: () => filters.includes("living") || has("sofa", "chair", "speaker", "sonos", "hay", "rh", "restoration", "peloton"),
       scent: () => filters.includes("scent") || has("candle", "aesop", "le labo", "byredo", "fragrance", "santal"),
       fragrance: () => filters.includes("fragrance") || has("le labo", "byredo", "perfume", "scent", "santal", "gypsy"),
       audio: () => filters.includes("audio") || has("sonos", "speaker", "audio"),
