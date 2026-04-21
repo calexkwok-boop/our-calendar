@@ -487,16 +487,16 @@ const CURATED_ITEMS = {
     { id: "car10",name: "Vintage Porsche 356",         brand: "Porsche",  priceRange: "$80,000–$200,000", subFilter: ["classic","grail"],         emoji: "🚗", imageQuery: "vintage Porsche 356 classic car", description: "The original. Before 911, there was 356. A piece of automotive history you can actually drive." },
   ],
   experiences: [
-    { id: "ex1", name: "Safari in the Serengeti",      brand: "Tanzania", priceRange: "$5,000–$15,000",   subFilter: ["nature","bucket-list"],   emoji: "🦁", imageQuery: "Serengeti safari sunrise animals Africa", description: "Dawn game drives, golden light, and the most alive you will ever feel. The trip that changes your frame of reference." },
-    { id: "ex2", name: "Northern Lights in Iceland",   brand: "Iceland",  priceRange: "$2,000–$5,000",    subFilter: ["nature","bucket-list"],   emoji: "🌌", imageQuery: "Northern Lights aurora Iceland night sky", description: "Standing under a sky that looks like a painting. One of the few things that genuinely exceeds the photographs." },
-    { id: "ex3", name: "Tokyo Food Trip",              brand: "Japan",    priceRange: "$3,000–$6,000",    subFilter: ["food","city"],            emoji: "🍜", imageQuery: "Tokyo ramen street food night market Japan", description: "The best food city on earth, by a wide margin. Every meal a discovery, every neighbourhood a different world." },
-    { id: "ex4", name: "Amalfi Coast Road Trip",       brand: "Italy",    priceRange: "$4,000–$8,000",    subFilter: ["road-trip","bucket-list"],emoji: "🛣️", imageQuery: "Amalfi Coast road Italy cliffs sea", description: "Narrow roads, blue water, and the most dramatic coastline in Europe. The drive you plan for years." },
+    { id: "ex1", name: "Safari in the Serengeti",      brand: "Tanzania", priceRange: "$5,000–$15,000",   subFilter: ["nature","bucket-list"],   emoji: "🦁", imageQuery: "giraffes and lions safari Africa", description: "Dawn game drives, golden light, and the most alive you will ever feel. The trip that changes your frame of reference." },
+    { id: "ex2", name: "Northern Lights in Iceland",   brand: "Iceland",  priceRange: "$2,000–$5,000",    subFilter: ["nature","bucket-list"],   emoji: "🌌", imageQuery: "northern lights aurora borealis green sky stars", description: "Standing under a sky that looks like a painting. One of the few things that genuinely exceeds the photographs." },
+    { id: "ex3", name: "Tokyo Food Trip",              brand: "Japan",    priceRange: "$3,000–$6,000",    subFilter: ["food","city"],            emoji: "🍜", imageQuery: "Tokyo sushi omakase Japan chef counter", description: "The best food city on earth, by a wide margin. Every meal a discovery, every neighbourhood a different world." },
+    { id: "ex4", name: "Amalfi Coast Road Trip",       brand: "Italy",    priceRange: "$4,000–$8,000",    subFilter: ["road-trip","bucket-list"],emoji: "🛣️", imageQuery: "Amalfi Coast Italy village cliffs turquoise water", description: "Narrow roads, blue water, and the most dramatic coastline in Europe. The drive you plan for years." },
     { id: "ex5", name: "Michelin Star Dinner",         brand: "Various",  priceRange: "$200–$800",        subFilter: ["food","luxury"],          emoji: "⭐", imageQuery: "Michelin star restaurant fine dining", description: "A meal that takes three hours and stays with you for years. The best argument for spending money on experiences." },
     { id: "ex6", name: "Private Chef Dinner at Home",  brand: "Various",  priceRange: "$400–$1,500",      subFilter: ["food","luxury"],          emoji: "🍽️", imageQuery: "private chef dinner home table", description: "Your own kitchen, a professional chef, and a table of the people you love. A celebration that feels entirely yours." },
     { id: "ex7", name: "New Year's Eve in NYC",        brand: "New York", priceRange: "$1,000–$5,000",    subFilter: ["city","bucket-list"],     emoji: "🎆", imageQuery: "New York Times Square New Year's Eve celebration", description: "The city that made New Year's Eve what it is. Once is enough. Once is everything." },
     { id: "ex8", name: "Napa Valley Harvest Weekend",  brand: "California",priceRange: "$1,500–$4,000",   subFilter: ["food","nature"],          emoji: "🍇", imageQuery: "Napa Valley vineyard harvest autumn wine", description: "September in wine country — crush season, barrel tastings, and tables set among the vines." },
     { id: "ex9", name: "Hot Air Balloon over Cappadocia", brand: "Turkey",priceRange: "$200–$400",        subFilter: ["nature","bucket-list"],   emoji: "🎈", imageQuery: "hot air balloon Cappadocia Turkey sunrise", description: "Dozens of balloons rising over fairy chimneys at sunrise. One of the most photographed mornings on earth, for good reason." },
-    { id: "ex10",name: "Coachella Weekend",            brand: "Various",  priceRange: "$500–$2,000",      subFilter: ["city","music"],           emoji: "🎵", imageQuery: "Coachella music festival desert night lights", description: "Music, desert air, and the feeling that everything is possible. The festival worth planning a year ahead for." },
+    { id: "ex10",name: "Coachella Weekend",            brand: "Various",  priceRange: "$500–$2,000",      subFilter: ["city","music"],           emoji: "🎵", image: "https://source.unsplash.com/featured/?coachella,music,festival,crowd,lights,concert", imageQuery: "Coachella music festival desert night lights", description: "Music, desert air, and the feeling that everything is possible. The festival worth planning a year ahead for." },
   ],
   home: [
     { id: "hm1", name: "Parachute Linen Sheet Set",    brand: "Parachute", priceRange: "$200–$350",        subFilter: ["bedroom","textiles"],     emoji: "🛏️", imageQuery: "Parachute linen sheets bed natural light", description: "The sheets that make every morning feel like a slow one. Softer every time you wash them." },
@@ -545,8 +545,8 @@ function getAllCuratedItemsShuffled() {
       ...item,
       category: categoryId,
       emoji: item.emoji || cat.emoji,
-      preferResolvedImage: true,
-      image: "",
+      preferResolvedImage: !item.image,
+      image: item.image || "",
     }));
   });
   return shuffleArray(all);
@@ -1592,7 +1592,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
               Someday
             </h1>
             <p className="text-sm leading-relaxed max-w-xs" style={{ color: dm ? "rgba(250,246,240,0.55)" : STONE, letterSpacing: '0.01em' }}>
-              Some dreams take you somewhere. Others you take with you.
+              Every life is built twice—first in thought.
             </p>
           </div>
         </div>
@@ -1624,16 +1624,6 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
               style={{ background: 'transparent', border: `1px solid ${AMBER_BORDER}`, color: dm ? AMBER : AMBER_DARK }}
             >
               {searching ? "Finding..." : "Find it"}
-            </button>
-          </div>
-          <div className="flex items-center justify-end gap-3 px-1 pt-2">
-            <button
-              type="button"
-              onClick={() => setSharingItem({ name: searchQuery.trim(), brand: "", image: "", priceRange: "", category: inferDreamShelfCategory(searchQuery), description: "" })}
-              className="dream-shelf-pill flex-shrink-0 text-sm font-bold"
-              style={{ color: TEAL }}
-            >
-              Add manually
             </button>
           </div>
           {searchError && (
