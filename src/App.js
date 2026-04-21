@@ -25806,6 +25806,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         {/* Notification Settings Panel */}
         {showSharePanel && showNotificationSettings && (
           <div className="account-handwritten glass-panel rounded-2xl p-6 mb-6">
+            <style>{`.account-handwritten, .account-handwritten * { font-family: 'Caveat', cursive !important; } .account-handwritten { font-size: 1.08rem; } .account-handwritten .text-\\[10px\\] { font-size: 0.78rem !important; } .account-handwritten .text-\\[11px\\] { font-size: 0.84rem !important; } .account-handwritten .text-xs { font-size: 0.9rem !important; } .account-handwritten .text-sm { font-size: 1rem !important; } .account-handwritten .text-xl { font-size: 1.42rem !important; }`}</style>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold text-green-600 dark:text-green-400">Notification Settings</h3>
               <button onClick={() => setShowNotificationSettings(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
@@ -26127,7 +26128,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {showSharePanel && (
           <div className="account-handwritten glass-panel rounded-2xl p-6 mb-6">
-            <style>{`.account-handwritten, .account-handwritten * { font-family: 'Caveat', cursive !important; }`}</style>
+            <style>{`.account-handwritten, .account-handwritten * { font-family: 'Caveat', cursive !important; } .account-handwritten { font-size: 1.08rem; } .account-handwritten .text-\\[10px\\] { font-size: 0.78rem !important; } .account-handwritten .text-\\[11px\\] { font-size: 0.84rem !important; } .account-handwritten .text-xs { font-size: 0.9rem !important; } .account-handwritten .text-sm { font-size: 1rem !important; } .account-handwritten .text-xl { font-size: 1.42rem !important; }`}</style>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold" style={{ ...themeAccentHeadingStyle, fontFamily: "'Caveat', cursive" }}>
                 Account & Sharing
@@ -27717,7 +27718,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       {/* Account section */}
       {calendarSwitcherMode === 'account' && (
       <div className="account-handwritten p-4">
-        <style>{`.account-handwritten, .account-handwritten * { font-family: 'Caveat', cursive !important; }`}</style>
+        <style>{`.account-handwritten, .account-handwritten * { font-family: 'Caveat', cursive !important; } .account-handwritten { font-size: 1.08rem; } .account-handwritten .text-\\[10px\\] { font-size: 0.78rem !important; } .account-handwritten .text-\\[11px\\] { font-size: 0.84rem !important; } .account-handwritten .text-xs { font-size: 0.9rem !important; } .account-handwritten .text-sm { font-size: 1rem !important; } .account-handwritten .text-xl { font-size: 1.42rem !important; }`}</style>
         <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3">Account</h3>
         <div className="flex items-center gap-3 mb-3">
           <UserProfileAvatar

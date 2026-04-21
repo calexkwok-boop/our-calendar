@@ -1308,9 +1308,14 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     ...item,
     image: item.image || itemImages[getDreamShelfImageKey(item)] || "",
   }));
-  const firstCategoryItems = categoryItemsWithImages.slice(0, 2);
-  const secondCategoryItems = categoryItemsWithImages.slice(2, 4);
-  const remainingCategoryItems = categoryItemsWithImages.slice(4);
+  const categoryItemPairs = Array.from(
+    { length: Math.ceil(categoryItemsWithImages.length / 2) },
+    (_, index) => categoryItemsWithImages.slice(index * 2, index * 2 + 2)
+  );
+  const communityPostPairs = Array.from(
+    { length: Math.ceil(communityPosts.length / 2) },
+    (_, index) => communityPosts.slice(index * 2, index * 2 + 2)
+  );
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -1420,31 +1425,31 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
           <p className="text-[10px] uppercase tracking-[0.16em] mb-3" style={{ color: STONE }}>
             What moves you?
           </p>
-          <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             {DREAM_WORLDS.map(world => (
               <button
                 key={world.id}
                 type="button"
                 onClick={() => handleWorldClick(world)}
-                className="text-left rounded-2xl border p-4 transition-all duration-200 hover:-translate-y-0.5 focus:outline-none"
+                className="text-left rounded-2xl border p-3 sm:p-4 transition-all duration-200 hover:-translate-y-0.5 focus:outline-none min-h-[112px] sm:min-h-[150px]"
                 style={{
                   background: activeWorld?.id === world.id ? (dm ? CHAR_SOFT : LINEN) : (dm ? "rgba(250,246,240,0.035)" : "rgba(250,246,240,0.72)"),
                   borderColor: activeWorld?.id === world.id ? AMBER_BORDER : (dm ? "rgba(250,246,240,0.08)" : "rgba(212,201,187,0.55)"),
                   boxShadow: activeWorld?.id === world.id ? (dm ? "0 8px 22px rgba(0,0,0,0.22)" : "0 8px 22px rgba(42,36,32,0.08)") : "none",
                 }}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="font-handwritten text-2xl font-bold leading-none mb-1" style={{ color: dm ? LINEN : CHAR }}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-handwritten text-xl sm:text-2xl font-bold leading-none mb-1" style={{ color: dm ? LINEN : CHAR }}>
                       {world.emoji} {world.label}
                     </div>
-                    <div className="text-[11px] uppercase tracking-[0.14em] mb-2" style={{ color: AMBER_DARK }}>
+                    <div className="text-[9px] sm:text-[11px] uppercase tracking-[0.1em] sm:tracking-[0.14em] mb-1 sm:mb-2 leading-snug" style={{ color: AMBER_DARK }}>
                       {world.title}
                     </div>
                   </div>
-                  <span className="text-lg" style={{ color: STONE }}>›</span>
+                  <span className="text-base sm:text-lg flex-shrink-0" style={{ color: STONE }}>›</span>
                 </div>
-                <p className="text-sm leading-relaxed" style={{ color: dm ? "rgba(250,246,240,0.55)" : STONE }}>
+                <p className="text-xs sm:text-sm leading-snug sm:leading-relaxed line-clamp-2 sm:line-clamp-none" style={{ color: dm ? "rgba(250,246,240,0.55)" : STONE }}>
                   {world.description}
                 </p>
               </button>
@@ -1528,7 +1533,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
           </button>
         </div>
 
-        {/* ── First category cards ── */}
+        {/* ── Mixed dream feed ── */}
         <p className="text-[10px] uppercase tracking-[0.16em] mb-3" style={{ color: STONE }}>
           {activeCategory
             ? `${activeWorld?.label ? `${activeWorld.label} · ` : ""}${activeCategory.emoji} ${activeCategory.label}${activeSubFilter !== "all" ? ` · ${SUB_FILTERS[activeCategory.id]?.find(f => f.id === activeSubFilter)?.label || ""}` : ""}`
@@ -1543,138 +1548,135 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
               <div key={i} className="h-80 animate-pulse border" style={{ borderRadius: '16px', background: dm ? CHAR_SOFT : OAT, borderColor: dm ? "rgba(250,246,240,0.08)" : STONE_LIGHT }} />
             ))}
           </div>
-        ) : firstCategoryItems.length > 0 ? (
-          <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-4 mb-8">
-            {firstCategoryItems.map(item => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                savedIds={savedIds}
-                onOpen={setSelectedItem}
-                darkMode={dm}
-              />
+        ) : categoryItemPairs.length > 0 ? (
+          <>
+            {categoryItemPairs.map((pair, pairIndex) => (
+              <React.Fragment key={`dream-feed-pair-${pairIndex}`}>
+                <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-4 mb-8">
+                  {pair.map(item => (
+                    <ItemCard
+                      key={item.id}
+                      item={item}
+                      savedIds={savedIds}
+                      onOpen={setSelectedItem}
+                      darkMode={dm}
+                    />
+                  ))}
+                </div>
+
+                {pairIndex === 0 && featured && (
+                  <>
+                    <p className="text-[10px] uppercase tracking-[0.16em] mb-3" style={{ color: STONE }}>Most dreamed about this week</p>
+                    <div className="border overflow-hidden mb-8 transition-transform duration-200 cursor-pointer hover:-translate-y-0.5"
+                      style={{ background: dm ? CHAR_SOFT : LINEN, borderColor: dm ? "rgba(250,246,240,0.09)" : STONE_LIGHT, borderRadius: '16px', boxShadow: dm ? '0 4px 20px rgba(0,0,0,0.16)' : '0 2px 12px rgba(42,36,32,0.06)' }}
+                      onClick={() => setSelectedItem({
+                        id: featured.id,
+                        name: featured.product_name,
+                        brand: featured.product_brand,
+                        image: featuredImage,
+                        category: featured.category,
+                        description: featured.review,
+                        priceRange: featured.product_price,
+                        emoji: CATEGORIES.find(c => c.id === featured.category)?.emoji || "✨",
+                      })}>
+                      <div className="grid grid-cols-2 max-sm:grid-cols-1">
+                        <div className="h-52 flex items-center justify-center" style={{ background: dm ? CHAR : OAT }}>
+                          {featuredImage ? (
+                            <img src={featuredImage} alt={featured.product_name} className="w-full h-full object-contain p-6" />
+                          ) : (
+                            <span className="text-6xl">{CATEGORIES.find(c => c.id === featured.category)?.emoji || "✨"}</span>
+                          )}
+                        </div>
+                        <div className="p-6 flex flex-col justify-center">
+                          <p className="dream-shelf-product-text text-[10px] uppercase tracking-[0.2em] mb-1.5 font-semibold" style={{ color: AMBER_DARK }}>
+                            Most dreamed
+                          </p>
+                          <h2 className={`dream-shelf-product-text text-xl font-semibold leading-snug mb-1 ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
+                            {featured.product_name}
+                          </h2>
+                          {featured.product_brand && <p className="dream-shelf-product-text text-[10px] uppercase tracking-[0.2em] mb-2 font-semibold" style={{ color: STONE }}>{featured.product_brand}</p>}
+                          {featured.review && (
+                            <p className="text-sm text-slate-500 italic leading-relaxed mb-4 line-clamp-3">"{featured.review}"</p>
+                          )}
+                          <div className="flex gap-4 flex-wrap mb-4">
+                            <div className="flex flex-col">
+                              <span className="font-handwritten text-xl leading-none" style={{ color: AMBER_DARK }}>
+                                {getDreamShelfVibe({ name: featured.product_name, brand: featured.product_brand, description: featured.review, category: featured.category })}
+                              </span>
+                              <span className="text-[10px] uppercase tracking-wide" style={{ color: STONE }}>Vibe</span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="dream-shelf-product-text text-lg font-medium" style={{ color: STONE }}>{featured.likes_count ?? 0}</span>
+                              <span className="text-[10px] uppercase tracking-wide" style={{ color: STONE }}>Saves</span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              if (!featuredSaved) handleFeaturedSomeday(featured, featuredImage);
+                            }}
+                            className="self-start px-4 py-1.5 rounded-xl text-sm font-['Caveat'] font-bold border transition-all"
+                            style={{ background: dm ? TEAL_MUTED : '#f0fdfa', border: `1px solid ${TEAL_BORDER}`, color: TEAL, fontFamily: "'Caveat', cursive" }}
+                          >
+                            {featuredSaved ? "✓ Someday" : "+ Someday"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {pairIndex > 0 && communityPostPairs[pairIndex - 1]?.length > 0 && (
+                  <>
+                    <p ref={pairIndex === 1 ? communityFeedRef : null} className="text-[10px] uppercase tracking-[0.16em] mb-3" style={{ color: STONE }}>
+                      What friends are dreaming about
+                    </p>
+                    <div className="flex flex-col gap-2.5 mb-8">
+                      {communityPostPairs[pairIndex - 1].map(post => (
+                        <CommunityPost
+                          key={post.id}
+                          post={post}
+                          photoUrl={itemImages[getDreamShelfImageKey(post)] || ""}
+                          currentUserId={currentUserId}
+                          onAddToSomeday={handleCommunitySomeday}
+                          onVote={handleVoteCommunityPost}
+                          onOpen={setSelectedItem}
+                          darkMode={dm}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </React.Fragment>
             ))}
-          </div>
+
+            {communityPostPairs.slice(Math.max(0, categoryItemPairs.length - 1)).map((pair, pairIndex) => (
+              <React.Fragment key={`dream-feed-extra-friends-${pairIndex}`}>
+                <p ref={categoryItemPairs.length <= 1 && pairIndex === 0 ? communityFeedRef : null} className="text-[10px] uppercase tracking-[0.16em] mb-3" style={{ color: STONE }}>
+                  What friends are dreaming about
+                </p>
+                <div className="flex flex-col gap-2.5 mb-8">
+                  {pair.map(post => (
+                    <CommunityPost
+                      key={post.id}
+                      post={post}
+                      photoUrl={itemImages[getDreamShelfImageKey(post)] || ""}
+                      currentUserId={currentUserId}
+                      onAddToSomeday={handleCommunitySomeday}
+                      onVote={handleVoteCommunityPost}
+                      onOpen={setSelectedItem}
+                      darkMode={dm}
+                    />
+                  ))}
+                </div>
+              </React.Fragment>
+            ))}
+          </>
         ) : (
           <div className="text-center py-16 mb-8" style={{ color: STONE }}>
             <div className="text-4xl mb-4 opacity-40">✦</div>
             <p className="font-['Caveat'] text-2xl mb-1">{activeCategory ? "Nothing here yet" : "Choose a life chapter"}</p>
             <p className="text-sm opacity-60">{activeCategory ? "Try a different mood filter" : "Pick Style, Experiences, Lifestyle, or Collection to begin."}</p>
-          </div>
-        )}
-
-        {/* ── Featured community post ── */}
-        {featured && (
-          <>
-            <p className="text-[10px] uppercase tracking-[0.16em] mb-3" style={{ color: STONE }}>Most dreamed about this week</p>
-            <div className="border overflow-hidden mb-8 transition-transform duration-200 cursor-pointer hover:-translate-y-0.5"
-              style={{ background: dm ? CHAR_SOFT : LINEN, borderColor: dm ? "rgba(250,246,240,0.09)" : STONE_LIGHT, borderRadius: '16px', boxShadow: dm ? '0 4px 20px rgba(0,0,0,0.16)' : '0 2px 12px rgba(42,36,32,0.06)' }}
-              onClick={() => setSelectedItem({
-                id: featured.id,
-                name: featured.product_name,
-                brand: featured.product_brand,
-                image: featuredImage,
-                category: featured.category,
-                description: featured.review,
-                priceRange: featured.product_price,
-                emoji: CATEGORIES.find(c => c.id === featured.category)?.emoji || "✨",
-              })}>
-              <div className="grid grid-cols-2 max-sm:grid-cols-1">
-                <div className="h-52 flex items-center justify-center" style={{ background: dm ? CHAR : OAT }}>
-                  {featuredImage ? (
-                    <img src={featuredImage} alt={featured.product_name} className="w-full h-full object-contain p-6" />
-                  ) : (
-                    <span className="text-6xl">{CATEGORIES.find(c => c.id === featured.category)?.emoji || "✨"}</span>
-                  )}
-                </div>
-                <div className="p-6 flex flex-col justify-center">
-                  <p className="dream-shelf-product-text text-[10px] uppercase tracking-[0.2em] mb-1.5 font-semibold" style={{ color: AMBER_DARK }}>
-                    Most dreamed
-                  </p>
-                  <h2 className={`dream-shelf-product-text text-xl font-semibold leading-snug mb-1 ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
-                    {featured.product_name}
-                  </h2>
-                  {featured.product_brand && <p className="dream-shelf-product-text text-[10px] uppercase tracking-[0.2em] mb-2 font-semibold" style={{ color: STONE }}>{featured.product_brand}</p>}
-                  {featured.review && (
-                    <p className="text-sm text-slate-500 italic leading-relaxed mb-4 line-clamp-3">"{featured.review}"</p>
-                  )}
-                  <div className="flex gap-4 flex-wrap mb-4">
-                    <div className="flex flex-col">
-                      <span className="font-handwritten text-xl leading-none" style={{ color: AMBER_DARK }}>
-                        {getDreamShelfVibe({ name: featured.product_name, brand: featured.product_brand, description: featured.review, category: featured.category })}
-                      </span>
-                      <span className="text-[10px] uppercase tracking-wide" style={{ color: STONE }}>Vibe</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="dream-shelf-product-text text-lg font-medium" style={{ color: STONE }}>{featured.likes_count ?? 0}</span>
-                      <span className="text-[10px] uppercase tracking-wide" style={{ color: STONE }}>Saves</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      if (!featuredSaved) handleFeaturedSomeday(featured, featuredImage);
-                    }}
-                    className="self-start px-4 py-1.5 rounded-xl text-sm font-['Caveat'] font-bold border transition-all"
-                    style={{ background: dm ? TEAL_MUTED : '#f0fdfa', border: `1px solid ${TEAL_BORDER}`, color: TEAL, fontFamily: "'Caveat', cursive" }}
-                  >
-                    {featuredSaved ? "✓ Someday" : "+ Someday"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-
-        {!loading && secondCategoryItems.length > 0 && (
-          <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-4 mb-8">
-            {secondCategoryItems.map(item => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                savedIds={savedIds}
-                onOpen={setSelectedItem}
-                darkMode={dm}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* ── Community feed ── */}
-        <p ref={communityFeedRef} className="text-[10px] uppercase tracking-[0.16em] mb-3" style={{ color: STONE }}>
-          What friends are dreaming about
-        </p>
-        <div className="flex flex-col gap-2.5">
-          {communityPosts.map(post => (
-            <CommunityPost
-              key={post.id}
-              post={post}
-              photoUrl={itemImages[getDreamShelfImageKey(post)] || ""}
-              currentUserId={currentUserId}
-              onAddToSomeday={handleCommunitySomeday}
-              onVote={handleVoteCommunityPost}
-              onOpen={setSelectedItem}
-              darkMode={dm}
-            />
-          ))}
-        </div>
-
-        {!loading && remainingCategoryItems.length > 0 && (
-          <div className="mt-8">
-            <p className="text-[10px] uppercase tracking-[0.16em] mb-3" style={{ color: STONE }}>
-              More from this category
-            </p>
-            <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-4 mb-8">
-              {remainingCategoryItems.map(item => (
-                <ItemCard
-                  key={item.id}
-                  item={item}
-                  savedIds={savedIds}
-                  onOpen={setSelectedItem}
-                  darkMode={dm}
-                />
-              ))}
-            </div>
           </div>
         )}
 
