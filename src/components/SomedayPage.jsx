@@ -289,10 +289,11 @@ function SuggestionCard({ s, onAdd, darkMode }) {
   function onPointerUp(e) {
     if (!dragging) return;
     const dy = startRef.current ? e.clientY - startRef.current.y : 0;
+    const dropTarget = document.elementFromPoint(e.clientX, e.clientY)?.closest?.('[data-chapter-dropzone="true"]');
     setDragging(false);
     setGhostPos(null);
     startRef.current = null;
-    if (dy > 50) onAdd(s);
+    if (dropTarget || dy > 50) onAdd(s);
   }
 
   const isDraggingDown = dragging && ghostPos && startRef.current && (ghostPos.y + (anchorRef.current?.dy ?? 0)) - startRef.current.y > 10;
@@ -301,7 +302,12 @@ function SuggestionCard({ s, onAdd, darkMode }) {
     <>
       {/* Stationary placeholder — dims while ghost is out */}
       <div
+        draggable
         style={{ flexShrink: 0, position: 'relative', cursor: dragging ? 'grabbing' : 'grab', userSelect: 'none', touchAction: 'none', opacity: dragging ? 0.35 : 1, transition: 'opacity 0.15s' }}
+        onDragStart={(e) => {
+          e.dataTransfer.setData('application/json', JSON.stringify(s));
+          e.dataTransfer.effectAllowed = 'copy';
+        }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -910,7 +916,23 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
         </div>
       )}
 
-      <div style={{ padding: '22px 16px 0' }}>
+      <div
+        data-chapter-dropzone="true"
+        onDragOver={(event) => {
+          if (!onAddSuggestion) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'copy';
+        }}
+        onDrop={(event) => {
+          if (!onAddSuggestion) return;
+          event.preventDefault();
+          try {
+            const suggestion = JSON.parse(event.dataTransfer.getData('application/json') || '{}');
+            if (suggestion?.label) onAddSuggestion(suggestion);
+          } catch {}
+        }}
+        style={{ padding: '22px 16px 0' }}
+      >
         <p style={{ fontSize: 10, color: ts, textTransform: 'uppercase', letterSpacing: '0.18em', margin: '0 0 14px', fontWeight: 600 }}>Pinned · {chapterPins.length} item{chapterPins.length !== 1 ? 's' : ''}</p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
           {chapterPins.map(p => (
@@ -1079,6 +1101,7 @@ const SomedayPage = ({
   onBack,
   currentUser,
   ownerName,
+  onChaptersChange,
   darkMode = false,
 }) => {
   const [pins, setPins] = useState(() => dreams.map((d, idx) => {
@@ -1117,7 +1140,8 @@ const SomedayPage = ({
 
   useEffect(() => {
     try { localStorage.setItem(chaptersKey, JSON.stringify(chapters)); } catch {}
-  }, [chapters, chaptersKey]);
+    onChaptersChange?.(chapters);
+  }, [chapters, chaptersKey, onChaptersChange]);
 
   useEffect(() => {
     setPins(prev => {

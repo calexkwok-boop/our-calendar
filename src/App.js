@@ -1379,6 +1379,8 @@ const writeStoredTripSelectedDateKey = (userId, subCalId, dateKey) => {
 const getMemoriesStorageKey = (userId) => `saved-memories-${String(userId || 'guest').trim() || 'guest'}`;
 const getQuickThoughtsStorageKey = (userId) => `quick-thoughts-${String(userId || 'guest').trim() || 'guest'}`;
 const getBucketListStorageKey = (userId) => `bucket-list-${String(userId || 'guest').trim() || 'guest'}`;
+const getSomedayChaptersStorageKey = (userId) => `someday-chapters-${String(userId || 'guest').trim() || 'guest'}`;
+const getTripKomoStorageKey = (userId) => `trip-komo-links-${String(userId || 'guest').trim() || 'guest'}`;
 const readQuickThoughtsState = (userId) => {
   if (typeof window === 'undefined') return [];
   try {
@@ -1439,6 +1441,30 @@ const writeBucketListState = (userId, dreams) => {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(getBucketListStorageKey(userId), JSON.stringify(Array.isArray(dreams) ? dreams : []));
+  } catch {}
+};
+const readSomedayChaptersState = (userId) => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(getSomedayChaptersStorageKey(userId)) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+const readTripKomoState = (userId) => {
+  if (typeof window === 'undefined') return {};
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(getTripKomoStorageKey(userId)) || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+const writeTripKomoState = (userId, state) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(getTripKomoStorageKey(userId), JSON.stringify(state && typeof state === 'object' ? state : {}));
   } catch {}
 };
 const mergePersistedBucketList = (...dreamLists) => {
@@ -3307,6 +3333,8 @@ function App() {
   const [journeyState, setJourneyState] = useState(createEmptyJourneyState);
   const [quickThoughts, setQuickThoughts] = useState(() => readQuickThoughtsState('guest'));
   const [bucketList, setBucketList] = useState(() => readBucketListState('guest'));
+  const [komoChapters, setKomoChapters] = useState(() => readSomedayChaptersState('guest'));
+  const [tripKomoState, setTripKomoState] = useState(() => readTripKomoState('guest'));
   const [showAddDreamSheet, setShowAddDreamSheet] = useState(false);
   const [makeItHappenItem, setMakeItHappenItem] = useState(null);
   const [somedayPinPositions, setSomedayPinPositions] = useState(() => {
@@ -20167,6 +20195,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [somedayDecorPins]);
 
   useEffect(() => {
+    const komoOwnerKey = String(currentUser || 'guest').trim() || 'guest';
+    setKomoChapters(readSomedayChaptersState(komoOwnerKey));
+    setTripKomoState(readTripKomoState(user?.id));
+  }, [currentUser, user?.id]);
+
+  useEffect(() => {
+    writeTripKomoState(user?.id, tripKomoState);
+  }, [user?.id, tripKomoState]);
+
+  useEffect(() => {
     const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
     let cancelled = false;
     (async () => {
@@ -29966,6 +30004,7 @@ transform: translateY(0);
                 onConvertToEvent={planFromDream}
                 onConvertToTrip={planFromDream}
                 currentUser={currentUser}
+                onChaptersChange={setKomoChapters}
               />
             );
           })()}
@@ -31756,6 +31795,119 @@ transform: translateY(0);
               location: '',
             });
           };
+          const tripId = String(activeSubCalendar?.id || '').trim();
+          const tripKomo = (tripKomoState && tripKomoState[tripId]) || {};
+          const linkedChapterId = String(tripKomo.chapterId || '').trim();
+          const linkedChapter = (komoChapters || []).find((chapter) => String(chapter?.id || '') === linkedChapterId) || null;
+          const komoCategoryMap = { travel: 'places', food: 'food', adventure: 'experiences', culture: 'experiences', home: 'home', wellness: 'experiences', fun: 'experiences', buy: 'buy', dreamshelf: 'buy', products: 'buy', shopping: 'buy' };
+          const komoPins = [
+            ...(Array.isArray(bucketList) ? bucketList : []).map((dream) => ({
+              id: dream.id,
+              type: 'photo',
+              label: dream.text,
+              text: dream.text,
+              emoji: dream.emoji || '*',
+              imageUrl: dream.photoUrl || '',
+              categoryId: komoCategoryMap[dream.category] || 'experiences',
+              chapterId: dream.chapterId,
+              status: dream.status || 'dreaming',
+              ...(somedayPinPositions[dream.id] || {}),
+            })),
+            ...(Array.isArray(quickThoughts) ? quickThoughts : []).map((thought) => ({
+              id: thought.id,
+              type: 'note',
+              label: thought.text,
+              text: thought.text,
+              chapterId: thought.chapterId,
+              status: 'dreaming',
+              ...(somedayPinPositions[thought.id] || {}),
+            })),
+          ];
+          const linkedChapterCards = linkedChapter
+            ? komoPins.filter((pin) => (linkedChapter.itemIds || []).some((id) => String(id || '') === String(pin?.id || '')))
+            : [];
+          const normalizeKomoCard = (card = {}) => ({
+            sourceId: String(card.sourceId || card.id || '').trim(),
+            label: String(card.label || card.text || 'Komo Book idea').trim(),
+            imageUrl: String(card.imageUrl || '').trim(),
+            emoji: String(card.emoji || '*').trim(),
+            type: String(card.type || 'photo').trim(),
+            rot: Number(card.rot || 0),
+          });
+          const updateTripKomo = (updater) => {
+            if (!tripId) return;
+            setTripKomoState((prev) => {
+              const safePrev = prev && typeof prev === 'object' ? prev : {};
+              const current = safePrev[tripId] && typeof safePrev[tripId] === 'object' ? safePrev[tripId] : {};
+              return { ...safePrev, [tripId]: updater(current) };
+            });
+          };
+          const setLinkedKomoChapter = (chapterId) => {
+            updateTripKomo((current) => ({ ...current, chapterId, slots: current.slots || {} }));
+          };
+          const getSlotCards = (dateKey, slotKey) => (
+            Array.isArray(tripKomo?.slots?.[dateKey]?.[slotKey]) ? tripKomo.slots[dateKey][slotKey] : []
+          );
+          const addKomoCardToSlot = (card, dateKey, slotKey, moveFrom = null) => {
+            const normalized = {
+              ...normalizeKomoCard(card),
+              placementId: card.placementId || `komo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            };
+            updateTripKomo((current) => {
+              const slots = { ...(current.slots || {}) };
+              if (moveFrom?.dateKey && moveFrom?.slotKey) {
+                const fromDay = { ...(slots[moveFrom.dateKey] || {}) };
+                fromDay[moveFrom.slotKey] = (fromDay[moveFrom.slotKey] || []).filter((item) => String(item?.placementId || '') !== String(normalized.placementId || ''));
+                slots[moveFrom.dateKey] = fromDay;
+              }
+              const day = { ...(slots[dateKey] || {}) };
+              day[slotKey] = [...(Array.isArray(day[slotKey]) ? day[slotKey] : []), normalized];
+              slots[dateKey] = day;
+              return { ...current, slots };
+            });
+          };
+          const removeKomoCardFromSlot = (dateKey, slotKey, placementId) => {
+            updateTripKomo((current) => {
+              const slots = { ...(current.slots || {}) };
+              const day = { ...(slots[dateKey] || {}) };
+              day[slotKey] = (day[slotKey] || []).filter((item) => String(item?.placementId || '') !== String(placementId || ''));
+              slots[dateKey] = day;
+              return { ...current, slots };
+            });
+          };
+          const handleKomoDrop = (event, dateKey, slotKey) => {
+            event.preventDefault();
+            try {
+              const payload = JSON.parse(event.dataTransfer.getData('application/json') || '{}');
+              if (payload?.type === 'komo-source') addKomoCardToSlot(payload.card, dateKey, slotKey);
+              if (payload?.type === 'komo-slot') addKomoCardToSlot(payload.card, dateKey, slotKey, payload.from);
+            } catch {}
+          };
+          const firstOpenSlotKey = TRIP_DAY_SECTIONS
+            .filter((section) => section.key !== 'anytime')
+            .map((section) => section.key)
+            .sort((a, b) => getSlotCards(dk, a).length - getSlotCards(dk, b).length)[0] || 'morning';
+          const renderKomoPolaroid = (card, options = {}) => {
+            const compact = Boolean(options.compact);
+            const normalized = normalizeKomoCard(card);
+            return (
+              <div
+                className={`relative shrink-0 rounded-[3px] bg-white p-1 shadow-md ${compact ? 'w-24' : 'w-32'} dark:bg-slate-100`}
+                style={{ transform: `rotate(${(normalized.rot || 0) * (compact ? 0.35 : 0.55)}deg)` }}
+              >
+                <div className="aspect-square w-full overflow-hidden rounded-[2px] bg-emerald-50">
+                  {normalized.imageUrl ? (
+                    <img src={normalized.imageUrl} alt={normalized.label} className="h-full w-full object-cover" draggable={false} />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-2xl">{normalized.emoji}</div>
+                  )}
+                </div>
+                <div className={`px-1 py-1 text-center text-gray-700 ${compact ? 'text-[11px]' : 'text-xs'}`} style={{ fontFamily: "'Caveat', cursive" }}>
+                  <span className="line-clamp-2">{normalized.label}</span>
+                </div>
+              </div>
+            );
+          };
 
           return (
             <div className="px-4 py-4 space-y-4">
@@ -32090,6 +32242,61 @@ transform: translateY(0);
                       </div>
                     </div>
 
+                    <div className="rounded-[28px] border border-emerald-900/10 bg-emerald-50/70 p-4 shadow-sm dark:border-emerald-300/10 dark:bg-emerald-950/20">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <div className="text-[11px] uppercase tracking-[0.2em] text-emerald-700/70 dark:text-emerald-300/75">From your Komo Book</div>
+                          <div className="mt-1 text-lg font-semibold text-gray-900 dark:text-white" style={{ fontFamily: "'Caveat', cursive" }}>
+                            {linkedChapter ? linkedChapter.title : 'Link a chapter'}
+                          </div>
+                        </div>
+                        <select
+                          value={linkedChapterId}
+                          onChange={(event) => setLinkedKomoChapter(event.target.value)}
+                          className="max-w-full rounded-2xl border border-emerald-200 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm dark:border-emerald-300/15 dark:bg-slate-900 dark:text-gray-100"
+                        >
+                          <option value="">Choose chapter...</option>
+                          {(komoChapters || []).map((chapter) => (
+                            <option key={chapter.id} value={chapter.id}>{chapter.title}</option>
+                          ))}
+                        </select>
+                      </div>
+                      {linkedChapter ? (
+                        linkedChapterCards.length > 0 ? (
+                          <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
+                            {linkedChapterCards.map((card) => (
+                              <div
+                                key={card.id}
+                                className="group relative shrink-0 cursor-grab"
+                                draggable
+                                onDragStart={(event) => {
+                                  event.dataTransfer.setData('application/json', JSON.stringify({ type: 'komo-source', card }));
+                                  event.dataTransfer.effectAllowed = 'copy';
+                                }}
+                              >
+                                {renderKomoPolaroid(card, { compact: true })}
+                                <button
+                                  type="button"
+                                  onClick={() => addKomoCardToSlot(card, dk, firstOpenSlotKey)}
+                                  className="absolute -bottom-1 -right-1 rounded-full border border-white bg-emerald-500 px-2 py-0.5 text-[10px] font-semibold text-white opacity-100 shadow-sm"
+                                >
+                                  Add
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="mt-3 rounded-2xl border border-dashed border-emerald-200 bg-white/65 px-4 py-3 text-sm text-emerald-900/70 dark:border-emerald-300/15 dark:bg-white/5 dark:text-emerald-100/70">
+                            This chapter has no saved polaroids yet.
+                          </div>
+                        )
+                      ) : (
+                        <div className="mt-3 rounded-2xl border border-dashed border-emerald-200 bg-white/65 px-4 py-3 text-sm text-emerald-900/70 dark:border-emerald-300/15 dark:bg-white/5 dark:text-emerald-100/70">
+                          Pick a Komo Book chapter to plan from its saved polaroids.
+                        </div>
+                      )}
+                    </div>
+
                     {groupedSections.filter((section) => section.key !== 'anytime').map((section) => (
                       <div key={section.key} className="rounded-[28px] border border-white/10 bg-white/72 p-4 shadow-sm dark:bg-slate-900/68">
                         <div className="flex items-center justify-between gap-3">
@@ -32115,6 +32322,64 @@ transform: translateY(0);
                         </div>
 
                         {subCalAddingSlot === section.slotValue && renderSectionAddForm(section.slotValue)}
+
+                        <div
+                          className="mt-4 min-h-[92px] rounded-3xl border border-dashed border-emerald-200/80 bg-white/45 px-3 py-3 dark:border-emerald-300/15 dark:bg-white/[0.03]"
+                          onDragOver={(event) => {
+                            event.preventDefault();
+                            event.dataTransfer.dropEffect = 'copy';
+                          }}
+                          onDrop={(event) => handleKomoDrop(event, dk, section.key)}
+                        >
+                          {getSlotCards(dk, section.key).length > 0 ? (
+                            <div className="flex flex-wrap gap-3">
+                              {getSlotCards(dk, section.key).map((card) => (
+                                <div
+                                  key={card.placementId}
+                                  className="group relative cursor-grab"
+                                  draggable
+                                  onDragStart={(event) => {
+                                    event.dataTransfer.setData('application/json', JSON.stringify({
+                                      type: 'komo-slot',
+                                      card,
+                                      from: { dateKey: dk, slotKey: section.key },
+                                    }));
+                                    event.dataTransfer.effectAllowed = 'move';
+                                  }}
+                                >
+                                  {renderKomoPolaroid(card)}
+                                  <select
+                                    value={dk}
+                                    onChange={(event) => addKomoCardToSlot(card, event.target.value, section.key, { dateKey: dk, slotKey: section.key })}
+                                    onClick={(event) => event.stopPropagation()}
+                                    className="mt-1 w-32 rounded-xl border border-gray-200 bg-white px-2 py-1 text-[11px] text-gray-600 shadow-sm dark:border-white/10 dark:bg-slate-900 dark:text-gray-200"
+                                  >
+                                    {itineraryDates.map((date) => {
+                                      const dateKey = getDateKey(date);
+                                      return (
+                                        <option key={dateKey} value={dateKey}>
+                                          {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                        </option>
+                                      );
+                                    })}
+                                  </select>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeKomoCardFromSlot(dk, section.key, card.placementId)}
+                                    className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border border-white bg-red-500 text-xs font-bold text-white shadow-sm opacity-100"
+                                    aria-label="Remove Komo Book polaroid"
+                                  >
+                                    x
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="flex h-full min-h-[68px] items-center justify-center text-center text-sm text-emerald-900/50 dark:text-emerald-100/50">
+                              Drop Komo Book polaroids here.
+                            </div>
+                          )}
+                        </div>
 
                         <div className="mt-4 space-y-3">
                           {section.events.length > 0 ? (
