@@ -39,6 +39,10 @@ const getDreamShelfImageQuery = (item = {}) => [
   "official",
 ].filter(Boolean).join(" ");
 
+const isDreamShelfWeakImageUrl = (url = "") => (
+  /source\.unsplash\.com\/featured/i.test(String(url || ""))
+);
+
 const getDreamShelfCategoryMeta = (categoryId) => (
   CATEGORIES.find(c => c.id === categoryId) || CATEGORIES[0]
 );
@@ -1049,11 +1053,22 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
     const request = (async () => {
       try {
-        const response = await fetch(`/api/google-image-search?query=${encodeURIComponent(query)}&num=1`);
-        if (!response.ok) return "";
-        const data = await response.json();
-        const result = data?.results?.[0];
-        const imageUrl = result?.displayUrl || result?.thumbnail || result?.url || "";
+        let imageUrl = "";
+        if (item?.preferResolvedImage) {
+          const productResponse = await fetch(`/api/product-search?q=${encodeURIComponent(query)}`);
+          if (productResponse.ok) {
+            const productData = await productResponse.json();
+            const productResult = normalizeSearchItems(productData.items || [], query).find(result => result?.image);
+            imageUrl = productResult?.image || "";
+          }
+        }
+        if (!imageUrl) {
+          const response = await fetch(`/api/google-image-search?query=${encodeURIComponent(query)}&num=1`);
+          if (!response.ok) return "";
+          const data = await response.json();
+          const result = data?.results?.[0];
+          imageUrl = result?.displayUrl || result?.thumbnail || result?.url || "";
+        }
         if (!imageUrl) return "";
 
         setItemImages(prev => {
@@ -1074,7 +1089,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
     imageRequestsRef.current.set(key, request);
     return request;
-  }, []);
+  }, [normalizeSearchItems]);
 
   const buildManualSearchItem = useCallback(async (query) => {
     const category = inferDreamShelfCategory(query);
@@ -1237,7 +1252,8 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
       return next;
     });
     if (!alreadySaved) {
-      const imageUrl = item.image || itemImages[getDreamShelfImageKey(item)] || await fetchDreamShelfImage(item) || "";
+      const fallbackImage = isDreamShelfWeakImageUrl(item.image) ? "" : item.image;
+      const imageUrl = itemImages[getDreamShelfImageKey(item)] || await fetchDreamShelfImage(item) || fallbackImage || "";
       const stableImageUrl = await cacheDreamShelfImage(imageUrl, item.name);
       onAddToSomeday?.({ title: item.name, imageUrl: stableImageUrl, emoji: item.emoji || "✨", type: "dreamshelf", categoryId: "buy", notes: `${item.brand} · ${item.priceRange || ""}` });
     }
@@ -1307,14 +1323,14 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     ? {
         ...selectedItem,
         image: selectedItem.preferResolvedImage
-          ? (itemImages[getDreamShelfImageKey(selectedItem)] || selectedItem.image || "")
+          ? (itemImages[getDreamShelfImageKey(selectedItem)] || (isDreamShelfWeakImageUrl(selectedItem.image) ? "" : selectedItem.image) || "")
           : (selectedItem.image || itemImages[getDreamShelfImageKey(selectedItem)] || "")
       }
     : null;
   const categoryItemsWithImages = items.map(item => ({
     ...item,
     image: item.preferResolvedImage
-      ? (itemImages[getDreamShelfImageKey(item)] || item.image || "")
+      ? (itemImages[getDreamShelfImageKey(item)] || (isDreamShelfWeakImageUrl(item.image) ? "" : item.image) || "")
       : (item.image || itemImages[getDreamShelfImageKey(item)] || ""),
   }));
   const categoryItemPairs = Array.from(
