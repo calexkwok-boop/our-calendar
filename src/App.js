@@ -3460,6 +3460,7 @@ function App() {
   const [subCalEventReviews, setSubCalEventReviews] = useState({});
   const [subCalEventGroupRatings, setSubCalEventGroupRatings] = useState({});
   const [showSubCalendarModal, setShowSubCalendarModal] = useState(false);
+  const [pendingTripKomoChapterId, setPendingTripKomoChapterId] = useState('');
   
     /* moved group ratings loader below subCalTab initialization */
 
@@ -5051,7 +5052,7 @@ function App() {
 
   const createSubCalendar = async (options = {}) => {
     if (!assertCanEditActiveLayer('create itineraries')) return;
-    const { openInviteAfterCreate = false } = options || {};
+    const { openInviteAfterCreate = false, komoChapterId = pendingTripKomoChapterId } = options || {};
     console.log('createSubCalendar called', { name: newSubCalName, dates: selectedDates.length, user: user?.id });
     if (!newSubCalName.trim() || selectedDates.length < 2) {
       alert(selectedDates.length < 2 ? `Please select at least 2 dates first. Currently selected: ${selectedDates.length}` : 'Please enter a name.');
@@ -5084,7 +5085,19 @@ function App() {
     }
     const insertedSubCalendar = insertData[0] || newSC;
     setSubCalendars(prev => [...prev, insertedSubCalendar]);
+    const linkedKomoChapterId = String(komoChapterId || '').trim();
+    if (linkedKomoChapterId) {
+      setTripKomoState((prev) => ({
+        ...(prev && typeof prev === 'object' ? prev : {}),
+        [String(insertedSubCalendar.id)]: {
+          ...((prev && typeof prev === 'object' && prev[String(insertedSubCalendar.id)]) || {}),
+          chapterId: linkedKomoChapterId,
+          slots: ((prev && typeof prev === 'object' && prev[String(insertedSubCalendar.id)]?.slots) || {}),
+        },
+      }));
+    }
     setShowSubCalendarModal(false);
+    setPendingTripKomoChapterId('');
     setNewSubCalName('');
     await openSubCalendar(insertedSubCalendar);
     if (openInviteAfterCreate) {
@@ -24264,6 +24277,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     });
   };
 
+  const startTripFromKomoChapter = (chapter = {}) => {
+    const chapterId = String(chapter?.id || '').trim();
+    if (!chapterId) return;
+    setPendingTripKomoChapterId(chapterId);
+    setNewSubCalName(String(chapter?.title || '').trim() || 'New trip');
+    setShowSubCalendarModal(true);
+  };
+
   const addMakeItHappenMilestone = async (eventData = {}) => {
     if (!assertCanEditActiveLayer('add events to this calendar')) return;
     const dateKey = String(eventData.date || getDateKey(new Date())).trim();
@@ -30029,6 +30050,7 @@ transform: translateY(0);
                 onConvertToTrip={planFromDream}
                 currentUser={currentUser}
                 onChaptersChange={setKomoChapters}
+                onCreateTripFromChapter={startTripFromKomoChapter}
               />
             );
           })()}
@@ -30805,7 +30827,7 @@ transform: translateY(0);
 
     <StartTripModal
       isOpen={showSubCalendarModal}
-      onClose={() => setShowSubCalendarModal(false)}
+      onClose={() => { setShowSubCalendarModal(false); setPendingTripKomoChapterId(''); }}
       selectedDates={selectedDates}
       setSelectedDates={setSelectedDates}
       tripName={newSubCalName}

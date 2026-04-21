@@ -77,14 +77,14 @@ const DREAMSHELF_IMAGES = {
   b6: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=600&q=80",
   b7: "https://www.prada.com/content/dam/pradabkg_products/1/1BA/1BA457/NZVF0046/1BA457_NZV_F0046_V_EOM_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg",
   b8: "https://assets.hermes.com/is/image/hermesedito/P_169_KELLY_HEADER?fit=wrap%2C0&wid=1920&resMode=sharp2&op_usm=1%2C1%2C6%2C0",
-  j1: "https://source.unsplash.com/featured/?gold,bracelet,hand,luxury",
-  j2: "https://source.unsplash.com/featured/?diamond,ring,engagement,hand",
-  j3: "https://source.unsplash.com/featured/?gold,necklace,elegant,jewelry",
-  j4: "https://source.unsplash.com/featured/?bracelet,stacked,jewelry,style",
-  j5: "https://source.unsplash.com/featured/?chain,necklace,fashion,editorial",
-  j6: "https://source.unsplash.com/featured/?bracelet,silver,jewelry,closeup",
-  j7: "https://source.unsplash.com/featured/?snake,ring,luxury,jewelry",
-  j8: "https://source.unsplash.com/featured/?gold,hoop,earrings,minimal",
+  j1: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80",
+  j2: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&q=80",
+  j3: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=80",
+  j4: "https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=600&q=80",
+  j5: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=600&q=80",
+  j6: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&q=80",
+  j7: "https://images.unsplash.com/photo-1506630448388-4e683c67ddb0?w=600&q=80",
+  j8: "https://images.unsplash.com/photo-1531995811006-35cb42e1a022?w=600&q=80",
   s1: "https://images.stockx.com/images/Air-Jordan-1-Retro-High-OG-Chicago-Reimagined-Product.jpg?fit=fill&bg=FFFFFF&w=140&h=75&q=57&dpr=2&trim=color&updated_at=1738193358",
   s2: "https://encrypted-tbn3.gstatic.com/shopping?q=tbn:ANd9GcQhynJlN1yrf037AvDWWDJYI5wC6c8CMshpSyIYM1g90oPfwzSlqUr25x1gNiQSmlfjKeIIxZYrJEfmubsRbgcK54vE7L_ZewlPuLmYVAlPnODL85ERZwoW",
   s3: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=600&q=80",
@@ -101,14 +101,22 @@ const DREAMSHELF_IMAGES = {
   a6: "https://images.unsplash.com/photo-1483721310020-03333e577078?w=600&q=80",
   a7: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80",
   a8: "https://images.unsplash.com/photo-1517336714739-489689fd1ca8?w=600&q=80",
-  h1: "https://source.unsplash.com/featured/?guitar,lespaul,vintage,studio",
-  h2: "https://source.unsplash.com/featured/?rangefinder,camera,street,photography",
-  h3: "https://source.unsplash.com/featured/?porsche,911,car,drive,coastal",
-  h4: "https://source.unsplash.com/featured/?grand,piano,steinway,interior,luxury",
-  h5: "https://source.unsplash.com/featured/?mediumformat,camera,photography,editorial",
-  h6: "https://source.unsplash.com/featured/?electric,guitar,stratocaster,stage",
-  h7: "https://source.unsplash.com/featured/?ferrari,sports,car,red,luxury",
-  h8: "https://source.unsplash.com/featured/?art,screenprint,warhol,modern,gallery",
+  h1: "https://images.unsplash.com/photo-1516924962500-2b4b3b99ea02?w=600&q=80",
+  h2: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600&q=80",
+  h3: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&q=80",
+  h4: "https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=600&q=80",
+  h5: "https://images.unsplash.com/photo-1495707902641-75cac588d2e9?w=600&q=80",
+  h6: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80",
+  h7: "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?w=600&q=80",
+  h8: "https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?w=600&q=80",
+  c1: "https://source.unsplash.com/featured/?red,wine,opus,one,glass,moody",
+  c2: "https://source.unsplash.com/featured/?champagne,domperignon,celebration,toast",
+  c3: "https://source.unsplash.com/featured/?fine,wine,cellar,bottle,aged",
+  c4: "https://source.unsplash.com/featured/?cabernet,wine,luxury,table,dinner",
+  c5: "https://source.unsplash.com/featured/?champagne,krug,bubbles,glass,elegant",
+  c6: "https://source.unsplash.com/featured/?italian,wine,tuscany,vineyard,goldenhour",
+  c7: "https://source.unsplash.com/featured/?white,wine,burgundy,restaurant,fine,dining",
+  c8: "https://source.unsplash.com/featured/?wine,cellar,cabinet,luxury,interior",
 };
 
 // ─── Category config ──────────────────────────────────────────────────────────
@@ -728,7 +736,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   const dm = darkMode;
   const communityFeedRef = useRef(null);
 
-  const [activeCategory, setActiveCategory] = useState(CATEGORIES[0]);
+  const [activeCategory, setActiveCategory] = useState(null);
   const [activeSubFilter, setActiveSubFilter] = useState("all");
   const [items, setItems]                   = useState([]);
   const [communityPosts, setCommunityPosts] = useState([]);
@@ -743,7 +751,6 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   const [searchResults, setSearchResults]   = useState([]);
   const [searching, setSearching]           = useState(false);
   const [searchError, setSearchError]       = useState("");
-  const hasFetchedRef = useRef(false);
   const imageFetchedRef = useRef(new Set());
   const imageRequestsRef = useRef(new Map());
   const searchRequestIdRef = useRef(0);
@@ -794,12 +801,6 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
       setLoading(false);
     }, 250);
   }, []);
-
-  useEffect(() => {
-    if (hasFetchedRef.current) return;
-    hasFetchedRef.current = true;
-    loadCategory(CATEGORIES[0]);
-  }, [loadCategory]);
 
   // ── Handlers ──
   const normalizeSearchItems = useCallback((rawItems = [], query = "") => (

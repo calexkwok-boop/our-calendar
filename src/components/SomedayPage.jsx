@@ -859,7 +859,7 @@ function ChapterPinSheet({ pin, onClose, onRemove, darkMode }) {
 }
 
 // ─── Chapter Page ─────────────────────────────────────────────────────────────
-function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, darkMode }) {
+function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, darkMode }) {
   const [showAddMemory, setShowAddMemory] = useState(false);
   const [memoryText, setMemoryText] = useState('');
   const [selectedPin, setSelectedPin] = useState(null);
@@ -891,12 +891,20 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
               <h1 style={{ fontFamily: CAVEAT, fontSize: 26, fontWeight: 700, color: tp, margin: 0, lineHeight: 1.1 }}>{chapter.title}</h1>
             </div>
           </div>
-          {onDeleteChapter && (
-            <button
-              onClick={() => { if (window.confirm(`Remove "${chapter.title}"? Pins will stay on your board.`)) onDeleteChapter(); }}
-              style={{ background: 'none', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e0d5'}`, borderRadius: 20, padding: '5px 12px', fontSize: 12, color: '#ef4444', cursor: 'pointer', flexShrink: 0 }}
-            >Remove chapter</button>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            {onCreateTrip && (
+              <button
+                onClick={() => onCreateTrip(chapter)}
+                style={{ background: darkMode ? 'rgba(94,173,206,0.14)' : '#eef8fd', border: `1px solid ${darkMode ? 'rgba(94,173,206,0.28)' : '#bae6fd'}`, borderRadius: 20, padding: '5px 12px', fontSize: 12, color: darkMode ? '#7dd3fc' : '#0e7490', cursor: 'pointer', flexShrink: 0, fontWeight: 700 }}
+              >Create trip</button>
+            )}
+            {onDeleteChapter && (
+              <button
+                onClick={() => { if (window.confirm(`Remove "${chapter.title}"? Pins will stay on your board.`)) onDeleteChapter(); }}
+                style={{ background: 'none', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e0d5'}`, borderRadius: 20, padding: '5px 12px', fontSize: 12, color: '#ef4444', cursor: 'pointer', flexShrink: 0 }}
+              >Remove chapter</button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1104,6 +1112,7 @@ const SomedayPage = ({
   currentUser,
   ownerName,
   onChaptersChange,
+  onCreateTripFromChapter,
   darkMode = false,
 }) => {
   const [pins, setPins] = useState(() => dreams.map((d, idx) => {
@@ -1379,7 +1388,7 @@ const SomedayPage = ({
       return (
         <>
           <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
-          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={() => deleteChapter(activeChapterId)} darkMode={darkMode} />
+          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={() => deleteChapter(activeChapterId)} onCreateTrip={onCreateTripFromChapter} darkMode={darkMode} />
         </>
       );
     }
