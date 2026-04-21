@@ -33,10 +33,11 @@ const getDreamShelfImageKey = (item = {}) => (
 ).toString();
 
 const getDreamShelfImageQuery = (item = {}) => [
+  item.imageQuery,
   item.product_brand || item.brand,
   item.product_name || item.name,
-  "product",
-  "official",
+  item.category,
+  "lifestyle",
 ].filter(Boolean).join(" ");
 
 const isDreamShelfWeakImageUrl = (url = "") => (
@@ -384,7 +385,8 @@ function getCuratedDreamShelfMatches(query = "") {
         ...item,
         category,
         emoji: item.emoji || cat.emoji,
-        image: item.image || DREAMSHELF_IMAGES[item.id] || "",
+        preferResolvedImage: true,
+        image: "",
       };
     }))
     .map(item => {
@@ -976,7 +978,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
       ...item,
       category: cat.id,
       preferResolvedImage: true,
-      image: item.image || DREAMSHELF_IMAGES[item.id] || "",
+      image: "",
     }));
     const filtered = subFilter === "all"
       ? allItems
@@ -1001,7 +1003,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         category: cat.id,
         emoji: item.emoji || cat.emoji,
         preferResolvedImage: true,
-        image: item.image || DREAMSHELF_IMAGES[item.id] || "",
+        image: "",
       }));
     });
     setTimeout(() => {
@@ -1428,7 +1430,12 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
             </div>
             <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-4 mb-6">
               {searchResults.map(item => {
-                const itemWithImage = { ...item, image: item.image || itemImages[getDreamShelfImageKey(item)] || "" };
+                const itemWithImage = {
+                  ...item,
+                  image: item.preferResolvedImage
+                    ? (itemImages[getDreamShelfImageKey(item)] || "")
+                    : (item.image || itemImages[getDreamShelfImageKey(item)] || "")
+                };
                 return (
                   <ItemCard
                     key={item.id}
