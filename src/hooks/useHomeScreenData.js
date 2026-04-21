@@ -20,6 +20,10 @@ export default function useHomeScreenData({
   currentUser,
   memories,
   journeyState,
+  tripKomoState,
+  komoChapters,
+  bucketList,
+  quickThoughts,
   getSubCalStartRaw,
   getSubCalEndRaw,
   toDateOnlyTs,
@@ -317,12 +321,38 @@ export default function useHomeScreenData({
   ), [activeTrips, upcomingTrips]);
 
   const homeTripsPreviewCards = useMemo(() => (
-    homeTripsPreview.map((trip) => ({
-      ...trip,
-      startDate: String(getSubCalStartRaw(trip) || '').trim(),
-      endDate: String(getSubCalEndRaw(trip) || '').trim(),
-    }))
-  ), [getSubCalEndRaw, getSubCalStartRaw, homeTripsPreview]);
+    homeTripsPreview.map((trip) => {
+      const tripId = String(trip?.id || '').trim();
+      const linkedChapterId = String(tripKomoState?.[tripId]?.chapterId || '').trim();
+      const linkedChapter = linkedChapterId
+        ? (komoChapters || []).find((chapter) => String(chapter?.id || '').trim() === linkedChapterId)
+        : null;
+      const chapterItemIds = new Set((linkedChapter?.itemIds || []).map((id) => String(id || '').trim()).filter(Boolean));
+      const komoBookItems = [
+        ...(Array.isArray(bucketList) ? bucketList : []).map((item) => ({
+          id: item?.id,
+          photoUrl: item?.photoUrl,
+          imageUrl: item?.imageUrl,
+        })),
+        ...(Array.isArray(quickThoughts) ? quickThoughts : []).map((item) => ({
+          id: item?.id,
+          photoUrl: item?.photoUrl,
+          imageUrl: item?.imageUrl,
+        })),
+      ];
+      const chapterCoverUrl = linkedChapter
+        ? String(komoBookItems.find((item) => chapterItemIds.has(String(item?.id || '').trim()) && (item?.photoUrl || item?.imageUrl))?.photoUrl
+          || komoBookItems.find((item) => chapterItemIds.has(String(item?.id || '').trim()) && (item?.photoUrl || item?.imageUrl))?.imageUrl
+          || '').trim()
+        : '';
+      return {
+        ...trip,
+        startDate: String(getSubCalStartRaw(trip) || '').trim(),
+        endDate: String(getSubCalEndRaw(trip) || '').trim(),
+        chapterCoverUrl,
+      };
+    })
+  ), [bucketList, getSubCalEndRaw, getSubCalStartRaw, homeTripsPreview, komoChapters, quickThoughts, tripKomoState]);
 
   const homeTodayPlanCount = overviewTodayEvents.length;
   const homeUpcomingEventCount = filteredUpcomingUserTabEvents.length;

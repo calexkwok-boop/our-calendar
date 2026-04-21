@@ -180,6 +180,18 @@ const ScrapbookHomeHybrid = ({
   const momentTapRef = React.useRef(null);
   const todaySpotlightPhoto = getVisualPreviewUrl(todaySpotlightEvent);
   const memoryCover = getMemoryCover(recentMemory);
+  const tripSpotlightTitle = String(
+    tripSpotlight?.name || tripSpotlight?.title || tripSpotlight?.tripName || ''
+  ).trim();
+  const tripSpotlightLocation = String(
+    tripSpotlight?.weather_location || tripSpotlight?.location || tripSpotlight?.destination || ''
+  ).trim();
+  const tripSpotlightHeading = tripSpotlightTitle || tripSpotlightLocation || 'Your next destination';
+  const tripSpotlightLocationLine = (
+    tripSpotlightLocation
+    && tripSpotlightLocation.toLowerCase() !== tripSpotlightHeading.toLowerCase()
+  ) ? tripSpotlightLocation : '';
+  const tripSpotlightImage = String(tripSpotlight?.chapterCoverUrl || '').trim();
 
   const todayKey = toLocalDateKey(new Date());
   const todayMoment = momentsThisWeek.find(
@@ -468,12 +480,28 @@ const ScrapbookHomeHybrid = ({
           {tripSpotlight ? (
             <div className="overflow-hidden rounded-[18px] border border-white/50 dark:border-white/10 bg-white/80 dark:bg-white/[0.05]">
               <div className="relative h-[152px] w-full bg-gradient-to-br from-sky-200 via-cyan-100 to-emerald-100 dark:from-sky-900/40 dark:via-slate-900 dark:to-emerald-900/30">
+                {tripSpotlightImage && (
+                  <img
+                    src={tripSpotlightImage}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover"
+                    draggable={false}
+                  />
+                )}
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.45),transparent_38%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.22),transparent_32%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_38%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.08),transparent_32%)]" />
+                {tripSpotlightImage && (
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-black/5" />
+                )}
                 <div className="absolute inset-x-0 bottom-0 px-4 py-4">
-                  <div className="truncate text-lg text-gray-900 dark:text-white" style={{ fontFamily: '"Comic Sans MS", "Bradley Hand", cursive' }}>
-                    {tripSpotlight?.weather_location || tripSpotlight?.name || 'Your next destination'}
+                  <div className={`font-handwritten truncate text-2xl font-bold ${tripSpotlightImage ? 'text-white drop-shadow' : 'text-gray-900 dark:text-white'}`}>
+                    {tripSpotlightHeading}
                   </div>
-                  <div className="mt-1 truncate text-xs text-gray-700/80 dark:text-gray-300">
+                  {tripSpotlightLocationLine && (
+                    <div className={`mt-0.5 truncate text-xs font-medium ${tripSpotlightImage ? 'text-white/90 drop-shadow' : 'text-gray-800/85 dark:text-gray-200/85'}`}>
+                      {tripSpotlightLocationLine}
+                    </div>
+                  )}
+                  <div className={`mt-1 truncate text-xs ${tripSpotlightImage ? 'text-white/85 drop-shadow' : 'text-gray-700/80 dark:text-gray-300'}`}>
                     {formatDisplayDate(tripSpotlight.startDateLabel || tripSpotlight.startDate || tripSpotlight.start)} - {formatDisplayDate(tripSpotlight.endDateLabel || tripSpotlight.endDate || tripSpotlight.end)}
                   </div>
                 </div>

@@ -966,7 +966,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
               {onRemovePin && (
                 <button
                   onClick={e => { e.stopPropagation(); onRemovePin(p.id); }}
-                  style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', background: 'rgba(220,38,38,0.85)', border: '1.5px solid white', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, zIndex: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.25)' }}
+                  style={{ position: 'absolute', top: 4, left: 4, background: 'rgba(0,0,0,0.10)', border: 'none', borderRadius: '50%', width: 16, height: 16, color: '#6b7280', fontSize: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, zIndex: 20 }}
                 >✕</button>
               )}
             </div>

@@ -45,12 +45,12 @@ const getDreamShelfCategoryMeta = (categoryId) => (
 
 const inferDreamShelfCategory = (text = "") => {
   const q = text.toLowerCase();
-  if (/(watch|rolex|omega|patek|audemars|cartier santos|iwc|tag heuer|daytona|submariner)/.test(q)) return "watches";
+  if (/(watch|rolex|omega|patek|audemars|cartier santos|iwc|tag heuer|daytona|submariner|hublot|big bang)/.test(q)) return "watches";
   if (/(bag|purse|tote|birkin|kelly|chanel|celine|prada|bottega|louis vuitton|gucci)/.test(q)) return "bags";
   if (/(ring|bracelet|necklace|earring|jewelry|jewellery|tiffany|van cleef|love bracelet)/.test(q)) return "jewelry";
   if (/(sneaker|shoe|jordan|nike|adidas|new balance|common projects|dunk|samba)/.test(q)) return "sneakers";
   if (/(golf|putter|driver|iron|scotty|taylormade|titleist)/.test(q)) return "golf";
-  if (/(camera|guitar|piano|art|leica|fender|gibson)/.test(q)) return "hobbies";
+  if (/(camera|guitar|piano|art|leica|fender|gibson|cookware|cooking|kitchen|dutch oven|le creuset|espresso|breville|coffee machine)/.test(q)) return "hobbies";
   if (/(wine|champagne|whiskey|whisky|cellar|bordeaux|burgundy)/.test(q)) return "cellar";
   if (/(ski|bike|snowboard|tent|kayak|adventure)/.test(q)) return "adventure";
   return "watches";
@@ -69,6 +69,7 @@ const DREAMSHELF_IMAGES = {
   w6: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80",
   w7: "https://images.unsplash.com/photo-1490367532201-b9bc1dc483f6?w=600&q=80",
   w8: "https://img.iwc.com/cluster-overview-lg-2/o-dpr-2/e6a2f75233ae6901b6842c6abe142d6834ebf5fc.jpg",
+  w9: "https://source.unsplash.com/featured/?luxury,watch,hublot,black,gold,wrist",
   b1: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600&q=80",
   b2: "https://assets.hermes.com/is/image/hermesedito/P_11_Birkin_2018?fit=wrap%2C0&wid=1920&resMode=sharp2&op_usm=1%2C1%2C6%2C0",
   b3: "https://images.unsplash.com/photo-1591561954557-26941169b49e?w=600&q=80",
@@ -77,14 +78,14 @@ const DREAMSHELF_IMAGES = {
   b6: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=600&q=80",
   b7: "https://www.prada.com/content/dam/pradabkg_products/1/1BA/1BA457/NZVF0046/1BA457_NZV_F0046_V_EOM_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg",
   b8: "https://assets.hermes.com/is/image/hermesedito/P_169_KELLY_HEADER?fit=wrap%2C0&wid=1920&resMode=sharp2&op_usm=1%2C1%2C6%2C0",
-  g1: "https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=600&q=80",
+  g1: "https://source.unsplash.com/featured/?golf,putter,green,course,lifestyle",
   g2: "https://images.unsplash.com/photo-1593111774240-d529f12cf4bb?w=600&q=80",
   g3: "https://images.unsplash.com/photo-1530028828-25e8270793c5?w=600&q=80",
   g4: "https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?w=600&q=80",
   g5: "https://images.unsplash.com/photo-1592919505780-303950717480?w=600&q=80",
   g6: "https://images.unsplash.com/photo-1562204320-31975a5e09c4?w=600&q=80",
-  g7: "https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=600&q=80",
-  g8: "https://images.unsplash.com/photo-1591491633265-8f623ed67b1f?w=600&q=80",
+  g7: "https://source.unsplash.com/featured/?golf,driver,club,course,luxury,golfing",
+  g8: "https://source.unsplash.com/featured/?golf,bag,clubs,course,sunrise",
   j1: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=600&q=80",
   j2: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&q=80",
   j3: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=80",
@@ -109,6 +110,9 @@ const DREAMSHELF_IMAGES = {
   a6: "https://images.unsplash.com/photo-1483721310020-03333e577078?w=600&q=80",
   a7: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=600&q=80",
   a8: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=600&q=80",
+  a9: "https://source.unsplash.com/featured/?parasailing,sunset,ocean",
+  a10: "https://source.unsplash.com/featured/?skydiving,clouds,gopro",
+  a11: "https://source.unsplash.com/featured/?bungee,jump,canyon,river",
   h1: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=600&q=80",
   h2: "https://images.unsplash.com/photo-1452780212940-6f5c0d14d848?w=600&q=80",
   h3: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&q=80",
@@ -117,6 +121,8 @@ const DREAMSHELF_IMAGES = {
   h6: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80",
   h7: "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?w=600&q=80",
   h8: "https://images.unsplash.com/photo-1547891654-e66ed7ebb968?w=600&q=80",
+  h9: "https://source.unsplash.com/featured/?dutch,oven,cooking,kitchen,cozy",
+  h10: "https://source.unsplash.com/featured/?espresso,machine,home,coffee,barista",
   c1: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=600&q=80",
   c2: "https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?w=600&q=80",
   c3: "https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=600&q=80",
@@ -139,79 +145,106 @@ const CATEGORIES = [
   { id: "adventure", label: "Adventure",  emoji: "🎿" },
 ];
 
+const DREAM_WORLDS = [
+  {
+    id: "style",
+    label: "Style",
+    title: "The way I want to move through the world",
+    description: "Pieces that feel like identity, ritual, and personal polish.",
+    emoji: "✦",
+    categoryIds: ["watches", "bags", "jewelry", "sneakers"],
+  },
+  {
+    id: "experiences",
+    label: "Experiences",
+    title: "Days worth planning around",
+    description: "Rounds, mountains, water, and the moments that become stories.",
+    emoji: "⛰️",
+    categoryIds: ["golf", "adventure"],
+  },
+  {
+    id: "lifestyle",
+    label: "Lifestyle",
+    title: "Rituals I want in my everyday life",
+    description: "Creative tools, cooking rituals, coffee corners, and weekend passions.",
+    emoji: "☕",
+    categoryIds: ["hobbies"],
+  },
+  {
+    id: "collection",
+    label: "Collection",
+    title: "The cellar I build slowly",
+    description: "Bottles, cabinets, and celebration pieces gathered over time.",
+    emoji: "🍷",
+    categoryIds: ["cellar"],
+  },
+];
+
+const getDreamWorldForCategory = (categoryId) => (
+  DREAM_WORLDS.find(world => world.categoryIds.includes(categoryId)) || null
+);
+
 // ─── Sub-filters per category ─────────────────────────────────────────────────
 const SUB_FILTERS = {
   watches: [
-    { id: "all",    label: "All"         },
-    { id: "u5k",    label: "Under $5k"   },
-    { id: "5k15k",  label: "$5k–$15k"    },
-    { id: "15kp",   label: "$15k+"       },
-    { id: "sport",  label: "Sport"       },
-    { id: "dress",  label: "Dress"       },
-    { id: "rolex",  label: "Rolex"       },
-    { id: "patek",  label: "Patek"       },
-    { id: "omega",  label: "Omega"       },
+    { id: "all",      label: "All"      },
+    { id: "everyday", label: "Everyday" },
+    { id: "sport",    label: "Sport"    },
+    { id: "dress",    label: "Dress"    },
+    { id: "grail",    label: "Grail"    },
+    { id: "timeless", label: "Timeless" },
   ],
   bags: [
-    { id: "all",    label: "All"         },
-    { id: "u2k",    label: "Under $2k"   },
-    { id: "2k5k",   label: "$2k–$5k"     },
-    { id: "5kp",    label: "$5k+"        },
-    { id: "tote",   label: "Tote"        },
-    { id: "shoulder", label: "Shoulder"  },
-    { id: "chanel", label: "Chanel"      },
-    { id: "hermes", label: "Hermès"      },
-    { id: "lv",     label: "LV"          },
+    { id: "all",       label: "All"       },
+    { id: "everyday",  label: "Everyday"  },
+    { id: "statement", label: "Statement" },
+    { id: "travel",    label: "Travel"    },
+    { id: "iconic",    label: "Iconic"    },
   ],
   jewelry: [
-    { id: "all",        label: "All"         },
-    { id: "anniversary",label: "Anniversary" },
-    { id: "birthday",   label: "Birthday"    },
-    { id: "everyday",   label: "Everyday"    },
-    { id: "gold",       label: "Gold"        },
-    { id: "silver",     label: "Silver"      },
-    { id: "cartier",    label: "Cartier"     },
-    { id: "tiffany",    label: "Tiffany"     },
+    { id: "all",       label: "All"       },
+    { id: "everyday",  label: "Everyday"  },
+    { id: "devotion",  label: "Devotion"  },
+    { id: "heirloom",  label: "Heirloom"  },
+    { id: "statement", label: "Statement" },
+    { id: "gold",      label: "Warm Gold" },
   ],
   golf: [
-    { id: "all",      label: "All"       },
-    { id: "putters",  label: "Putters"   },
-    { id: "irons",    label: "Irons"     },
-    { id: "drivers",  label: "Drivers"   },
-    { id: "sets",     label: "Full Sets" },
-    { id: "exp",      label: "Experiences"},
-    { id: "u500",     label: "Under $500"},
-    { id: "500_2k",   label: "$500–$2k"  },
-    { id: "2kp",      label: "$2k+"      },
+    { id: "all",      label: "All"             },
+    { id: "weekend",  label: "Weekend Rounds"  },
+    { id: "practice", label: "Practice Ritual" },
+    { id: "course",   label: "Dream Course"    },
+    { id: "setup",    label: "The Bag"         },
   ],
   sneakers: [
-    { id: "all",      label: "All"        },
-    { id: "jordan",   label: "Jordan"     },
-    { id: "nike",     label: "Nike"       },
-    { id: "adidas",   label: "Adidas"     },
-    { id: "collab",   label: "Collabs"    },
-    { id: "grail",    label: "Grails"     },
+    { id: "all",      label: "All"       },
+    { id: "everyday", label: "Everyday"  },
+    { id: "grail",    label: "Grail"     },
+    { id: "classic",  label: "Classic"   },
+    { id: "collab",   label: "Collab"    },
   ],
   hobbies: [
-    { id: "all",      label: "All"        },
-    { id: "music",    label: "Music"      },
-    { id: "camera",   label: "Camera"     },
-    { id: "auto",     label: "Auto"       },
-    { id: "art",      label: "Art"        },
+    { id: "all",      label: "All"       },
+    { id: "creative", label: "Creative"  },
+    { id: "ritual",   label: "Ritual"    },
+    { id: "studio",   label: "Studio"    },
+    { id: "drive",    label: "Drive"     },
+    { id: "cooking",  label: "Cooking"   },
   ],
   cellar: [
-    { id: "all",      label: "All"        },
-    { id: "red",      label: "Red"        },
-    { id: "white",    label: "White"      },
-    { id: "champagne",label: "Champagne"  },
-    { id: "rare",     label: "Rare"       },
+    { id: "all",         label: "All"          },
+    { id: "dinner",      label: "Dinner Table" },
+    { id: "celebration", label: "Celebration"  },
+    { id: "cellar",      label: "Cellar Build" },
+    { id: "rare",        label: "Special Bottle" },
   ],
   adventure: [
-    { id: "all",      label: "All"        },
-    { id: "ski",      label: "Ski"        },
-    { id: "climb",    label: "Climbing"   },
-    { id: "bike",     label: "Cycling"    },
-    { id: "water",    label: "Water"      },
+    { id: "all",      label: "All"       },
+    { id: "mountain", label: "Mountain"  },
+    { id: "climb",    label: "Climb"     },
+    { id: "ride",     label: "Ride"      },
+    { id: "water",    label: "Water"     },
+    { id: "gear",     label: "Ready Bag" },
   ],
 };
 
@@ -226,6 +259,7 @@ const CURATED_ITEMS = {
     { id: "w6",  name: "Cartier Santos",               brand: "Cartier", priceRange: "$6,000–$9,000",   subFilter: ["dress","5k15k"],          emoji: "⌚", description: "The world's first wristwatch, made for an aviator in 1904. Still the most elegant thing on a wrist." },
     { id: "w7",  name: "TAG Heuer Carrera",            brand: "TAG",     priceRange: "$3,000–$6,000",   subFilter: ["sport","u5k"],            emoji: "⌚", description: "Race-bred, beautifully legible, and the entry point into serious watchmaking." },
     { id: "w8",  name: "IWC Portugieser Chronograph",  brand: "IWC",     priceRange: "$8,000–$12,000",  subFilter: ["dress","5k15k"],          emoji: "⌚", description: "Clean, architectural, and quietly perfect. The watch for people who know watches." },
+    { id: "w9",  name: "Hublot Big Bang",              brand: "Hublot",  priceRange: "$8,000-$18,000",   subFilter: ["sport","5k15k"],          emoji: "⌚", description: "Bold case architecture, rubber strap energy, and a wrist presence that refuses to be quiet." },
   ],
   bags: [
     { id: "b1",  name: "Chanel Classic Flap",         brand: "Chanel",  priceRange: "$8,000–$10,000",  subFilter: ["chanel","shoulder","5kp"],emoji: "👜", description: "The most iconic bag ever made. Quilted leather, gold chain, and a logo that needs no introduction." },
@@ -254,7 +288,7 @@ const CURATED_ITEMS = {
     { id: "g4",  name: "Ping G430 Full Set",           brand: "Ping",    priceRange: "$2,500–$3,500",   subFilter: ["sets","2kp"],             emoji: "⛳", description: "The complete bag upgrade. Everything matched, everything fitted, everything right." },
     { id: "g5",  name: "Round at Pebble Beach",        brand: "Pebble Beach",priceRange: "$600–$1,000",  subFilter: ["exp","500_2k"],           emoji: "⛳", description: "The 18th green borders the Pacific Ocean. One of the greatest rounds of golf anyone will ever play." },
     { id: "g7",  name: "TaylorMade Stealth 2 HD Driver",brand: "TaylorMade",priceRange: "$450–$600",    subFilter: ["drivers","u500"],         emoji: "⛳", description: "Carbon face technology that genuinely changes what a golf ball can do in the air." },
-    { id: "g8",  name: "FootJoy Tour Alpha Bag",       brand: "FootJoy", priceRange: "$350–$500",        subFilter: ["u500"],                   emoji: "⛳", description: "The bag that says you take this seriously. Organized, beautiful, and built for the long game." },
+    { id: "g8",  name: "FootJoy Tour Setup Bag",       brand: "FootJoy", priceRange: "$350–$500",        subFilter: ["u500"],                   emoji: "⛳", description: "The bag that says you take this seriously. Organized, beautiful, and built for the long game." },
   ],
   sneakers: [
     { id: "s1",  name: "Air Jordan 1 Retro High OG",   brand: "Nike/Jordan",priceRange: "$170–$2,000+", subFilter: ["jordan","grail"],         emoji: "👟", description: "The shoe that started everything. Every colorway tells a story. The grail for a reason." },
@@ -275,6 +309,8 @@ const CURATED_ITEMS = {
     { id: "h6",  name: "Fender Custom Shop Stratocaster",brand: "Fender",priceRange: "$3,000–$6,000",  subFilter: ["music"],                  emoji: "🎸", description: "Built by master builders in Corona, California. The instrument you commission, not just buy." },
     { id: "h7",  name: "Ferrari 488 GTB",              brand: "Ferrari", priceRange: "$250,000+",        subFilter: ["auto"],                   emoji: "🏎️", description: "Twin-turbo V8, 660 horsepower, and a sound that makes grown adults cry. A pure dream." },
     { id: "h8",  name: "Warhol Screen Print (Authenticated)",brand: "Andy Warhol",priceRange: "$5,000–$50,000+",subFilter: ["art"],            emoji: "🖼️", description: "A piece of art history you can hang in your home. Pop art that only gets more meaningful with time." },
+    { id: "h9",  name: "Le Creuset Dutch Oven",        brand: "Le Creuset",priceRange: "$300-$500",      subFilter: ["cooking"],                emoji: "🍳", description: "The heirloom kitchen piece. Braises, soups, bread, and Sunday sauces all feel more special in enameled cast iron." },
+    { id: "h10", name: "Breville Espresso Machine",    brand: "Breville", priceRange: "$500-$900",      subFilter: ["cooking"],                emoji: "☕", description: "A countertop ritual machine for dialing in espresso, steaming milk, and making every morning feel a little more intentional." },
   ],
   cellar: [
     { id: "c1",  name: "Opus One 2018",                brand: "Opus One",priceRange: "$350–$450 /bottle",subFilter: ["red","rare"],            emoji: "🍷", description: "The Napa Valley Bordeaux blend that made California wine taken seriously worldwide." },
@@ -295,6 +331,9 @@ const CURATED_ITEMS = {
     { id: "a6",  name: "Capita DOA Snowboard",         brand: "Capita",  priceRange: "$600–$700",       subFilter: ["ski"],                    emoji: "🏂", description: "The people's board. Versatile, responsive, and the first thing intermediate riders reach for." },
     { id: "a7",  name: "Hobie Mirage Pro Angler Kayak",brand: "Hobie",   priceRange: "$3,500–$4,500",   subFilter: ["water"],                  emoji: "🛶", description: "Pedal-powered fishing kayak with hands-free steering. The serious angler's dream craft." },
     { id: "a8",  name: "Garmin Fenix 7X Solar",        brand: "Garmin",  priceRange: "$700–$900",       subFilter: ["ski","climb","bike"],     emoji: "⌚", description: "Solar charging, topographic maps, and a battery that lasts longer than any expedition." },
+    { id: "a9",  name: "Parasailing Over Clear Water", brand: "Ocean Day",priceRange: "$80–$180",        subFilter: ["water"],                  emoji: "🪂", description: "Floating above bright water with nothing but wind, sunlight, and the kind of view you remember years later." },
+    { id: "a10", name: "Skydiving First Jump",         brand: "Drop Zone",priceRange: "$250–$400",       subFilter: ["mountain"],               emoji: "🪂", description: "The leap you talk about for the rest of your life. A few wild seconds that make everything feel bigger." },
+    { id: "a11", name: "Bungee Jumping",               brand: "Adventure Day",priceRange: "$120–$300",   subFilter: ["climb"],                  emoji: "🌉", description: "A bridge, a cord, a countdown, and the clean shock of doing something you were scared to do." },
   ],
 };
 
@@ -356,6 +395,85 @@ function formatTime(iso) {
   if (mins < 60)  return `${mins}m ago`;
   if (hours < 24) return `${hours}h ago`;
   return `${days}d ago`;
+}
+
+function itemMatchesSubFilter(categoryId, item, subId) {
+  if (!subId || subId === "all") return true;
+  const filters = Array.isArray(item?.subFilter) ? item.subFilter : [];
+  const haystack = [item?.name, item?.brand, item?.description, ...filters].filter(Boolean).join(" ").toLowerCase();
+  const has = (...terms) => terms.some(term => haystack.includes(term));
+  const matchers = {
+    watches: {
+      everyday: () => has("cartier", "tag", "omega", "santos", "carrera", "5k15k", "u5k"),
+      sport: () => filters.includes("sport") || has("submariner", "daytona", "hublot", "speedmaster", "royal oak"),
+      dress: () => filters.includes("dress") || has("santos", "portugieser"),
+      grail: () => has("patek", "nautilus", "royal oak", "daytona", "hublot", "15kp"),
+      timeless: () => has("rolex", "omega", "cartier", "iwc", "tag", "submariner", "speedmaster"),
+    },
+    bags: {
+      everyday: () => has("neverfull", "galleria", "bucket", "tote", "shoulder"),
+      statement: () => has("gucci", "bottega", "dionysus", "andiamo", "chanel"),
+      travel: () => has("neverfull", "tote", "prada", "galleria"),
+      iconic: () => has("chanel", "hermes", "birkin", "kelly", "louis vuitton", "prada"),
+    },
+    jewelry: {
+      everyday: () => filters.includes("everyday") || has("tiffany", "love bracelet", "alhambra"),
+      devotion: () => has("love", "diamond", "anniversary", "solitaire", "band"),
+      heirloom: () => has("mikimoto", "harry winston", "diamond", "pearl", "bvlgari"),
+      statement: () => has("serpenti", "clou", "diamond", "bvlgari"),
+      gold: () => filters.includes("gold") || has("gold", "cartier", "van cleef"),
+    },
+    golf: {
+      weekend: () => has("driver", "putter", "bag", "round", "pebble"),
+      practice: () => has("putter", "irons", "driver"),
+      course: () => has("pebble", "round", "experience"),
+      setup: () => has("set", "bag", "irons", "driver", "putter"),
+    },
+    sneakers: {
+      everyday: () => has("samba", "common projects", "panda", "new balance"),
+      grail: () => filters.includes("grail") || has("jordan", "sacai", "silver bullet"),
+      classic: () => has("jordan", "samba", "air max", "achilles", "dunk"),
+      collab: () => filters.includes("collab") || has("sacai", "aime leon dore"),
+    },
+    hobbies: {
+      creative: () => has("guitar", "camera", "piano", "screen print", "art", "hasselblad", "leica", "fender", "gibson", "warhol"),
+      ritual: () => has("espresso", "coffee", "dutch oven", "le creuset", "piano", "camera"),
+      studio: () => has("guitar", "piano", "camera", "hasselblad", "leica", "fender", "gibson"),
+      drive: () => has("porsche", "ferrari", "911", "gtb"),
+      cooking: () => filters.includes("cooking") || has("dutch oven", "le creuset", "espresso", "breville", "coffee"),
+    },
+    cellar: {
+      dinner: () => has("red", "white", "cabernet", "sassicaia", "puligny", "opus"),
+      celebration: () => has("champagne", "dom", "krug", "cuvée", "cuvee"),
+      cellar: () => has("cabinet", "eurocave", "cellar"),
+      rare: () => filters.includes("rare") || has("pétrus", "petrus", "screaming eagle", "opus"),
+    },
+    adventure: {
+      mountain: () => has("ski", "snowboard", "jacket", "mountain", "snow"),
+      climb: () => filters.includes("climb") || has("climb", "carabiner", "arc'teryx"),
+      ride: () => filters.includes("bike") || has("bike", "cycling", "trek", "ride"),
+      water: () => filters.includes("water") || has("kayak", "water"),
+      gear: () => has("duffel", "jacket", "watch", "garmin", "bag"),
+    },
+  };
+  return Boolean(matchers[categoryId]?.[subId]?.());
+}
+
+function getDreamShelfVibe(item = {}) {
+  const text = `${item.name || ""} ${item.brand || ""} ${item.description || ""}`.toLowerCase();
+  if (text.includes("espresso") || text.includes("coffee")) return "Morning ritual";
+  if (text.includes("dutch oven") || text.includes("le creuset")) return "Dinner with friends";
+  if (text.includes("golf") || text.includes("pebble")) return "A day worth clearing";
+  if (text.includes("wine") || text.includes("champagne") || text.includes("krug") || text.includes("dom")) return "Saved for a celebration";
+  if (text.includes("guitar") || text.includes("piano")) return "Creative life";
+  if (text.includes("camera") || text.includes("leica") || text.includes("hasselblad")) return "Seeing more closely";
+  if (text.includes("porsche") || text.includes("ferrari")) return "The long drive";
+  if (text.includes("ski") || text.includes("snowboard") || text.includes("kayak") || text.includes("climb")) return "Weekend outside";
+  if (text.includes("bag") || text.includes("tote") || text.includes("birkin") || text.includes("kelly")) return "Carry the life you want";
+  if (text.includes("ring") || text.includes("bracelet") || text.includes("diamond") || text.includes("pearl")) return "A future heirloom";
+  if (text.includes("sneaker") || text.includes("jordan") || text.includes("samba") || text.includes("dunk")) return "Everyday uniform";
+  if (text.includes("watch") || text.includes("rolex") || text.includes("hublot") || text.includes("omega")) return "One day watch";
+  return "Part of the life I want";
 }
 
 // ─── Item Modal ───────────────────────────────────────────────────────────────
@@ -463,6 +581,7 @@ const ItemCard = React.memo(function ItemCard({ item, savedIds, onOpen, darkMode
   const dm = darkMode;
   const isSaved = savedIds.has(item.id);
   const [imageFailed, setImageFailed] = useState(false);
+  const vibe = getDreamShelfVibe(item);
 
   useEffect(() => { setImageFailed(false); }, [item.image]);
 
@@ -507,11 +626,9 @@ const ItemCard = React.memo(function ItemCard({ item, savedIds, onOpen, darkMode
           {item.name}
         </h3>
 
-        {item.priceRange && (
-          <p className="dream-shelf-product-text text-lg font-medium mb-0" style={{ color: AMBER_DARK }}>
-            {item.priceRange}
-          </p>
-        )}
+        <p className="font-handwritten text-lg leading-tight" style={{ color: AMBER_DARK }}>
+          {vibe}
+        </p>
       </div>
     </div>
   );
@@ -540,6 +657,7 @@ const CommunityPost = React.memo(function CommunityPost({ post, photoUrl, curren
   const displayName = post.profiles?.full_name ?? (post.user_id === currentUserId ? "You" : "Someone");
   const initials = String(displayName || "??").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
   const cat = CATEGORIES.find(c => c.id === post.category);
+  const vibe = getDreamShelfVibe({ name: post.product_name, brand: post.product_brand, description: post.review, category: post.category });
 
   return (
     <div className="border rounded-2xl p-4" style={{ background: dm ? CHAR_SOFT : LINEN, borderColor: dm ? "rgba(241,230,216,0.10)" : STONE_LIGHT }}>
@@ -576,10 +694,8 @@ const CommunityPost = React.memo(function CommunityPost({ post, photoUrl, curren
             {post.product_name}
           </h3>
           {post.product_brand && <p className="text-xs text-slate-500 mb-1">{post.product_brand}</p>}
+          <p className="font-['Caveat'] text-base leading-tight mb-1" style={{ color: AMBER_DARK }}>{vibe}</p>
           {post.review && <p className="text-sm text-slate-500 italic leading-relaxed line-clamp-2">"{post.review}"</p>}
-          {post.product_price && (
-            <p className="font-['Caveat'] text-lg font-bold mt-1" style={{ color: AMBER_DARK }}>{post.product_price}</p>
-          )}
         </div>
       </div>
 
@@ -751,7 +867,8 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   const dm = darkMode;
   const communityFeedRef = useRef(null);
 
-  const [activeCategory, setActiveCategory] = useState(CATEGORIES[0]);
+  const [activeWorld, setActiveWorld] = useState(null);
+  const [activeCategory, setActiveCategory] = useState(null);
   const [activeSubFilter, setActiveSubFilter] = useState("all");
   const [items, setItems]                   = useState([]);
   const [communityPosts, setCommunityPosts] = useState([]);
@@ -815,7 +932,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     }));
     const filtered = subFilter === "all"
       ? allItems
-      : allItems.filter(item => item.subFilter?.includes(subFilter));
+      : allItems.filter(item => itemMatchesSubFilter(cat.id, item, subFilter));
     setTimeout(() => {
       if (categoryLoadIdRef.current !== loadId) return;
       setItems(filtered);
@@ -826,8 +943,10 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   useEffect(() => {
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
-    loadCategory(CATEGORIES[0]);
-  }, [loadCategory]);
+    categoryLoadIdRef.current += 1;
+    setItems([]);
+    setLoading(false);
+  }, []);
 
   // ── Handlers ──
   const normalizeSearchItems = useCallback((rawItems = [], query = "") => (
@@ -1017,9 +1136,20 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
       setLoading(false);
       return;
     }
+    const world = getDreamWorldForCategory(cat.id);
+    if (world) setActiveWorld(world);
     setActiveCategory(cat);
     setActiveSubFilter("all");
     loadCategory(cat, "all");
+  };
+
+  const handleWorldClick = (world) => {
+    setActiveWorld(world);
+    categoryLoadIdRef.current += 1;
+    setActiveCategory(null);
+    setActiveSubFilter("all");
+    setItems([]);
+    setLoading(false);
   };
 
   const handleSubFilter = (subId) => {
@@ -1093,6 +1223,9 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     onAddToSomeday?.({ title: featured.product_name, imageUrl: stableImageUrl, emoji: "✨", type: "dreamshelf", categoryId: "buy" });
   }, [cacheDreamShelfImage, onAddToSomeday]);
 
+  const activeWorldCategories = activeWorld
+    ? CATEGORIES.filter(cat => activeWorld.categoryIds.includes(cat.id))
+    : [];
   const subFilters = SUB_FILTERS[activeCategory?.id] || [];
   const featured = featuredPost;
   const featuredImage = featured
@@ -1142,7 +1275,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
             <input
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search a dream item..."
+              placeholder="Search a dream, ritual, or someday piece..."
               className="flex-1 min-w-0 rounded-xl px-4 py-2.5 text-sm outline-none border"
               style={{ background: dm ? CHAR : OAT, borderColor: dm ? "rgba(250,246,240,0.10)" : STONE_LIGHT, color: dm ? LINEN : CHAR }}
             />
@@ -1157,7 +1290,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
           </div>
           <div className="flex items-center justify-between gap-3 px-1 pt-2">
             <p className={`text-xs ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
-              Search pulls product matches when configured. You can always add your own photo.
+              Search pulls possible matches when configured. You can always add your own photo.
             </p>
             <button
               type="button"
@@ -1207,33 +1340,71 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
           </>
         )}
 
-        <div className="flex gap-2 mb-4 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => handleCategoryClick(cat)}
-              className="dream-shelf-pill flex-shrink-0 rounded-full px-3 py-1 text-sm font-bold transition-all duration-200 border focus:outline-none"
-              style={{
-                background: activeCategory?.id === cat.id
-                  ? (dm ? CHAR_SOFT : LINEN)
-                  : 'transparent',
-                border: activeCategory?.id === cat.id
-                  ? `1px solid ${dm ? "rgba(250,246,240,0.22)" : STONE_LIGHT}`
-                  : `1px solid ${dm ? "rgba(250,246,240,0.08)" : "rgba(212,201,187,0.5)"}`,
-                color: activeCategory?.id === cat.id ? (dm ? LINEN : CHAR) : STONE,
-                fontFamily: "'Caveat', cursive",
-                boxShadow: activeCategory?.id === cat.id
-                  ? (dm ? '0 2px 8px rgba(0,0,0,0.18)' : '0 2px 8px rgba(42,36,32,0.07)')
-                  : 'none',
-              }}
-            >
-              {cat.emoji} {cat.label}
-            </button>
-          ))}
+        <div className="mb-5">
+          <p className="text-[10px] uppercase tracking-[0.16em] mb-3" style={{ color: STONE }}>
+            Choose a world
+          </p>
+          <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-3">
+            {DREAM_WORLDS.map(world => (
+              <button
+                key={world.id}
+                type="button"
+                onClick={() => handleWorldClick(world)}
+                className="text-left rounded-2xl border p-4 transition-all duration-200 hover:-translate-y-0.5 focus:outline-none"
+                style={{
+                  background: activeWorld?.id === world.id ? (dm ? CHAR_SOFT : LINEN) : (dm ? "rgba(250,246,240,0.035)" : "rgba(250,246,240,0.72)"),
+                  borderColor: activeWorld?.id === world.id ? AMBER_BORDER : (dm ? "rgba(250,246,240,0.08)" : "rgba(212,201,187,0.55)"),
+                  boxShadow: activeWorld?.id === world.id ? (dm ? "0 8px 22px rgba(0,0,0,0.22)" : "0 8px 22px rgba(42,36,32,0.08)") : "none",
+                }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-handwritten text-2xl font-bold leading-none mb-1" style={{ color: dm ? LINEN : CHAR }}>
+                      {world.emoji} {world.label}
+                    </div>
+                    <div className="text-[11px] uppercase tracking-[0.14em] mb-2" style={{ color: AMBER_DARK }}>
+                      {world.title}
+                    </div>
+                  </div>
+                  <span className="text-lg" style={{ color: STONE }}>›</span>
+                </div>
+                <p className="text-sm leading-relaxed" style={{ color: dm ? "rgba(250,246,240,0.55)" : STONE }}>
+                  {world.description}
+                </p>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* ── Sub-filter strip (contextual) ── */}
-        {subFilters.length > 0 && (
+        {activeWorld && (
+          <div className="flex gap-2 mb-4 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+            {activeWorldCategories.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => handleCategoryClick(cat)}
+                className="dream-shelf-pill flex-shrink-0 rounded-full px-3 py-1 text-sm font-bold transition-all duration-200 border focus:outline-none"
+                style={{
+                  background: activeCategory?.id === cat.id
+                    ? (dm ? CHAR_SOFT : LINEN)
+                    : 'transparent',
+                  border: activeCategory?.id === cat.id
+                    ? `1px solid ${dm ? "rgba(250,246,240,0.22)" : STONE_LIGHT}`
+                    : `1px solid ${dm ? "rgba(250,246,240,0.08)" : "rgba(212,201,187,0.5)"}`,
+                  color: activeCategory?.id === cat.id ? (dm ? LINEN : CHAR) : STONE,
+                  fontFamily: "'Caveat', cursive",
+                  boxShadow: activeCategory?.id === cat.id
+                    ? (dm ? '0 2px 8px rgba(0,0,0,0.18)' : '0 2px 8px rgba(42,36,32,0.07)')
+                    : 'none',
+                }}
+              >
+                {cat.emoji} {cat.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* ── Mood-filter strip (contextual) ── */}
+        {activeWorld && subFilters.length > 0 && (
           <div className="flex gap-2 mb-6 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
             {subFilters.map(sf => (
               <button
@@ -1289,12 +1460,12 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                     <p className="text-sm text-slate-500 italic leading-relaxed mb-4 line-clamp-3">"{featured.review}"</p>
                   )}
                   <div className="flex gap-4 flex-wrap mb-4">
-                    {featured.product_price && (
-                      <div className="flex flex-col">
-                        <span className="dream-shelf-product-text text-lg font-medium" style={{ color: AMBER_DARK }}>{featured.product_price}</span>
-                        <span className="text-[10px] uppercase tracking-wide" style={{ color: STONE }}>Price</span>
-                      </div>
-                    )}
+                    <div className="flex flex-col">
+                      <span className="font-handwritten text-xl leading-none" style={{ color: AMBER_DARK }}>
+                        {getDreamShelfVibe({ name: featured.product_name, brand: featured.product_brand, description: featured.review, category: featured.category })}
+                      </span>
+                      <span className="text-[10px] uppercase tracking-wide" style={{ color: STONE }}>Vibe</span>
+                    </div>
                     <div className="flex flex-col">
                       <span className="dream-shelf-product-text text-lg font-medium" style={{ color: STONE }}>{featured.likes_count ?? 0}</span>
                       <span className="text-[10px] uppercase tracking-wide" style={{ color: STONE }}>Saves</span>
@@ -1319,8 +1490,8 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         {/* ── Item grid ── */}
         <p className="text-[10px] uppercase tracking-[0.16em] mb-3" style={{ color: STONE }}>
           {activeCategory
-            ? `${activeCategory.emoji} ${activeCategory.label}${activeSubFilter !== "all" ? ` · ${SUB_FILTERS[activeCategory.id]?.find(f => f.id === activeSubFilter)?.label || ""}` : ""}`
-            : "No category selected"}
+            ? `${activeWorld?.label ? `${activeWorld.label} · ` : ""}${activeCategory.emoji} ${activeCategory.label}${activeSubFilter !== "all" ? ` · ${SUB_FILTERS[activeCategory.id]?.find(f => f.id === activeSubFilter)?.label || ""}` : ""}`
+            : "Start with a world above"}
         </p>
 
         {loading ? (
@@ -1345,8 +1516,8 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
             }) : (
               <div className="col-span-2 max-sm:col-span-1 text-center py-16" style={{ color: STONE }}>
                 <div className="text-4xl mb-4 opacity-40">✦</div>
-                <p className="font-['Caveat'] text-2xl mb-1">{activeCategory ? "Nothing here yet" : "Search or choose a category"}</p>
-                <p className="text-sm opacity-60">{activeCategory ? "Try a different filter" : "Category filters can stay turned off."}</p>
+                <p className="font-['Caveat'] text-2xl mb-1">{activeCategory ? "Nothing here yet" : "Choose a life chapter"}</p>
+                <p className="text-sm opacity-60">{activeCategory ? "Try a different mood filter" : "Pick Style, Experiences, Lifestyle, or Collection to begin."}</p>
               </div>
             )}
           </div>
