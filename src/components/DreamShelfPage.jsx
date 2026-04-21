@@ -59,6 +59,8 @@ const inferDreamShelfCategory = (text = "") => {
   if (/(espresso|breville|la marzocco|niche zero|pour over|coffee grinder|coffee machine|stagg kettle|acaia)/.test(q)) return "coffee";
   if (/(sofa|linen sheet|parachute|aesop candle|byredo|le labo|santal|restoration hardware|hay chair|sonos|gallery wall|fragrance|perfume)/.test(q)) return "home";
   if (/(eight sleep|oura ring|theragun|sauna|red light|whoop|normatec|hyperice|joovv)/.test(q)) return "wellness";
+  if (/(porsche|ferrari|bmw m3|mclaren|lamborghini|range rover|mercedes amg|taycan|supercar|sports car|track day)/.test(q)) return "cars";
+  if (/(safari|northern lights|aurora|amalfi|cappadocia|michelin star|private chef|coachella|napa valley|tokyo food)/.test(q)) return "experiences";
   if (/(camera|guitar|piano|art|leica|fender|gibson)/.test(q)) return "hobbies";
   if (/(whiskey|whisky|bourbon|macallan|yamazaki|hibiki|pappy|van winkle|clase azul|don julio|cognac|louis xiii)/.test(q)) return "whiskey";
   if (/(wine|champagne|cellar|bordeaux|burgundy)/.test(q)) return "cellar";
@@ -162,9 +164,11 @@ const CATEGORIES = [
   { id: "home",      label: "Home",       emoji: "🪴" },
   { id: "wellness",  label: "Wellness",   emoji: "🧘" },
   { id: "coffee",    label: "Coffee",     emoji: "☕" },
-  { id: "cellar",    label: "Cellar",     emoji: "🍷" },
-  { id: "whiskey",   label: "Whiskey",    emoji: "🥃" },
-  { id: "adventure", label: "Adventure",  emoji: "🎿" },
+  { id: "cellar",      label: "Cellar",      emoji: "🍷" },
+  { id: "whiskey",     label: "Whiskey",     emoji: "🥃" },
+  { id: "adventure",   label: "Adventure",   emoji: "🎿" },
+  { id: "cars",        label: "Cars",        emoji: "🚗" },
+  { id: "experiences", label: "Experiences", emoji: "✈️" },
 ];
 
 const DREAM_WORLDS = [
@@ -187,14 +191,14 @@ const DREAM_WORLDS = [
     label: "Lifestyle",
     title: "The rhythm of your life",
     emoji: "☕",
-    categoryIds: ["kitchen", "home", "wellness", "coffee"],
+    categoryIds: ["kitchen", "home", "wellness", "coffee", "cellar", "whiskey", "cars"],
   },
   {
-    id: "collection",
-    label: "Collection",
-    title: "Built over time",
-    emoji: "🍷",
-    categoryIds: ["watches", "sneakers", "cellar", "whiskey"],
+    id: "experiences",
+    label: "Experiences",
+    title: "Moments worth saving for",
+    emoji: "✈️",
+    categoryIds: ["experiences", "adventure"],
   },
 ];
 
@@ -221,6 +225,7 @@ const SUB_FILTERS = {
   ],
   jewelry: [
     { id: "all",       label: "All"       },
+    { id: "mens",      label: "Men's"     },
     { id: "everyday",  label: "Everyday"  },
     { id: "devotion",  label: "Devotion"  },
     { id: "heirloom",  label: "Heirloom"  },
@@ -279,6 +284,26 @@ const SUB_FILTERS = {
     { id: "ride",     label: "Ride"      },
     { id: "water",    label: "Water"     },
     { id: "gear",     label: "Ready Bag" },
+  ],
+  cars: [
+    { id: "all",        label: "All"        },
+    { id: "sports",     label: "Sports"     },
+    { id: "luxury",     label: "Luxury"     },
+    { id: "suv",        label: "SUV"        },
+    { id: "ev",         label: "Electric"   },
+    { id: "classic",    label: "Classic"    },
+    { id: "grail",      label: "Grail"      },
+    { id: "experience", label: "Track Day"  },
+  ],
+  experiences: [
+    { id: "all",          label: "All"          },
+    { id: "bucket-list",  label: "Bucket List"  },
+    { id: "nature",       label: "Nature"       },
+    { id: "food",         label: "Food"         },
+    { id: "city",         label: "City"         },
+    { id: "road-trip",    label: "Road Trip"    },
+    { id: "music",        label: "Music"        },
+    { id: "luxury",       label: "Luxury"       },
   ],
   home: [
     { id: "all",       label: "All"        },
@@ -339,6 +364,9 @@ const CURATED_ITEMS = {
     { id: "j6",  name: "Bvlgari Serpenti",             brand: "Bvlgari", priceRange: "$3,000–$8,000",   subFilter: ["anniversary"],            emoji: "💍", description: "A coiled serpent in gold and gemstones. The most dramatic thing you'll ever put on your wrist." },
     { id: "j7",  name: "Mikimoto Pearl Strand",        brand: "Mikimoto",priceRange: "$1,500–$5,000",   subFilter: ["anniversary","gold"],     emoji: "💍", description: "The original pearl jeweler, still the best. A strand of Mikimoto pearls is an heirloom from day one." },
     { id: "j8",  name: "Harry Winston Round Diamond Solitaire", brand: "Harry Winston", priceRange: "$10,000+", subFilter: ["anniversary"], emoji: "💍", description: "The King of Diamonds. When the moment demands something truly extraordinary." },
+    { id: "j9",  name: "Gold Signet Ring",               brand: "Bespoke",  priceRange: "$800–$3,000",     subFilter: ["mens","gold","everyday"],  emoji: "💍", imageQuery: "gold signet ring mens hand pinky", description: "The oldest piece of jewelry in history, still the most quietly powerful thing a man can wear." },
+    { id: "j10", name: "Cuban Link Chain 14k Gold",      brand: "Various",  priceRange: "$1,500–$8,000",   subFilter: ["mens","gold"],             emoji: "📿", imageQuery: "Cuban link gold chain mens jewelry", description: "Heavy, warm, and undeniably confident. The chain that works with everything from a white tee to a suit." },
+    { id: "j11", name: "David Yurman Chevron Ring",      brand: "Yurman",   priceRange: "$500–$1,200",     subFilter: ["mens","everyday"],         emoji: "💍", imageQuery: "David Yurman men ring silver cable", description: "Cable-inspired architecture in sterling and gold. The ring men reach for when they want something with character." },
   ],
   golf: [
     { id: "g1",  name: "Scotty Cameron Newport 2",     brand: "Scotty Cameron",priceRange: "$400–$600",  subFilter: ["golf"],                   emoji: "⛳", imageQuery: "Scotty Cameron Newport 2 putter", image: DREAMSHELF_IMAGES.g1, description: "The putter Tour pros hoard and collectors obsess over. Feel unlike anything else on the green." },
@@ -400,16 +428,19 @@ const CURATED_ITEMS = {
   hobbies: [
     { id: "h1",  name: "Gibson Les Paul Standard",     brand: "Gibson",  priceRange: "$2,500–$4,000",   subFilter: ["music"],                  emoji: "🎸", description: "The guitar Page, Slash, and Clapton chose. If you're going to learn, learn on the real thing." },
     { id: "h2",  name: "Leica M11 Rangefinder",        brand: "Leica",   priceRange: "$8,000–$10,000",  subFilter: ["camera"],                 emoji: "📷", description: "The camera Cartier-Bresson used. Manual, quiet, and the reason photographers make pilgrimages to Wetzlar." },
-    { id: "h3",  name: "Porsche 911 Carrera",          brand: "Porsche", priceRange: "$110,000+",        subFilter: ["auto"],                   emoji: "🏎️", imageQuery: "real Porsche 911 Carrera car road", description: "Sixty years of the same shape, infinitely refined. The car that rewards the driver who learns it." },
     { id: "h4",  name: "Steinway Model O Grand Piano", brand: "Steinway",priceRange: "$60,000–$90,000", subFilter: ["music"],                  emoji: "🎹", imageQuery: "Steinway grand piano black concert hall", description: "Every concert hall has one. If you're going to have a piano in your home, have this piano." },
     { id: "h5",  name: "Hasselblad X2D 100C",          brand: "Hasselblad",priceRange: "$8,000–$10,000",subFilter: ["camera"],                 emoji: "📷", description: "Medium format. 100 megapixels. The camera that makes professional photographers emotional." },
     { id: "h6",  name: "Fender Custom Shop Stratocaster",brand: "Fender",priceRange: "$3,000–$6,000",  subFilter: ["music"],                  emoji: "🎸", description: "Built by master builders in Corona, California. The instrument you commission, not just buy." },
-    { id: "h7",  name: "Ferrari 488 GTB",              brand: "Ferrari", priceRange: "$250,000+",        subFilter: ["auto"],                   emoji: "🏎️", description: "Twin-turbo V8, 660 horsepower, and a sound that makes grown adults cry. A pure dream." },
     { id: "h8",  name: "Warhol Screen Print (Authenticated)",brand: "Andy Warhol",priceRange: "$5,000–$50,000+",subFilter: ["art"],            emoji: "🖼️", description: "A piece of art history you can hang in your home. Pop art that only gets more meaningful with time." },
   ],
   kitchen: [
-    { id: "h9",  name: "Le Creuset Dutch Oven",        brand: "Le Creuset",priceRange: "$300-$500",      subFilter: ["cooking","ritual"],       emoji: "🍳", image: "https://source.unsplash.com/featured/?dutch,oven,cooking,kitchen,cozy", description: "The heirloom kitchen piece. Braises, soups, bread, and Sunday sauces all feel more special in enameled cast iron." },
-    { id: "h10", name: "Breville Espresso Machine",    brand: "Breville", priceRange: "$500-$900",      subFilter: ["coffee","ritual"],        emoji: "☕", image: "https://source.unsplash.com/featured/?espresso,machine,home,coffee,barista", description: "A countertop ritual machine for dialing in espresso, steaming milk, and making every morning feel a little more intentional." },
+    { id: "h9",  name: "Le Creuset Dutch Oven",        brand: "Le Creuset",priceRange: "$300–$500",      subFilter: ["cooking","ritual"],       emoji: "🍳", image: "https://source.unsplash.com/featured/?dutch,oven,cooking,kitchen,cozy", description: "The heirloom kitchen piece. Braises, soups, bread, and Sunday sauces all feel more special in enameled cast iron." },
+    { id: "h10", name: "Breville Espresso Machine",    brand: "Breville", priceRange: "$500–$900",      subFilter: ["coffee","ritual"],        emoji: "☕", image: "https://source.unsplash.com/featured/?espresso,machine,home,coffee,barista", description: "A countertop ritual machine for dialing in espresso, steaming milk, and making every morning feel a little more intentional." },
+    { id: "h11", name: "All-Clad D3 10-Piece Set",    brand: "All-Clad", priceRange: "$700–$1,000",    subFilter: ["cooking"],                emoji: "🍳", imageQuery: "All-Clad stainless steel cookware set kitchen", description: "The set professional cooks put in their home kitchens. Tri-ply stainless that lasts decades and only gets better." },
+    { id: "h12", name: "Vitamix Ascent A3500",        brand: "Vitamix",  priceRange: "$600–$700",      subFilter: ["cooking","ritual"],       emoji: "🥤", imageQuery: "Vitamix blender countertop kitchen", description: "The blender that handles anything. Smoothies, soups, nut butters — the kind of machine that changes what you cook." },
+    { id: "h13", name: "Staub Cocotte 5.5qt",         brand: "Staub",    priceRange: "$350–$450",      subFilter: ["cooking"],                emoji: "🍳", imageQuery: "Staub cocotte cast iron black oven", description: "Matte enamel interior, self-basting lid, and a weight that means business. The French alternative to Le Creuset." },
+    { id: "h14", name: "Ooni Karu 16 Pizza Oven",     brand: "Ooni",     priceRange: "$799",           subFilter: ["cooking","outdoor"],      emoji: "🍕", imageQuery: "Ooni pizza oven outdoor wood fire", description: "Restaurant-quality pizza in your backyard in sixty seconds. The oven that turns any evening into an event." },
+    { id: "h15", name: "Global G-2 Knife Set",        brand: "Global",   priceRange: "$400–$600",      subFilter: ["cooking"],                emoji: "🔪", imageQuery: "Global G-2 Japanese knife set kitchen", description: "Japanese steel, razor edge, and a handle that disappears in your hand. The knives you sharpen and keep forever." },
   ],
   cellar: [
     { id: "c1",  name: "Opus One 2018",                brand: "Opus One",priceRange: "$350–$450 /bottle",subFilter: ["red","rare"],            emoji: "🍷", image: DREAMSHELF_IMAGES.c1, description: "The Napa Valley Bordeaux blend that made California wine taken seriously worldwide." },
@@ -442,6 +473,30 @@ const CURATED_ITEMS = {
     { id: "a9",  name: "Parasailing Over Clear Water", brand: "Ocean Day",priceRange: "$80–$180",        subFilter: ["water"],                  emoji: "🪂", description: "Floating above bright water with nothing but wind, sunlight, and the kind of view you remember years later." },
     { id: "a10", name: "Skydiving First Jump",         brand: "Drop Zone",priceRange: "$250–$400",       subFilter: ["mountain"],               emoji: "🪂", imageQuery: "skydiving", description: "The leap you talk about for the rest of your life. A few wild seconds that make everything feel bigger." },
     { id: "a11", name: "Bungee Jumping",               brand: "Adventure Day",priceRange: "$120–$300",   subFilter: ["climb"],                  emoji: "🌉", imageQuery: "bungee jumping", description: "A bridge, a cord, a countdown, and the clean shock of doing something you were scared to do." },
+  ],
+  cars: [
+    { id: "car1", name: "Porsche 911 Carrera",         brand: "Porsche",  priceRange: "$110,000+",        subFilter: ["sports","grail"],          emoji: "🏎️", imageQuery: "Porsche 911 Carrera road driving", description: "Sixty years of the same shape, infinitely refined. The car that rewards the driver who learns it." },
+    { id: "car2", name: "Ferrari 296 GTB",             brand: "Ferrari",  priceRange: "$320,000+",        subFilter: ["sports","grail"],          emoji: "🏎️", imageQuery: "Ferrari 296 GTB red supercar", description: "Hybrid V6, 830 horsepower, and a soundtrack that belongs in an opera house. Ferrari's most exciting car in decades." },
+    { id: "car3", name: "BMW M3 Competition",          brand: "BMW",      priceRange: "$80,000–$95,000",  subFilter: ["sports","attainable"],     emoji: "🚗", imageQuery: "BMW M3 Competition car road", description: "The benchmark sports sedan. Track-capable, daily-driveable, and the car that makes every drive feel intentional." },
+    { id: "car4", name: "McLaren GT",                  brand: "McLaren",  priceRange: "$220,000+",        subFilter: ["sports","grail"],          emoji: "🏎️", imageQuery: "McLaren GT silver supercar road", description: "A grand tourer that happens to be a supercar. Fast enough for a track, comfortable enough for the coast." },
+    { id: "car5", name: "Range Rover Autobiography",   brand: "Land Rover",priceRange: "$200,000+",       subFilter: ["luxury","suv"],            emoji: "🚙", imageQuery: "Range Rover Autobiography luxury SUV", description: "The most accomplished SUV ever made. Quiet, elevated, and capable of anything." },
+    { id: "car6", name: "Mercedes-AMG GT 63",          brand: "Mercedes-AMG",priceRange: "$165,000+",     subFilter: ["sports","luxury"],         emoji: "🚗", imageQuery: "Mercedes AMG GT 63 car road", description: "Four doors, AMG performance, and a presence that announces itself before you even open the door." },
+    { id: "car7", name: "Lamborghini Huracán EVO",     brand: "Lamborghini",priceRange: "$250,000+",      subFilter: ["sports","grail"],          emoji: "🏎️", imageQuery: "Lamborghini Huracan yellow supercar", description: "The car that makes people stop and stare every single time. No apologies, no compromises." },
+    { id: "car8", name: "Porsche Taycan Turbo S",      brand: "Porsche",  priceRange: "$185,000+",        subFilter: ["sports","ev"],             emoji: "⚡", imageQuery: "Porsche Taycan Turbo S electric car", description: "0–60 in 2.6 seconds with zero emissions. The car that proved electric performance could be this good." },
+    { id: "car9", name: "Track Day Experience",        brand: "Various",  priceRange: "$300–$1,500",      subFilter: ["experience"],              emoji: "🏁", imageQuery: "track day driving experience supercar circuit", description: "An afternoon on a closed circuit in something fast. The experience that recalibrates what driving means." },
+    { id: "car10",name: "Vintage Porsche 356",         brand: "Porsche",  priceRange: "$80,000–$200,000", subFilter: ["classic","grail"],         emoji: "🚗", imageQuery: "vintage Porsche 356 classic car", description: "The original. Before 911, there was 356. A piece of automotive history you can actually drive." },
+  ],
+  experiences: [
+    { id: "ex1", name: "Safari in the Serengeti",      brand: "Tanzania", priceRange: "$5,000–$15,000",   subFilter: ["nature","bucket-list"],   emoji: "🦁", imageQuery: "Serengeti safari sunrise animals Africa", description: "Dawn game drives, golden light, and the most alive you will ever feel. The trip that changes your frame of reference." },
+    { id: "ex2", name: "Northern Lights in Iceland",   brand: "Iceland",  priceRange: "$2,000–$5,000",    subFilter: ["nature","bucket-list"],   emoji: "🌌", imageQuery: "Northern Lights aurora Iceland night sky", description: "Standing under a sky that looks like a painting. One of the few things that genuinely exceeds the photographs." },
+    { id: "ex3", name: "Tokyo Food Trip",              brand: "Japan",    priceRange: "$3,000–$6,000",    subFilter: ["food","city"],            emoji: "🍜", imageQuery: "Tokyo ramen street food night market Japan", description: "The best food city on earth, by a wide margin. Every meal a discovery, every neighbourhood a different world." },
+    { id: "ex4", name: "Amalfi Coast Road Trip",       brand: "Italy",    priceRange: "$4,000–$8,000",    subFilter: ["road-trip","bucket-list"],emoji: "🛣️", imageQuery: "Amalfi Coast road Italy cliffs sea", description: "Narrow roads, blue water, and the most dramatic coastline in Europe. The drive you plan for years." },
+    { id: "ex5", name: "Michelin Star Dinner",         brand: "Various",  priceRange: "$200–$800",        subFilter: ["food","luxury"],          emoji: "⭐", imageQuery: "Michelin star restaurant fine dining", description: "A meal that takes three hours and stays with you for years. The best argument for spending money on experiences." },
+    { id: "ex6", name: "Private Chef Dinner at Home",  brand: "Various",  priceRange: "$400–$1,500",      subFilter: ["food","luxury"],          emoji: "🍽️", imageQuery: "private chef dinner home table", description: "Your own kitchen, a professional chef, and a table of the people you love. A celebration that feels entirely yours." },
+    { id: "ex7", name: "New Year's Eve in NYC",        brand: "New York", priceRange: "$1,000–$5,000",    subFilter: ["city","bucket-list"],     emoji: "🎆", imageQuery: "New York Times Square New Year's Eve celebration", description: "The city that made New Year's Eve what it is. Once is enough. Once is everything." },
+    { id: "ex8", name: "Napa Valley Harvest Weekend",  brand: "California",priceRange: "$1,500–$4,000",   subFilter: ["food","nature"],          emoji: "🍇", imageQuery: "Napa Valley vineyard harvest autumn wine", description: "September in wine country — crush season, barrel tastings, and tables set among the vines." },
+    { id: "ex9", name: "Hot Air Balloon over Cappadocia", brand: "Turkey",priceRange: "$200–$400",        subFilter: ["nature","bucket-list"],   emoji: "🎈", imageQuery: "hot air balloon Cappadocia Turkey sunrise", description: "Dozens of balloons rising over fairy chimneys at sunrise. One of the most photographed mornings on earth, for good reason." },
+    { id: "ex10",name: "Coachella Weekend",            brand: "Various",  priceRange: "$500–$2,000",      subFilter: ["city","music"],           emoji: "🎵", imageQuery: "Coachella music festival desert night lights", description: "Music, desert air, and the feeling that everything is possible. The festival worth planning a year ahead for." },
   ],
   home: [
     { id: "hm1", name: "Parachute Linen Sheet Set",    brand: "Parachute", priceRange: "$200–$350",        subFilter: ["bedroom","textiles"],     emoji: "🛏️", imageQuery: "Parachute linen sheets bed natural light", description: "The sheets that make every morning feel like a slow one. Softer every time you wash them." },
@@ -577,6 +632,7 @@ function itemMatchesSubFilter(categoryId, item, subId) {
       iconic: () => has("chanel", "hermes", "birkin", "kelly", "louis vuitton", "prada"),
     },
     jewelry: {
+      mens: () => filters.includes("mens") || has("signet", "cuban", "chevron", "chain", "yurman"),
       everyday: () => filters.includes("everyday") || has("tiffany", "love bracelet", "alhambra"),
       devotion: () => has("love", "diamond", "anniversary", "solitaire", "band"),
       heirloom: () => has("mikimoto", "harry winston", "diamond", "pearl", "bvlgari"),
@@ -621,6 +677,25 @@ function itemMatchesSubFilter(categoryId, item, subId) {
       bourbon: () => filters.includes("bourbon") || has("pappy", "van winkle", "bourbon"),
       tequila: () => filters.includes("tequila") || has("clase azul", "don julio", "tequila"),
       cognac: () => filters.includes("cognac") || has("louis xiii", "cognac", "rémy", "remy"),
+    },
+    cars: {
+      sports: () => filters.includes("sports") || has("porsche", "ferrari", "bmw", "mclaren", "amg", "lamborghini", "taycan", "911", "m3"),
+      luxury: () => filters.includes("luxury") || has("range rover", "mercedes", "amg", "rolls"),
+      suv: () => filters.includes("suv") || has("range rover", "suv"),
+      ev: () => filters.includes("ev") || has("taycan", "electric", "tesla"),
+      classic: () => filters.includes("classic") || has("356", "vintage", "classic"),
+      grail: () => filters.includes("grail") || has("ferrari", "lamborghini", "mclaren", "porsche 911", "911", "taycan"),
+      experience: () => filters.includes("experience") || has("track", "circuit", "day"),
+      attainable: () => filters.includes("attainable") || has("bmw", "m3"),
+    },
+    experiences: {
+      "bucket-list": () => filters.includes("bucket-list") || has("serengeti", "northern lights", "aurora", "amalfi", "cappadocia", "nyc", "new year"),
+      nature: () => filters.includes("nature") || has("safari", "northern lights", "balloon", "cappadocia", "napa", "harvest"),
+      food: () => filters.includes("food") || has("tokyo", "michelin", "chef", "dinner", "napa", "wine"),
+      city: () => filters.includes("city") || has("tokyo", "nyc", "new york", "coachella"),
+      "road-trip": () => filters.includes("road-trip") || has("amalfi", "road trip", "coast", "drive"),
+      music: () => filters.includes("music") || has("coachella", "festival", "music"),
+      luxury: () => filters.includes("luxury") || has("michelin", "private chef", "chef", "star"),
     },
     adventure: {
       mountain: () => has("ski", "snowboard", "jacket", "mountain", "snow"),
