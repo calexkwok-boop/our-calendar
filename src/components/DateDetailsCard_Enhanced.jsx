@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ChevronDown, Clock, Lock, Repeat, Settings, User } from 'lucide-react';
+import { AlertTriangle, ChevronDown, Clock, Lock, Repeat, Settings, User, Users } from 'lucide-react';
 
 const DEFAULT_PARTNER = { name: 'Calendar Partner', avatar: '👤' };
 
@@ -598,8 +598,7 @@ export default function DateDetailsCardEnhanced({
                   ) : null}
                 </div>
 
-                {(
-                  <div>
+                <div>
                     <button
                       type="button"
                       onClick={() => setShowAdvancedSettings((prev) => !prev)}
@@ -709,8 +708,7 @@ export default function DateDetailsCardEnhanced({
                         </div>
                       </div>
                     ) : null}
-                  </div>
-                ) : null}
+                </div>
 
                 <button
                   type="button"

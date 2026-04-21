@@ -435,19 +435,19 @@ const CURATED_ITEMS = {
     { id: "s8",  name: "Nike Dunk Low Panda",          brand: "Nike",    priceRange: "$110–$200+",       subFilter: ["nike"],                   emoji: "👟", description: "Black and white, simple as it gets, and somehow still the hardest dunk to keep in stock." },
   ],
   heels: [
-    { id: "hl1", name: "Manolo Blahnik Hangisi",        brand: "Manolo Blahnik", priceRange: "$900–$1,200",  subFilter: ["classic","grail"],        emoji: "👠", imageQuery: "Manolo Blahnik Hangisi satin pump jewel buckle", description: "The buckle pump that became a cultural symbol. Carrie Bradshaw's wedding shoe. An heirloom you wear." },
-    { id: "hl2", name: "Christian Louboutin So Kate",   brand: "Louboutin",      priceRange: "$700–$900",    subFilter: ["classic","grail"],        emoji: "👠", imageQuery: "Christian Louboutin So Kate red sole stiletto heel", description: "120mm of red-soled intention. The heel that started a thousand imitations and can't be replicated." },
-    { id: "hl3", name: "Jimmy Choo Romy 100",           brand: "Jimmy Choo",     priceRange: "$650–$850",    subFilter: ["classic","party"],        emoji: "👠", imageQuery: "Jimmy Choo Romy 100 pointed toe pump suede", description: "Pointed toe, kitten-to-stiletto range, no frills — just the shape that works every time." },
-    { id: "hl4", name: "Bottega Veneta Stretch Mule",   brand: "Bottega Veneta", priceRange: "$750–$1,100",  subFilter: ["everyday","classic"],     emoji: "👠", imageQuery: "Bottega Veneta stretch mule heel leather", description: "The heel you wear like a flat. Intrecciato leather, no logo, and somehow impossible to miss." },
-    { id: "hl5", name: "Gianvito Rossi 105 Pumps",      brand: "Gianvito Rossi", priceRange: "$700–$900",    subFilter: ["classic","everyday"],     emoji: "👠", imageQuery: "Gianvito Rossi 105 leather pump nude", description: "The Italian pump that walks better than anything. Nude pairs with everything; the heel height is forgiving." },
-    { id: "hl6", name: "Saint Laurent Opyum Sandal",    brand: "Saint Laurent",  priceRange: "$900–$1,300",  subFilter: ["party","grail"],          emoji: "👠", imageQuery: "Saint Laurent Opyum YSL sandal stiletto logo heel", description: "The logo is the heel. Audacious, architectural, and the kind of shoe that owns the room before you do." },
-    { id: "hl7", name: "Aquazzura Deneuve Bow Pump",    brand: "Aquazzura",      priceRange: "$650–$850",    subFilter: ["party","classic"],        emoji: "👠", imageQuery: "Aquazzura Deneuve bow satin pump heel", description: "A bow at the toe, a pointed heel, satin finish. The party shoe that photographs as well as it wears." },
-    { id: "hl8", name: "Sergio Rossi SR1 Pumps",        brand: "Sergio Rossi",   priceRange: "$500–$700",    subFilter: ["everyday","classic"],     emoji: "👠", imageQuery: "Sergio Rossi SR1 leather pump pointed heel", description: "The understated Italian heel. No logo, no buckle — just a beautifully proportioned shoe that goes with everything." },
+    { id: "hl1", name: "Manolo Blahnik Hangisi",        brand: "Manolo Blahnik", priceRange: "$900–$1,200",  subFilter: ["classic","grail"],        emoji: "👠", imageQuery: "blue satin jeweled buckle high heels fashion", description: "The buckle pump that became a cultural symbol. Carrie Bradshaw's wedding shoe. An heirloom you wear." },
+    { id: "hl2", name: "Christian Louboutin So Kate",   brand: "Louboutin",      priceRange: "$700–$900",    subFilter: ["classic","grail"],        emoji: "👠", imageQuery: "red sole black stiletto heels fashion", description: "120mm of red-soled intention. The heel that started a thousand imitations and can't be replicated." },
+    { id: "hl3", name: "Jimmy Choo Romy 100",           brand: "Jimmy Choo",     priceRange: "$650–$850",    subFilter: ["classic","party"],        emoji: "👠", imageQuery: "pointed toe suede pump heels fashion", description: "Pointed toe, kitten-to-stiletto range, no frills — just the shape that works every time." },
+    { id: "hl4", name: "Bottega Veneta Stretch Mule",   brand: "Bottega Veneta", priceRange: "$750–$1,100",  subFilter: ["everyday","classic"],     emoji: "👠", imageQuery: "leather mule heels fashion editorial", description: "The heel you wear like a flat. Intrecciato leather, no logo, and somehow impossible to miss." },
+    { id: "hl5", name: "Gianvito Rossi 105 Pumps",      brand: "Gianvito Rossi", priceRange: "$700–$900",    subFilter: ["classic","everyday"],     emoji: "👠", imageQuery: "nude leather pointed pump heels fashion", description: "The Italian pump that walks better than anything. Nude pairs with everything; the heel height is forgiving." },
+    { id: "hl6", name: "Saint Laurent Opyum Sandal",    brand: "Saint Laurent",  priceRange: "$900–$1,300",  subFilter: ["party","grail"],          emoji: "👠", imageQuery: "black stiletto sandal logo heel fashion", description: "The logo is the heel. Audacious, architectural, and the kind of shoe that owns the room before you do." },
+    { id: "hl7", name: "Aquazzura Deneuve Bow Pump",    brand: "Aquazzura",      priceRange: "$650–$850",    subFilter: ["party","classic"],        emoji: "👠", imageQuery: "bow satin pointed pump heels fashion", description: "A bow at the toe, a pointed heel, satin finish. The party shoe that photographs as well as it wears." },
+    { id: "hl8", name: "Sergio Rossi SR1 Pumps",        brand: "Sergio Rossi",   priceRange: "$500–$700",    subFilter: ["everyday","classic"],     emoji: "👠", imageQuery: "minimal leather pointed pump heels fashion", description: "The understated Italian heel. No logo, no buckle — just a beautifully proportioned shoe that goes with everything." },
   ],
   hobbies: [
     { id: "h1",  name: "Gibson Les Paul Standard",     brand: "Gibson",  priceRange: "$2,500–$4,000",   subFilter: ["music"],                  emoji: "🎸", description: "The guitar Page, Slash, and Clapton chose. If you're going to learn, learn on the real thing." },
     { id: "h2",  name: "Leica M11 Rangefinder",        brand: "Leica",   priceRange: "$8,000–$10,000",  subFilter: ["camera"],                 emoji: "📷", description: "The camera Cartier-Bresson used. Manual, quiet, and the reason photographers make pilgrimages to Wetzlar." },
-    { id: "h4",  name: "Steinway Model O Grand Piano", brand: "Steinway",priceRange: "$60,000–$90,000", subFilter: ["music"],                  emoji: "🎹", imageQuery: "Steinway grand piano black concert hall", description: "Every concert hall has one. If you're going to have a piano in your home, have this piano." },
+    { id: "h4",  name: "Steinway Model O Grand Piano", brand: "Steinway",priceRange: "$60,000–$90,000", subFilter: ["music"],                  emoji: "🎹", imageQuery: "Steinway grand piano", description: "Every concert hall has one. If you're going to have a piano in your home, have this piano." },
     { id: "h5",  name: "Hasselblad X2D 100C",          brand: "Hasselblad",priceRange: "$8,000–$10,000",subFilter: ["camera"],                 emoji: "📷", description: "Medium format. 100 megapixels. The camera that makes professional photographers emotional." },
     { id: "h6",  name: "Fender Custom Shop Stratocaster",brand: "Fender",priceRange: "$3,000–$6,000",  subFilter: ["music"],                  emoji: "🎸", description: "Built by master builders in Corona, California. The instrument you commission, not just buy." },
     { id: "h8",  name: "Warhol Screen Print (Authenticated)",brand: "Andy Warhol",priceRange: "$5,000–$50,000+",subFilter: ["art"],            emoji: "🖼️", description: "A piece of art history you can hang in your home. Pop art that only gets more meaningful with time." },
@@ -558,17 +558,28 @@ function shuffleArray(arr) {
 }
 
 function getAllCuratedItemsShuffled() {
-  const all = Object.entries(CURATED_ITEMS).flatMap(([categoryId, categoryItems]) => {
+  const buckets = shuffleArray(Object.entries(CURATED_ITEMS)).map(([categoryId, categoryItems]) => {
     const cat = getDreamShelfCategoryMeta(categoryId);
-    return categoryItems.map(item => ({
-      ...item,
-      category: categoryId,
-      emoji: item.emoji || cat.emoji,
-      preferResolvedImage: !item.image,
-      image: item.image || "",
-    }));
+    return {
+      categoryId,
+      items: shuffleArray(categoryItems.map(item => ({
+        ...item,
+        category: categoryId,
+        emoji: item.emoji || cat.emoji,
+        preferResolvedImage: true,
+        image: "",
+      }))),
+    };
   });
-  return shuffleArray(all);
+
+  const mixed = [];
+  while (buckets.some(bucket => bucket.items.length > 0)) {
+    shuffleArray(buckets.filter(bucket => bucket.items.length > 0)).forEach(bucket => {
+      const next = bucket.items.shift();
+      if (next) mixed.push(next);
+    });
+  }
+  return mixed;
 }
 
 function getCuratedDreamShelfMatches(query = "") {
