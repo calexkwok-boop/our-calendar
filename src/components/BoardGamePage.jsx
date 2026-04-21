@@ -168,11 +168,13 @@ const GameCard = ({ game, onAddEvent, onAddToSomeday, darkMode, stagger, initInS
   const [expanded, setExpanded] = useState(false);
   const [addedToNight, setAddedToNight] = useState(false);
   const [inSomeday, setInSomeday] = useState(initInSomeday || false);
+  const [imageFailed, setImageFailed] = useState(false);
   const imgUrl = useGoogleImage(`${game.name} board game box`);
   const catStyle = CAT_STYLES[game.category] || CAT_STYLES.strategy;
   const links = retailLinks(game.name);
 
   useEffect(() => { setInSomeday(initInSomeday || false); }, [initInSomeday]);
+  useEffect(() => { setImageFailed(false); }, [imgUrl]);
 
   const cardBg = darkMode ? '#131c2e' : '#ffffff';
   const borderCol = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
@@ -209,11 +211,11 @@ const GameCard = ({ game, onAddEvent, onAddToSomeday, darkMode, stagger, initInS
         }}
         onClick={() => setExpanded(e => !e)}
       >
-        {imgUrl ? (
+        {imgUrl && !imageFailed ? (
           <img
             src={imgUrl}
             alt={game.name}
-            onError={() => setImgUrl("")}
+            onError={() => setImageFailed(true)}
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
           />
         ) : (
@@ -303,7 +305,7 @@ const GameCard = ({ game, onAddEvent, onAddToSomeday, darkMode, stagger, initInS
             <button
               onClick={() => {
                 setInSomeday(v => !v);
-                onAddToSomeday?.({ ...game, type: 'games', cardTitle: game.name, poster_path: '' });
+                onAddToSomeday?.({ ...game, type: 'games', cardTitle: game.name, poster_path: imgUrl || '', imageUrl: imgUrl || '' });
               }}
               className="font-handwritten"
               style={{
@@ -511,7 +513,7 @@ const BoardGamePage = ({ onAddEvent, onAddToSomeday, onBack, darkMode = false })
       return next;
     });
     if (!somedays.has(game.id)) {
-      onAddToSomeday?.({ ...game, type: 'games', cardTitle: game.name, poster_path: '' });
+      onAddToSomeday?.({ ...game, type: 'games', cardTitle: game.name, poster_path: game.poster_path || game.imageUrl || '', imageUrl: game.imageUrl || game.poster_path || '' });
     }
   }
 
