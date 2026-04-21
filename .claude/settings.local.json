@@ -4,7 +4,9 @@
       "Bash(python3 -c ':*)",
       "Bash(node -e ':*)",
       "Bash(ls -lh /c/Users/a_kwo/Desktop/our-calendar/src/components/*Event*.jsx /c/Users/a_kwo/Desktop/our-calendar/src/components/*event*.jsx)",
-      "Bash(npx react-scripts:*)"
+      "Bash(npx react-scripts:*)",
+      "Bash(find /c/Users/a_kwo/Desktop/our-calendar/src/components -name \"*.jsx\" -type f -exec grep -l \"me event\\\\|we event\\\\|toggle.*event\" {} \\\\;)",
+      "Bash(xargs grep *)"
     ]
   }
 }

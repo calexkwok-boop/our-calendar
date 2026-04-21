@@ -215,22 +215,17 @@ export default function DateDetailsCardEnhanced({
   handleLocationLinkClick = () => {},
   calendarPartner = DEFAULT_PARTNER,
 }) {
-  const [eventType, setEventType] = useState(null);
-  const [weEventCategory, setWeEventCategory] = useState(null);
   const [eventTitle, setEventTitle] = useState('');
   const [location, setLocation] = useState('');
   const [locationCoords, setLocationCoords] = useState({ lat: null, lng: null });
   const [locationSuggestions, setLocationSuggestions] = useState([]);
   const [selectedTime, setSelectedTime] = useState('');
+  const [showInvite, setShowInvite] = useState(false);
   const [invitees, setInvitees] = useState([{ id: 'partner', ...calendarPartner, selected: true }]);
   const [showAddPeople, setShowAddPeople] = useState(false);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const currentTemplate = useMemo(
-    () => WE_EVENT_TEMPLATES.find((template) => template.id === weEventCategory) || null,
-    [weEventCategory]
-  );
   const normalizedSelectedTime = parseTimeInput(selectedTime);
   const popupNoMaxDraft = Number(popupEventMaxPeopleDraft || 0) >= POPUP_NO_MAX_SENTINEL;
   const canSaveEvent = Boolean(eventTitle.trim() && normalizedSelectedTime);
@@ -239,13 +234,12 @@ export default function DateDetailsCardEnhanced({
 
   useEffect(() => {
     if (!isOpen) {
-      setEventType(null);
-      setWeEventCategory(null);
       setEventTitle('');
       setLocation('');
       setLocationCoords({ lat: null, lng: null });
       setLocationSuggestions([]);
       setSelectedTime('');
+      setShowInvite(false);
       setInvitees([{ id: 'partner', ...calendarPartner, selected: true }]);
       setShowAddPeople(false);
       setShowAdvancedSettings(false);
@@ -388,16 +382,15 @@ export default function DateDetailsCardEnhanced({
 
   const handleSave = async () => {
     if (!eventTitle.trim() || !normalizedSelectedTime) return;
-      const eventData = {
-        type: eventType,
-        category: weEventCategory,
-        title: eventTitle.trim(),
-        location: location.trim(),
-        locationLat: locationCoords.lat,
-        locationLng: locationCoords.lng,
-        date: selectedDate,
-        time: normalizedSelectedTime,
-        invitees: eventType === 'we' ? invitees.filter((invitee) => invitee.selected) : [],
+    const hasInvitees = showInvite && invitees.some((inv) => inv.selected);
+    const eventData = {
+      title: eventTitle.trim(),
+      location: location.trim(),
+      locationLat: locationCoords.lat,
+      locationLng: locationCoords.lng,
+      date: selectedDate,
+      time: normalizedSelectedTime,
+      invitees: hasInvitees ? invitees.filter((inv) => inv.selected) : [],
     };
 
     if (typeof onSaveEvent === 'function') {
@@ -407,26 +400,21 @@ export default function DateDetailsCardEnhanced({
     }
 
     if (typeof handleQuickAdd === 'function') {
-      const categoryOverride = buildCategoryOverride(eventType, weEventCategory, eventData.title, categories);
-        if (eventType === 'we') {
+      const categoryOverride = buildCategoryOverride('me', null, eventData.title, categories);
+      if (hasInvitees) {
         try { setIsPopupEventDraft?.(true); } catch {}
-        if (!String(popupEventMaxPeopleDraft || '').trim()) {
-          setPopupEventMaxPeopleDraft?.('10');
-        }
+        if (!String(popupEventMaxPeopleDraft || '').trim()) setPopupEventMaxPeopleDraft?.('10');
       }
-        const result = await handleQuickAdd({
-          titleOverride: eventData.title,
-          time: eventData.time || null,
-          directCreate: true,
-          isPopupEvent: eventType === 'we',
-          categoryOverride: eventType === 'me' ? (selectedCategory || 'other') : categoryOverride,
-          popupSubtype: eventType === 'we' ? (eventData.category || null) : null,
-          popupMetadata: eventType === 'we' ? buildWeEventMetadata(eventData.category) : {},
-          locationOverride: eventData.location || '',
-          locationLat: eventData.locationLat,
-          locationLng: eventData.locationLng,
-          description: eventType === 'we' && currentTemplate ? `${currentTemplate.label} We Event` : '',
-        });
+      const result = await handleQuickAdd({
+        titleOverride: eventData.title,
+        time: eventData.time || null,
+        directCreate: true,
+        isPopupEvent: hasInvitees,
+        categoryOverride: selectedCategory || categoryOverride,
+        locationOverride: eventData.location || '',
+        locationLat: eventData.locationLat,
+        locationLng: eventData.locationLng,
+      });
       if (result?.ok || result === true) {
         handleClose();
       }
@@ -445,12 +433,7 @@ export default function DateDetailsCardEnhanced({
           <div className="space-y-5 p-6 pb-[max(6rem,calc(env(safe-area-inset-bottom)+5rem))]">
             <div className="mb-2 flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold">
-                  {eventType === null && 'Add Event'}
-                  {eventType === 'me' && 'Me Event'}
-                  {eventType === 'we' && weEventCategory === null && 'We Event'}
-                  {eventType === 'we' && weEventCategory && currentTemplate?.label}
-                </h2>
+                <h2 className="text-2xl font-bold">+ Add Event</h2>
                 <p className={`mt-0.5 text-sm ${mutedText}`}>{formatDate(selectedDate || new Date())}</p>
               </div>
               <button
@@ -464,116 +447,8 @@ export default function DateDetailsCardEnhanced({
               </button>
             </div>
 
-            {eventType === null && (
-              <div className="space-y-3">
-                <p className={`mb-3 text-sm font-semibold ${labelText}`}>What kind of event?</p>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEventType('me');
-                    if (!selectedTime) {
-                      setSelectedTime('9:00 AM');
-                    }
-                  }}
-                  className={`w-full rounded-2xl border p-5 text-left transition-all hover:shadow-md ${darkMode ? 'border-blue-400/25 bg-gradient-to-br from-blue-500/10 to-indigo-500/10' : 'border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50'}`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-xl text-2xl shadow-sm ${darkMode ? 'bg-white/10' : 'bg-white'}`}>📅</div>
-                    <div className="flex-1">
-                      <div className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Me Event</div>
-                      <div className={`mt-0.5 text-sm ${mutedText}`}>Just for you</div>
-                    </div>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setEventType('we')}
-                  className="w-full rounded-2xl border p-5 text-left transition-all hover:shadow-md"
-                  style={themedWeCardStyle}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-xl text-2xl shadow-sm ${darkMode ? 'bg-white/10' : 'bg-white'}`}>👥</div>
-                    <div className="flex-1">
-                      <div className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>We Event</div>
-                      <div className={`mt-0.5 text-sm ${mutedText}`}>Invite people to join</div>
-                    </div>
-                  </div>
-                </button>
-              </div>
-            )}
-
-            {eventType === 'we' && weEventCategory === null && (
+            {(
               <>
-                <button
-                  type="button"
-                  onClick={() => setEventType(null)}
-                  className={`-ml-1 mb-1 flex items-center gap-1.5 text-sm ${mutedText}`}
-                >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  Back
-                </button>
-
-                <div className="space-y-3">
-                  <p className={`mb-3 text-sm font-semibold ${labelText}`}>What type of gathering?</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {WE_EVENT_TEMPLATES.map((template) => (
-                      <button
-                        key={template.id}
-                        type="button"
-                        onClick={() => setWeEventCategory(template.id)}
-                        className="rounded-xl border p-4 text-center transition-all hover:shadow-md"
-                        style={themedWeTemplateStyle}
-                      >
-                        <div className="mb-2 text-3xl">{template.emoji}</div>
-                        <div className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{template.label}</div>
-                        {template.examples.length > 0 ? (
-                          <div className={`mt-1 line-clamp-1 text-xs ${mutedText}`}>{template.examples[0]}</div>
-                        ) : null}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {(eventType === 'me' || (eventType === 'we' && weEventCategory !== null)) && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (eventType === 'we' && weEventCategory) setWeEventCategory(null);
-                    else setEventType(null);
-                  }}
-                  className={`-ml-1 mb-1 flex items-center gap-1.5 text-sm ${mutedText}`}
-                >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  Back
-                </button>
-
-                {eventType === 'we' && currentTemplate?.examples?.length > 0 ? (
-                  <div>
-                    <label className={`mb-2 block text-sm font-semibold ${labelText}`}>Quick ideas</label>
-                    <div className="flex flex-wrap gap-2">
-                      {currentTemplate.examples.map((example) => (
-                        <button
-                          key={example}
-                          type="button"
-                          onClick={() => setEventTitle(example)}
-                          className="rounded-full px-3 py-1.5 text-sm font-medium transition-colors hover:opacity-90"
-                          style={themedWeChipStyle}
-                        >
-                          {example}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
 
                 <div>
                   <label className={`mb-2 block text-sm font-semibold ${labelText}`}>What</label>
@@ -581,13 +456,7 @@ export default function DateDetailsCardEnhanced({
                     type="text"
                     value={eventTitle}
                     onChange={(event) => setEventTitle(event.target.value)}
-                    placeholder={
-                      eventType === 'we' && currentTemplate
-                        ? currentTemplate.placeholder
-                        : eventType === 'we'
-                          ? 'What are we doing?'
-                          : 'What are you doing?'
-                    }
+                    placeholder="Dinner, workout, coffee, movie night..."
                     className={inputSurface}
                     autoFocus
                   />
@@ -638,31 +507,7 @@ export default function DateDetailsCardEnhanced({
                 <div>
                   <label className={`mb-2 block text-sm font-semibold ${labelText}`}>What time?</label>
 
-                  {eventType === 'we' && currentTemplate?.suggestedTimes?.length > 0 ? (
-                    <div className="mb-2.5 flex flex-wrap gap-2">
-                      {currentTemplate.suggestedTimes.map((time) => (
-                        <button
-                          key={time}
-                          type="button"
-                            onClick={() => setSelectedTime(toTimeLabel(time))}
-                          className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                            selectedTime === time
-                              ? ''
-                              : softButton
-                          }`}
-                          style={selectedTime === time ? { borderColor: accentStrongBorderColor, backgroundColor: accentSoftBackground, color: accent } : undefined}
-                        >
-                          {toTimeLabel(time)}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-
-                  <div className={`rounded-2xl border p-3 ${eventType === 'me'
-                    ? (darkMode ? 'border-blue-400/20 bg-gradient-to-br from-blue-500/10 to-indigo-500/10' : 'border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50')
-                    : ''
-                  }`}
-                  style={eventType === 'we' ? themedWeSectionStyle : undefined}>
+                  <div className={`rounded-2xl border p-3 ${darkMode ? 'border-white/10 bg-white/[0.04]' : 'border-gray-200 bg-gray-50/60'}`}>
                     <input
                       type="text"
                       value={selectedTime}
@@ -678,69 +523,23 @@ export default function DateDetailsCardEnhanced({
                   ) : null}
                 </div>
 
-                {eventType === 'we' ? (
-                  <div>
-                    <label className={`mb-2 block text-sm font-semibold ${labelText}`}>Max people</label>
-                    <div className="rounded-2xl border p-4" style={themedWeSectionStyle}>
-                      <div className="mb-3 flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setPopupEventMaxPeopleDraft?.(popupNoMaxDraft ? '10' : String(POPUP_NO_MAX_SENTINEL))}
-                          className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
-                            popupNoMaxDraft
-                              ? 'text-white shadow-sm'
-                              : (darkMode
-                                  ? 'border border-white/10 bg-white/[0.05] text-white/80 hover:bg-white/[0.08]'
-                                  : 'border border-gray-200 bg-white/88 text-gray-700 hover:bg-gray-50')
-                          }`}
-                          style={popupNoMaxDraft ? themeAccentButtonStyle : undefined}
-                        >
-                          <span
-                            className={`inline-flex h-4 w-4 items-center justify-center rounded-[5px] border text-[11px] ${
-                              popupNoMaxDraft
-                                ? 'border-white/70 bg-white/15 text-white'
-                                : (darkMode ? 'border-white/30 text-transparent' : 'border-gray-300 text-transparent')
-                            }`}
-                          >
-                            ✓
-                          </span>
-                          No max
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="range"
-                          min={2}
-                          max={30}
-                          step={1}
-                          value={Math.max(2, parseInt(String(popupEventMaxPeopleDraft || '10'), 10) || 10)}
-                          onChange={(event) => setPopupEventMaxPeopleDraft?.(String(event.target.value))}
-                          disabled={popupNoMaxDraft}
-                          className="flex-1"
-                          style={{ accentColor: accent }}
-                        />
-                        <input
-                          type="number"
-                          min={2}
-                          max={99}
-                          value={popupNoMaxDraft ? '' : popupEventMaxPeopleDraft}
-                          onChange={(event) => setPopupEventMaxPeopleDraft?.(String(Math.max(2, parseInt(String(event.target.value || '2'), 10) || 2)))}
-                          disabled={popupNoMaxDraft}
-                          placeholder={popupNoMaxDraft ? 'No max' : undefined}
-                          className={`${inputSurface} w-20 py-2 text-center text-sm font-semibold`}
-                        />
-                      </div>
-                      <p className={`mt-2 text-xs ${mutedText}`}>
-                        {popupNoMaxDraft ? 'Anyone can join until you decide to cap it later.' : 'Set the guest limit before creating the event.'}
-                      </p>
-                    </div>
-                  </div>
-                ) : null}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => { setShowInvite((v) => !v); setShowAddPeople(false); }}
+                    className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all ${
+                      showInvite
+                        ? 'text-white shadow-sm'
+                        : (darkMode ? 'border-white/10 bg-white/[0.04] text-white/75 hover:bg-white/[0.08]' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50')
+                    }`}
+                    style={showInvite ? themeAccentButtonStyle : undefined}
+                  >
+                    <Users className="h-4 w-4" />
+                    {showInvite ? 'Inviting friends' : '+ Invite friends'}
+                  </button>
 
-                {eventType === 'we' ? (
-                  <div>
-                    <label className={`mb-2 block text-sm font-semibold ${labelText}`}>Who's invited?</label>
-                    <div className="space-y-3 rounded-2xl border p-4" style={themedWeSectionStyle}>
+                  {showInvite ? (
+                    <div className={`mt-3 space-y-3 rounded-2xl border p-4 ${darkMode ? 'border-white/10 bg-white/[0.03]' : 'border-gray-200 bg-gray-50/60'}`}>
                       <div className="flex flex-wrap gap-2">
                         {invitees.map((invitee) => (
                           <button
@@ -758,7 +557,6 @@ export default function DateDetailsCardEnhanced({
                             <span className="text-sm">{invitee.name}</span>
                           </button>
                         ))}
-
                         <button
                           type="button"
                           onClick={() => setShowAddPeople(true)}
@@ -768,9 +566,8 @@ export default function DateDetailsCardEnhanced({
                           + Add people
                         </button>
                       </div>
-
                       {showAddPeople ? (
-                        <div className="space-y-2 pt-2">
+                        <div className="space-y-2 pt-1">
                           <input
                             type="text"
                             value={searchQuery}
@@ -779,7 +576,6 @@ export default function DateDetailsCardEnhanced({
                             className={inputSurface}
                             autoFocus
                           />
-
                           {searchQuery ? (
                             <div className="max-h-40 space-y-1.5 overflow-y-auto">
                               {searchContacts(searchQuery).map((contact) => (
@@ -799,10 +595,10 @@ export default function DateDetailsCardEnhanced({
                         </div>
                       ) : null}
                     </div>
-                  </div>
-                ) : null}
+                  ) : null}
+                </div>
 
-                {(eventType === 'me' || eventType === 'we') ? (
+                {(
                   <div>
                     <button
                       type="button"
@@ -920,12 +716,8 @@ export default function DateDetailsCardEnhanced({
                   type="button"
                   onClick={handleSave}
                   disabled={!canSaveEvent}
-                  className={`w-full rounded-2xl py-4 text-lg font-bold text-white transition-all shadow-sm disabled:cursor-not-allowed ${
-                    eventType === 'me'
-                      ? 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700'
-                      : ''
-                  }`}
-                  style={canSaveEvent && eventType === 'me'
+                  className="w-full rounded-2xl py-4 text-lg font-bold text-white transition-all shadow-sm disabled:cursor-not-allowed"
+                  style={canSaveEvent
                     ? themeAccentButtonStyle
                     : canSaveEvent ? {
                         ...(themeAccentButtonStyle || {}),
@@ -941,7 +733,7 @@ export default function DateDetailsCardEnhanced({
                         border: `1px solid ${hexToRgba(accent, darkMode ? 0.24 : 0.16)}`,
                       }}
                 >
-                  Create {eventType === 'we' ? 'We' : 'Me'} Event
+                  + Save Event
                 </button>
               </>
             )}

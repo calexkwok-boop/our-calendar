@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calendar, Clock, MapPin, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Calendar, Clock, MapPin, Sparkles, ChevronLeft, ChevronRight, Users } from 'lucide-react';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -45,6 +45,7 @@ const AddEventModal = ({
 }) => {
   const [errors, setErrors] = useState({});
   const [showCalendarPanel, setShowCalendarPanel] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
   const [displayMonth, setDisplayMonth] = useState(() => {
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), 1);
@@ -392,7 +393,32 @@ const AddEventModal = ({
             )}
           </div>
 
-          <div className="pt-4 flex gap-3">
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                const next = !showInvite;
+                setShowInvite(next);
+                setFormData((prev) => ({ ...prev, inviteFriends: next }));
+              }}
+              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all ${
+                showInvite
+                  ? 'text-white shadow-sm'
+                  : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.07]'
+              }`}
+              style={showInvite ? themeAccentButtonStyle : undefined}
+            >
+              <Users className="w-4 h-4" />
+              {showInvite ? 'Inviting friends' : '+ Invite friends'}
+            </button>
+            {showInvite && (
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 pl-1">
+                After saving, you'll get a share link to send to friends.
+              </p>
+            )}
+          </div>
+
+          <div className="pt-2 flex gap-3">
             <button
               onClick={validateAndSubmit}
               className="flex-1 px-5 py-3.5 rounded-xl text-white font-semibold transition-all duration-200 hover:shadow-lg active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2"
