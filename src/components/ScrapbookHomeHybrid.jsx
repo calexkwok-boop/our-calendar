@@ -341,16 +341,16 @@ const ScrapbookHomeHybrid = ({
         </button>
 
         {/* PHOTO OF THE DAY */}
-        <div className="rounded-[28px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-white/95 via-amber-50/40 to-white/90 dark:from-slate-900/80 dark:via-amber-900/10 dark:to-slate-900/75 p-5 shadow-lg">
+        <div className="rounded-[28px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-purple-50/60 via-white/90 to-pink-50/60 dark:from-purple-950/30 dark:via-slate-900/80 dark:to-pink-950/20 p-5 shadow-lg">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Camera className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <Camera className="w-4 h-4 text-pink-500 dark:text-pink-300" />
               <h3 className="font-handwritten text-2xl text-gray-700 dark:text-gray-300">
                 Photo of the Day
               </h3>
             </div>
             {yearStats.streak > 0 && (
-              <div className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+              <div className="text-xs text-pink-500 dark:text-pink-300 font-medium">
                 🔥 {yearStats.streak} day streak
               </div>
             )}
@@ -374,8 +374,8 @@ const ScrapbookHomeHybrid = ({
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="h-full w-full bg-gradient-to-br from-amber-100 to-rose-100 dark:from-amber-900/40 dark:to-rose-900/30 flex items-center justify-center">
-                        <Camera className="w-12 h-12 text-amber-400/60" />
+                      <div className="h-full w-full bg-gradient-to-br from-violet-100 via-rose-50 to-amber-100 dark:from-violet-900/30 dark:via-slate-900 dark:to-amber-900/20 flex items-center justify-center">
+                        <Camera className="w-12 h-12 text-pink-400/60" />
                       </div>
                     )}
                   </div>
@@ -408,15 +408,15 @@ const ScrapbookHomeHybrid = ({
                   onCaptureQuickMoment?.();
                 }
               }}
-              className="w-full flex flex-col items-center justify-center gap-3 rounded-[18px] border-2 border-dashed border-amber-300 dark:border-amber-700/50 py-14 bg-amber-50/50 dark:bg-amber-900/10 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+              className="w-full flex flex-col items-center justify-center gap-3 rounded-[18px] border-2 border-dashed border-pink-200 dark:border-pink-700/40 py-14 bg-gradient-to-br from-violet-100/70 via-rose-50/80 to-amber-100/60 dark:from-violet-900/20 dark:via-slate-900/70 dark:to-pink-950/20 hover:from-violet-100 hover:via-rose-50 hover:to-pink-100 dark:hover:from-violet-900/30 dark:hover:via-slate-900/80 dark:hover:to-pink-950/30 transition-colors"
             >
-              <div className="rounded-full bg-amber-100 dark:bg-amber-900/40 p-4">
-                <Camera className="w-8 h-8 text-amber-500 dark:text-amber-400" />
+              <div className="rounded-full bg-white/80 dark:bg-white/[0.06] p-4 shadow-sm">
+                <Camera className="w-8 h-8 text-pink-500 dark:text-pink-300" />
               </div>
-              <p className="font-handwritten text-2xl text-amber-700 dark:text-amber-400">
+              <p className="font-handwritten text-2xl text-gray-700 dark:text-gray-200">
                 Capture today's moment
               </p>
-              <p className="text-xs text-amber-600/70 dark:text-amber-400/60">
+              <p className="text-xs text-pink-500/80 dark:text-pink-300/70">
                 Add a photo that captures your day
               </p>
             </button>

@@ -26422,6 +26422,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 </div>
               </div>
             )}
+            {activeLayer?.is_public && (
             <div className="mb-5">
               <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Members</h4>
               <div className="space-y-2">
@@ -26439,9 +26440,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     const isMuted = share?.can_edit === false;
                     const isBanned = share?.is_banned === true;
                     return (
-                      <div key={`member-${i}`} className="flex items-center justify-between gap-3 p-3 bg-gray-100 dark:bg-gray-700/60 rounded-xl border border-gray-200 dark:border-gray-600">
-                        <div className="min-w-0">
-                          <div className="text-sm leading-relaxed text-gray-700 dark:text-gray-200 truncate">{displayLabel}</div>
+                      <div key={`member-${i}`} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-gray-100 dark:bg-gray-700/60 rounded-xl border border-gray-200 dark:border-gray-600">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm leading-relaxed text-gray-700 dark:text-gray-200 break-words">{displayLabel}</div>
                           <div className="mt-1 flex items-center gap-1.5">
                             <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
                               member
@@ -26459,7 +26460,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           </div>
                         </div>
                         {canModerateActiveLayer ? (
-                          <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="flex flex-wrap items-center gap-1.5 shrink-0">
                             {canManageActiveLayer && (
                               <select
                                 value="member"
@@ -26513,7 +26514,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 })()}
               </div>
             </div>
-            {canModerateActiveLayer && (
+            )}
+            {activeLayer?.is_public && canModerateActiveLayer && (
               <div className="mb-5 p-3 rounded-xl border bg-gray-100 dark:bg-gray-700/60" style={{ borderColor: themeAccentBorder }}>
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Pending Event Approvals</h4>
@@ -30684,7 +30686,8 @@ transform: translateY(0);
 
     {showPublishLayerModal && (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
+        <div className="account-handwritten bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
+          <style>{`.account-handwritten, .account-handwritten * { font-family: 'Caveat', cursive !important; } .account-handwritten { font-size: 1.08rem; } .account-handwritten .text-\\[10px\\] { font-size: 0.78rem !important; } .account-handwritten .text-\\[11px\\] { font-size: 0.84rem !important; } .account-handwritten .text-xs { font-size: 0.9rem !important; } .account-handwritten .text-sm { font-size: 1rem !important; } .account-handwritten .text-lg { font-size: 1.32rem !important; }`}</style>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               {publishTargetIsPublic ? 'Edit Public Calendar' : 'Publish Calendar'}
