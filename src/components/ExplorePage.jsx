@@ -40,7 +40,7 @@ const COMMUNITY_POOL = {
     { id: "p2",  type: "products", icon: "✨", page: "Someday", time: "Trending",           cardTitle: "Porsche 911",               desc: "The car that never gets old. Every decade they refine something that already felt finished.",                          actions: ["Add to someday", "Open Someday"], imageUrl: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=900&q=80" },
     { id: "p3",  type: "products", icon: "✨", page: "Someday", time: "Community pick",     cardTitle: "Le Creuset Dutch Oven",      desc: "The heirloom kitchen piece. Once you cook in it you understand why people pass these down.",                          actions: ["Add to someday", "Open Someday"], imageUrl: "https://images.unsplash.com/photo-1585515320310-259814833e62?w=900&q=80" },
     { id: "p4",  type: "products", icon: "✨", page: "Someday", time: "Hidden gem",         cardTitle: "La Marzocco Linea Mini",     desc: "The home espresso machine for people who take coffee seriously. Used in the world's best cafés.",                     actions: ["Add to someday", "Open Someday"], imageUrl: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=900&q=80" },
-    { id: "p5",  type: "products", icon: "✨", page: "Someday", time: "Most dreamed about", cardTitle: "Hermès Birkin 30",           desc: "The bag that started a waiting list. Quiet, rare, and somehow still the most recognized in any room.",                  actions: ["Add to someday", "Open Someday"], imageUrl: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=900&q=80" },
+    { id: "p5",  type: "products", icon: "✨", page: "Someday", time: "Most dreamed about", cardTitle: "Hermès Birkin 30",           desc: "The bag that started a waiting list. Quiet, rare, and somehow still the most recognized in any room.",                  actions: ["Add to someday", "Open Someday"], imageQuery: "Hermes Birkin 30 bag orange leather" },
     { id: "p6",  type: "products", icon: "✨", page: "Someday", time: "Trending",           cardTitle: "Eight Sleep Pod 4",          desc: "Temperature-controlled sleep. Once you understand how much sleep quality matters, this is the upgrade.",                actions: ["Add to someday", "Open Someday"], imageUrl: "https://images.unsplash.com/photo-1540518614846-7eded433c457?w=900&q=80" },
     { id: "p7",  type: "products", icon: "✨", page: "Someday", time: "Community pick",     cardTitle: "Peloton Bike+",              desc: "The bike that turned home fitness into a habit. Great instructors, real results, zero commute.",                       actions: ["Add to someday", "Open Someday"], imageUrl: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=900&q=80" },
     { id: "p8",  type: "products", icon: "✨", page: "Someday", time: "Hidden gem",         cardTitle: "Vitamix 5200",               desc: "The blender that does everything. Smoothies, soups, nut butter — it just works, for decades.",                        actions: ["Add to someday", "Open Someday"], imageUrl: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=900&q=80" },
@@ -298,8 +298,8 @@ const TYPE_EMOJI = { hiking: "🥾", games: "🎲", restaurants: "🍜", product
 
 function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveFromSomeday, onCardTap }) {
   const [inSomeday, setInSomeday] = useState(false);
-  const googleImgUrl = useGoogleImage(post.type === 'games' ? (post.imageQuery || `${post.cardTitle} board game box`) : null);
-  const imageUrl = post.type === 'games' ? googleImgUrl : getExploreImageUrl(post);
+  const googleImgUrl = useGoogleImage(post.imageQuery || (post.type === 'games' ? `${post.cardTitle} board game box` : null));
+  const imageUrl = googleImgUrl || getExploreImageUrl(post);
 
   return (
     <div className="rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent shadow-sm dark:shadow-none overflow-hidden">
@@ -571,10 +571,10 @@ function WeekendCard({ post, onAddToSomeday, onRemoveFromSomeday, onPlanEvent, o
   const [inSomeday, setInSomeday] = useState(false);
   const isMovie = post.type === 'movies';
   const isGame = post.type === 'games';
-  const googleImgUrl = useGoogleImage(isGame ? (post.imageQuery || `${post.cardTitle} board game box`) : null);
+  const googleImgUrl = useGoogleImage(!isMovie ? (post.imageQuery || (isGame ? `${post.cardTitle} board game box` : null)) : null);
   const imageUrl = isMovie
     ? (post.poster_path ? `${TMDB_IMG}${post.poster_path}` : null)
-    : isGame ? googleImgUrl : getExploreImageUrl(post);
+    : googleImgUrl || getExploreImageUrl(post);
   const title = isMovie ? post.title : post.cardTitle;
 
   function handleSomeday(e) {
@@ -823,8 +823,16 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
       }
       return out;
     }
-    // "For this weekend" — movies + board games only
-    const weekend  = take([...moviesByRating, ...activeCom.filter(p => p.type === 'games')], 5);
+    // "For this weekend" — interleave movies + board games so both appear
+    const weekendMovies = moviesByRating.slice(0, 3);
+    const weekendGames  = activeCom.filter(p => p.type === 'games').slice(0, 2);
+    const interleaved   = [];
+    const maxLen = Math.max(weekendMovies.length, weekendGames.length);
+    for (let i = 0; i < maxLen; i++) {
+      if (weekendMovies[i]) interleaved.push(weekendMovies[i]);
+      if (weekendGames[i])  interleaved.push(weekendGames[i]);
+    }
+    const weekend = take(interleaved, 5);
     // "From your friends" — friend activity posts (omit if empty)
     const friends  = activeFriends.length > 0 ? take(activeFriends, 4) : [];
     // "Dreaming of" — products + hiking + restaurants + destinations
