@@ -7768,6 +7768,7 @@ function App() {
   const [sharedOwnerLabels, setSharedOwnerLabels] = useState({});
   const [myShares, setMyShares] = useState([]); // people I've shared with
   const [showSharePanel, setShowSharePanel] = useState(false);
+  const [accountPanelMode, setAccountPanelMode] = useState('account');
   const [accountHandleInput, setAccountHandleInput] = useState('');
   const [accountHandleMessage, setAccountHandleMessage] = useState('');
   const [savingAccountHandle, setSavingAccountHandle] = useState(false);
@@ -8673,8 +8674,9 @@ useEffect(() => {
   const canManageActiveLayer = isActiveLayerOwner || isActiveLayerAdmin;
   const canModerateActiveLayer = canManageActiveLayer || isActiveLayerModerator;
   const canMuteMembersInActiveLayer = canModerateActiveLayer;
-  let memberPostsRequireApproval = true;
-  if (Boolean(activeLayer?.is_public)) {
+  const activeLayerIsPublic = Boolean(activeLayer?.is_public);
+  let memberPostsRequireApproval = false;
+  if (activeLayerIsPublic) {
     try {
       let parsedTheme = activeLayer?.page_theme;
       if (typeof parsedTheme === 'string') {
@@ -12919,7 +12921,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       setShareEmailInput('');
       const postingPolicyNote = activeLayer?.is_public
         ? (memberPostsRequireApproval ? 'member posts are pending moderator/admin review.' : 'member posts are auto-approved.')
-        : 'member posts are pending moderator/admin review.';
+        : 'member posts are auto-approved.';
       setShareMessage(`Shared! ${recipient.value} can post events, and ${postingPolicyNote}`);
     }
   };
@@ -25498,14 +25500,21 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     }}
                     title="Account"
                   >
-                    <UserProfileAvatar
-                      photoUrl={currentUserProfilePhotoUrl}
-                      userId={user?.id}
-                      label={currentUserProfileLabel}
-                      sizeClass="w-9 h-9 sm:w-10 sm:h-10"
-                      roundedClass="rounded-xl"
-                      textClass="text-base sm:text-lg"
-                    />
+                    <span className="relative inline-flex">
+                      <UserProfileAvatar
+                        photoUrl={currentUserProfilePhotoUrl}
+                        userId={user?.id}
+                        label={currentUserProfileLabel}
+                        sizeClass="w-9 h-9 sm:w-10 sm:h-10"
+                        roundedClass="rounded-xl"
+                        textClass="text-base sm:text-lg"
+                      />
+                      {unreadInAppCount > 0 && (
+                        <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full border border-white bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-md dark:border-gray-900">
+                          {unreadInAppCount > 99 ? '99+' : unreadInAppCount}
+                        </span>
+                      )}
+                    </span>
                   </button>
                   {canManageActiveLayer && (
                     <button
@@ -25804,12 +25813,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         </div>
 
         {/* Notification Settings Panel */}
-        {showSharePanel && showNotificationSettings && (
+        {showSharePanel && accountPanelMode === 'notifications' && showNotificationSettings && (
           <div className="account-handwritten glass-panel rounded-2xl p-6 mb-6">
             <style>{`.account-handwritten, .account-handwritten * { font-family: 'Caveat', cursive !important; } .account-handwritten { font-size: 1.08rem; } .account-handwritten .text-\\[10px\\] { font-size: 0.78rem !important; } .account-handwritten .text-\\[11px\\] { font-size: 0.84rem !important; } .account-handwritten .text-xs { font-size: 0.9rem !important; } .account-handwritten .text-sm { font-size: 1rem !important; } .account-handwritten .text-xl { font-size: 1.42rem !important; }`}</style>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold text-green-600 dark:text-green-400">Notification Settings</h3>
-              <button onClick={() => setShowNotificationSettings(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+              <button onClick={() => { setShowSharePanel(false); setShowNotificationSettings(false); }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
             </div>
@@ -26126,153 +26135,138 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
         )}
 
-        {showSharePanel && (
+        {showSharePanel && accountPanelMode !== 'notifications' && (
           <div className="account-handwritten glass-panel rounded-2xl p-6 mb-6">
             <style>{`.account-handwritten, .account-handwritten * { font-family: 'Caveat', cursive !important; } .account-handwritten { font-size: 1.08rem; } .account-handwritten .text-\\[10px\\] { font-size: 0.78rem !important; } .account-handwritten .text-\\[11px\\] { font-size: 0.84rem !important; } .account-handwritten .text-xs { font-size: 0.9rem !important; } .account-handwritten .text-sm { font-size: 1rem !important; } .account-handwritten .text-xl { font-size: 1.42rem !important; }`}</style>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold" style={{ ...themeAccentHeadingStyle, fontFamily: "'Caveat', cursive" }}>
-                Account & Sharing
+                {accountPanelMode === 'sharing'
+                  ? `Sharing (${activeLayer?.name || calendarTitle || 'Current Calendar'})`
+                  : 'Account Settings'}
               </h3>
               <button onClick={() => { setShowSharePanel(false); setShowNotificationSettings(false); setShareMessage(''); }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
             </div>
-            <div className="mb-4 p-3 rounded-xl border bg-gray-100 dark:bg-gray-700/70" style={{ borderColor: themeAccentBorder }}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Signed in as</div>
-                  <div className="mt-2">
-                    <input
-                      type="text"
-                      value={accountHandleInput}
-                      onChange={(e) => {
-                        setAccountHandleInput(e.target.value);
-                        setAccountHandleMessage('');
-                      }}
-                      placeholder="Set your handle"
-                      maxLength={40}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          saveAccountHandle();
-                        }
-                      }}
-                      onBlur={() => {
-                        const nextHandle = normalizeUsernameHandle(accountHandleInput);
-                        if (!nextHandle) return;
-                        if (nextHandle === String(currentUser || '').trim()) return;
-                        saveAccountHandle();
-                      }}
-                    />
-                  </div>
-                  {(user?.email || user?.phone) && (
-                    <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-2">{user?.email || user?.phone || ''}</div>
-                  )}
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className={`self-center px-3 py-2 rounded-xl text-[11px] font-semibold shrink-0 transition-all ${darkMode ? 'text-gray-100 border border-white/10 bg-white/10 hover:bg-white/15' : ''}`}
-                  style={darkMode ? undefined : themeAccentSoftButtonStyle}
-                >
-                  Logout
-                </button>
-              </div>
-              {accountHandleMessage && (
-                <div className={`mt-2 text-xs ${/updated|already set/i.test(accountHandleMessage) ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
-                  {accountHandleMessage}
-                </div>
-              )}
-            </div>
-            <div className="mb-4 p-3 rounded-xl border bg-gray-50 dark:bg-gray-800/70" style={{ borderColor: themeAccentBorder }}>
-              <button
-                onClick={() => setShowAccountPaymentHandles((prev) => !prev)}
-                className="w-full flex items-center justify-between gap-3 text-left"
-              >
-                <div>
-                  <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Payment Handles</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {showAccountPaymentHandles ? 'Hide Venmo and Cash App' : 'Expand to manage Venmo and Cash App'}
-                  </div>
-                </div>
-                <div className={`text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-600'}`}>
-                  {showAccountPaymentHandles ? 'Hide' : 'Show'}
-                </div>
-              </button>
-              {showAccountPaymentHandles && (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
-                    <div>
-                      <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">Venmo</div>
-                      <input
-                        type="text"
-                        value={accountVenmoInput}
-                        onChange={(e) => {
-                          setAccountVenmoInput(e.target.value);
-                          setAccountPaymentMessage('');
-                        }}
-                        placeholder="@username"
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
-                      />
+            {accountPanelMode === 'account' && (
+              <>
+                <div className="mb-4 p-3 rounded-xl border bg-gray-100 dark:bg-gray-700/70" style={{ borderColor: themeAccentBorder }}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Signed in as</div>
+                      <div className="mt-2">
+                        <input
+                          type="text"
+                          value={accountHandleInput}
+                          onChange={(e) => {
+                            setAccountHandleInput(e.target.value);
+                            setAccountHandleMessage('');
+                          }}
+                          placeholder="Set your handle"
+                          maxLength={40}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              saveAccountHandle();
+                            }
+                          }}
+                          onBlur={() => {
+                            const nextHandle = normalizeUsernameHandle(accountHandleInput);
+                            if (!nextHandle) return;
+                            if (nextHandle === String(currentUser || '').trim()) return;
+                            saveAccountHandle();
+                          }}
+                        />
+                      </div>
+                      {(user?.email || user?.phone) && (
+                        <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-2">{user?.email || user?.phone || ''}</div>
+                      )}
                     </div>
-                    <div>
-                      <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">Cash App</div>
-                      <input
-                        type="text"
-                        value={accountCashAppInput}
-                        onChange={(e) => {
-                          setAccountCashAppInput(e.target.value);
-                          setAccountPaymentMessage('');
-                        }}
-                        placeholder="$cashtag"
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
-                      />
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between gap-3">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      These handles will be used in the expense tracker payment links.
-                    </p>
                     <button
-                      onClick={saveAccountPaymentHandles}
-                      disabled={savingAccountPayments}
-                      className="px-3 py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-50"
-                      style={themeAccentButtonStyle}
+                      onClick={handleLogout}
+                      className={`self-center px-3 py-2 rounded-xl text-[11px] font-semibold shrink-0 transition-all ${darkMode ? 'text-gray-100 border border-white/10 bg-white/10 hover:bg-white/15' : ''}`}
+                      style={darkMode ? undefined : themeAccentSoftButtonStyle}
                     >
-                      {savingAccountPayments ? 'Saving...' : 'Save Payments'}
+                      Logout
                     </button>
                   </div>
-                  {accountPaymentMessage && (
-                    <div className={`mt-2 text-xs ${/updated|saved/i.test(accountPaymentMessage) ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
-                      {accountPaymentMessage}
+                  {accountHandleMessage && (
+                    <div className={`mt-2 text-xs ${/updated|already set/i.test(accountHandleMessage) ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
+                      {accountHandleMessage}
                     </div>
                   )}
-                </>
-              )}
-            </div>
-            <div className="mb-4 p-3 rounded-xl border bg-gray-50 dark:bg-gray-800/70" style={{ borderColor: themeAccentBorder }}>
-              <button
-                onClick={() => setShowNotificationSettings((prev) => !prev)}
-                className="w-full flex items-center justify-between gap-3 text-left"
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Notifications</div>
-                    {unreadInAppCount > 0 && (
-                      <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold">
-                        {unreadInAppCount > 99 ? '99+' : unreadInAppCount}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Manage reminders, invites, and in-app updates
-                  </div>
                 </div>
-                <div className={`text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-600'}`}>
-                  {showNotificationSettings ? 'Hide' : 'Show'}
+                <div className="mb-4 p-3 rounded-xl border bg-gray-50 dark:bg-gray-800/70" style={{ borderColor: themeAccentBorder }}>
+                  <button
+                    onClick={() => setShowAccountPaymentHandles((prev) => !prev)}
+                    className="w-full flex items-center justify-between gap-3 text-left"
+                  >
+                    <div>
+                      <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Payment Handles</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {showAccountPaymentHandles ? 'Hide Venmo and Cash App' : 'Expand to manage Venmo and Cash App'}
+                      </div>
+                    </div>
+                    <div className={`text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-600'}`}>
+                      {showAccountPaymentHandles ? 'Hide' : 'Show'}
+                    </div>
+                  </button>
+                  {showAccountPaymentHandles && (
+                    <>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+                        <div>
+                          <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">Venmo</div>
+                          <input
+                            type="text"
+                            value={accountVenmoInput}
+                            onChange={(e) => {
+                              setAccountVenmoInput(e.target.value);
+                              setAccountPaymentMessage('');
+                            }}
+                            placeholder="@username"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
+                          />
+                        </div>
+                        <div>
+                          <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">Cash App</div>
+                          <input
+                            type="text"
+                            value={accountCashAppInput}
+                            onChange={(e) => {
+                              setAccountCashAppInput(e.target.value);
+                              setAccountPaymentMessage('');
+                            }}
+                            placeholder="$cashtag"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          These handles will be used in the expense tracker payment links.
+                        </p>
+                        <button
+                          onClick={saveAccountPaymentHandles}
+                          disabled={savingAccountPayments}
+                          className="px-3 py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-50"
+                          style={themeAccentButtonStyle}
+                        >
+                          {savingAccountPayments ? 'Saving...' : 'Save Payments'}
+                        </button>
+                      </div>
+                      {accountPaymentMessage && (
+                        <div className={`mt-2 text-xs ${/updated|saved/i.test(accountPaymentMessage) ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
+                          {accountPaymentMessage}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
-              </button>
-            </div>
+              </>
+            )}
+            {accountPanelMode === 'sharing' && (
+              <>
             <div className="mb-5">
               <div className="mb-4 rounded-xl border bg-gray-50 p-3 dark:bg-gray-800/60" style={{ borderColor: themeAccentBorder }}>
                 <div className="flex items-center justify-between gap-3">
@@ -26293,30 +26287,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   </button>
                 </div>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                Direct email or phone invites are still available below, but the shareable link is now the preferred way to join private calendars.
-              </p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={shareEmailInput}
-                  onChange={(e) => { setShareEmailInput(e.target.value); setShareMessage(''); }}
-                  placeholder="wife@gmail.com or +15551234567"
-                  disabled={!canManageActiveLayer}
-                  className="flex-1 px-4 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
-                  onKeyPress={(e) => e.key === 'Enter' && handleShareCalendar()}
-                />
-                <button
-                  onClick={handleShareCalendar}
-                  disabled={!canManageActiveLayer}
-                  className={`px-4 py-2 rounded-xl transition-all ${canManageActiveLayer ? 'text-white hover:shadow-lg' : 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'}`}
-                  style={canManageActiveLayer ? themeAccentButtonStyle : undefined}
-                >
-                  <Plus className="w-5 h-5" />
-                </button>
-              </div>
               {!canManageActiveLayer && (
-                <p className="text-xs text-amber-600 dark:text-amber-300 mt-2">Only owner/admin can add/remove members or change permissions.</p>
+                <p className="text-xs text-amber-600 dark:text-amber-300">Only owner/admin can copy and manage sharing.</p>
               )}
               {shareMessage && (
                 <p className={`text-sm mt-2 ${shareMessage.startsWith('?') ? 'text-green-600' : 'text-red-500'}`}>
@@ -26424,7 +26396,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       if (!displayLabel) return null;
                       return (
                         <div key={row.id} className="flex items-center justify-between gap-3 p-3 bg-gray-100 dark:bg-gray-700/60 rounded-xl border border-gray-200 dark:border-gray-600">
-                          <div className="min-w-0 text-sm text-gray-700 dark:text-gray-200 truncate">{displayLabel}</div>
+                          <div className="min-w-0 text-sm leading-relaxed text-gray-700 dark:text-gray-200 truncate">{displayLabel}</div>
                           <div className="flex items-center gap-2">
                             {canManageActiveLayer && !row?.owner ? (
                               <select
@@ -26469,7 +26441,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     return (
                       <div key={`member-${i}`} className="flex items-center justify-between gap-3 p-3 bg-gray-100 dark:bg-gray-700/60 rounded-xl border border-gray-200 dark:border-gray-600">
                         <div className="min-w-0">
-                          <div className="text-sm text-gray-700 dark:text-gray-200 truncate">{displayLabel}</div>
+                          <div className="text-sm leading-relaxed text-gray-700 dark:text-gray-200 truncate">{displayLabel}</div>
                           <div className="mt-1 flex items-center gap-1.5">
                             <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
                               member
@@ -26488,6 +26460,18 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         </div>
                         {canModerateActiveLayer ? (
                           <div className="flex items-center gap-1.5 shrink-0">
+                            {canManageActiveLayer && (
+                              <select
+                                value="member"
+                                onChange={(e) => handleUpdateShareRole(memberIdentity, e.target.value)}
+                                className="px-2 py-1 text-[11px] rounded-lg border bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600"
+                                title="Promote member"
+                              >
+                                <option value="member">Member</option>
+                                <option value="moderator">Moderator</option>
+                                <option value="admin">Admin</option>
+                              </select>
+                            )}
                             <button
                               onClick={() => handleToggleShareEditPermission(memberIdentity, isMuted)}
                               className={`px-2 py-1 text-[11px] rounded-lg border transition-all ${
@@ -26628,6 +26612,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             {!activeLayer?.is_public && myShares.length === 0 && (
               <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">No shares yet. Add an email or phone above to get started.</p>
             )}
+              </>
+            )}
           </div>
         )}
 
@@ -26647,6 +26633,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   onClick={() => {
                     setShowExpensePaymentHandlePrompt(false);
                     setReturnToExpenseFlowAfterPaymentSave(true);
+                    setAccountPanelMode('account');
+                    setShowNotificationSettings(false);
                     setShowSharePanel(true);
                   }}
                   className="px-3 py-2 rounded-xl text-xs font-semibold text-white"
@@ -27721,27 +27709,51 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         <style>{`.account-handwritten, .account-handwritten * { font-family: 'Caveat', cursive !important; } .account-handwritten { font-size: 1.08rem; } .account-handwritten .text-\\[10px\\] { font-size: 0.78rem !important; } .account-handwritten .text-\\[11px\\] { font-size: 0.84rem !important; } .account-handwritten .text-xs { font-size: 0.9rem !important; } .account-handwritten .text-sm { font-size: 1rem !important; } .account-handwritten .text-xl { font-size: 1.42rem !important; }`}</style>
         <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3">Account</h3>
         <div className="flex items-center gap-3 mb-3">
-          <UserProfileAvatar
-            photoUrl={currentUserProfilePhotoUrl}
-            userId={user?.id}
-            label={currentUserProfileLabel}
-            sizeClass="w-10 h-10"
-            roundedClass="rounded-full"
-          />
+          <span className="relative inline-flex">
+            <UserProfileAvatar
+              photoUrl={currentUserProfilePhotoUrl}
+              userId={user?.id}
+              label={currentUserProfileLabel}
+              sizeClass="w-10 h-10"
+              roundedClass="rounded-full"
+            />
+            {unreadInAppCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full border border-white bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-md dark:border-gray-900">
+                {unreadInAppCount > 99 ? '99+' : unreadInAppCount}
+              </span>
+            )}
+          </span>
           <div className="min-w-0">
             <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{currentUser || 'No username set'}</div>
             <div className="text-xs text-gray-400 truncate">{user?.email || user?.phone || ''}</div>
           </div>
         </div>
         <button
-          onClick={() => { setShowCalendarSwitcher(false); setShowSharePanel(true); }}
+          onClick={() => {
+            setShowCalendarSwitcher(false);
+            setAccountPanelMode('account');
+            setShowNotificationSettings(false);
+            setShowSharePanel(true);
+          }}
           className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
         >
-          ⚙️ Account settings & sharing
+          Account settings
         </button>
         <button
           onClick={() => {
             setShowCalendarSwitcher(false);
+            setAccountPanelMode('sharing');
+            setShowNotificationSettings(false);
+            setShowSharePanel(true);
+          }}
+          className="mt-1 w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+        >
+          Sharing
+        </button>
+        <button
+          onClick={() => {
+            setShowCalendarSwitcher(false);
+            setAccountPanelMode('notifications');
             setShowSharePanel(true);
             setShowNotificationSettings(true);
           }}
