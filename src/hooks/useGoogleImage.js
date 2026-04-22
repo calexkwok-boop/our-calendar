@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 
 const _cache = {};
 
-export default function useGoogleImage(query) {
+export default function useGoogleImage(query, options = {}) {
+  const preferProductSearch = Boolean(options.preferProductSearch);
   const [url, setUrl] = useState(query ? (_cache[query] || "") : "");
 
   useEffect(() => {
@@ -12,31 +13,31 @@ export default function useGoogleImage(query) {
 
     async function resolveImage() {
       let result = "";
-      try {
-        const productResponse = await fetch(`/api/product-search?q=${encodeURIComponent(query)}`);
-        if (productResponse.ok) {
-          const productData = await productResponse.json();
-          const productItems = Array.isArray(productData)
-            ? productData
-            : (productData?.items || productData?.results || productData?.products || []);
-          const productMatch = productItems.find(item => (
-            item?.image ||
-            item?.imageUrl ||
-            item?.thumbnail ||
-            item?.thumbnailUrl ||
-            item?.displayUrl ||
-            item?.url
-          ));
-          result = productMatch?.image ||
-            productMatch?.imageUrl ||
-            productMatch?.thumbnail ||
-            productMatch?.thumbnailUrl ||
-            productMatch?.displayUrl ||
-            productMatch?.url ||
-            "";
+      if (preferProductSearch) {
+        try {
+          const productResponse = await fetch(`/api/product-search?q=${encodeURIComponent(query)}`);
+          if (productResponse.ok) {
+            const productData = await productResponse.json();
+            const productItems = Array.isArray(productData)
+              ? productData
+              : (productData?.items || productData?.results || productData?.products || []);
+            const productMatch = productItems.find(item => (
+              item?.image ||
+              item?.imageUrl ||
+              item?.thumbnail ||
+              item?.thumbnailUrl ||
+              item?.displayUrl
+            ));
+            result = productMatch?.image ||
+              productMatch?.imageUrl ||
+              productMatch?.thumbnail ||
+              productMatch?.thumbnailUrl ||
+              productMatch?.displayUrl ||
+              "";
+          }
+        } catch {
+          result = "";
         }
-      } catch {
-        result = "";
       }
 
       if (!result) {
@@ -61,7 +62,7 @@ export default function useGoogleImage(query) {
     return () => {
       cancelled = true;
     };
-  }, [query]);
+  }, [preferProductSearch, query]);
 
   return url;
 }

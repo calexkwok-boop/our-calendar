@@ -169,7 +169,7 @@ const GameCard = ({ game, onAddEvent, onAddToSomeday, darkMode, stagger, initInS
   const [addedToNight, setAddedToNight] = useState(false);
   const [inSomeday, setInSomeday] = useState(initInSomeday || false);
   const [imageFailed, setImageFailed] = useState(false);
-  const imgUrl = useGoogleImage(`${game.name} board game box`);
+  const imgUrl = useGoogleImage(`${game.name} board game box`, { preferProductSearch: true });
   const catStyle = CAT_STYLES[game.category] || CAT_STYLES.strategy;
   const links = retailLinks(game.name);
 

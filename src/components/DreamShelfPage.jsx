@@ -1471,7 +1471,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
   useEffect(() => {
     const imageTargets = [
-      ...items.slice(0, 72),
+      ...items.slice(0, 48),
       ...searchResults.slice(0, 8),
       featuredPost,
       ...communityPosts.slice(0, 8),
