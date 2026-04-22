@@ -12307,12 +12307,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return String(a.time).localeCompare(String(b.time));
     });
 
-        await saveEvents(nextEvents, { immediate: true });
+    // Update UI immediately — saves happen in the background
+    setEvents(nextEvents);
+    setSelectedDate(nextSelectedDate);
+    setSelectedDates([]);
+    setShowHomeAddEventModal(false);
+    resetHomeAddEventForm();
 
-    // If invite friends toggled, create popup rows and show share link
     if (inviteFriends || isPopupEventDraft) {
+      const shareLink = inviteFriends && typeof window !== 'undefined' ? `${window.location.origin}?popup=${eventId}` : '';
+      if (inviteFriends) {
+        try { navigator.clipboard.writeText(shareLink); } catch {}
+        setShareResultLink(shareLink);
+      }
+      // Fire saves in background
       const maxPeople = Math.max(1, parseInt(String(popupEventMaxPeopleDraft || '').trim(), 10) || 10);
-      await createPopupEventRows([{
+      saveEvents(nextEvents, { immediate: true });
+      createPopupEventRows([{
         layer_id: activeLayerId,
         event_id: eventId,
         max_people: maxPeople,
@@ -12332,22 +12343,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         event_data: {},
         status: 'open',
       }).then(({ error }) => { if (error) console.error('popup_event_details insert error (home add):', error); });
-      if (inviteFriends) {
-        const shareLink = typeof window !== 'undefined' ? `${window.location.origin}?popup=${eventId}` : '';
-        setSelectedDate(nextSelectedDate);
-        setSelectedDates([]);
-        setShowHomeAddEventModal(false);
-        resetHomeAddEventForm();
-        try { await navigator.clipboard.writeText(shareLink); } catch {}
-        setShareResultLink(shareLink);
-        return;
-      }
+      return;
     }
 
-    setSelectedDate(nextSelectedDate);
-    setSelectedDates([]);
-    setShowHomeAddEventModal(false);
-    resetHomeAddEventForm();
+    saveEvents(nextEvents, { immediate: true });
   }, [
     homeAddEventForm,
     currentUser,
