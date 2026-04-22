@@ -138,7 +138,7 @@ const DREAMSHELF_IMAGES = {
   h3: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&q=80",
   h4: "https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=600&q=80",
   h5: "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=600&q=80",
-  h6: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80",
+  h6: "https://media.guitarcenter.com/is/image/MMGS7/M01782000001000-00-264x264.jpg",
   h7: "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?w=600&q=80",
   h8: "https://images.unsplash.com/photo-1547891654-e66ed7ebb968?w=600&q=80",
   h9: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/h9-le-creuset-dutch-oven.jpg",
@@ -169,6 +169,8 @@ const DREAMSHELF_IMAGES = {
   car8: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/car8-porsche-taycan-turbo-s.avif",
   hl5: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/hl5-gianvito-rossi-105-pumps.avif",
   h12: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/h12-vitamix-ascent-a3500.avif",
+  wl5: "https://joovv.com/cdn/shop/products/joovv-go-2-0-setup-charging-dock-002_1000x.jpg?v=1708025273",
+  hm1: "https://parachutehome.com/cdn/shop/files/linen-sheet-set-bone-_f-q_k-ck__01_f39c5ff8-36b2-4a81-bba1-b23dbd14fd47.jpg?v=1762839007&width=1200",
 };
 
 // ─── Category config ──────────────────────────────────────────────────────────
@@ -467,7 +469,7 @@ const CURATED_ITEMS = {
     { id: "h2",  name: "Leica M11 Rangefinder",        brand: "Leica",   priceRange: "$8,000–$10,000",  subFilter: ["camera"],                 emoji: "📷", description: "The camera Cartier-Bresson used. Manual, quiet, and the reason photographers make pilgrimages to Wetzlar." },
     { id: "h4",  name: "Steinway Model O Grand Piano", brand: "Steinway",priceRange: "$60,000–$90,000", subFilter: ["music"],                  emoji: "🎹", imageQuery: "Steinway grand piano", description: "Every concert hall has one. If you're going to have a piano in your home, have this piano." },
     { id: "h5",  name: "Hasselblad X2D 100C",          brand: "Hasselblad",priceRange: "$8,000–$10,000",subFilter: ["camera"],                 emoji: "📷", description: "Medium format. 100 megapixels. The camera that makes professional photographers emotional." },
-    { id: "h6",  name: "Fender Custom Shop Stratocaster",brand: "Fender",priceRange: "$3,000–$6,000",  subFilter: ["music"],                  emoji: "🎸", description: "Built by master builders in Corona, California. The instrument you commission, not just buy." },
+    { id: "h6",  name: "Fender Custom Shop Stratocaster",brand: "Fender",priceRange: "$3,000–$6,000",  subFilter: ["music"],                  emoji: "🎸", image: DREAMSHELF_IMAGES.h6, description: "Built by master builders in Corona, California. The instrument you commission, not just buy." },
     { id: "h8",  name: "Warhol Screen Print (Authenticated)",brand: "Andy Warhol",priceRange: "$5,000–$50,000+",subFilter: ["art"],            emoji: "🖼️", description: "A piece of art history you can hang in your home. Pop art that only gets more meaningful with time." },
   ],
   kitchen: [
@@ -536,7 +538,7 @@ const CURATED_ITEMS = {
     { id: "ex10",name: "Coachella Weekend",            brand: "Various",  priceRange: "$500–$2,000",      subFilter: ["city","music"],           emoji: "🎵", image: "https://source.unsplash.com/featured/?coachella,music,festival,crowd,lights,concert", imageQuery: "Coachella music festival desert night lights", description: "Music, desert air, and the feeling that everything is possible. The festival worth planning a year ahead for." },
   ],
   home: [
-    { id: "hm1", name: "Parachute Linen Sheet Set",    brand: "Parachute", priceRange: "$200–$350",        subFilter: ["bedroom","textiles"],     emoji: "🛏️", imageQuery: "Parachute linen sheets bed natural light", description: "The sheets that make every morning feel like a slow one. Softer every time you wash them." },
+    { id: "hm1", name: "Parachute Linen Sheet Set",    brand: "Parachute", priceRange: "$200–$350",        subFilter: ["bedroom","textiles"],     emoji: "🛏️", imageQuery: "Parachute linen sheets bed natural light", image: DREAMSHELF_IMAGES.hm1, description: "The sheets that make every morning feel like a slow one. Softer every time you wash them." },
     { id: "hm2", name: "Aesop Aromatique Candle",      brand: "Aesop",     priceRange: "$80–$110",         subFilter: ["scent","living"],         emoji: "🕯️", imageQuery: "Aesop candle warm interior minimal", description: "Botanical and medicinal. The candle that makes a room smell like somewhere you want to stay." },
     { id: "hm3", name: "Le Labo Santal 33",            brand: "Le Labo",   priceRange: "$220–$320",        subFilter: ["scent","fragrance"],      emoji: "🌿", imageQuery: "Le Labo Santal 33 perfume bottle", description: "The fragrance everyone recognises and no one admits to wearing. Woody, leathery, and completely addictive." },
     { id: "hm4", name: "Restoration Hardware Cloud Sofa", brand: "RH",    priceRange: "$3,000–$8,000",    subFilter: ["living","statement"],     emoji: "🛋️", imageQuery: "RH cloud sofa living room linen", description: "The sofa people build rooms around. Deep enough to disappear into, beautiful enough to anchor everything else." },
@@ -550,7 +552,7 @@ const CURATED_ITEMS = {
     { id: "wl2", name: "Oura Ring Gen 4",              brand: "Oura",      priceRange: "$349–$499",        subFilter: ["tracking","sleep"],       emoji: "💍", imageQuery: "Oura Ring health tracker hand", description: "The ring that knows your readiness before you do. Subtle, accurate, and actually changes how you manage your days." },
     { id: "wl3", name: "Theragun Pro",                 brand: "Therabody", priceRange: "$399–$499",        subFilter: ["recovery","training"],    emoji: "💪", imageQuery: "Theragun Pro massage gun recovery", description: "Deep tissue percussion you actually use. The recovery tool that earns its counter space." },
     { id: "wl4", name: "Clearlight Sanctuary Sauna",  brand: "Clearlight",priceRange: "$4,000–$6,000",    subFilter: ["sauna","recovery"],       emoji: "🧖", imageQuery: "home infrared sauna wood cedar interior", description: "An infrared sauna that fits in a spare corner. Twenty minutes in, and you remember what relaxed feels like." },
-    { id: "wl5", name: "Joov Red Light Panel",        brand: "Joovv",     priceRange: "$600–$1,200",      subFilter: ["recovery","tracking"],    emoji: "🔴", imageQuery: "red light therapy panel wellness", description: "Ten minutes of red and near-infrared light. The longevity routine that's now standard in performance circles." },
+    { id: "wl5", name: "Joovv Red Light Panel",       brand: "Joovv",     priceRange: "$600–$1,200",      subFilter: ["recovery","tracking"],    emoji: "🔴", imageQuery: "red light therapy panel wellness", image: DREAMSHELF_IMAGES.wl5, description: "Ten minutes of red and near-infrared light. The longevity routine that's now standard in performance circles." },
     { id: "wl6", name: "Whoop 4.0 Membership",        brand: "Whoop",     priceRange: "$239/yr",          subFilter: ["tracking","sleep"],       emoji: "⌚", imageQuery: "Whoop fitness tracker wrist", description: "No screen, no distraction — just strain, recovery, and sleep data that quietly rewires your habits." },
     { id: "wl7", name: "Hyperice Normatec 3 Legs",    brand: "Hyperice",  priceRange: "$699",             subFilter: ["recovery"],               emoji: "🦵", imageQuery: "Normatec compression boots recovery", description: "The compression boots serious athletes use post-run. You feel the difference the next morning." },
   ],
