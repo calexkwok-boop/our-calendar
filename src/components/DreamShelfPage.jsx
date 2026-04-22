@@ -1322,11 +1322,24 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     const request = (async () => {
       let imageUrl = "";
       try {
-        const response = await fetch(`/api/google-image-search?query=${encodeURIComponent(query)}&num=1`);
-        if (!response.ok) return "";
-        const data = await response.json();
-        const result = data?.results?.[0];
-        imageUrl = result?.displayUrl || result?.thumbnail || result?.url || "";
+        const productResponse = await fetch(`/api/product-search?q=${encodeURIComponent(query)}`);
+        if (productResponse.ok) {
+          const productData = await productResponse.json();
+          const productItems = Array.isArray(productData)
+            ? productData
+            : (productData?.items || productData?.results || productData?.products || []);
+          const productResult = productItems[0] || {};
+          imageUrl = productResult.image || productResult.imageUrl || productResult.thumbnail || productResult.product_image || "";
+        }
+
+        if (!imageUrl) {
+          const response = await fetch(`/api/google-image-search?query=${encodeURIComponent(query)}&num=1`);
+          if (!response.ok) return "";
+          const data = await response.json();
+          const result = data?.results?.[0];
+          imageUrl = result?.displayUrl || result?.thumbnail || result?.url || "";
+        }
+
         if (!imageUrl) return "";
 
         setItemImages(prev => {
