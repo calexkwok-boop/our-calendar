@@ -40,6 +40,13 @@ const getDreamShelfImageQuery = (item = {}) => [
   "lifestyle",
 ].filter(Boolean).join(" ");
 
+const getDreamShelfProductSearchQuery = (item = {}) => {
+  const brand = item.product_brand || item.brand || "";
+  const name = item.product_name || item.name || "";
+  const query = [brand, name].filter(Boolean).join(" ").trim();
+  return query || item.imageQuery || name;
+};
+
 const isDreamShelfWeakImageUrl = (url = "") => (
   /source\.unsplash\.com\/featured/i.test(String(url || ""))
 );
@@ -1322,7 +1329,8 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     const request = (async () => {
       let imageUrl = "";
       try {
-        const productResponse = await fetch(`/api/product-search?q=${encodeURIComponent(query)}`);
+        const productQuery = getDreamShelfProductSearchQuery(item) || query;
+        const productResponse = await fetch(`/api/product-search?q=${encodeURIComponent(productQuery)}`);
         if (productResponse.ok) {
           const productData = await productResponse.json();
           const productItems = Array.isArray(productData)
@@ -1695,7 +1703,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                 const itemWithImage = {
                   ...item,
                   image: item.preferResolvedImage
-                    ? (itemImages[getDreamShelfImageKey(item)] || "")
+                    ? (itemImages[getDreamShelfImageKey(item)] || (isDreamShelfWeakImageUrl(item.image) ? "" : item.image) || "")
                     : (item.image || itemImages[getDreamShelfImageKey(item)] || "")
                 };
                 return (
