@@ -3275,6 +3275,7 @@ function App() {
   const [eventsTabVisibleLayerIds, setEventsTabVisibleLayerIds] = useState([]);
   const [showEventsTabCalendarFilter, setShowEventsTabCalendarFilter] = useState(false);
   const [showHomeAddEventModal, setShowHomeAddEventModal] = useState(false);
+  const [homeAddEventShareLink, setHomeAddEventShareLink] = useState('');
   const [homeAddEventForm, setHomeAddEventForm] = useState(() => ({
     title: '',
     date: new Date().toISOString().slice(0, 10),
@@ -12219,6 +12220,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (!assertCanEditActiveLayer('add events to this calendar')) return;
     resetHomeAddEventForm();
     if (hint?.title) setHomeAddEventForm(prev => ({ ...prev, title: String(hint.title) }));
+    if (hint?.date) setHomeAddEventForm(prev => ({ ...prev, date: String(hint.date) }));
     setShowHomeAddEventModal(true);
   }, [resetHomeAddEventForm]);
 
@@ -12263,12 +12265,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       title,
       time,
       date: dateKey,
-      category: isPopupEventDraft ? 'popup_event' : 'other',
+      category: isPopupEventDraft ? 'popup_event' : (homeAddEventForm.category || 'other'),
       description: null,
-      isPrivate: false,
-      isUrgent: false,
+      isPrivate: Boolean(homeAddEventForm.isPrivate),
+      isUrgent: Boolean(homeAddEventForm.isUrgent),
       isAnnual: false,
-      recurrence: 'once',
+      recurrence: homeAddEventForm.recurrence || 'once',
       annualMonth: null,
       annualDay: null,
       createdBy: currentUser,
@@ -12283,6 +12285,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       location,
     };
 
+    const inviteFriends = Boolean(homeAddEventForm.inviteFriends);
     const nextEvents = { ...(events || {}) };
     const dayEvents = Array.isArray(nextEvents[dateKey]) ? [...nextEvents[dateKey]] : [];
     dayEvents.push(newEvent);
@@ -12294,9 +12297,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
         await saveEvents(nextEvents, { immediate: true });
 
-    // If marked as pop-up, also create the popup metadata rows now
-    if (isPopupEventDraft) {
-      const maxPeople = Math.max(1, parseInt(String(popupEventMaxPeopleDraft || '').trim(), 10) || 1);
+    // If invite friends toggled, create popup rows and show share link
+    if (inviteFriends || isPopupEventDraft) {
+      const maxPeople = Math.max(1, parseInt(String(popupEventMaxPeopleDraft || '').trim(), 10) || 10);
       await createPopupEventRows([{
         layer_id: activeLayerId,
         event_id: eventId,
@@ -12305,7 +12308,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         created_by_name: currentUser || user?.email || user?.phone || 'Member',
         created_at: new Date().toISOString(),
       }]);
-      // Best-effort details row (ignore if table/columns are missing)
       supabase.from('popup_event_details').insert({
         id: eventId,
         calendar_id: activeLayerId,
@@ -12318,6 +12320,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         event_data: {},
         status: 'open',
       }).then(({ error }) => { if (error) console.error('popup_event_details insert error (home add):', error); });
+      if (inviteFriends) {
+        const shareLink = typeof window !== 'undefined' ? `${window.location.origin}?popup=${eventId}` : '';
+        setSelectedDate(nextSelectedDate);
+        setSelectedDates([]);
+        setHomeAddEventShareLink(shareLink);
+        return;
+      }
     }
 
     setSelectedDate(nextSelectedDate);
@@ -22333,17 +22342,20 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       isOpen={showHomeAddEventModal}
       onClose={() => {
         setShowHomeAddEventModal(false);
+        setHomeAddEventShareLink('');
         resetHomeAddEventForm();
       }}
       formData={homeAddEventForm}
       setFormData={setHomeAddEventForm}
       onSubmit={handleSubmitHomeAddEvent}
+      shareLink={homeAddEventShareLink}
       PlacesAutocomplete={PlacesAutocomplete}
       darkMode={darkMode}
       themeAccentButtonStyle={themeAccentButtonStyle}
       themeAccentHeadingStyle={themeAccentHeadingStyle}
       themeAccentBorder={themeAccentBorder}
       themeAccentSoftButtonStyle={themeAccentSoftButtonStyle}
+      categories={categories}
     />
   ) : null;
 
@@ -28745,6 +28757,15 @@ transform: translateY(0);
             setEditingEvent={setEditingEvent}
             PlacesAutocomplete={PlacesAutocomplete}
             handleLocationLinkClick={handleLocationLinkClick}
+            onAddEvent={() => {
+              setShowDateDetailModal(false);
+              const dateStr = selectedDate
+                ? selectedDate instanceof Date
+                  ? selectedDate.toISOString().slice(0, 10)
+                  : String(selectedDate)
+                : '';
+              openHomeAddEventModal({ date: dateStr });
+            }}
           />
           {false && showDateDetailModal && (
           <div

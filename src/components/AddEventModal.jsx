@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calendar, Clock, MapPin, Sparkles, ChevronLeft, ChevronRight, Users } from 'lucide-react';
+import { X, Calendar, Clock, MapPin, Sparkles, ChevronLeft, ChevronRight, Users, Copy, Check, Settings, Lock, AlertTriangle, Repeat } from 'lucide-react';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -36,16 +36,39 @@ const AddEventModal = ({
   formData,
   setFormData,
   onSubmit,
+  shareLink,
   PlacesAutocomplete,
   darkMode,
   themeAccentButtonStyle,
   themeAccentHeadingStyle,
   themeAccentBorder,
   themeAccentSoftButtonStyle,
+  categories,
 }) => {
   const [errors, setErrors] = useState({});
   const [showCalendarPanel, setShowCalendarPanel] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = useCallback(async () => {
+    if (!shareLink) return;
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // fallback: select a temp textarea
+      const el = document.createElement('textarea');
+      el.value = shareLink;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
+  }, [shareLink]);
   const [displayMonth, setDisplayMonth] = useState(() => {
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), 1);
@@ -130,13 +153,13 @@ const AddEventModal = ({
       <div className="absolute inset-0" onClick={onClose} />
 
         <div
-          className="relative w-full max-w-lg max-h-[min(88dvh,44rem)] rounded-[28px] shadow-2xl overflow-hidden border border-white/40 dark:border-white/10 flex flex-col bg-white dark:bg-slate-950"
-          style={{
-            borderColor: themeAccentBorder,
-          }}
+          id="add-event-modal-panel"
+          className="relative w-full max-w-lg max-h-[min(88dvh,44rem)] rounded-[28px] shadow-2xl border border-white/40 dark:border-white/10 flex flex-col bg-white dark:bg-slate-950"
+          style={{ borderColor: themeAccentBorder, fontFamily: "'Caveat', cursive" }}
           onClick={(e) => e.stopPropagation()}
         >
-        <div className="relative p-6 pb-5 border-b border-gray-200 dark:border-gray-700">
+        <style>{`#add-event-modal-panel, #add-event-modal-panel * { font-family: 'Caveat', cursive !important; }`}</style>
+        <div className="relative p-6 pb-5 border-b border-gray-200 dark:border-gray-700 rounded-t-[28px] overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500" />
 
           <div className="flex items-start justify-between gap-4">
@@ -144,11 +167,11 @@ const AddEventModal = ({
               <div className="flex items-center gap-2 mb-1">
                 <Sparkles className="w-5 h-5 text-purple-500" />
                 <div className="text-xs uppercase tracking-widest text-purple-600 dark:text-purple-400 font-semibold">
-                  Plan ahead
+                  {shareLink ? 'Event created' : 'Plan ahead'}
                 </div>
               </div>
               <h2 className="text-3xl font-bold tracking-tight" style={themeAccentHeadingStyle}>
-                + Add Event
+                {shareLink ? '🎉 Invite friends' : '+ Add Event'}
               </h2>
             </div>
             <button
@@ -169,6 +192,34 @@ const AddEventModal = ({
             touchAction: 'pan-y',
           }}
         >
+          {shareLink ? (
+            <div className="space-y-5" style={{ fontFamily: "'Caveat', cursive" }}>
+              <p className="text-xl text-gray-600 dark:text-gray-400">
+                Your event was saved. Share this link so friends can join.
+              </p>
+              <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.04] px-4 py-3 flex items-center gap-3">
+                <span className="flex-1 text-base text-gray-800 dark:text-gray-200 break-all select-all" style={{ fontFamily: 'monospace' }}>{shareLink}</span>
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-lg font-bold transition-all text-white"
+                  style={{ ...themeAccentButtonStyle, fontFamily: "'Caveat', cursive" }}
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full py-3.5 rounded-xl text-xl font-bold transition-all text-white"
+                style={{ ...themeAccentButtonStyle, fontFamily: "'Caveat', cursive" }}
+              >
+                Done
+              </button>
+            </div>
+          ) : (
+          <>
           <div>
             <label className="block text-xs font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2">
               What you're doing
@@ -393,28 +444,125 @@ const AddEventModal = ({
             )}
           </div>
 
-          <div>
-            <button
-              type="button"
-              onClick={() => {
-                const next = !showInvite;
-                setShowInvite(next);
-                setFormData((prev) => ({ ...prev, inviteFriends: next }));
-              }}
-              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all ${
-                showInvite
-                  ? 'text-white shadow-sm'
-                  : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.07]'
-              }`}
-              style={showInvite ? themeAccentButtonStyle : undefined}
-            >
-              <Users className="w-4 h-4" />
-              {showInvite ? 'Inviting friends' : '+ Invite friends'}
-            </button>
+          <div className="space-y-3">
+            <div className="flex gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !showInvite;
+                  setShowInvite(next);
+                  setFormData((prev) => ({ ...prev, inviteFriends: next }));
+                }}
+                className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all ${
+                  showInvite
+                    ? 'text-white shadow-sm'
+                    : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.07]'
+                }`}
+                style={showInvite ? themeAccentButtonStyle : undefined}
+              >
+                <Users className="w-4 h-4" />
+                {showInvite ? 'Inviting friends' : '+ Invite friends'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAdvancedSettings((v) => !v)}
+                className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all ${
+                  showAdvancedSettings
+                    ? 'text-white shadow-sm'
+                    : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.07]'
+                }`}
+                style={showAdvancedSettings ? themeAccentButtonStyle : undefined}
+              >
+                <Settings className="w-4 h-4" />
+                Settings
+              </button>
+            </div>
             {showInvite && (
-              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 pl-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400 pl-1">
                 After saving, you'll get a share link to send to friends.
               </p>
+            )}
+            {showAdvancedSettings && (
+              <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.03] p-4 space-y-4">
+                {categories && Object.keys(categories).filter(k => k !== 'popup_event').length > 0 && (
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Category</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {Object.entries(categories).filter(([k]) => k !== 'popup_event').map(([key, cat]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setFormData((prev) => ({ ...prev, category: key }))}
+                          className={`rounded-2xl px-3 py-2 text-xs font-semibold transition-all ${
+                            formData.category === key
+                              ? `${cat.color} text-white shadow-sm scale-[1.02]`
+                              : `${cat.lightBg} ${cat.text} hover:shadow-sm`
+                          }`}
+                        >
+                          {cat.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Event Properties</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, isPrivate: !prev.isPrivate }))}
+                      className={`flex items-center justify-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold transition-all ${
+                        formData.isPrivate
+                          ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md'
+                          : 'border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.05] text-gray-600 dark:text-gray-300'
+                      }`}
+                    >
+                      <Lock className="w-4 h-4" />
+                      {formData.isPrivate ? 'Private' : 'Shared'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, isUrgent: !prev.isUrgent }))}
+                      className={`flex items-center justify-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold transition-all ${
+                        formData.isUrgent
+                          ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md'
+                          : 'border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.05] text-gray-600 dark:text-gray-300'
+                      }`}
+                    >
+                      <AlertTriangle className="w-4 h-4" />
+                      {formData.isUrgent ? 'Urgent' : 'Normal'}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">
+                    <Repeat className="w-3.5 h-3.5" />
+                    Recurrence
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: 'once', label: 'One-time' },
+                      { value: 'weekly', label: 'Weekly' },
+                      { value: 'monthly', label: 'Monthly' },
+                      { value: 'annual', label: 'Annual' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setFormData((prev) => ({ ...prev, recurrence: opt.value }))}
+                        className={`rounded-2xl px-3 py-2.5 text-sm font-semibold transition-all ${
+                          (formData.recurrence || 'once') === opt.value
+                            ? 'text-white shadow-sm scale-[1.02]'
+                            : 'border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.05] text-gray-600 dark:text-gray-300'
+                        }`}
+                        style={(formData.recurrence || 'once') === opt.value ? themeAccentButtonStyle : undefined}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
@@ -434,6 +582,8 @@ const AddEventModal = ({
               Cancel
             </button>
           </div>
+          </>
+          )}
         </div>
       </div>
     </div>

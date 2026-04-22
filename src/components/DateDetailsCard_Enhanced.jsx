@@ -170,6 +170,7 @@ export default function DateDetailsCardEnhanced({
   user,
   onClose,
   onSaveEvent,
+  onAddEvent,
   handleQuickAdd,
   handleDeleteEvent,
   handleUpdateEventField,
@@ -430,7 +431,8 @@ export default function DateDetailsCardEnhanced({
           className={`max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-[32px] sm:rounded-[32px] shadow-2xl ${panelSurface}`}
           onClick={(event) => event.stopPropagation()}
         >
-          <div className="space-y-5 p-6 pb-[max(6rem,calc(env(safe-area-inset-bottom)+5rem))]">
+          <style>{`#date-details-panel, #date-details-panel * { font-family: 'Caveat', cursive !important; }`}</style>
+          <div id="date-details-panel" className="space-y-5 p-6 pb-[max(6rem,calc(env(safe-area-inset-bottom)+5rem))]" style={{ fontFamily: "'Caveat', cursive" }}>
             <div className="mb-2 flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold">+ Add Event</h2>
@@ -448,6 +450,19 @@ export default function DateDetailsCardEnhanced({
             </div>
 
             {(
+              <>
+                <button
+                  type="button"
+                  onClick={() => onAddEvent?.()}
+                  className="w-full rounded-2xl py-4 text-lg font-bold text-white transition-all shadow-sm"
+                  style={themeAccentButtonStyle}
+                >
+                  + Add Event
+                </button>
+              </>
+            )}
+
+            {false && (
               <>
 
                 <div>
