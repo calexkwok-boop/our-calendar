@@ -4,7 +4,7 @@
  * Product discovery proxy for Dream Shelf.
  *
  * Optional Vercel environment variables, in priority order:
- *   SERPAPI_KEY       = SerpAPI key for Google Shopping results
+ *   SERPER_API_KEY    = Serper.dev key for Google image results
  *   SEARCHAPI_KEY     = SearchAPI.io key for Google Shopping results
  *   GOOGLE_SEARCH_KEY = Google Custom Search API key
  *   GOOGLE_SEARCH_CX  = Programmable Search Engine ID
@@ -59,6 +59,21 @@ function normalizeImageItem(item = {}, index = 0, query = "") {
   };
 }
 
+function normalizeSerperImageItem(item = {}, index = 0, query = "") {
+  const title = clean(item.title || query);
+  return {
+    id: clean(item.imageUrl || item.link || title || `${query}-${index}`),
+    name: title.replace(/\s+\|.*$/, "").replace(/\s+-\s+.*$/, "") || query,
+    brand: guessBrand(title || query),
+    priceRange: "",
+    image: clean(item.imageUrl || item.thumbnailUrl || item.thumbnail || ""),
+    sourceUrl: clean(item.link || ""),
+    sourceName: clean(item.source || ""),
+    description: "Image result from Serper. Save it now and refine the details later.",
+    external: true,
+  };
+}
+
 function getGoogleImageConfig() {
   return {
     key: process.env.GOOGLE_SEARCH_KEY || process.env.GOOGLE_API_KEY || process.env.GOOGLE_CUSTOM_SEARCH_KEY || process.env.GOOGLE_CUSTOM_SEARCH_API_KEY,
@@ -66,18 +81,21 @@ function getGoogleImageConfig() {
   };
 }
 
-async function fetchSerpApi(query) {
-  const key = process.env.SERPAPI_KEY;
+async function fetchSerperImages(query) {
+  const key = process.env.SERPER_API_KEY;
   if (!key) return null;
-  const url = new URL("https://serpapi.com/search.json");
-  url.searchParams.set("engine", "google_shopping");
-  url.searchParams.set("q", query);
-  url.searchParams.set("api_key", key);
 
-  const response = await fetch(url.toString());
+  const response = await fetch("https://google.serper.dev/images", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-KEY": key,
+    },
+    body: JSON.stringify({ q: query, num: 8 }),
+  });
   const data = await response.json();
-  if (!response.ok) throw new Error(data?.error || "SerpAPI request failed");
-  return (data.shopping_results || []).map((item, index) => normalizeShoppingItem(item, index, query));
+  if (!response.ok) throw new Error(data?.message || data?.error || "Serper request failed");
+  return (data.images || []).map((item, index) => normalizeSerperImageItem(item, index, query));
 }
 
 async function fetchSearchApi(query) {
@@ -118,7 +136,7 @@ export default async function handler(req, res) {
   if (!query) return res.status(400).json({ error: "q required" });
 
   const sources = [
-    ["serpapi", fetchSerpApi],
+    ["serper", fetchSerperImages],
     ["searchapi", fetchSearchApi],
     ["google_custom_search", fetchGoogleImages],
   ];
@@ -137,6 +155,6 @@ export default async function handler(req, res) {
 
   return res.status(501).json({
     error: "Product search is not configured",
-    missingAnyOf: ["SERPAPI_KEY", "SEARCHAPI_KEY", "GOOGLE_SEARCH_KEY + GOOGLE_SEARCH_CX"],
+    missingAnyOf: ["SERPER_API_KEY", "SEARCHAPI_KEY", "GOOGLE_SEARCH_KEY + GOOGLE_SEARCH_CX"],
   });
 }

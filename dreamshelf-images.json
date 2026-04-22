@@ -1,0 +1,167 @@
+[
+  {
+    "id": "g1",
+    "name": "Scotty Cameron Newport 2",
+    "brand": "Scotty Cameron",
+    "imageQuery": "Scotty Cameron Newport 2 putter",
+    "query": "Scotty Cameron Newport 2 putter",
+    "currentImage": "https://source.unsplash.com/featured/?golf,putter,green,course,lifestyle",
+    "sourceImageUrl": "https://www.scottycameron.com/media/xqjbm25m/2025studiostyle_newport2_hero.jpg",
+    "cachedUrl": "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/g1-scotty-cameron-newport-2.jpg",
+    "provider": "supabase"
+  },
+  {
+    "id": "g7",
+    "name": "TaylorMade Stealth 2 HD Driver",
+    "brand": "TaylorMade",
+    "imageQuery": "golf driver club course luxury golfing",
+    "query": "golf driver club course luxury golfing",
+    "currentImage": "https://source.unsplash.com/featured/?golf,driver,club,course,luxury,golfing",
+    "sourceImageUrl": "https://ik.imgkit.net/3vlqs5axxjf/TAW/ik-seo/uploadedImages/All_Gateways/USA_Canada/Featuresssss/Aviara02-Park-Hyatt-Aviara-Hole-18-TOPSHOT/ParkHyattaAviara_Golf.jpg?tr=w-1008%2Ch-567%2Cfo-auto",
+    "cachedUrl": "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/g7-taylormade-stealth-2-hd-driver.jpg",
+    "provider": "supabase"
+  },
+  {
+    "id": "g8",
+    "name": "FootJoy Tour Setup Bag",
+    "brand": "FootJoy",
+    "imageQuery": "golf bag clubs course sunrise",
+    "query": "golf bag clubs course sunrise",
+    "currentImage": "https://source.unsplash.com/featured/?golf,bag,clubs,course,sunrise",
+    "sourceImageUrl": "https://thumbs.dreamstime.com/b/golf-bag-clubs-green-course-sunrise-foggy-trees-golf-clubs-golf-course-black-golf-bag-filled-clubs-stands-424887545.jpg",
+    "cachedUrl": "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/g8-footjoy-tour-setup-bag.jpg",
+    "provider": "supabase"
+  },
+  {
+    "id": "h9",
+    "name": "Le Creuset Dutch Oven",
+    "brand": "Le Creuset",
+    "imageQuery": "",
+    "query": "Le Creuset Le Creuset Dutch Oven",
+    "currentImage": "https://source.unsplash.com/featured/?dutch,oven,cooking,kitchen,cozy",
+    "sourceImageUrl": "https://m.media-amazon.com/images/I/813u+nRRkxL.jpg",
+    "cachedUrl": "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/h9-le-creuset-dutch-oven.jpg",
+    "provider": "supabase"
+  },
+  {
+    "id": "h10",
+    "name": "Breville Espresso Machine",
+    "brand": "Breville",
+    "imageQuery": "",
+    "query": "Breville Breville Espresso Machine",
+    "currentImage": "https://source.unsplash.com/featured/?espresso,machine,home,coffee,barista",
+    "sourceImageUrl": "https://assets.breville.com/cdn-cgi/image/width=1300,format=auto/Dynamic_Bundle/US/BES870XL_Transparent_1300x1300.png?pdp",
+    "cachedUrl": "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/h10-breville-espresso-machine.png",
+    "provider": "supabase"
+  },
+  {
+    "id": "wh1",
+    "name": "Macallan 18",
+    "brand": "The Macallan",
+    "imageQuery": "",
+    "query": "The Macallan Macallan 18",
+    "currentImage": "https://source.unsplash.com/featured/?macallan,whisky,scotch,bottle,warm,bar",
+    "sourceImageUrl": "http://arthurcantina.com/cdn/shop/files/Macallan_18_Sherry_Oak_750mL_-_Arthur_Cantina_Wine_Liquor_-_-_tag1_-_tag2_-2695523.jpg?v=1724544122",
+    "cachedUrl": "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/wh1-macallan-18.jpg",
+    "provider": "supabase"
+  },
+  {
+    "id": "wh2",
+    "name": "Yamazaki 18",
+    "brand": "Suntory",
+    "imageQuery": "",
+    "query": "Suntory Yamazaki 18",
+    "currentImage": "https://source.unsplash.com/featured/?yamazaki,japanese,whisky,bottle,minimal",
+    "sourceImageUrl": "http://www.liquorexpress.us/cdn/shop/products/image_f4586186-66f0-4dd9-9282-da99b442d6fb.jpg?v=1700348784",
+    "cachedUrl": "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/wh2-yamazaki-18.jpg",
+    "provider": "supabase"
+  },
+  {
+    "id": "wh3",
+    "name": "Hibiki Harmony",
+    "brand": "Suntory",
+    "imageQuery": "",
+    "query": "Suntory Hibiki Harmony",
+    "currentImage": "https://source.unsplash.com/featured/?hibiki,whisky,glass,decanter,japanese",
+    "sourceImageUrl": "https://internetwines.com/cdn/shop/products/HibikiHarmony_box_900x.jpg?v=1571167301",
+    "cachedUrl": "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/wh3-hibiki-harmony.jpg",
+    "provider": "supabase"
+  },
+  {
+    "id": "wh4",
+    "name": "Pappy Van Winkle",
+    "brand": "Old Rip Van Winkle",
+    "imageQuery": "",
+    "query": "Old Rip Van Winkle Pappy Van Winkle",
+    "currentImage": "https://source.unsplash.com/featured/?bourbon,rare,whiskey,bottle,wood,shelf",
+    "sourceImageUrl": "http://flaskfinewines.com/cdn/shop/products/VanWinkle10filephoto_d5c4d2e2-4cc8-49cc-ae0f-0aec93acf730.jpg?v=1655866798",
+    "cachedUrl": "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/wh4-pappy-van-winkle.jpg",
+    "provider": "supabase"
+  },
+  {
+    "id": "wh5",
+    "name": "Clase Azul",
+    "brand": "Clase Azul",
+    "imageQuery": "",
+    "query": "Clase Azul Clase Azul",
+    "currentImage": "https://source.unsplash.com/featured/?clase,azul,tequila,ceramic,bottle,luxury",
+    "sourceImageUrl": "https://www.whitehorsewine.com/cdn/shop/products/Clase_Azul_Reposado_Tequila.jpg?v=1466026191",
+    "cachedUrl": "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/wh5-clase-azul.jpg",
+    "provider": "supabase"
+  },
+  {
+    "id": "wh6",
+    "name": "Don Julio 1942",
+    "brand": "Don Julio",
+    "imageQuery": "",
+    "query": "Don Julio Don Julio 1942",
+    "currentImage": "https://source.unsplash.com/featured/?don,julio,tequila,bottle,elegant,bar",
+    "sourceImageUrl": "https://www.totalwine.com/dynamic/x1000,sq/images/38388750/38388750-1-fr.png",
+    "cachedUrl": "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/wh6-don-julio-1942.png",
+    "provider": "supabase"
+  },
+  {
+    "id": "wh7",
+    "name": "Louis XIII Cognac",
+    "brand": "Rémy Martin",
+    "imageQuery": "",
+    "query": "Rémy Martin Louis XIII Cognac",
+    "currentImage": "https://source.unsplash.com/featured/?louis,xiii,cognac,decanter,luxury,crystal",
+    "sourceImageUrl": "https://static-prod.remymartin.com/app/uploads/2024/07/tour-louis-xiii-introduction-header-mobile-240704.jpg",
+    "cachedUrl": "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/wh7-louis-xiii-cognac.jpg",
+    "provider": "supabase"
+  },
+  {
+    "id": "a9",
+    "name": "Parasailing Over Clear Water",
+    "brand": "Ocean Day",
+    "imageQuery": "",
+    "query": "Ocean Day Parasailing Over Clear Water",
+    "currentImage": "https://source.unsplash.com/featured/?parasailing,sunset,ocean",
+    "sourceImageUrl": "https://proparasail.com/wp-content/uploads/2025/02/464550349_1100073222119431_49575996536744410_n.jpg",
+    "cachedUrl": "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/a9-parasailing-over-clear-water.jpg",
+    "provider": "supabase"
+  },
+  {
+    "id": "a10",
+    "name": "Skydiving First Jump",
+    "brand": "Drop Zone",
+    "imageQuery": "skydiving",
+    "query": "skydiving",
+    "currentImage": "https://source.unsplash.com/featured/?skydiving,clouds,gopro",
+    "sourceImageUrl": "https://www.skydivenewengland.com/wp-content/uploads/SNE-Aircraft-Photo.jpg",
+    "cachedUrl": "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/a10-skydiving-first-jump.jpg",
+    "provider": "supabase"
+  },
+  {
+    "id": "a11",
+    "name": "Bungee Jumping",
+    "brand": "Adventure Day",
+    "imageQuery": "bungee jumping",
+    "query": "bungee jumping",
+    "currentImage": "https://source.unsplash.com/featured/?bungee,jump,canyon,river",
+    "sourceImageUrl": "https://sportsmatik.com/uploads/matik-sports-corner/matik-know-how/bungee-jumping_1562400390.jpg",
+    "cachedUrl": "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/a11-bungee-jumping.jpg",
+    "provider": "supabase"
+  }
+]

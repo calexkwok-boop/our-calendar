@@ -89,7 +89,7 @@ const DREAMSHELF_IMAGES = {
   w6: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80",
   w7: "https://images.unsplash.com/photo-1490367532201-b9bc1dc483f6?w=600&q=80",
   w8: "https://img.iwc.com/cluster-overview-lg-2/o-dpr-2/e6a2f75233ae6901b6842c6abe142d6834ebf5fc.jpg",
-  w9: "https://source.unsplash.com/featured/?luxury,watch,hublot,black,gold,wrist",
+  w9: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/w9-hublot-big-bang.jpg",
   b1: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600&q=80",
   b2: "https://assets.hermes.com/is/image/hermesedito/P_11_Birkin_2018?fit=wrap%2C0&wid=1920&resMode=sharp2&op_usm=1%2C1%2C6%2C0",
   b3: "https://images.unsplash.com/photo-1591561954557-26941169b49e?w=600&q=80",
@@ -98,14 +98,14 @@ const DREAMSHELF_IMAGES = {
   b6: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=600&q=80",
   b7: "https://www.prada.com/content/dam/pradabkg_products/1/1BA/1BA457/NZVF0046/1BA457_NZV_F0046_V_EOM_SLF.jpg/_jcr_content/renditions/cq5dam.web.hebebed.1200.1200.jpg",
   b8: "https://assets.hermes.com/is/image/hermesedito/P_169_KELLY_HEADER?fit=wrap%2C0&wid=1920&resMode=sharp2&op_usm=1%2C1%2C6%2C0",
-  g1: "https://source.unsplash.com/featured/?golf,putter,green,course,lifestyle",
+  g1: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/g1-scotty-cameron-newport-2.jpg",
   g2: "https://images.unsplash.com/photo-1593111774240-d529f12cf4bb?w=600&q=80",
   g3: "https://images.unsplash.com/photo-1530028828-25e8270793c5?w=600&q=80",
   g4: "https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?w=600&q=80",
   g5: "https://images.unsplash.com/photo-1592919505780-303950717480?w=600&q=80",
   g6: "https://images.unsplash.com/photo-1562204320-31975a5e09c4?w=600&q=80",
-  g7: "https://source.unsplash.com/featured/?golf,driver,club,course,luxury,golfing",
-  g8: "https://source.unsplash.com/featured/?golf,bag,clubs,course,sunrise",
+  g7: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/g7-taylormade-stealth-2-hd-driver.jpg",
+  g8: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/g8-footjoy-tour-setup-bag.jpg",
   j1: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=600&q=80",
   j2: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&q=80",
   j3: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=80",
@@ -130,9 +130,9 @@ const DREAMSHELF_IMAGES = {
   a6: "https://images.unsplash.com/photo-1483721310020-03333e577078?w=600&q=80",
   a7: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=600&q=80",
   a8: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=600&q=80",
-  a9: "https://source.unsplash.com/featured/?parasailing,sunset,ocean",
-  a10: "https://source.unsplash.com/featured/?skydiving,clouds,gopro",
-  a11: "https://source.unsplash.com/featured/?bungee,jump,canyon,river",
+  a9: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/a9-parasailing-over-clear-water.jpg",
+  a10: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/a10-skydiving-first-jump.jpg",
+  a11: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/a11-bungee-jumping.jpg",
   h1: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=600&q=80",
   h2: "https://images.unsplash.com/photo-1452780212940-6f5c0d14d848?w=600&q=80",
   h3: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&q=80",
@@ -141,8 +141,8 @@ const DREAMSHELF_IMAGES = {
   h6: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80",
   h7: "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?w=600&q=80",
   h8: "https://images.unsplash.com/photo-1547891654-e66ed7ebb968?w=600&q=80",
-  h9: "https://source.unsplash.com/featured/?dutch,oven,cooking,kitchen,cozy",
-  h10: "https://source.unsplash.com/featured/?espresso,machine,home,coffee,barista",
+  h9: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/h9-le-creuset-dutch-oven.jpg",
+  h10: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/h10-breville-espresso-machine.png",
   c1: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=600&q=80",
   c2: "https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?w=600&q=80",
   c3: "https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=600&q=80",
@@ -151,13 +151,13 @@ const DREAMSHELF_IMAGES = {
   c6: "https://images.unsplash.com/photo-1506377585622-bedcbb027afc?w=600&q=80",
   c7: "https://images.unsplash.com/photo-1474722883778-792e7990302f?w=600&q=80",
   c8: "https://images.unsplash.com/photo-1516594798947-e65505dbb29d?w=600&q=80",
-  wh1: "https://source.unsplash.com/featured/?macallan,whisky,scotch,bottle,warm,bar",
-  wh2: "https://source.unsplash.com/featured/?yamazaki,japanese,whisky,bottle,minimal",
-  wh3: "https://source.unsplash.com/featured/?hibiki,whisky,glass,decanter,japanese",
-  wh4: "https://source.unsplash.com/featured/?bourbon,rare,whiskey,bottle,wood,shelf",
-  wh5: "https://source.unsplash.com/featured/?clase,azul,tequila,ceramic,bottle,luxury",
-  wh6: "https://source.unsplash.com/featured/?don,julio,tequila,bottle,elegant,bar",
-  wh7: "https://source.unsplash.com/featured/?louis,xiii,cognac,decanter,luxury,crystal",
+  wh1: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/wh1-macallan-18.jpg",
+  wh2: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/wh2-yamazaki-18.jpg",
+  wh3: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/wh3-hibiki-harmony.jpg",
+  wh4: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/wh4-pappy-van-winkle.jpg",
+  wh5: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/wh5-clase-azul.jpg",
+  wh6: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/wh6-don-julio-1942.png",
+  wh7: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/wh7-louis-xiii-cognac.jpg",
 };
 
 // ─── Category config ──────────────────────────────────────────────────────────
@@ -574,7 +574,7 @@ function getAllCuratedItemsShuffled() {
         category: categoryId,
         emoji: item.emoji || cat.emoji,
         preferResolvedImage: true,
-        image: item.image || "",
+        image: item.image || DREAMSHELF_IMAGES[item.id] || "",
       }))),
     };
   });
@@ -601,7 +601,7 @@ function getCuratedDreamShelfMatches(query = "") {
         category,
         emoji: item.emoji || cat.emoji,
         preferResolvedImage: true,
-        image: item.image || "",
+        image: item.image || DREAMSHELF_IMAGES[item.id] || "",
       };
     }))
     .map(item => {
@@ -1251,7 +1251,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
       ...item,
       category: cat.id,
       preferResolvedImage: true,
-      image: item.image || "",
+      image: item.image || DREAMSHELF_IMAGES[item.id] || "",
     }));
     const filtered = subFilter === "all"
       ? allItems
@@ -1276,7 +1276,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         category: cat.id,
         emoji: item.emoji || cat.emoji,
         preferResolvedImage: true,
-        image: item.image || "",
+        image: item.image || DREAMSHELF_IMAGES[item.id] || "",
       }));
     });
     setTimeout(() => {
@@ -1420,8 +1420,12 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
           : (data?.items || data?.results || data?.products || []);
         const results = normalizeSearchItems(productItems, query);
         if (results.length) {
+          const cachedResults = await Promise.all(results.map(async item => ({
+            ...item,
+            image: await cacheDreamShelfImage(item.image, item.name),
+          })));
           if (requestId !== searchRequestIdRef.current) return;
-          setSearchResults(results);
+          setSearchResults(cachedResults);
           setSearching(false);
           return;
         }
@@ -1443,7 +1447,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     } finally {
       if (requestId === searchRequestIdRef.current) setSearching(false);
     }
-  }, [buildManualSearchItem, normalizeSearchItems]);
+  }, [buildManualSearchItem, cacheDreamShelfImage, normalizeSearchItems]);
 
   const handleProductSearch = useCallback(async (event) => {
     event?.preventDefault?.();
@@ -1473,23 +1477,8 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     setSearchResults(localMatches.length ? localMatches : [getDraftDreamShelfMatch(query)]);
     setSearchError(localMatches.length ? "" : "Press Find it to search wider, or add your own photo.");
 
-    const timeout = window.setTimeout(() => {
-      runProductSearch(query, { allowFallback: false });
-    }, 650);
-
-    return () => window.clearTimeout(timeout);
-  }, [runProductSearch, searchQuery]);
-
-  useEffect(() => {
-    const imageTargets = [
-      ...items.slice(0, 48),
-      ...searchResults.slice(0, 8),
-      featuredPost,
-      ...communityPosts.slice(0, 8),
-    ].filter(Boolean);
-
-    imageTargets.forEach(fetchDreamShelfImage);
-  }, [communityPosts, featuredPost, fetchDreamShelfImage, items, searchResults]);
+    return undefined;
+  }, [searchQuery]);
 
   const handleCategoryClick = (cat) => {
     if (activeCategory?.id === cat.id) {
@@ -1535,11 +1524,11 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     });
     if (!alreadySaved) {
       const fallbackImage = isDreamShelfWeakImageUrl(item.image) ? "" : item.image;
-      const imageUrl = itemImages[getDreamShelfImageKey(item)] || await fetchDreamShelfImage(item) || fallbackImage || "";
+      const imageUrl = itemImages[getDreamShelfImageKey(item)] || fallbackImage || "";
       const stableImageUrl = await cacheDreamShelfImage(imageUrl, item.name);
       onAddToSomeday?.({ title: item.name, imageUrl: stableImageUrl, emoji: item.emoji || "✨", type: "dreamshelf", categoryId: "buy", notes: `${item.brand} · ${item.priceRange || ""}` });
     }
-  }, [cacheDreamShelfImage, fetchDreamShelfImage, itemImages, onAddToSomeday, savedIds]);
+  }, [cacheDreamShelfImage, itemImages, onAddToSomeday, savedIds]);
 
   const handleCommunitySomeday = useCallback(async (payload) => {
     const stableImageUrl = await cacheDreamShelfImage(payload?.imageUrl || "", payload?.title || "dream-item");
