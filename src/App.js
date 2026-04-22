@@ -3276,6 +3276,7 @@ function App() {
   const [showEventsTabCalendarFilter, setShowEventsTabCalendarFilter] = useState(false);
   const [showHomeAddEventModal, setShowHomeAddEventModal] = useState(false);
   const [homeAddEventShareLink, setHomeAddEventShareLink] = useState('');
+  const [shareResultLink, setShareResultLink] = useState('');
   const [homeAddEventForm, setHomeAddEventForm] = useState(() => ({
     title: '',
     date: new Date().toISOString().slice(0, 10),
@@ -11794,22 +11795,33 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   // Get user location then fetch weather
   useEffect(() => {
+    const CACHE_KEY = 'weather-location-cache';
+    const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
+
     const initWeather = () => {
+      // Use cached coords if fresh — avoids re-prompting for location every session
+      try {
+        const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+        if (cached && cached.lat && cached.lng && (Date.now() - cached.ts) < CACHE_TTL) {
+          fetchWeather(cached.lat, cached.lng);
+          const interval = setInterval(() => fetchWeather(cached.lat, cached.lng), 3 * 60 * 60 * 1000);
+          return () => clearInterval(interval);
+        }
+      } catch {}
+
       if (!navigator.geolocation) {
-        // Fallback to Fresno if geolocation not supported
         fetchWeather(36.7378, -119.7871);
         return;
       }
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const { latitude, longitude } = pos.coords;
+          try { localStorage.setItem(CACHE_KEY, JSON.stringify({ lat: latitude, lng: longitude, ts: Date.now() })); } catch {}
           fetchWeather(latitude, longitude);
-          // Refresh every 3 hours with same location
           const interval = setInterval(() => fetchWeather(latitude, longitude), 3 * 60 * 60 * 1000);
           return () => clearInterval(interval);
         },
         () => {
-          // User denied or error — fallback to Fresno
           fetchWeather(36.7378, -119.7871);
         },
         { timeout: 10000 }
@@ -12324,7 +12336,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         const shareLink = typeof window !== 'undefined' ? `${window.location.origin}?popup=${eventId}` : '';
         setSelectedDate(nextSelectedDate);
         setSelectedDates([]);
-        setHomeAddEventShareLink(shareLink);
+        setShowHomeAddEventModal(false);
+        resetHomeAddEventForm();
+        try { await navigator.clipboard.writeText(shareLink); } catch {}
+        setShareResultLink(shareLink);
         return;
       }
     }
@@ -18775,21 +18790,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const targetLayerId = String(options?.layerId || activeLayerId || '').trim();
     const ids = Array.from(new Set((eventIds || []).map(id => String(id)).filter(Boolean)));
     if (!targetLayerId || ids.length === 0) return true;
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('events')
       .delete()
-      .select('id')
       .in('id', ids)
       .eq('layer_id', targetLayerId);
     if (error) {
       console.error('Error deleting events:', error);
       if (!silent) alert(`Could not delete event(s): ${error.message}`);
-      return false;
-    }
-    const deletedIds = new Set((data || []).map(row => String(row.id)));
-    if (deletedIds.size === 0 || ids.some(id => !deletedIds.has(String(id)))) {
-      const missing = ids.filter(id => !deletedIds.has(String(id)));
-      if (!silent) alert(`Delete blocked by permissions or ownership. Missing IDs: ${missing.join(', ')}`);
       return false;
     }
     try {
@@ -22342,7 +22350,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       isOpen={showHomeAddEventModal}
       onClose={() => {
         setShowHomeAddEventModal(false);
-        setHomeAddEventShareLink('');
         resetHomeAddEventForm();
       }}
       formData={homeAddEventForm}
@@ -22357,6 +22364,35 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       themeAccentSoftButtonStyle={themeAccentSoftButtonStyle}
       categories={categories}
     />
+  ) : null;
+
+  const shareResultSheet = shareResultLink ? (
+    <div className="fixed inset-0 z-[12000] flex items-end justify-center p-4 pb-8 bg-black/50 backdrop-blur-sm" onClick={() => setShareResultLink('')}>
+      <div
+        className="w-full max-w-lg rounded-[28px] p-6 shadow-2xl"
+        style={{ background: darkMode ? '#1e1b2e' : '#fff', fontFamily: "'Caveat', cursive" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-1 text-xs font-semibold uppercase tracking-widest" style={{ color: '#a855f7' }}>Link copied!</div>
+        <h2 className="text-2xl font-bold mb-1" style={themeAccentHeadingStyle}>Share with friends</h2>
+        <p className="text-base mb-4" style={{ color: darkMode ? 'rgba(255,255,255,0.6)' : '#6b7280' }}>Send this link so friends can join your event.</p>
+        <div className="flex items-center gap-3 rounded-2xl border px-4 py-3 mb-4" style={{ borderColor: darkMode ? 'rgba(255,255,255,0.1)' : '#e5e7eb', background: darkMode ? 'rgba(255,255,255,0.04)' : '#f9fafb' }}>
+          <span className="flex-1 text-sm break-all select-all" style={{ fontFamily: 'monospace', color: darkMode ? '#e2e8f0' : '#374151' }}>{shareResultLink}</span>
+          <button
+            type="button"
+            onClick={async () => { try { await navigator.clipboard.writeText(shareResultLink); } catch {} }}
+            className="shrink-0 px-3 py-1.5 rounded-xl text-base font-bold text-white"
+            style={themeAccentButtonStyle}
+          >Copy</button>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShareResultLink('')}
+          className="w-full py-3 rounded-xl text-base font-bold text-white"
+          style={themeAccentButtonStyle}
+        >Done</button>
+      </div>
+    </div>
   ) : null;
 
   if (showUserSetup) {
@@ -24933,6 +24969,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     <style>{shakeStyle}</style>
     {controlWidgetAddPanelPortal}
     {homeAddEventModal}
+    {shareResultSheet}
     {makeItHappenItem ? (
       <MakeItHappenSheet
         item={makeItHappenItem}
