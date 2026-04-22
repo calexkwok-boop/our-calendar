@@ -53,9 +53,15 @@ const inferDreamShelfCategory = (text = "") => {
   if (/(watch|rolex|omega|patek|audemars|cartier santos|iwc|tag heuer|daytona|submariner|hublot|big bang)/.test(q)) return "watches";
   if (/(bag|purse|tote|birkin|kelly|chanel|celine|prada|bottega|louis vuitton|gucci)/.test(q)) return "bags";
   if (/(ring|bracelet|necklace|earring|jewelry|jewellery|tiffany|van cleef|love bracelet)/.test(q)) return "jewelry";
-  if (/(sneaker|shoe|jordan|nike|adidas|new balance|common projects|dunk|samba)/.test(q)) return "sneakers";
+  if (/(sneaker|jordan|nike|adidas|new balance|common projects|dunk|samba)/.test(q)) return "sneakers";
+  if (/(heel|heels|pump|stiletto|louboutin|manolo|jimmy choo|aquazzura|gianvito|sergio rossi|opyum|mule)/.test(q)) return "heels";
   if (/(golf|putter|driver|iron|scotty|taylormade|titleist|footjoy|vokey|bushnell|tennis|pickleball|selkirk|running|marathon|garmin forerunner|peloton|cycling|bike|formula 1|f1|grand prix|nba|courtside|basketball)/.test(q)) return "golf";
-  if (/(cookware|cooking|kitchen|dutch oven|le creuset|espresso|breville|coffee machine)/.test(q)) return "kitchen";
+  if (/(cookware|cooking|kitchen|dutch oven|le creuset)/.test(q)) return "kitchen";
+  if (/(espresso|breville|la marzocco|niche zero|pour over|coffee grinder|coffee machine|stagg kettle|acaia)/.test(q)) return "coffee";
+  if (/(sofa|linen sheet|parachute|aesop candle|byredo|le labo|santal|restoration hardware|hay chair|sonos|gallery wall|fragrance|perfume)/.test(q)) return "home";
+  if (/(eight sleep|oura ring|theragun|sauna|red light|whoop|normatec|hyperice|joovv)/.test(q)) return "wellness";
+  if (/(porsche|ferrari|bmw m3|mclaren|lamborghini|range rover|mercedes amg|taycan|supercar|sports car|track day)/.test(q)) return "cars";
+  if (/(safari|northern lights|aurora|amalfi|cappadocia|michelin star|private chef|coachella|napa valley|tokyo food)/.test(q)) return "experiences";
   if (/(camera|guitar|piano|art|leica|fender|gibson)/.test(q)) return "hobbies";
   if (/(whiskey|whisky|bourbon|macallan|yamazaki|hibiki|pappy|van winkle|clase azul|don julio|cognac|louis xiii)/.test(q)) return "whiskey";
   if (/(wine|champagne|cellar|bordeaux|burgundy)/.test(q)) return "cellar";
@@ -154,11 +160,17 @@ const CATEGORIES = [
   { id: "jewelry",   label: "Jewelry",    emoji: "💍" },
   { id: "golf",      label: "Sports",     emoji: "⛳" },
   { id: "sneakers",  label: "Sneakers",   emoji: "👟" },
+  { id: "heels",     label: "Heels",      emoji: "👠" },
   { id: "hobbies",   label: "Hobbies",    emoji: "🎸" },
   { id: "kitchen",   label: "Kitchen",    emoji: "🍳" },
-  { id: "cellar",    label: "Cellar",     emoji: "🍷" },
-  { id: "whiskey",   label: "Whiskey",    emoji: "🥃" },
-  { id: "adventure", label: "Adventure",  emoji: "🎿" },
+  { id: "home",      label: "Home",       emoji: "🪴" },
+  { id: "wellness",  label: "Wellness",   emoji: "🧘" },
+  { id: "coffee",    label: "Coffee",     emoji: "☕" },
+  { id: "cellar",      label: "Cellar",      emoji: "🍷" },
+  { id: "whiskey",     label: "Whiskey",     emoji: "🥃" },
+  { id: "adventure",   label: "Adventure",   emoji: "🎿" },
+  { id: "cars",        label: "Cars",        emoji: "🚗" },
+  { id: "experiences", label: "Experiences", emoji: "✈️" },
 ];
 
 const DREAM_WORLDS = [
@@ -167,7 +179,7 @@ const DREAM_WORLDS = [
     label: "Style",
     title: "Quiet choices, your identity",
     emoji: "✦",
-    categoryIds: ["watches", "bags", "jewelry", "sneakers"],
+    categoryIds: ["watches", "bags", "jewelry", "sneakers", "heels"],
   },
   {
     id: "pursuits",
@@ -181,14 +193,14 @@ const DREAM_WORLDS = [
     label: "Lifestyle",
     title: "The rhythm of your life",
     emoji: "☕",
-    categoryIds: ["hobbies", "kitchen"],
+    categoryIds: ["kitchen", "home", "wellness", "coffee", "cellar", "whiskey", "cars"],
   },
   {
-    id: "collection",
-    label: "Collection",
-    title: "Built over time",
-    emoji: "🍷",
-    categoryIds: ["watches", "sneakers", "cellar", "whiskey"],
+    id: "experiences",
+    label: "Experiences",
+    title: "Moments worth saving for",
+    emoji: "✈️",
+    categoryIds: ["experiences", "adventure"],
   },
 ];
 
@@ -215,6 +227,7 @@ const SUB_FILTERS = {
   ],
   jewelry: [
     { id: "all",       label: "All"       },
+    { id: "mens",      label: "Men's"     },
     { id: "everyday",  label: "Everyday"  },
     { id: "devotion",  label: "Devotion"  },
     { id: "heirloom",  label: "Heirloom"  },
@@ -237,6 +250,13 @@ const SUB_FILTERS = {
     { id: "grail",    label: "Grail"     },
     { id: "classic",  label: "Classic"   },
     { id: "collab",   label: "Collab"    },
+  ],
+  heels: [
+    { id: "all",       label: "All"       },
+    { id: "classic",   label: "Classic"   },
+    { id: "party",     label: "Party"     },
+    { id: "everyday",  label: "Everyday"  },
+    { id: "grail",     label: "Grail"     },
   ],
   hobbies: [
     { id: "all",      label: "All"       },
@@ -274,6 +294,51 @@ const SUB_FILTERS = {
     { id: "water",    label: "Water"     },
     { id: "gear",     label: "Ready Bag" },
   ],
+  cars: [
+    { id: "all",        label: "All"        },
+    { id: "sports",     label: "Sports"     },
+    { id: "luxury",     label: "Luxury"     },
+    { id: "suv",        label: "SUV"        },
+    { id: "ev",         label: "Electric"   },
+    { id: "classic",    label: "Classic"    },
+    { id: "grail",      label: "Grail"      },
+    { id: "experience", label: "Track Day"  },
+  ],
+  experiences: [
+    { id: "all",          label: "All"          },
+    { id: "bucket-list",  label: "Bucket List"  },
+    { id: "nature",       label: "Nature"       },
+    { id: "food",         label: "Food"         },
+    { id: "city",         label: "City"         },
+    { id: "road-trip",    label: "Road Trip"    },
+    { id: "music",        label: "Music"        },
+    { id: "luxury",       label: "Luxury"       },
+  ],
+  home: [
+    { id: "all",       label: "All"        },
+    { id: "living",    label: "Living"     },
+    { id: "bedroom",   label: "Bedroom"    },
+    { id: "scent",     label: "Scent"      },
+    { id: "fragrance", label: "Fragrance"  },
+    { id: "audio",     label: "Audio"      },
+    { id: "art",       label: "Art"        },
+  ],
+  wellness: [
+    { id: "all",      label: "All"       },
+    { id: "sleep",    label: "Sleep"     },
+    { id: "recovery", label: "Recovery"  },
+    { id: "tracking", label: "Tracking"  },
+    { id: "sauna",    label: "Sauna"     },
+  ],
+  coffee: [
+    { id: "all",        label: "All"        },
+    { id: "espresso",   label: "Espresso"   },
+    { id: "pour-over",  label: "Pour Over"  },
+    { id: "machine",    label: "Machine"    },
+    { id: "grinder",    label: "Grinder"    },
+    { id: "gear",       label: "Gear"       },
+    { id: "experience", label: "Experience" },
+  ],
 };
 
 // ─── Curated items per category ───────────────────────────────────────────────
@@ -308,6 +373,9 @@ const CURATED_ITEMS = {
     { id: "j6",  name: "Bvlgari Serpenti",             brand: "Bvlgari", priceRange: "$3,000–$8,000",   subFilter: ["anniversary"],            emoji: "💍", description: "A coiled serpent in gold and gemstones. The most dramatic thing you'll ever put on your wrist." },
     { id: "j7",  name: "Mikimoto Pearl Strand",        brand: "Mikimoto",priceRange: "$1,500–$5,000",   subFilter: ["anniversary","gold"],     emoji: "💍", description: "The original pearl jeweler, still the best. A strand of Mikimoto pearls is an heirloom from day one." },
     { id: "j8",  name: "Harry Winston Round Diamond Solitaire", brand: "Harry Winston", priceRange: "$10,000+", subFilter: ["anniversary"], emoji: "💍", description: "The King of Diamonds. When the moment demands something truly extraordinary." },
+    { id: "j9",  name: "Gold Signet Ring",               brand: "Bespoke",  priceRange: "$800–$3,000",     subFilter: ["mens","gold","everyday"],  emoji: "💍", imageQuery: "gold signet ring mens hand pinky", description: "The oldest piece of jewelry in history, still the most quietly powerful thing a man can wear." },
+    { id: "j10", name: "Cuban Link Chain 14k Gold",      brand: "Various",  priceRange: "$1,500–$8,000",   subFilter: ["mens","gold"],             emoji: "📿", imageQuery: "Cuban link gold chain mens jewelry", description: "Heavy, warm, and undeniably confident. The chain that works with everything from a white tee to a suit." },
+    { id: "j11", name: "David Yurman Chevron Ring",      brand: "Yurman",   priceRange: "$500–$1,200",     subFilter: ["mens","everyday"],         emoji: "💍", imageQuery: "David Yurman men ring silver cable", description: "Cable-inspired architecture in sterling and gold. The ring men reach for when they want something with character." },
   ],
   golf: [
     { id: "g1",  name: "Scotty Cameron Newport 2",     brand: "Scotty Cameron",priceRange: "$400–$600",  subFilter: ["golf"],                   emoji: "⛳", imageQuery: "Scotty Cameron Newport 2 putter", image: DREAMSHELF_IMAGES.g1, description: "The putter Tour pros hoard and collectors obsess over. Feel unlike anything else on the green." },
@@ -327,13 +395,32 @@ const CURATED_ITEMS = {
     { id: "sp8", name: "FootJoy Premiere Series Shoes",brand: "FootJoy", priceRange: "$200–$250",        subFilter: ["golf"],                   emoji: "⛳", imageQuery: "FootJoy Premiere Series golf shoes", description: "A crisp first-tee feeling for the rounds you want to dress up for." },
     { id: "sp9", name: "Vessel Player IV Bag",         brand: "Vessel",  priceRange: "$395–$450",        subFilter: ["golf"],                   emoji: "⛳", imageQuery: "Vessel Player IV golf bag", description: "A beautiful everyday bag for the version of you that keeps clubs by the door." },
     { id: "sp10",name: "Scotty Cameron Phantom X Putter",brand: "Scotty Cameron",priceRange: "$450–$550", subFilter: ["golf"],                  emoji: "⛳", imageQuery: "Scotty Cameron Phantom X putter", description: "A modern mallet for the calm little ritual of lining up a putt." },
-    { id: "sp11",name: "Wilson Pro Staff RF97",        brand: "Wilson",  priceRange: "$250–$300",        subFilter: ["tennis"],                 emoji: "🎾", imageQuery: "Wilson Pro Staff RF97 tennis racket", description: "The kind of racquet that makes a Saturday hit feel a little more serious." },
-    { id: "sp12",name: "US Open Weekend",              brand: "USTA",    priceRange: "$500+",            subFilter: ["tennis","events"],        emoji: "🎾", imageQuery: "US Open tennis stadium weekend", description: "A late-summer city weekend built around night matches, big serves, and one more set." },
-    { id: "sp13",name: "Private Tennis Lesson Package",brand: "Local Pro",priceRange: "$400–$1,200",     subFilter: ["tennis","training"],      emoji: "🎾", imageQuery: "private tennis lesson court", description: "A few focused mornings to make the game feel smoother, lighter, and more yours." },
+    { id: "sp11",name: "Wilson Pro Staff v14",          brand: "Wilson",  priceRange: "$230–$280",        subFilter: ["tennis"],                 emoji: "🎾", imageQuery: "Wilson Pro Staff tennis racket white red", description: "The classic player's racket. Dense pattern, precise control, and the feel that serious club players obsess over." },
+    { id: "sp11b",name: "Babolat Pure Aero",           brand: "Babolat", priceRange: "$230–$260",        subFilter: ["tennis"],                 emoji: "🎾", imageQuery: "Babolat Pure Aero tennis racket yellow", description: "Rafa's racket. Built for topspin, pop on serve, and the satisfying thwack of a clean cross-court." },
+    { id: "sp11c",name: "Nike Air Zoom Vapor Pro 2",   brand: "Nike",    priceRange: "$130–$150",        subFilter: ["tennis"],                 emoji: "👟", imageQuery: "Nike Air Zoom Vapor Pro tennis shoes court", description: "Light, low, and locked in. The shoe that makes lateral cuts feel effortless." },
+    { id: "sp11d",name: "Spinshot Player Ball Machine",brand: "Spinshot",priceRange: "$800–$1,000",      subFilter: ["tennis","training"],      emoji: "🎾", imageQuery: "tennis ball machine court practice", description: "An hour alone on court, drilling exactly the shot you keep missing. The solo practice upgrade." },
+    { id: "sp11e",name: "Wimbledon Tickets",           brand: "AELTC",   priceRange: "$200–$2,000+",     subFilter: ["tennis","events"],        emoji: "🎾", imageQuery: "Wimbledon Centre Court tennis grass", description: "Strawberries, whites, grass, and the quietest crowd in sport. A bucket list afternoon." },
+    { id: "sp12",name: "US Open Weekend",              brand: "USTA",    priceRange: "$500+",            subFilter: ["tennis","events"],        emoji: "🎾", imageQuery: "US Open tennis stadium night", description: "A late-summer city weekend built around night matches, big serves, and one more set." },
+    { id: "sp13",name: "Private Tennis Lesson Package",brand: "Local Pro",priceRange: "$400–$1,200",     subFilter: ["tennis","training"],      emoji: "🎾", imageQuery: "private tennis lesson court coach", description: "A few focused mornings to make the game feel smoother, lighter, and more yours." },
     { id: "sp14",name: "Selkirk Pickleball Paddle",    brand: "Selkirk", priceRange: "$150–$250",        subFilter: ["pickleball"],             emoji: "🏓", imageQuery: "Selkirk pickleball paddle", description: "Easy to bring, quick to share, and perfect for the hobby that keeps becoming a plan." },
-    { id: "sp15",name: "Run a Half Marathon",          brand: "Race Day",priceRange: "$80–$200",         subFilter: ["running","events"],       emoji: "🏃", imageQuery: "half marathon race finish line", description: "A date on the calendar that turns ordinary mornings into training miles." },
+    { id: "sp14b",name: "Joola Ben Johns Hyperion Paddle", brand: "Joola",  priceRange: "$180–$220",       subFilter: ["pickleball"],             emoji: "🏓", imageQuery: "Joola Ben Johns Hyperion pickleball paddle carbon", description: "The paddle the world no. 1 plays with. When you're ready to stop sharing and start improving." },
+    { id: "sp14c",name: "Pickleball Lesson Series",    brand: "Local Pro",priceRange: "$200–$500",        subFilter: ["pickleball","training"],  emoji: "🏓", imageQuery: "pickleball lesson court coach", description: "Four sessions to crack the third-shot drop. The upgrade that changes how the whole game feels." },
+    { id: "sp14d",name: "Selkirk Pickleball Bag",      brand: "Selkirk", priceRange: "$80–$120",         subFilter: ["pickleball"],             emoji: "🎒", imageQuery: "Selkirk pickleball bag court", description: "Holds four paddles, your shoes, and still looks like a bag worth carrying everywhere else." },
+    { id: "sp15",name: "Run a Half Marathon",          brand: "Race Day",priceRange: "$80–$200",         subFilter: ["running","events"],       emoji: "🏃", imageQuery: "half marathon race morning start line runners", description: "A date on the calendar that turns ordinary mornings into training miles." },
+    { id: "sp15b",name: "Run a Full Marathon",        brand: "Race Day",priceRange: "$100–$300",         subFilter: ["running","events"],       emoji: "🏃", imageQuery: "marathon race finish line crowd runners", description: "The one you train six months for and talk about the rest of your life. Worth every early morning." },
+    { id: "sp15c",name: "Nike Alphafly 3",            brand: "Nike",    priceRange: "$285–$310",         subFilter: ["running","training"],     emoji: "👟", imageQuery: "Nike Alphafly 3 running shoe carbon plate", description: "The carbon-plate race shoe. The one you put on for the event and feel genuinely different in." },
+    { id: "sp15d",name: "Hoka Clifton 9",             brand: "Hoka",    priceRange: "$145",              subFilter: ["running","training"],     emoji: "👟", imageQuery: "Hoka Clifton running shoe road", description: "The workhorse trainer. Soft enough for every day, stable enough for long miles, ugly enough to be iconic." },
+    { id: "sp15e",name: "Hoka Speedgoat 6",           brand: "Hoka",    priceRange: "$155",              subFilter: ["running","training"],     emoji: "🏔️", imageQuery: "Hoka Speedgoat trail running shoe", description: "Grip, cushion, and confidence on any trail. The shoe that makes you want to find a harder route." },
+    { id: "sp15f",name: "Salomon Active Skin Vest",   brand: "Salomon", priceRange: "$110–$140",         subFilter: ["running","training"],     emoji: "🏃", imageQuery: "Salomon running vest trail hydration", description: "Carry water, gels, and your phone without thinking about them. Built for when you add an hour to the run." },
     { id: "sp16",name: "Garmin Forerunner 965",        brand: "Garmin",  priceRange: "$600",             subFilter: ["running","training"],     emoji: "⌚", imageQuery: "Garmin Forerunner 965 running watch", description: "A tiny coach on your wrist for the season where you decide to get consistent." },
-    { id: "sp17",name: "Peloton Bike+",                brand: "Peloton", priceRange: "$2,495",           subFilter: ["cycling","training"],     emoji: "🚴", imageQuery: "Peloton Bike Plus home workout", description: "A home ritual for rainy days, reset days, and the days you still show up." },
+    { id: "sp17",name: "Peloton Bike+",                brand: "Peloton", priceRange: "$2,495",           subFilter: ["cycling","training","home"], emoji: "🚴", imageQuery: "Peloton Bike Plus home workout", description: "A home ritual for rainy days, reset days, and the days you still show up." },
+    { id: "sp17b",name: "Cervélo R5",                brand: "Cervélo", priceRange: "$8,000–$12,000",   subFilter: ["cycling"],                emoji: "🚴", imageQuery: "Cervelo R5 road bike carbon climbing", description: "The climber's bike. Stiff, light, and beautiful in a way that makes every elevation gain feel earned." },
+    { id: "sp17c",name: "Canyon Aeroad CF SLX",      brand: "Canyon",  priceRange: "$5,000–$8,000",    subFilter: ["cycling"],                emoji: "🚴", imageQuery: "Canyon Aeroad road bike aero carbon", description: "UCI WorldTour geometry at a fraction of the price. The bike that wins races and confuses people who ask what it cost." },
+    { id: "sp17d",name: "Wahoo KICKR Core Trainer",  brand: "Wahoo",   priceRange: "$900–$1,100",      subFilter: ["cycling","training"],     emoji: "🚴", imageQuery: "Wahoo KICKR smart trainer indoor cycling", description: "Winter training, Zwift intervals, and the reason you don't lose your fitness between October and March." },
+    { id: "sp17e",name: "Garmin Edge 1040 Solar",    brand: "Garmin",  priceRange: "$650–$750",        subFilter: ["cycling","training"],     emoji: "📡", imageQuery: "Garmin Edge 1040 cycling computer handlebar", description: "Turn-by-turn maps, power metrics, solar charging. The computer that makes every ride feel like a mission." },
+    { id: "sp17f",name: "Rapha Pro Team Jersey",     brand: "Rapha",   priceRange: "$200–$260",        subFilter: ["cycling"],                emoji: "🚴", imageQuery: "Rapha Pro Team cycling jersey road", description: "The kit that makes you stand up a little straighter on the bike. Merino-blend, understated, and deeply good." },
+    { id: "sp17g",name: "Zipp 303 S Wheelset",       brand: "Zipp",    priceRange: "$1,600–$2,000",    subFilter: ["cycling"],                emoji: "⚙️", imageQuery: "Zipp 303 S carbon wheelset road bike", description: "The upgrade that changes how the whole bike feels. Lighter, stiffer, and worth every dollar on a fast descent." },
+    { id: "sp17h",name: "Tour de France Stage Trip", brand: "Various", priceRange: "$500–$3,000",      subFilter: ["cycling","events"],       emoji: "🏆", imageQuery: "Tour de France cycling crowd mountain stage", description: "Roadside on a mountain pass, watching the peloton go by. One of those afternoons that stays with you." },
     { id: "sp18",name: "Formula 1 Grand Prix Weekend", brand: "Formula 1",priceRange: "$500+",           subFilter: ["events"],                 emoji: "🏁", imageQuery: "Formula 1 Grand Prix weekend", description: "A full-throttle travel weekend with engines, grandstands, and a reason to plan ahead." },
     { id: "sp19",name: "NBA Courtside Game",           brand: "NBA",     priceRange: "$1,000+",          subFilter: ["events"],                 emoji: "🏀", imageQuery: "NBA courtside game seats", description: "One night close enough to hear the sneakers, the bench, and the buzz in the room." },
   ],
@@ -347,19 +434,32 @@ const CURATED_ITEMS = {
     { id: "s7",  name: "Common Projects Achilles Low", brand: "Common Projects", priceRange: "$500–$750", subFilter: ["grail"],                  emoji: "👟", description: "Minimal, Italian-made, and quietly iconic. The white sneaker that makes everything look more considered." },
     { id: "s8",  name: "Nike Dunk Low Panda",          brand: "Nike",    priceRange: "$110–$200+",       subFilter: ["nike"],                   emoji: "👟", description: "Black and white, simple as it gets, and somehow still the hardest dunk to keep in stock." },
   ],
+  heels: [
+    { id: "hl1", name: "Manolo Blahnik Hangisi",        brand: "Manolo Blahnik", priceRange: "$900–$1,200",  subFilter: ["classic","grail"],        emoji: "👠", imageQuery: "blue satin jeweled buckle high heels fashion", description: "The buckle pump that became a cultural symbol. Carrie Bradshaw's wedding shoe. An heirloom you wear." },
+    { id: "hl2", name: "Christian Louboutin So Kate",   brand: "Louboutin",      priceRange: "$700–$900",    subFilter: ["classic","grail"],        emoji: "👠", imageQuery: "red sole black stiletto heels fashion", description: "120mm of red-soled intention. The heel that started a thousand imitations and can't be replicated." },
+    { id: "hl3", name: "Jimmy Choo Romy 100",           brand: "Jimmy Choo",     priceRange: "$650–$850",    subFilter: ["classic","party"],        emoji: "👠", imageQuery: "pointed toe suede pump heels fashion", description: "Pointed toe, kitten-to-stiletto range, no frills — just the shape that works every time." },
+    { id: "hl4", name: "Bottega Veneta Stretch Mule",   brand: "Bottega Veneta", priceRange: "$750–$1,100",  subFilter: ["everyday","classic"],     emoji: "👠", imageQuery: "leather mule heels fashion editorial", description: "The heel you wear like a flat. Intrecciato leather, no logo, and somehow impossible to miss." },
+    { id: "hl5", name: "Gianvito Rossi 105 Pumps",      brand: "Gianvito Rossi", priceRange: "$700–$900",    subFilter: ["classic","everyday"],     emoji: "👠", imageQuery: "nude leather pointed pump heels fashion", description: "The Italian pump that walks better than anything. Nude pairs with everything; the heel height is forgiving." },
+    { id: "hl6", name: "Saint Laurent Opyum Sandal",    brand: "Saint Laurent",  priceRange: "$900–$1,300",  subFilter: ["party","grail"],          emoji: "👠", imageQuery: "black stiletto sandal logo heel fashion", description: "The logo is the heel. Audacious, architectural, and the kind of shoe that owns the room before you do." },
+    { id: "hl7", name: "Aquazzura Deneuve Bow Pump",    brand: "Aquazzura",      priceRange: "$650–$850",    subFilter: ["party","classic"],        emoji: "👠", imageQuery: "bow satin pointed pump heels fashion", description: "A bow at the toe, a pointed heel, satin finish. The party shoe that photographs as well as it wears." },
+    { id: "hl8", name: "Sergio Rossi SR1 Pumps",        brand: "Sergio Rossi",   priceRange: "$500–$700",    subFilter: ["everyday","classic"],     emoji: "👠", imageQuery: "minimal leather pointed pump heels fashion", description: "The understated Italian heel. No logo, no buckle — just a beautifully proportioned shoe that goes with everything." },
+  ],
   hobbies: [
     { id: "h1",  name: "Gibson Les Paul Standard",     brand: "Gibson",  priceRange: "$2,500–$4,000",   subFilter: ["music"],                  emoji: "🎸", description: "The guitar Page, Slash, and Clapton chose. If you're going to learn, learn on the real thing." },
     { id: "h2",  name: "Leica M11 Rangefinder",        brand: "Leica",   priceRange: "$8,000–$10,000",  subFilter: ["camera"],                 emoji: "📷", description: "The camera Cartier-Bresson used. Manual, quiet, and the reason photographers make pilgrimages to Wetzlar." },
-    { id: "h3",  name: "Porsche 911 Carrera",          brand: "Porsche", priceRange: "$110,000+",        subFilter: ["auto"],                   emoji: "🏎️", imageQuery: "real Porsche 911 Carrera car road", description: "Sixty years of the same shape, infinitely refined. The car that rewards the driver who learns it." },
-    { id: "h4",  name: "Steinway Model O Grand Piano", brand: "Steinway",priceRange: "$60,000–$90,000", subFilter: ["music"],                  emoji: "🎹", description: "Every concert hall has one. If you're going to have a piano in your home, have this piano." },
+    { id: "h4",  name: "Steinway Model O Grand Piano", brand: "Steinway",priceRange: "$60,000–$90,000", subFilter: ["music"],                  emoji: "🎹", imageQuery: "Steinway grand piano", description: "Every concert hall has one. If you're going to have a piano in your home, have this piano." },
     { id: "h5",  name: "Hasselblad X2D 100C",          brand: "Hasselblad",priceRange: "$8,000–$10,000",subFilter: ["camera"],                 emoji: "📷", description: "Medium format. 100 megapixels. The camera that makes professional photographers emotional." },
     { id: "h6",  name: "Fender Custom Shop Stratocaster",brand: "Fender",priceRange: "$3,000–$6,000",  subFilter: ["music"],                  emoji: "🎸", description: "Built by master builders in Corona, California. The instrument you commission, not just buy." },
-    { id: "h7",  name: "Ferrari 488 GTB",              brand: "Ferrari", priceRange: "$250,000+",        subFilter: ["auto"],                   emoji: "🏎️", description: "Twin-turbo V8, 660 horsepower, and a sound that makes grown adults cry. A pure dream." },
     { id: "h8",  name: "Warhol Screen Print (Authenticated)",brand: "Andy Warhol",priceRange: "$5,000–$50,000+",subFilter: ["art"],            emoji: "🖼️", description: "A piece of art history you can hang in your home. Pop art that only gets more meaningful with time." },
   ],
   kitchen: [
-    { id: "h9",  name: "Le Creuset Dutch Oven",        brand: "Le Creuset",priceRange: "$300-$500",      subFilter: ["cooking","ritual"],       emoji: "🍳", image: "https://source.unsplash.com/featured/?dutch,oven,cooking,kitchen,cozy", description: "The heirloom kitchen piece. Braises, soups, bread, and Sunday sauces all feel more special in enameled cast iron." },
-    { id: "h10", name: "Breville Espresso Machine",    brand: "Breville", priceRange: "$500-$900",      subFilter: ["coffee","ritual"],        emoji: "☕", image: "https://source.unsplash.com/featured/?espresso,machine,home,coffee,barista", description: "A countertop ritual machine for dialing in espresso, steaming milk, and making every morning feel a little more intentional." },
+    { id: "h9",  name: "Le Creuset Dutch Oven",        brand: "Le Creuset",priceRange: "$300–$500",      subFilter: ["cooking","ritual"],       emoji: "🍳", image: "https://source.unsplash.com/featured/?dutch,oven,cooking,kitchen,cozy", description: "The heirloom kitchen piece. Braises, soups, bread, and Sunday sauces all feel more special in enameled cast iron." },
+    { id: "h10", name: "Breville Espresso Machine",    brand: "Breville", priceRange: "$500–$900",      subFilter: ["coffee","ritual"],        emoji: "☕", image: "https://source.unsplash.com/featured/?espresso,machine,home,coffee,barista", description: "A countertop ritual machine for dialing in espresso, steaming milk, and making every morning feel a little more intentional." },
+    { id: "h11", name: "All-Clad D3 10-Piece Set",    brand: "All-Clad", priceRange: "$700–$1,000",    subFilter: ["cooking"],                emoji: "🍳", imageQuery: "All-Clad stainless steel cookware set kitchen", description: "The set professional cooks put in their home kitchens. Tri-ply stainless that lasts decades and only gets better." },
+    { id: "h12", name: "Vitamix Ascent A3500",        brand: "Vitamix",  priceRange: "$600–$700",      subFilter: ["cooking","ritual"],       emoji: "🥤", imageQuery: "Vitamix blender countertop kitchen", description: "The blender that handles anything. Smoothies, soups, nut butters — the kind of machine that changes what you cook." },
+    { id: "h13", name: "Staub Cocotte 5.5qt",         brand: "Staub",    priceRange: "$350–$450",      subFilter: ["cooking"],                emoji: "🍳", imageQuery: "Staub cocotte cast iron black oven", description: "Matte enamel interior, self-basting lid, and a weight that means business. The French alternative to Le Creuset." },
+    { id: "h14", name: "Ooni Karu 16 Pizza Oven",     brand: "Ooni",     priceRange: "$799",           subFilter: ["cooking","outdoor"],      emoji: "🍕", imageQuery: "Ooni pizza oven outdoor wood fire", description: "Restaurant-quality pizza in your backyard in sixty seconds. The oven that turns any evening into an event." },
+    { id: "h15", name: "Global G-2 Knife Set",        brand: "Global",   priceRange: "$400–$600",      subFilter: ["cooking"],                emoji: "🔪", imageQuery: "Global G-2 Japanese knife set kitchen", description: "Japanese steel, razor edge, and a handle that disappears in your hand. The knives you sharpen and keep forever." },
   ],
   cellar: [
     { id: "c1",  name: "Opus One 2018",                brand: "Opus One",priceRange: "$350–$450 /bottle",subFilter: ["red","rare"],            emoji: "🍷", image: DREAMSHELF_IMAGES.c1, description: "The Napa Valley Bordeaux blend that made California wine taken seriously worldwide." },
@@ -384,7 +484,7 @@ const CURATED_ITEMS = {
     { id: "a1",  name: "Völkl Mantra M6 Skis",        brand: "Völkl",   priceRange: "$800–$1,000",     subFilter: ["ski"],                    emoji: "🎿", description: "The all-mountain benchmark. Skis that make every run feel intentional and every turn feel earned." },
     { id: "a2",  name: "Arc'teryx Alpha SV Jacket",    brand: "Arc'teryx",priceRange: "$850–$1,000",    subFilter: ["ski","climb"],            emoji: "🧥", description: "The jacket mountaineers trust in the most severe conditions on earth. Built to last a lifetime." },
     { id: "a3",  name: "Petzl Vertigo Wire-Lock",      brand: "Petzl",   priceRange: "$25–$40",         subFilter: ["climb"],                  emoji: "🧗", description: "The carabiner that professional guides trust. A small thing that means everything." },
-    { id: "a4",  name: "Trek Domane SLR 9",            brand: "Trek",    priceRange: "$9,000–$12,000",  subFilter: ["bike"],                   emoji: "🚴", description: "Carbon frame, Shimano Dura-Ace, and the smoothest ride on any road surface. The dream cycling setup." },
+    { id: "a4",  name: "Trek Domane SLR 9",            brand: "Trek",    priceRange: "$9,000–$12,000",  subFilter: ["bike","cycling"],         emoji: "🚴", imageQuery: "Trek Domane SLR road bike carbon", description: "Carbon frame, Shimano Dura-Ace, and the smoothest ride on any road surface. The dream cycling setup." },
     { id: "a5",  name: "Patagonia Black Hole Duffel 70L",brand: "Patagonia",priceRange: "$250–$300",   subFilter: ["ski","climb"],            emoji: "🎒", description: "The bag that goes on every adventure and comes back looking fine. Built to outlast the trip." },
     { id: "a6",  name: "Capita DOA Snowboard",         brand: "Capita",  priceRange: "$600–$700",       subFilter: ["ski"],                    emoji: "🏂", description: "The people's board. Versatile, responsive, and the first thing intermediate riders reach for." },
     { id: "a7",  name: "Hobie Mirage Pro Angler Kayak",brand: "Hobie",   priceRange: "$3,500–$4,500",   subFilter: ["water"],                  emoji: "🛶", description: "Pedal-powered fishing kayak with hands-free steering. The serious angler's dream craft." },
@@ -393,9 +493,95 @@ const CURATED_ITEMS = {
     { id: "a10", name: "Skydiving First Jump",         brand: "Drop Zone",priceRange: "$250–$400",       subFilter: ["mountain"],               emoji: "🪂", imageQuery: "skydiving", description: "The leap you talk about for the rest of your life. A few wild seconds that make everything feel bigger." },
     { id: "a11", name: "Bungee Jumping",               brand: "Adventure Day",priceRange: "$120–$300",   subFilter: ["climb"],                  emoji: "🌉", imageQuery: "bungee jumping", description: "A bridge, a cord, a countdown, and the clean shock of doing something you were scared to do." },
   ],
+  cars: [
+    { id: "car1", name: "Porsche 911 Carrera",         brand: "Porsche",  priceRange: "$110,000+",        subFilter: ["sports","grail"],          emoji: "🏎️", imageQuery: "Porsche 911 Carrera road driving", description: "Sixty years of the same shape, infinitely refined. The car that rewards the driver who learns it." },
+    { id: "car2", name: "Ferrari 296 GTB",             brand: "Ferrari",  priceRange: "$320,000+",        subFilter: ["sports","grail"],          emoji: "🏎️", imageQuery: "Ferrari 296 GTB red supercar", description: "Hybrid V6, 830 horsepower, and a soundtrack that belongs in an opera house. Ferrari's most exciting car in decades." },
+    { id: "car3", name: "BMW M3 Competition",          brand: "BMW",      priceRange: "$80,000–$95,000",  subFilter: ["sports","attainable"],     emoji: "🚗", imageQuery: "BMW M3 Competition car road", description: "The benchmark sports sedan. Track-capable, daily-driveable, and the car that makes every drive feel intentional." },
+    { id: "car4", name: "McLaren GT",                  brand: "McLaren",  priceRange: "$220,000+",        subFilter: ["sports","grail"],          emoji: "🏎️", imageQuery: "McLaren GT silver supercar road", description: "A grand tourer that happens to be a supercar. Fast enough for a track, comfortable enough for the coast." },
+    { id: "car5", name: "Range Rover Autobiography",   brand: "Land Rover",priceRange: "$200,000+",       subFilter: ["luxury","suv"],            emoji: "🚙", imageQuery: "Range Rover Autobiography luxury SUV", description: "The most accomplished SUV ever made. Quiet, elevated, and capable of anything." },
+    { id: "car6", name: "Mercedes-AMG GT 63",          brand: "Mercedes-AMG",priceRange: "$165,000+",     subFilter: ["sports","luxury"],         emoji: "🚗", imageQuery: "Mercedes AMG GT 63 car road", description: "Four doors, AMG performance, and a presence that announces itself before you even open the door." },
+    { id: "car7", name: "Lamborghini Huracán EVO",     brand: "Lamborghini",priceRange: "$250,000+",      subFilter: ["sports","grail"],          emoji: "🏎️", imageQuery: "Lamborghini Huracan yellow supercar", description: "The car that makes people stop and stare every single time. No apologies, no compromises." },
+    { id: "car8", name: "Porsche Taycan Turbo S",      brand: "Porsche",  priceRange: "$185,000+",        subFilter: ["sports","ev"],             emoji: "⚡", imageQuery: "Porsche Taycan Turbo S electric car", description: "0–60 in 2.6 seconds with zero emissions. The car that proved electric performance could be this good." },
+    { id: "car9", name: "Track Day Experience",        brand: "Various",  priceRange: "$300–$1,500",      subFilter: ["experience"],              emoji: "🏁", imageQuery: "track day driving experience supercar circuit", description: "An afternoon on a closed circuit in something fast. The experience that recalibrates what driving means." },
+    { id: "car10",name: "Vintage Porsche 356",         brand: "Porsche",  priceRange: "$80,000–$200,000", subFilter: ["classic","grail"],         emoji: "🚗", imageQuery: "vintage Porsche 356 classic car", description: "The original. Before 911, there was 356. A piece of automotive history you can actually drive." },
+  ],
+  experiences: [
+    { id: "ex1", name: "Safari in the Serengeti",      brand: "Tanzania", priceRange: "$5,000–$15,000",   subFilter: ["nature","bucket-list"],   emoji: "🦁", imageQuery: "giraffes and lions safari Africa", description: "Dawn game drives, golden light, and the most alive you will ever feel. The trip that changes your frame of reference." },
+    { id: "ex2", name: "Northern Lights in Iceland",   brand: "Iceland",  priceRange: "$2,000–$5,000",    subFilter: ["nature","bucket-list"],   emoji: "🌌", imageQuery: "northern lights aurora borealis green sky stars", description: "Standing under a sky that looks like a painting. One of the few things that genuinely exceeds the photographs." },
+    { id: "ex3", name: "Tokyo Food Trip",              brand: "Japan",    priceRange: "$3,000–$6,000",    subFilter: ["food","city"],            emoji: "🍜", imageQuery: "Tokyo sushi omakase Japan chef counter", description: "The best food city on earth, by a wide margin. Every meal a discovery, every neighbourhood a different world." },
+    { id: "ex4", name: "Amalfi Coast Road Trip",       brand: "Italy",    priceRange: "$4,000–$8,000",    subFilter: ["road-trip","bucket-list"],emoji: "🛣️", imageQuery: "Amalfi Coast Italy village cliffs turquoise water", description: "Narrow roads, blue water, and the most dramatic coastline in Europe. The drive you plan for years." },
+    { id: "ex5", name: "Michelin Star Dinner",         brand: "Various",  priceRange: "$200–$800",        subFilter: ["food","luxury"],          emoji: "⭐", imageQuery: "Michelin star restaurant fine dining", description: "A meal that takes three hours and stays with you for years. The best argument for spending money on experiences." },
+    { id: "ex6", name: "Private Chef Dinner at Home",  brand: "Various",  priceRange: "$400–$1,500",      subFilter: ["food","luxury"],          emoji: "🍽️", imageQuery: "private chef dinner home table", description: "Your own kitchen, a professional chef, and a table of the people you love. A celebration that feels entirely yours." },
+    { id: "ex7", name: "New Year's Eve in NYC",        brand: "New York", priceRange: "$1,000–$5,000",    subFilter: ["city","bucket-list"],     emoji: "🎆", imageQuery: "New York Times Square New Year's Eve celebration", description: "The city that made New Year's Eve what it is. Once is enough. Once is everything." },
+    { id: "ex8", name: "Napa Valley Harvest Weekend",  brand: "California",priceRange: "$1,500–$4,000",   subFilter: ["food","nature"],          emoji: "🍇", imageQuery: "Napa Valley vineyard harvest autumn wine", description: "September in wine country — crush season, barrel tastings, and tables set among the vines." },
+    { id: "ex9", name: "Hot Air Balloon over Cappadocia", brand: "Turkey",priceRange: "$200–$400",        subFilter: ["nature","bucket-list"],   emoji: "🎈", imageQuery: "hot air balloon Cappadocia Turkey sunrise", description: "Dozens of balloons rising over fairy chimneys at sunrise. One of the most photographed mornings on earth, for good reason." },
+    { id: "ex10",name: "Coachella Weekend",            brand: "Various",  priceRange: "$500–$2,000",      subFilter: ["city","music"],           emoji: "🎵", image: "https://source.unsplash.com/featured/?coachella,music,festival,crowd,lights,concert", imageQuery: "Coachella music festival desert night lights", description: "Music, desert air, and the feeling that everything is possible. The festival worth planning a year ahead for." },
+  ],
+  home: [
+    { id: "hm1", name: "Parachute Linen Sheet Set",    brand: "Parachute", priceRange: "$200–$350",        subFilter: ["bedroom","textiles"],     emoji: "🛏️", imageQuery: "Parachute linen sheets bed natural light", description: "The sheets that make every morning feel like a slow one. Softer every time you wash them." },
+    { id: "hm2", name: "Aesop Aromatique Candle",      brand: "Aesop",     priceRange: "$80–$110",         subFilter: ["scent","living"],         emoji: "🕯️", imageQuery: "Aesop candle warm interior minimal", description: "Botanical and medicinal. The candle that makes a room smell like somewhere you want to stay." },
+    { id: "hm3", name: "Le Labo Santal 33",            brand: "Le Labo",   priceRange: "$220–$320",        subFilter: ["scent","fragrance"],      emoji: "🌿", imageQuery: "Le Labo Santal 33 perfume bottle", description: "The fragrance everyone recognises and no one admits to wearing. Woody, leathery, and completely addictive." },
+    { id: "hm4", name: "Restoration Hardware Cloud Sofa", brand: "RH",    priceRange: "$3,000–$8,000",    subFilter: ["living","statement"],     emoji: "🛋️", imageQuery: "RH cloud sofa living room linen", description: "The sofa people build rooms around. Deep enough to disappear into, beautiful enough to anchor everything else." },
+    { id: "hm5", name: "Hay Palissade Lounge Chair",   brand: "Hay",       priceRange: "$500–$700",        subFilter: ["living","statement"],     emoji: "🪑", imageQuery: "Hay outdoor lounge chair design", description: "Scandinavian outdoor design that looks as considered inside as out." },
+    { id: "hm6", name: "Byredo Gypsy Water",           brand: "Byredo",    priceRange: "$200–$280",        subFilter: ["scent","fragrance"],      emoji: "🌿", imageQuery: "Byredo perfume bottle minimal", description: "Bergamot, pine needles, vanilla. The scent of a campfire you went to in your twenties that you haven't stopped thinking about." },
+    { id: "hm7", name: "Gallery Wall Curation",        brand: "Various",   priceRange: "$500–$3,000",      subFilter: ["art","living"],           emoji: "🖼️", imageQuery: "gallery wall art prints home interior", description: "A wall that says something about you. The collection you build slowly and never quite finish." },
+    { id: "hm8", name: "Sonos Era 300",                brand: "Sonos",     priceRange: "$449",             subFilter: ["audio","living"],         emoji: "🔊", imageQuery: "Sonos Era 300 speaker room", description: "Spatial audio in a form that actually looks right on a shelf. The room sounds different after." },
+  ],
+  wellness: [
+    { id: "wl1", name: "Eight Sleep Pod 4",            brand: "Eight Sleep",priceRange: "$2,295–$3,295",   subFilter: ["sleep","recovery"],       emoji: "🛏️", imageQuery: "Eight Sleep Pod smart mattress cover", description: "Temperature-regulated sleep. The upgrade that makes everything else in your health stack perform better." },
+    { id: "wl2", name: "Oura Ring Gen 4",              brand: "Oura",      priceRange: "$349–$499",        subFilter: ["tracking","sleep"],       emoji: "💍", imageQuery: "Oura Ring health tracker hand", description: "The ring that knows your readiness before you do. Subtle, accurate, and actually changes how you manage your days." },
+    { id: "wl3", name: "Theragun Pro",                 brand: "Therabody", priceRange: "$399–$499",        subFilter: ["recovery","training"],    emoji: "💪", imageQuery: "Theragun Pro massage gun recovery", description: "Deep tissue percussion you actually use. The recovery tool that earns its counter space." },
+    { id: "wl4", name: "Clearlight Sanctuary Sauna",  brand: "Clearlight",priceRange: "$4,000–$6,000",    subFilter: ["sauna","recovery"],       emoji: "🧖", imageQuery: "home infrared sauna wood cedar interior", description: "An infrared sauna that fits in a spare corner. Twenty minutes in, and you remember what relaxed feels like." },
+    { id: "wl5", name: "Joov Red Light Panel",        brand: "Joovv",     priceRange: "$600–$1,200",      subFilter: ["recovery","tracking"],    emoji: "🔴", imageQuery: "red light therapy panel wellness", description: "Ten minutes of red and near-infrared light. The longevity routine that's now standard in performance circles." },
+    { id: "wl6", name: "Whoop 4.0 Membership",        brand: "Whoop",     priceRange: "$239/yr",          subFilter: ["tracking","sleep"],       emoji: "⌚", imageQuery: "Whoop fitness tracker wrist", description: "No screen, no distraction — just strain, recovery, and sleep data that quietly rewires your habits." },
+    { id: "wl7", name: "Hyperice Normatec 3 Legs",    brand: "Hyperice",  priceRange: "$699",             subFilter: ["recovery"],               emoji: "🦵", imageQuery: "Normatec compression boots recovery", description: "The compression boots serious athletes use post-run. You feel the difference the next morning." },
+  ],
+  coffee: [
+    { id: "cf1", name: "La Marzocco Linea Mini",       brand: "La Marzocco",priceRange: "$4,500–$5,500",   subFilter: ["espresso","machine"],     emoji: "☕", imageQuery: "La Marzocco Linea Mini espresso home", description: "The machine baristas dream of putting in their kitchen. Commercial quality, counter-sized, completely worth it." },
+    { id: "cf2", name: "Niche Zero Grinder",           brand: "Niche",     priceRange: "$700–$800",        subFilter: ["espresso","grinder"],     emoji: "⚙️", imageQuery: "Niche Zero coffee grinder single dose", description: "Single-dose, zero retention, beautiful on the counter. The grinder that changed what home espresso could taste like." },
+    { id: "cf3", name: "Fellow Stagg EKG Kettle",      brand: "Fellow",    priceRange: "$165–$199",        subFilter: ["pour-over","gear"],       emoji: "🫖", imageQuery: "Fellow Stagg EKG kettle pour over coffee", description: "Precision temperature, a slow gooseneck pour, and the ritual that makes mornings worth waking up for." },
+    { id: "cf4", name: "Arlo Blanco Pour-Over Set",    brand: "Fellow",    priceRange: "$85–$120",         subFilter: ["pour-over","gear"],       emoji: "☕", imageQuery: "pour over coffee dripper ceramic morning", description: "The slow-coffee setup for the kind of morning where you have nowhere to be for twenty minutes." },
+    { id: "cf5", name: "Breville Oracle Touch",        brand: "Breville",  priceRange: "$1,500–$1,800",    subFilter: ["espresso","machine"],     emoji: "☕", imageQuery: "Breville Oracle Touch espresso machine", description: "Auto-grind, auto-tamp, auto-steam. The machine for people who want La Marzocco results with fewer variables." },
+    { id: "cf6", name: "Coffee Origin Trip",           brand: "Various",   priceRange: "$500–$2,000",      subFilter: ["experience"],             emoji: "✈️", imageQuery: "coffee farm Ethiopia Colombia origin", description: "Ethiopia, Colombia, Costa Rica — visiting a farm changes how you drink coffee for the rest of your life." },
+    { id: "cf7", name: "Acaia Pearl Scale",            brand: "Acaia",     priceRange: "$150–$200",        subFilter: ["pour-over","espresso","gear"], emoji: "⚖️", imageQuery: "Acaia coffee scale precision", description: "The scale coffee obsessives swear by. Real-time flow rate, Bluetooth logging, and enough precision to finally dial in your shot." },
+  ],
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+function shuffleArray(arr) {
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+function getAllCuratedItemsShuffled() {
+  const buckets = shuffleArray(Object.entries(CURATED_ITEMS)).map(([categoryId, categoryItems]) => {
+    const cat = getDreamShelfCategoryMeta(categoryId);
+    return {
+      categoryId,
+      items: shuffleArray(categoryItems.map(item => ({
+        ...item,
+        category: categoryId,
+        emoji: item.emoji || cat.emoji,
+        preferResolvedImage: true,
+        image: "",
+      }))),
+    };
+  });
+
+  const mixed = [];
+  while (buckets.some(bucket => bucket.items.length > 0)) {
+    shuffleArray(buckets.filter(bucket => bucket.items.length > 0)).forEach(bucket => {
+      const next = bucket.items.shift();
+      if (next) mixed.push(next);
+    });
+  }
+  return mixed;
+}
+
 function getCuratedDreamShelfMatches(query = "") {
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
   if (!terms.length) return [];
@@ -476,6 +662,7 @@ function itemMatchesSubFilter(categoryId, item, subId) {
       iconic: () => has("chanel", "hermes", "birkin", "kelly", "louis vuitton", "prada"),
     },
     jewelry: {
+      mens: () => filters.includes("mens") || has("signet", "cuban", "chevron", "chain", "yurman"),
       everyday: () => filters.includes("everyday") || has("tiffany", "love bracelet", "alhambra"),
       devotion: () => has("love", "diamond", "anniversary", "solitaire", "band"),
       heirloom: () => has("mikimoto", "harry winston", "diamond", "pearl", "bvlgari"),
@@ -484,10 +671,10 @@ function itemMatchesSubFilter(categoryId, item, subId) {
     },
     golf: {
       golf: () => filters.includes("golf") || has("golf", "putter", "driver", "iron", "pebble", "scotty", "taylormade", "titleist", "footjoy", "vokey", "bushnell", "vessel", "pinehurst", "bandon", "masters"),
-      tennis: () => filters.includes("tennis") || has("tennis", "wilson", "pro staff", "us open"),
-      pickleball: () => filters.includes("pickleball") || has("pickleball", "selkirk"),
-      running: () => filters.includes("running") || has("run", "running", "marathon", "forerunner"),
-      cycling: () => filters.includes("cycling") || has("cycling", "bike", "peloton"),
+      tennis: () => filters.includes("tennis") || has("tennis", "wilson", "pro staff", "babolat", "pure aero", "vapor pro", "spinshot", "wimbledon", "us open"),
+      pickleball: () => filters.includes("pickleball") || has("pickleball", "selkirk", "joola", "ben johns", "hyperion"),
+      running: () => filters.includes("running") || has("run", "running", "marathon", "forerunner", "alphafly", "hoka", "clifton", "speedgoat", "salomon", "vest"),
+      cycling: () => filters.includes("cycling") || has("cycling", "bike", "peloton", "cervélo", "cervelo", "canyon", "aeroad", "wahoo", "kickr", "rapha", "zipp", "tour de france", "trek", "domane"),
       training: () => filters.includes("training") || has("training", "lesson", "fitting", "rangefinder", "launch monitor", "garmin", "forerunner", "peloton"),
       events: () => filters.includes("events") || has("pebble", "pinehurst", "bandon", "masters", "us open", "half marathon", "formula 1", "f1", "grand prix", "nba", "courtside"),
     },
@@ -496,6 +683,12 @@ function itemMatchesSubFilter(categoryId, item, subId) {
       grail: () => filters.includes("grail") || has("jordan", "sacai", "silver bullet"),
       classic: () => has("jordan", "samba", "air max", "achilles", "dunk"),
       collab: () => filters.includes("collab") || has("sacai", "aime leon dore"),
+    },
+    heels: {
+      classic: () => has("manolo", "louboutin", "gianvito", "sergio rossi", "bottega"),
+      party: () => filters.includes("party") || has("louboutin", "saint laurent", "opyum", "aquazzura", "jimmy choo"),
+      everyday: () => has("bottega", "gianvito", "sergio rossi"),
+      grail: () => filters.includes("grail") || has("manolo", "louboutin", "saint laurent"),
     },
     hobbies: {
       creative: () => has("guitar", "camera", "piano", "screen print", "art", "hasselblad", "leica", "fender", "gibson", "warhol"),
@@ -521,12 +714,56 @@ function itemMatchesSubFilter(categoryId, item, subId) {
       tequila: () => filters.includes("tequila") || has("clase azul", "don julio", "tequila"),
       cognac: () => filters.includes("cognac") || has("louis xiii", "cognac", "rémy", "remy"),
     },
+    cars: {
+      sports: () => filters.includes("sports") || has("porsche", "ferrari", "bmw", "mclaren", "amg", "lamborghini", "taycan", "911", "m3"),
+      luxury: () => filters.includes("luxury") || has("range rover", "mercedes", "amg", "rolls"),
+      suv: () => filters.includes("suv") || has("range rover", "suv"),
+      ev: () => filters.includes("ev") || has("taycan", "electric", "tesla"),
+      classic: () => filters.includes("classic") || has("356", "vintage", "classic"),
+      grail: () => filters.includes("grail") || has("ferrari", "lamborghini", "mclaren", "porsche 911", "911", "taycan"),
+      experience: () => filters.includes("experience") || has("track", "circuit", "day"),
+      attainable: () => filters.includes("attainable") || has("bmw", "m3"),
+    },
+    experiences: {
+      "bucket-list": () => filters.includes("bucket-list") || has("serengeti", "northern lights", "aurora", "amalfi", "cappadocia", "nyc", "new year"),
+      nature: () => filters.includes("nature") || has("safari", "northern lights", "balloon", "cappadocia", "napa", "harvest"),
+      food: () => filters.includes("food") || has("tokyo", "michelin", "chef", "dinner", "napa", "wine"),
+      city: () => filters.includes("city") || has("tokyo", "nyc", "new york", "coachella"),
+      "road-trip": () => filters.includes("road-trip") || has("amalfi", "road trip", "coast", "drive"),
+      music: () => filters.includes("music") || has("coachella", "festival", "music"),
+      luxury: () => filters.includes("luxury") || has("michelin", "private chef", "chef", "star"),
+    },
     adventure: {
       mountain: () => has("ski", "snowboard", "jacket", "mountain", "snow"),
       climb: () => filters.includes("climb") || has("climb", "carabiner", "arc'teryx"),
       ride: () => filters.includes("bike") || has("bike", "cycling", "trek", "ride"),
       water: () => filters.includes("water") || has("kayak", "water"),
       gear: () => has("duffel", "jacket", "watch", "garmin", "bag"),
+    },
+    home: {
+      bedroom: () => filters.includes("bedroom") || has("sheet", "linen", "parachute", "sleep"),
+      living: () => filters.includes("living") || has("sofa", "chair", "speaker", "sonos", "hay", "rh", "restoration", "peloton"),
+      scent: () => filters.includes("scent") || has("candle", "aesop", "le labo", "byredo", "fragrance", "santal"),
+      fragrance: () => filters.includes("fragrance") || has("le labo", "byredo", "perfume", "scent", "santal", "gypsy"),
+      audio: () => filters.includes("audio") || has("sonos", "speaker", "audio"),
+      art: () => filters.includes("art") || has("art", "gallery", "print", "wall"),
+      statement: () => filters.includes("statement") || has("sofa", "chair", "rh", "restoration", "hay"),
+      textiles: () => filters.includes("textiles") || has("sheet", "linen", "parachute"),
+    },
+    wellness: {
+      sleep: () => filters.includes("sleep") || has("sleep", "eight sleep", "oura", "pod"),
+      recovery: () => filters.includes("recovery") || has("theragun", "normatec", "sauna", "red light", "joovv", "hyperice", "compression"),
+      tracking: () => filters.includes("tracking") || has("oura", "whoop", "ring", "tracker"),
+      sauna: () => filters.includes("sauna") || has("sauna", "infrared", "clearlight"),
+      training: () => filters.includes("training") || has("theragun", "normatec", "hyperice"),
+    },
+    coffee: {
+      espresso: () => filters.includes("espresso") || has("espresso", "la marzocco", "breville", "linea", "oracle", "niche", "grinder"),
+      "pour-over": () => filters.includes("pour-over") || has("pour over", "kettle", "stagg", "fellow", "dripper"),
+      grinder: () => filters.includes("grinder") || has("grinder", "niche", "zero"),
+      machine: () => filters.includes("machine") || has("machine", "la marzocco", "breville", "oracle", "linea"),
+      gear: () => filters.includes("gear") || has("kettle", "scale", "acaia", "fellow", "gear"),
+      experience: () => filters.includes("experience") || has("origin", "trip", "farm", "ethiopia", "colombia"),
     },
   };
   return Boolean(matchers[categoryId]?.[subId]?.());
@@ -1046,7 +1283,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
     categoryLoadIdRef.current += 1;
-    setItems([]);
+    setItems(getAllCuratedItemsShuffled());
     setLoading(false);
   }, []);
 
@@ -1083,23 +1320,13 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     if (!query) return "";
 
     const request = (async () => {
+      let imageUrl = "";
       try {
-        let imageUrl = "";
-        if (item?.preferResolvedImage) {
-          const productResponse = await fetch(`/api/product-search?q=${encodeURIComponent(query)}`);
-          if (productResponse.ok) {
-            const productData = await productResponse.json();
-            const productResult = normalizeSearchItems(productData.items || [], query).find(result => result?.image);
-            imageUrl = productResult?.image || "";
-          }
-        }
-        if (!imageUrl) {
-          const response = await fetch(`/api/google-image-search?query=${encodeURIComponent(query)}&num=1`);
-          if (!response.ok) return "";
-          const data = await response.json();
-          const result = data?.results?.[0];
-          imageUrl = result?.displayUrl || result?.thumbnail || result?.url || "";
-        }
+        const response = await fetch(`/api/google-image-search?query=${encodeURIComponent(query)}&num=1`);
+        if (!response.ok) return "";
+        const data = await response.json();
+        const result = data?.results?.[0];
+        imageUrl = result?.displayUrl || result?.thumbnail || result?.url || "";
         if (!imageUrl) return "";
 
         setItemImages(prev => {
@@ -1120,7 +1347,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
     imageRequestsRef.current.set(key, request);
     return request;
-  }, [normalizeSearchItems]);
+  }, []);
 
   const buildManualSearchItem = useCallback(async (query) => {
     const category = inferDreamShelfCategory(query);
@@ -1167,7 +1394,10 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
       const response = await fetch(`/api/product-search?q=${encodeURIComponent(query)}`);
       if (response.ok) {
         const data = await response.json();
-        const results = normalizeSearchItems(data.items || [], query);
+        const productItems = Array.isArray(data)
+          ? data
+          : (data?.items || data?.results || data?.products || []);
+        const results = normalizeSearchItems(productItems, query);
         if (results.length) {
           if (requestId !== searchRequestIdRef.current) return;
           setSearchResults(results);
@@ -1231,7 +1461,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
   useEffect(() => {
     const imageTargets = [
-      ...items.slice(0, 24),
+      ...items.slice(0, 48),
       ...searchResults.slice(0, 8),
       featuredPost,
       ...communityPosts.slice(0, 8),
@@ -1248,7 +1478,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         loadWorld(activeWorld);
       } else {
         categoryLoadIdRef.current += 1;
-        setItems([]);
+        setItems(getAllCuratedItemsShuffled());
         setLoading(false);
       }
       return;
@@ -1391,7 +1621,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
               Someday
             </h1>
             <p className="text-sm leading-relaxed max-w-xs" style={{ color: dm ? "rgba(250,246,240,0.55)" : STONE, letterSpacing: '0.01em' }}>
-              Some dreams take you somewhere. Others you take with you.
+              Every life is built twice—first in thought.
             </p>
           </div>
         </div>
@@ -1423,16 +1653,6 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
               style={{ background: 'transparent', border: `1px solid ${AMBER_BORDER}`, color: dm ? AMBER : AMBER_DARK }}
             >
               {searching ? "Finding..." : "Find it"}
-            </button>
-          </div>
-          <div className="flex items-center justify-end gap-3 px-1 pt-2">
-            <button
-              type="button"
-              onClick={() => setSharingItem({ name: searchQuery.trim(), brand: "", image: "", priceRange: "", category: inferDreamShelfCategory(searchQuery), description: "" })}
-              className="dream-shelf-pill flex-shrink-0 text-sm font-bold"
-              style={{ color: TEAL }}
-            >
-              Add manually
             </button>
           </div>
           {searchError && (
