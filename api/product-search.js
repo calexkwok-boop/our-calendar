@@ -59,6 +59,13 @@ function normalizeImageItem(item = {}, index = 0, query = "") {
   };
 }
 
+function getGoogleImageConfig() {
+  return {
+    key: process.env.GOOGLE_SEARCH_KEY || process.env.GOOGLE_API_KEY || process.env.GOOGLE_CUSTOM_SEARCH_KEY || process.env.GOOGLE_CUSTOM_SEARCH_API_KEY,
+    cx: process.env.GOOGLE_SEARCH_CX || process.env.GOOGLE_CSE_ID || process.env.GOOGLE_CUSTOM_SEARCH_CX || process.env.GOOGLE_CUSTOM_SEARCH_ENGINE_ID,
+  };
+}
+
 async function fetchSerpApi(query) {
   const key = process.env.SERPAPI_KEY;
   if (!key) return null;
@@ -88,8 +95,7 @@ async function fetchSearchApi(query) {
 }
 
 async function fetchGoogleImages(query) {
-  const key = process.env.GOOGLE_SEARCH_KEY || process.env.GOOGLE_API_KEY;
-  const cx = process.env.GOOGLE_SEARCH_CX;
+  const { key, cx } = getGoogleImageConfig();
   if (!key || !cx) return null;
 
   const url = new URL("https://www.googleapis.com/customsearch/v1");
@@ -99,7 +105,7 @@ async function fetchGoogleImages(query) {
   url.searchParams.set("safe", "active");
   url.searchParams.set("num", "5");
   url.searchParams.set("imgSize", "large");
-  url.searchParams.set("q", `${query} luxury product`);
+  url.searchParams.set("q", query);
 
   const response = await fetch(url.toString());
   const data = await response.json();

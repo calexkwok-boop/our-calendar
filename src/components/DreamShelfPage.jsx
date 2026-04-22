@@ -567,7 +567,7 @@ function getAllCuratedItemsShuffled() {
         category: categoryId,
         emoji: item.emoji || cat.emoji,
         preferResolvedImage: true,
-        image: "",
+        image: item.image || "",
       }))),
     };
   });
@@ -594,7 +594,7 @@ function getCuratedDreamShelfMatches(query = "") {
         category,
         emoji: item.emoji || cat.emoji,
         preferResolvedImage: true,
-        image: "",
+        image: item.image || "",
       };
     }))
     .map(item => {
@@ -1244,7 +1244,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
       ...item,
       category: cat.id,
       preferResolvedImage: true,
-      image: "",
+      image: item.image || "",
     }));
     const filtered = subFilter === "all"
       ? allItems
@@ -1269,7 +1269,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         category: cat.id,
         emoji: item.emoji || cat.emoji,
         preferResolvedImage: true,
-        image: "",
+        image: item.image || "",
       }));
     });
     setTimeout(() => {

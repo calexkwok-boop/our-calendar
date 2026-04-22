@@ -9,8 +9,8 @@
  */
 
 export default async function handler(req, res) {
-  const key = process.env.GOOGLE_SEARCH_KEY || process.env.GOOGLE_API_KEY;
-  const cx = process.env.GOOGLE_SEARCH_CX;
+  const key = process.env.GOOGLE_SEARCH_KEY || process.env.GOOGLE_API_KEY || process.env.GOOGLE_CUSTOM_SEARCH_KEY || process.env.GOOGLE_CUSTOM_SEARCH_API_KEY;
+  const cx = process.env.GOOGLE_SEARCH_CX || process.env.GOOGLE_CSE_ID || process.env.GOOGLE_CUSTOM_SEARCH_CX || process.env.GOOGLE_CUSTOM_SEARCH_ENGINE_ID;
   const { query = "", num = "1" } = req.query;
   const term = String(query).trim();
   const resultCount = Math.max(1, Math.min(Number(num) || 1, 5));
