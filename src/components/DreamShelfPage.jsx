@@ -1320,9 +1320,9 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     if (!query) return "";
 
     const request = (async () => {
-      try {
-        let imageUrl = "";
-        if (item?.preferResolvedImage) {
+      let imageUrl = "";
+      if (item?.preferResolvedImage) {
+        try {
           const productResponse = await fetch(`/api/product-search?q=${encodeURIComponent(query)}`);
           if (productResponse.ok) {
             const productData = await productResponse.json();
@@ -1332,7 +1332,12 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
             const productResult = normalizeSearchItems(productItems, query).find(result => result?.image);
             imageUrl = productResult?.image || "";
           }
+        } catch {
+          imageUrl = "";
         }
+      }
+
+      try {
         if (!imageUrl) {
           const response = await fetch(`/api/google-image-search?query=${encodeURIComponent(query)}&num=1`);
           if (!response.ok) return "";
@@ -1407,7 +1412,10 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
       const response = await fetch(`/api/product-search?q=${encodeURIComponent(query)}`);
       if (response.ok) {
         const data = await response.json();
-        const results = normalizeSearchItems(data.items || [], query);
+        const productItems = Array.isArray(data)
+          ? data
+          : (data?.items || data?.results || data?.products || []);
+        const results = normalizeSearchItems(productItems, query);
         if (results.length) {
           if (requestId !== searchRequestIdRef.current) return;
           setSearchResults(results);
