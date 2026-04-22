@@ -27861,7 +27861,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
 {selectedPopupEventPanelId && renderJourneyPortal((
   <div
-    className="fixed inset-0 z-50 bg-black/50 p-3 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center"
+    className="fixed inset-0 z-[10002] bg-black/50 p-3 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center"
     onClick={() => {
       setSelectedPopupEventPanelId(null);
       clearPopupQueryParam();

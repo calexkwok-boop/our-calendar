@@ -1733,13 +1733,14 @@ export default function PopupEventPanel({
     height: '100%',
     display: 'flex',
     flexDirection: 'column',
+    fontFamily: "'Caveat', cursive",
   };
   const headerStyle = {
-    background: `linear-gradient(135deg, ${weEventPanelTheme.headerFrom} 0%, ${weEventPanelTheme.headerTo} 100%)`,
-    padding: '18px 20px 16px',
     position: 'relative',
-    overflow: 'hidden',
     flexShrink: 0,
+    borderBottom: `1px solid ${darkMode ? weEventPanelTheme.borderDark : weEventPanelTheme.borderLight}`,
+    background: darkMode ? 'rgba(15,23,42,0.98)' : '#fff',
+    padding: '20px 20px 16px',
   };
 
   if (loading) return (
@@ -1825,68 +1826,92 @@ export default function PopupEventPanel({
     : null;
 
   return (
-    <div style={panelStyle}>
+    <div style={panelStyle} id="popup-event-panel-root">
+      <style>{`#popup-event-panel-root, #popup-event-panel-root * { font-family: 'Caveat', cursive !important; }`}</style>
       {/* Header */}
       <div style={headerStyle}>
+        {/* Thin gradient bar at top */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: `linear-gradient(90deg, ${weEventPanelTheme.headerFrom}, ${weEventPanelTheme.headerTo})` }} />
         {isSportsPopupEvent ? <CourtBg /> : null}
-        <div style={{ position: 'relative' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div style={{ flex: 1, minWidth: 0, paddingRight: 36 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-                {isSportsPopupEvent ? <StatusBadge status={event.status} /> : null}
-                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'rgba(255,255,255,0.2)', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  {event.is_public ? <Globe style={{ width: 10, height: 10 }} /> : <Lock style={{ width: 10, height: 10 }} />}
-                  {event.is_public ? 'Public' : 'Private'}
-                </span>
-                {!isSportsPopupEvent ? (
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'rgba(255,255,255,0.18)', color: '#fff' }}>
-                    {popupEventCardCategory.charAt(0).toUpperCase() + popupEventCardCategory.slice(1)}
-                  </span>
-                ) : null}
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.2, marginBottom: 4 }}>{event.title}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Calendar style={{ width: 11, height: 11 }} />{formatDateKeyMMDDYYYY?.(event.date) || event.date}</span>
-                {event.time && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Clock style={{ width: 11, height: 11 }} />{formatTime?.(event.time) || event.time}</span>}
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Users style={{ width: 11, height: 11 }} />{formatPopupCapacityLabel(memberCount, event.max_players, attendeeLabel)}</span>
-              </div>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {/* Badges */}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+              <span style={{ background: `linear-gradient(90deg, ${weEventPanelTheme.headerFrom}, ${weEventPanelTheme.headerTo})`, color: '#fff', fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 999 }}>
+                {popupEventCardCategory.charAt(0).toUpperCase() + popupEventCardCategory.slice(1)}
+              </span>
+              <span style={{ background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', color: secondaryText, fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 999, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                {event.is_public ? <Globe style={{ width: 9, height: 9 }} /> : <Lock style={{ width: 9, height: 9 }} />}
+                {event.is_public ? 'Public' : 'Private'}
+              </span>
+              {isSportsPopupEvent ? <StatusBadge status={event.status} /> : null}
             </div>
-            <button onClick={(e) => { e.stopPropagation(); onClose?.(); }} style={{ position: 'absolute', top: 0, right: 0, background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 10, padding: 6, cursor: 'pointer' }}>
-              <X style={{ width: 16, height: 16, color: '#111' }} />
-            </button>
+            {/* Title */}
+            <div style={{ fontSize: 24, fontWeight: 900, color: primaryText, letterSpacing: '-0.01em', lineHeight: 1.2, marginBottom: 8 }}>{event.title}</div>
+            {/* Meta row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 12, color: secondaryText, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Calendar style={{ width: 11, height: 11 }} />{formatDateKeyMMDDYYYY?.(event.date) || event.date}
+              </span>
+              {event.time && (
+                <span style={{ fontSize: 12, color: secondaryText, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Clock style={{ width: 11, height: 11 }} />{formatTime?.(event.time) || event.time}
+                </span>
+              )}
+              <span style={{ fontSize: 12, color: secondaryText, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Users style={{ width: 11, height: 11 }} />{formatPopupCapacityLabel(memberCount, event.max_players, attendeeLabel)}
+              </span>
+            </div>
+            {/* Capacity bar */}
+            <div style={{ height: 4, borderRadius: 999, background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)', marginTop: 10, overflow: 'hidden' }}>
+              <div style={{ height: '100%', borderRadius: 999, background: `linear-gradient(90deg, ${weEventPanelTheme.headerFrom}, ${weEventPanelTheme.headerTo})`, width: `${Math.min(100, (memberCount / (event.max_players || 1)) * 100)}%`, transition: 'width 0.5s' }} />
+            </div>
           </div>
-          <div style={{ height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.25)', overflow: 'hidden' }}>
-            <div style={{ height: '100%', borderRadius: 999, background: '#fff', width: `${Math.min(100, (memberCount / (event.max_players || 1)) * 100)}%`, transition: 'width 0.5s' }} />
-          </div>
+          <button onClick={(e) => { e.stopPropagation(); onClose?.(); }} style={{ flexShrink: 0, background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', border: 'none', borderRadius: 10, padding: 7, cursor: 'pointer', marginTop: 2 }}>
+            <X style={{ width: 15, height: 15, color: secondaryText, display: 'block' }} />
+          </button>
         </div>
       </div>
 
-      {/* Tab bar */}
+      {/* Tab bar — pill style */}
       <div
         style={{
           display: 'flex',
-          borderBottom: `1px solid ${border}`,
-          background: darkMode ? 'rgba(15,23,42,0.82)' : 'rgba(255,255,255,0.92)',
+          gap: 6,
+          padding: '10px 16px',
           overflowX: 'auto',
+          borderBottom: `1px solid ${darkMode ? weEventPanelTheme.borderDark : weEventPanelTheme.borderLight}`,
+          background: darkMode ? 'rgba(15,23,42,0.92)' : 'rgba(255,255,255,0.95)',
           position: 'sticky',
           top: 0,
           zIndex: 4,
           backdropFilter: 'blur(14px)',
           WebkitBackdropFilter: 'blur(14px)',
-          boxShadow: darkMode ? '0 8px 20px rgba(2,6,23,0.28)' : '0 8px 20px rgba(15,23,42,0.08)',
-          padding: '4px 8px 0',
+          scrollbarWidth: 'none',
         }}
       >
         {visibleTabs.map(({ id, label, emoji }) => (
-          <button key={id} onClick={() => setScreen(id)}
-            style={{ flex: 1, minWidth: 56, padding: '12px 8px 10px', fontSize: 11, fontWeight: 900, cursor: 'pointer', border: 'none',
-              background: activeScreen === id ? activeTabBackground : 'transparent',
-              color: activeScreen === id ? activeTabText : secondaryText,
-              borderBottom: activeScreen === id ? `2px solid ${activeTabBorder}` : '2px solid transparent', transition: 'all 0.15s', whiteSpace: 'nowrap',
-              borderTopLeftRadius: 12, borderTopRightRadius: 12,
-              boxShadow: activeScreen === id
-                ? (darkMode ? `0 10px 24px ${hexToRgba(accent, 0.18)}` : `0 10px 22px ${hexToRgba(accent, 0.1)}`)
-                : 'none' }}>
+          <button
+            key={id}
+            onClick={() => setScreen(id)}
+            style={{
+              flexShrink: 0,
+              padding: '6px 14px',
+              borderRadius: 999,
+              border: 'none',
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.15s',
+              fontFamily: "'Caveat', cursive",
+              background: activeScreen === id
+                ? `linear-gradient(90deg, ${weEventPanelTheme.headerFrom}, ${weEventPanelTheme.headerTo})`
+                : darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)',
+              color: activeScreen === id ? '#fff' : secondaryText,
+              boxShadow: activeScreen === id ? `0 4px 12px ${hexToRgba(accent, 0.28)}` : 'none',
+            }}
+          >
             {emoji} {label}
           </button>
         ))}
