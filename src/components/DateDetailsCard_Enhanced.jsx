@@ -783,74 +783,104 @@ export default function DateDetailsCardEnhanced({
 
                   if (weEventBadge) {
                     return (
-                      <div
-                        key={event.id}
-                        className="cursor-pointer rounded-2xl border-2 border-rose-200 bg-gradient-to-br from-rose-50 to-pink-50 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg dark:border-rose-700 dark:from-rose-900/20 dark:to-pink-900/10"
-                        onClick={() => setSelectedPopupEventPanelId?.(String(event.id || ''))}
-                      >
-                        <div className="mb-3 flex items-start justify-between">
-                          <div className="flex-1 pr-4">
-                            <div className="mb-1 flex items-center gap-2">
-                              <h4 className={`text-base font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{event.title}</h4>
-                              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${weEventBadge.className}`}>{weEventBadge.label}</span>
-                            </div>
-                            <div className={`flex items-center gap-2 text-sm ${mutedText}`}>
-                              {event.time ? (
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-3.5 w-3.5" />
-                                  {formatTime(event.time)}
-                                </span>
-                              ) : null}
-                              <span className="flex items-center gap-1">
-                                <User className="h-3.5 w-3.5" />
-                                {popupSignups.length}{popupMeta ? (popupNoMax ? ' joined' : `/${popupMeta.maxPeople} spots`) : ' invited'}
-                              </span>
-                            </div>
-                            {event.location ? (
-                              <button
-                                type="button"
-                                className="mt-1 flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400"
-                                onClick={(clickEvent) => {
-                                  clickEvent.stopPropagation();
-                                  handleLocationLinkClick(clickEvent, event.location);
-                                }}
-                              >
-                                📍 {event.location}
-                              </button>
-                            ) : null}
-                          </div>
-
-                          {popupJoined ? (
+                      <div key={event.id} className="relative overflow-hidden rounded-2xl">
+                        {canDeleteThisEvent ? (
+                          <div className={`absolute inset-y-0 right-0 z-20 flex w-[88px] items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500 pointer-events-auto' : 'bg-transparent pointer-events-none'}`}>
                             <button
                               type="button"
-                              className="whitespace-nowrap rounded-lg border-2 bg-white px-4 py-2 text-sm font-semibold transition-all dark:bg-gray-800"
-                              style={{ borderColor: darkMode ? hexToRgba(accent, 0.5) : hexToRgba(accent, 0.35), color: accent }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteEvent(selectedDateKey, event.id, false, false, false);
+                              }}
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onTouchStart={(e) => e.stopPropagation()}
+                              className={`h-full w-full text-sm font-semibold transition-opacity ${isDeleteRevealed ? 'pointer-events-auto text-white opacity-100' : 'pointer-events-none text-transparent opacity-0'}`}
                             >
-                              ✓ Joined
+                              Delete
                             </button>
-                          ) : popupFull ? (
-                            <button type="button" disabled className="whitespace-nowrap rounded-lg bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-500 opacity-60 dark:bg-gray-700 dark:text-gray-500">
-                              Full
-                            </button>
-                          ) : (
-                            <button type="button" className="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all" style={themeAccentButtonStyle}>
-                              Join
-                            </button>
-                          )}
-                        </div>
-
-                        {popupSignups.length > 0 ? (
-                          <div className="flex flex-wrap items-center gap-1.5 border-t border-rose-200/50 pt-2 dark:border-rose-700/50">
-                            {popupSignups.slice(0, 4).map((signup) => (
-                              <span key={signup.userId} className="rounded-full border border-rose-200 bg-white px-2.5 py-1 text-xs font-medium text-rose-700 dark:border-rose-600 dark:bg-gray-800 dark:text-rose-300">
-                                {signup.displayName || 'Member'}
-                              </span>
-                            ))}
-                            {popupSignups.length > 4 ? (
-                              <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">+{popupSignups.length - 4} more</span>
-                            ) : null}
                           </div>
                         ) : null}
+
+                        <div
+                          className="relative z-10 cursor-pointer rounded-2xl border-2 border-rose-200 bg-gradient-to-br from-rose-50 to-pink-50 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg dark:border-rose-700 dark:from-rose-900/20 dark:to-pink-900/10"
+                          style={{ transform: `translateX(${rowOffset}px)`, transition: eventSwipeDrag.id === eventSwipeKey ? 'none' : 'transform 180ms ease', touchAction: 'pan-y' }}
+                          onClick={() => setSelectedPopupEventPanelId?.(String(event.id || ''))}
+                          onTouchStart={(e) => handleEventSwipeStart?.(e, eventSwipeKey, canDeleteThisEvent)}
+                          onTouchMove={handleEventSwipeMove}
+                          onTouchEnd={handleEventSwipeEnd}
+                          onTouchCancel={handleEventSwipeEnd}
+                          onPointerDown={(e) => startEventSwipeDrag?.(e, eventSwipeKey, canDeleteThisEvent)}
+                          onPointerMove={moveEventSwipeDrag}
+                          onPointerUp={endEventSwipeDrag}
+                          onPointerCancel={endEventSwipeDrag}
+                        >
+                          <div className="mb-3 flex items-start justify-between">
+                            <div className="flex-1 pr-4">
+                              <div className="mb-1 flex items-center gap-2">
+                                <h4 className={`text-base font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{event.title}</h4>
+                                <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${weEventBadge.className}`}>{weEventBadge.label}</span>
+                              </div>
+                              <div className={`flex items-center gap-2 text-sm ${mutedText}`}>
+                                {event.time ? (
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="h-3.5 w-3.5" />
+                                    {formatTime(event.time)}
+                                  </span>
+                                ) : null}
+                                <span className="flex items-center gap-1">
+                                  <User className="h-3.5 w-3.5" />
+                                  {popupSignups.length}{popupMeta ? (popupNoMax ? ' joined' : `/${popupMeta.maxPeople} spots`) : ' invited'}
+                                </span>
+                              </div>
+                              {event.location ? (
+                                <button
+                                  type="button"
+                                  className="mt-1 flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400"
+                                  onClick={(e) => { e.stopPropagation(); handleLocationLinkClick(e, event.location); }}
+                                >
+                                  📍 {event.location}
+                                </button>
+                              ) : null}
+                            </div>
+
+                            {popupJoined ? (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); leavePopupEvent?.(event.id); }}
+                                className="whitespace-nowrap rounded-lg border-2 bg-white px-4 py-2 text-sm font-semibold transition-all dark:bg-gray-800"
+                                style={{ borderColor: darkMode ? hexToRgba(accent, 0.5) : hexToRgba(accent, 0.35), color: accent }}
+                              >
+                                ✓ Joined
+                              </button>
+                            ) : popupFull ? (
+                              <button type="button" disabled className="whitespace-nowrap rounded-lg bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-500 opacity-60 dark:bg-gray-700 dark:text-gray-500">
+                                Full
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); joinPopupEvent?.(event.id); }}
+                                className="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all"
+                                style={themeAccentButtonStyle}
+                              >
+                                Join
+                              </button>
+                            )}
+                          </div>
+
+                          {popupSignups.length > 0 ? (
+                            <div className="flex flex-wrap items-center gap-1.5 border-t border-rose-200/50 pt-2 dark:border-rose-700/50">
+                              {popupSignups.slice(0, 4).map((signup) => (
+                                <span key={signup.userId} className="rounded-full border border-rose-200 bg-white px-2.5 py-1 text-xs font-medium text-rose-700 dark:border-rose-600 dark:bg-gray-800 dark:text-rose-300">
+                                  {signup.displayName || 'Member'}
+                                </span>
+                              ))}
+                              {popupSignups.length > 4 ? (
+                                <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">+{popupSignups.length - 4} more</span>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
                     );
                   }
