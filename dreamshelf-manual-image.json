@@ -1,0 +1,13 @@
+[
+  {
+    "id": "h12",
+    "name": "Vitamix Ascent A3500",
+    "brand": "Vitamix",
+    "imageQuery": "Vitamix blender countertop kitchen",
+    "query": "Vitamix blender countertop kitchen",
+    "currentImage": "",
+    "sourceImageUrl": "https://www.vitamix.com/us/en_us/products/media_cf7b1b7a0732b25592404b6342ae9bbac946514c.png?width=2000&format=webply&optimize=medium",
+    "cachedUrl": "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/h12-vitamix-ascent-a3500.avif",
+    "provider": "supabase"
+  }
+]

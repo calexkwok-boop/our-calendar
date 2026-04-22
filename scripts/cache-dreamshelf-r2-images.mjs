@@ -39,6 +39,9 @@ const LIMIT = Number(getArg("--limit", "0")) || Infinity;
 const ONLY_IDS = new Set(String(getArg("--ids", "")).split(",").map(value => value.trim()).filter(Boolean));
 const OUT_FILE = getArg("--out", "");
 const STORAGE_PROVIDER = getArg("--provider", "supabase").toLowerCase();
+const OVERRIDE_ID = getArg("--id", "");
+const OVERRIDE_IMAGE_URL = getArg("--image-url", "");
+const OVERRIDE_FILE = getArg("--file", "");
 
 const clean = value => String(value || "").trim();
 const isWeakImageUrl = url => /source\.unsplash\.com\/featured/i.test(clean(url));
@@ -95,7 +98,7 @@ function getSupabaseConfig() {
 function assertRuntimeEnv() {
   if (!SHOULD_UPLOAD) return;
   const missing = [];
-  if (!process.env.SERPER_API_KEY) missing.push("SERPER_API_KEY");
+  if (!OVERRIDE_IMAGE_URL && !process.env.SERPER_API_KEY) missing.push("SERPER_API_KEY");
   if (STORAGE_PROVIDER === "r2") {
     const r2 = getR2Config();
     if (!r2.accountId) missing.push("R2_ACCOUNT_ID");
@@ -131,8 +134,8 @@ function parseDreamShelfImages(source) {
   return images;
 }
 
-function parseCuratedItems(source, imageMap) {
-  return source
+function parseCuratedItems(source, imageMap, { includeAlreadyCached = INCLUDE_ALL } = {}) {
+  const items = source
     .split(/\r?\n/)
     .filter(line => line.includes("{ id: "))
     .map(line => {
@@ -147,8 +150,14 @@ function parseCuratedItems(source, imageMap) {
       return { id, name, brand, imageQuery, query, currentImage };
     })
     .filter(item => item.id && item.name && item.query)
-    .filter(item => ONLY_IDS.size === 0 || ONLY_IDS.has(item.id))
-    .filter(item => INCLUDE_ALL || !item.currentImage || isWeakImageUrl(item.currentImage));
+    .filter(item => ONLY_IDS.size === 0 || ONLY_IDS.has(item.id));
+  return includeAlreadyCached
+    ? items
+    : items.filter(item => !item.currentImage || isWeakImageUrl(item.currentImage));
+}
+
+function findCuratedItemById(source, imageMap, id) {
+  return parseCuratedItems(source, imageMap, { includeAlreadyCached: true }).find(item => item.id === id);
 }
 
 async function findSerperImage(query) {
@@ -170,13 +179,31 @@ async function findSerperImage(query) {
 
 async function downloadImage(imageUrl) {
   const response = await fetch(imageUrl, {
-    headers: { "User-Agent": "KomoBookDreamShelfCache/1.0" },
+    headers: {
+      "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+    },
   });
   if (!response.ok) throw new Error(`Image download failed with ${response.status}`);
   const contentType = response.headers.get("content-type") || "image/jpeg";
   if (!contentType.startsWith("image/")) throw new Error(`Not an image: ${contentType}`);
   const buffer = Buffer.from(await response.arrayBuffer());
   if (buffer.byteLength > MAX_BYTES) throw new Error("Image is too large");
+  return { buffer, contentType };
+}
+
+async function readLocalImage(filePath) {
+  const resolvedPath = path.resolve(filePath);
+  const buffer = await fs.readFile(resolvedPath);
+  if (buffer.byteLength > MAX_BYTES) throw new Error("Image is too large");
+  const ext = path.extname(resolvedPath).toLowerCase();
+  const contentType = ext === ".png"
+    ? "image/png"
+    : ext === ".webp"
+      ? "image/webp"
+      : ext === ".avif"
+        ? "image/avif"
+        : "image/jpeg";
   return { buffer, contentType };
 }
 
@@ -303,6 +330,35 @@ async function main() {
   assertRuntimeEnv();
   const source = await fs.readFile(DREAMSHELF_FILE, "utf8");
   const imageMap = parseDreamShelfImages(source);
+
+  if (OVERRIDE_ID || OVERRIDE_IMAGE_URL || OVERRIDE_FILE) {
+    if (!OVERRIDE_ID || (!OVERRIDE_IMAGE_URL && !OVERRIDE_FILE)) {
+      throw new Error("Manual override needs --id=<item id> plus --image-url=<direct image url> or --file=<local image path>.");
+    }
+    if (!SHOULD_UPLOAD) {
+      console.log(`Dry run: would cache manual image for ${OVERRIDE_ID}. Add --upload to download and store it.`);
+      return;
+    }
+    const item = findCuratedItemById(source, imageMap, OVERRIDE_ID) || { id: OVERRIDE_ID, name: OVERRIDE_ID };
+    const { buffer, contentType } = OVERRIDE_FILE
+      ? await readLocalImage(OVERRIDE_FILE)
+      : await downloadImage(OVERRIDE_IMAGE_URL);
+    const ext = extensionFromContentType(contentType);
+    const objectPath = `dreamshelf/${item.id}-${safeSlug(item.name)}.${ext}`;
+    const cachedUrl = await uploadCachedImage(buffer, contentType, objectPath);
+    const results = [{ ...item, sourceImageUrl: OVERRIDE_IMAGE_URL || path.resolve(OVERRIDE_FILE), cachedUrl, provider: STORAGE_PROVIDER }];
+    if (OUT_FILE) {
+      await fs.writeFile(path.resolve(OUT_FILE), `${JSON.stringify(results, null, 2)}\n`);
+    }
+    if (SHOULD_APPLY) {
+      await applyImageMap(results);
+    }
+    console.log(`Cached manual image for ${OVERRIDE_ID} -> ${cachedUrl}`);
+    console.log("\nDREAMSHELF_IMAGES entry:\n");
+    console.log(toImageMapSnippet(results));
+    return;
+  }
+
   const items = parseCuratedItems(source, imageMap).slice(0, LIMIT);
 
   if (!SHOULD_UPLOAD) {
