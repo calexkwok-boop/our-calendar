@@ -478,9 +478,32 @@ const AddEventModal = ({
               </button>
             </div>
             {showInvite && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 pl-1">
-                After saving, you'll get a share link to send to friends.
-              </p>
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400 pl-1">What kind of event?</p>
+                <div className="flex gap-2">
+                  {[
+                    { id: 'party', emoji: '🎉', label: 'Party' },
+                    { id: 'sports', emoji: '🏃', label: 'Sports' },
+                    { id: 'custom', emoji: '✨', label: 'Custom' },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, weEventType: t.id }))}
+                      className="flex-1 flex flex-col items-center gap-1 rounded-2xl border-2 py-3 text-sm font-semibold transition-all"
+                      style={
+                        formData.weEventType === t.id
+                          ? { ...themeAccentButtonStyle, borderColor: 'transparent' }
+                          : { borderColor: darkMode ? 'rgba(255,255,255,0.1)' : '#e5e7eb', background: darkMode ? 'rgba(255,255,255,0.04)' : '#fff', color: darkMode ? '#d1d5db' : '#4b5563' }
+                      }
+                    >
+                      <span className="text-xl">{t.emoji}</span>
+                      <span>{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 dark:text-gray-500 pl-1">A share link will be generated after saving.</p>
+              </div>
             )}
             {showAdvancedSettings && (
               <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.03] p-4 space-y-4">

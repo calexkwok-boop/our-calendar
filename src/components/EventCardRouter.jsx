@@ -4,6 +4,7 @@ import PartyEventCardView from './PartyEventCard';
 import CelebrationEventCardView from './CelebrationEventCard';
 import KidsEventCardView from './KidsEventCard';
 import HangoutEventCardView from './HangoutEventCard';
+import GenericEventCard from './GenericEventCard';
 
 export const resolveEventCardCategory = (event) => {
   const popupSubtype = [
@@ -1664,26 +1665,6 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
   );
 };
 
-const GenericEventCard = ({ event, onEdit, ...props }) => (
-  <CardShell
-    event={event}
-    categoryLabel={event?.category === 'sports' ? 'Sports' : 'Event'}
-    icon={event?.category === 'sports' ? '🏃' : '✨'}
-    accentClasses={{
-      shell: 'border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/65 to-cyan-50/60 dark:border-fuchsia-400/20 dark:from-[#171320] dark:via-[#1d1a30] dark:to-[#0f1727]',
-      header: 'border-fuchsia-200/70 bg-gradient-to-br from-white via-rose-50/90 to-cyan-50/90 dark:border-fuchsia-400/15 dark:bg-gradient-to-br dark:from-[#261c38] dark:via-[#231933] dark:to-[#17263e]',
-      iconWrap: 'border-fuchsia-300 bg-gradient-to-br from-fuchsia-100 to-rose-100 text-fuchsia-700 shadow-fuchsia-200/40 dark:border-fuchsia-400/30 dark:from-fuchsia-500/15 dark:to-rose-500/15 dark:text-fuchsia-200 dark:shadow-fuchsia-500/10',
-      categoryChip: 'bg-gradient-to-br from-fuchsia-100 to-rose-100 text-fuchsia-800 dark:from-fuchsia-500/15 dark:to-rose-500/15 dark:text-fuchsia-200',
-      secondaryChip: 'border-cyan-200 bg-white/90 text-cyan-700 dark:border-cyan-400/20 dark:bg-white/5 dark:text-cyan-200',
-      gradientOverlay: 'bg-gradient-to-br from-fuchsia-400 via-rose-400 to-cyan-400',
-    }}
-    fillHeight
-    {...props}
-  >
-    <NotesSection event={event} onEdit={onEdit} />
-    <InviteeRow event={event} />
-  </CardShell>
-);
 
 const EventCardRouter = ({ event, onEditBasics, ...props }) => {
   const category = resolveEventCardCategory(event);

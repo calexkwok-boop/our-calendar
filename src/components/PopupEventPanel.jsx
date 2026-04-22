@@ -6,6 +6,7 @@ import {
   Navigation, Radio, Gamepad2, MessageCircle, Map,
 } from 'lucide-react';
 import EventCardRouter, { resolveEventCardCategory } from './EventCardRouter';
+import GenericEventCard from './GenericEventCard';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const POPUP_NO_MAX_SENTINEL = 1000000;
@@ -999,6 +1000,60 @@ const GameModeLauncher = ({ event, members, accent, darkMode, border, softBg, bt
   );
 };
 
+const DragToCloseSheet = ({ onClose, darkMode, panelStyle, children }) => {
+  const startYRef = useRef(null);
+  const currentYRef = useRef(0);
+  const sheetRef = useRef(null);
+
+  const onPointerDown = (e) => {
+    startYRef.current = e.clientY;
+    currentYRef.current = 0;
+  };
+  const onPointerMove = (e) => {
+    if (startYRef.current === null) return;
+    const dy = e.clientY - startYRef.current;
+    if (dy < 0) return;
+    currentYRef.current = dy;
+    if (sheetRef.current) sheetRef.current.style.transform = `translateY(${dy}px)`;
+  };
+  const onPointerUp = () => {
+    if (startYRef.current === null) return;
+    startYRef.current = null;
+    if (currentYRef.current > 80) {
+      onClose?.();
+    } else {
+      if (sheetRef.current) sheetRef.current.style.transform = '';
+    }
+    currentYRef.current = 0;
+  };
+
+  return (
+    <div
+      ref={sheetRef}
+      id="popup-event-panel-root"
+      style={{ ...panelStyle, overflowY: 'auto', overscrollBehavior: 'contain', transition: 'transform 0.2s' }}
+    >
+      {/* Drag handle */}
+      <div
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerLeave={onPointerUp}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '12px 0 8px', cursor: 'grab', touchAction: 'none', flexShrink: 0,
+        }}
+      >
+        <div style={{
+          width: 36, height: 4, borderRadius: 999,
+          background: darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)',
+        }} />
+      </div>
+      {children}
+    </div>
+  );
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Component
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1058,9 +1113,9 @@ export default function PopupEventPanel({
   };
 
   const [screen, setScreen] = useState(initialEventId ? 'detail' : 'create');
-  const [event, setEvent] = useState(null);
+  const [event, setEvent] = useState(eventMetaFallback || null);
   const [members, setMembers] = useState([]);
-  const [loading, setLoading] = useState(Boolean(initialEventId));
+  const [loading, setLoading] = useState(Boolean(initialEventId) && !eventMetaFallback);
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -1824,6 +1879,23 @@ export default function PopupEventPanel({
           : null
     )
     : null;
+
+  if (!isSportsPopupEvent) return (
+    <DragToCloseSheet onClose={onClose} darkMode={darkMode} panelStyle={panelStyle}>
+      <style>{`#popup-event-panel-root, #popup-event-panel-root * { font-family: 'Caveat', cursive !important; }`}</style>
+      <GenericEventCard
+        event={routedEvent}
+        darkMode={darkMode}
+        onEditBasics={isHostOrCohost ? handleEditEventBasics : undefined}
+        onUpdateEventData={isHostOrCohost ? handleUpdateEventData : undefined}
+        currentUserId={String(user?.id || '').trim()}
+        currentUserName={effectiveDisplayName || 'Guest'}
+        onPrimaryAction={nonSportsPrimaryAction?.action}
+        primaryActionLabel={joining && nonSportsPrimaryAction?.action === handleJoin ? joiningLabel : nonSportsPrimaryAction?.label}
+        hidePrimaryAction={!nonSportsPrimaryAction}
+      />
+    </DragToCloseSheet>
+  );
 
   return (
     <div style={panelStyle} id="popup-event-panel-root">

@@ -12277,7 +12277,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       title,
       time,
       date: dateKey,
-      category: isPopupEventDraft ? 'popup_event' : (homeAddEventForm.category || 'other'),
+      category: homeAddEventForm.inviteFriends ? (homeAddEventForm.weEventType || 'custom') : isPopupEventDraft ? 'popup_event' : (homeAddEventForm.category || 'other'),
       description: null,
       isPrivate: Boolean(homeAddEventForm.isPrivate),
       isUrgent: Boolean(homeAddEventForm.isUrgent),

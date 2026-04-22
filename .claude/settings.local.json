@@ -7,7 +7,11 @@
       "Bash(npx react-scripts:*)",
       "Bash(find /c/Users/a_kwo/Desktop/our-calendar/src/components -name \"*.jsx\" -type f -exec grep -l \"me event\\\\|we event\\\\|toggle.*event\" {} \\\\;)",
       "Bash(xargs grep *)",
-      "Bash(node -e \"const fs = require\\('fs'\\); const src = fs.readFileSync\\('c:/Users/a_kwo/Desktop/our-calendar/src/components/AddEventModal.jsx', 'utf8'\\); console.log\\('Lines:', src.split\\('\\\\n'\\).length\\); console.log\\('Has shareLink check:', src.includes\\('shareLink ?'\\)\\); console.log\\('Has <> close:', src.includes\\('</>'\\)\\);\")"
+      "Bash(node -e \"const fs = require\\('fs'\\); const src = fs.readFileSync\\('c:/Users/a_kwo/Desktop/our-calendar/src/components/AddEventModal.jsx', 'utf8'\\); console.log\\('Lines:', src.split\\('\\\\n'\\).length\\); console.log\\('Has shareLink check:', src.includes\\('shareLink ?'\\)\\); console.log\\('Has <> close:', src.includes\\('</>'\\)\\);\")",
+      "Bash(node --input-type=module --eval \"import\\('./src/components/PopupEventPanel.jsx'\\)\")",
+      "Bash(npx --yes acorn --ecma2020 --module src/components/PopupEventPanel.jsx)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(npx acorn *)"
     ]
   }
 }
