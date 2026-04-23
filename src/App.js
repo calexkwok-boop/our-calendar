@@ -29644,10 +29644,10 @@ transform: translateY(0);
                 <div className="flex flex-wrap items-center gap-2 mb-4 relative">
                   <button
                     onClick={() => openHomeAddEventModal()}
-                    className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold font-handwritten text-white shadow-[0_10px_24px_rgba(139,92,246,0.24)] transition-transform hover:scale-[1.01]"
+                    className="inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-medium font-handwritten text-white transition-all"
                     style={{ background: 'linear-gradient(90deg, #8b5cf6 0%, #ec4899 52%, #f97316 100%)' }}
                   >
-                    <Plus className="w-4 h-4" /> New Event
+                    <Plus className="w-3 h-3" /> Add Event
                   </button>
                   <button
                     onClick={() => setEventsTabHideRecurring((prev) => !prev)}
@@ -29711,7 +29711,7 @@ transform: translateY(0);
                   <div className="text-center py-10">
                     <div className="text-4xl mb-3">🎾</div>
                     <div className="ev-heading font-bold text-gray-500 dark:text-gray-400 mb-1" style={{ fontSize: 22 }}>No upcoming events</div>
-                    <div className="text-xs text-gray-400 dark:text-gray-500">Adjust filters or tap "New Event" to create one</div>
+                    <div className="text-xs text-gray-400 dark:text-gray-500">Adjust filters or tap "Add Event" to create one</div>
                   </div>
                 ) : (
                   <div className="space-y-2">
