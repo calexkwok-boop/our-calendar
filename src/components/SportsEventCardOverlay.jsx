@@ -267,6 +267,17 @@ export default function SportsEventCardOverlay({
     }
   };
 
+  const handleTogglePublic = async () => {
+    if (!isHost || !isUuid(event?.id)) return;
+    const next = !event.is_public;
+    setEvent((prev) => ({ ...prev, is_public: next }));
+    try {
+      await supabase.from('popup_event_details').update({ is_public: next }).eq('id', event.id);
+    } catch {
+      setEvent((prev) => ({ ...prev, is_public: !next }));
+    }
+  };
+
   const handleAddManualPlayer = async () => {
     const nextName = String(manualPlayerName || '').trim();
     if (!isHost || !isUuid(event?.id)) return;
@@ -620,6 +631,7 @@ export default function SportsEventCardOverlay({
           copied={copied}
           onCopyLink={handleCopyLink}
           onGoToInfo={() => setActiveScreen('detail')}
+          onTogglePublic={isHost ? handleTogglePublic : undefined}
           onViewRoster={() => setActiveScreen('roster')}
           onOpenChat={() => setActiveScreen('chat')}
           onOpenMap={() => setActiveScreen('map')}

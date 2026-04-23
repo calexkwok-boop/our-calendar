@@ -8,7 +8,7 @@
 import React from 'react';
 import {
   MapPin, Clock, Calendar, Users, Lock, Globe,
-  Edit3, Trash2, Camera, MessageCircle, Check, Copy,
+  Edit3, Trash2, MessageCircle, Check, Copy,
 } from 'lucide-react';
 
 const APP_FONT_STACK = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -215,6 +215,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
   const currentUserId   = String(props.currentUserId || '').trim();
   const canClaimPotluck = Boolean(props.canClaimPotluck && typeof props.onClaimPotluck === 'function');
   const activeTab = String(props.activeTab || 'info').trim().toLowerCase();
+  const bodyContent = props.bodyContent || null;
 
   // invitees
   const invitees  = Array.isArray(event.invitees) ? event.invitees : [];
@@ -328,18 +329,8 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
         )}
 
         {/* edit / delete controls */}
-        {(props.onEdit || props.onDelete || openCoverEditor) && (
+        {(props.onEdit || props.onDelete) && (
           <div style={{ position: 'absolute', top: 14, left: 16, display: 'flex', gap: 7, zIndex: 10 }}>
-            {openCoverEditor && (
-              <button onClick={openCoverEditor} type="button" style={{
-                width: 30, height: 30, borderRadius: '50%', cursor: 'pointer',
-                background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.18)',
-                color: 'rgba(255,255,255,0.7)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }} title={coverImageUrl ? 'Change cover' : 'Add cover'}>
-                <Camera style={{ width: 13, height: 13 }} />
-              </button>
-            )}
             {props.onEdit && (
               <button onClick={props.onEdit} type="button" style={{
                 width: 30, height: 30, borderRadius: '50%', cursor: 'pointer',
@@ -451,7 +442,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                 flex: 1, padding: '11px 0',
                 fontSize: 13, fontWeight: active ? 700 : 500,
                 textAlign: 'center', cursor: 'pointer',
-                color: active ? heroText : heroMuted,
+                color: active ? (darkMode ? heroText : '#0f172a') : heroMuted,
                 background: active ? bodyBg : 'transparent',
                 borderTop: active ? `2px solid ${accent}` : '2px solid transparent',
                 borderLeft: 'none',
@@ -474,6 +465,8 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
         padding: '16px 16px 20px',
         display: 'flex', flexDirection: 'column', gap: 10,
       }}>
+        {bodyContent || (
+          <>
 
         {/* who's coming */}
         {invitees.length > 0 && (
@@ -677,6 +670,8 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
               </div>
             )}
           </Section>
+        )}
+          </>
         )}
 
       </div>
