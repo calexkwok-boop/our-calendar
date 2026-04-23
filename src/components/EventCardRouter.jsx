@@ -505,6 +505,9 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
   const [draft, setDraft] = useState({});
   const [saving, setSaving] = useState(false);
   const [uploadingImageField, setUploadingImageField] = useState('');
+  const [dragY, setDragY] = useState(0);
+  const dragStartYRef = useRef(null);
+  const dragPointerIdRef = useRef(null);
   const editorVariant = String(config?.variant || '').trim().toLowerCase();
   const isPartyEditor = editorVariant === 'party';
   const editorTheme = editorVariant === 'kids'
@@ -661,6 +664,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
       setDraft({});
       setSaving(false);
       setUploadingImageField('');
+      setDragY(0);
       return;
     }
     const nextDraft = {};
@@ -678,6 +682,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
     setDraft(nextDraft);
     setSaving(false);
     setUploadingImageField('');
+    setDragY(0);
   }, [config]);
 
   useEffect(() => {
@@ -801,26 +806,56 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
     }
   };
 
+  const handleDragStart = (event) => {
+    dragStartYRef.current = event.clientY;
+    dragPointerIdRef.current = event.pointerId;
+    setDragY(0);
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  };
+
+  const handleDragMove = (event) => {
+    if (dragStartYRef.current == null || dragPointerIdRef.current !== event.pointerId) return;
+    const nextDragY = Math.max(0, event.clientY - dragStartYRef.current);
+    setDragY(nextDragY);
+  };
+
+  const handleDragEnd = (event) => {
+    if (dragPointerIdRef.current !== event.pointerId) return;
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+    const shouldClose = dragY > 80;
+    dragStartYRef.current = null;
+    dragPointerIdRef.current = null;
+    setDragY(0);
+    if (shouldClose) onClose?.();
+  };
+
   const modalNode = (
     <div className="fixed inset-0 z-[11020] flex items-center justify-center bg-slate-950/55 p-3 pt-6 pb-6 backdrop-blur-md sm:p-6" onClick={onClose}>
       <form
         className={`flex max-h-[min(78dvh,42rem)] w-full max-w-md flex-col overflow-hidden rounded-[28px] border shadow-[0_30px_80px_rgba(15,23,42,0.24)] ${editorTheme.shell}`}
         onClick={(event) => event.stopPropagation()}
         onSubmit={handleSubmit}
+        style={{
+          transform: `translateY(${dragY}px)`,
+          transition: dragStartYRef.current != null ? 'none' : 'transform 180ms ease',
+        }}
       >
         <div className={`relative overflow-hidden border-b px-5 py-5 ${editorTheme.header}`}>
-          <div className="flex items-start justify-between gap-4">
+          <div
+            className="flex justify-center pb-3"
+            onPointerDown={handleDragStart}
+            onPointerMove={handleDragMove}
+            onPointerUp={handleDragEnd}
+            onPointerCancel={handleDragEnd}
+            style={{ touchAction: 'none', cursor: dragStartYRef.current != null ? 'grabbing' : 'grab' }}
+          >
+            <div className="h-1.5 w-14 rounded-full bg-white/55 dark:bg-white/45" />
+          </div>
+          <div className="flex items-start gap-4">
             <div className="min-w-0 flex-1">
               <div className={`text-[18px] font-bold tracking-tight ${editorTheme.title}`}>{config.title || 'Edit details'}</div>
               {config.subtitle ? <div className={`mt-1 text-sm leading-6 ${editorTheme.subtitle}`}>{config.subtitle}</div> : null}
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition ${editorTheme.close}`}
-            >
-              <span className="text-lg leading-none">X</span>
-            </button>
           </div>
         </div>
 
