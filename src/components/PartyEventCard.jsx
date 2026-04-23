@@ -433,7 +433,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
           position: 'relative', zIndex: 1,
         }}>
           {[
-            { id: 'info', label: 'Info', action: null },
+            { id: 'info', label: 'Info', action: props.onGoToInfo || null },
             { id: 'people', label: 'People', action: props.onViewPeople },
             { id: 'chat', label: 'Chat', action: props.onOpenChat },
             { id: 'map', label: 'Map', action: props.onOpenMap },

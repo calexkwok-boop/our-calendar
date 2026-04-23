@@ -87,10 +87,12 @@ const ROLE_COLORS = {
   player: { bg: '#f3f4f6', text: '#374151', dark_bg: 'rgba(255,255,255,0.08)',dark_text: '#9ca3af' },
 };
 const ROLE_ICONS = { host: Crown, cohost: Shield, player: null };
-const Avatar = ({ name, size = 32, accent, role, darkMode }) => {
+const Avatar = ({ name, photoUrl, size = 32, accent, role, darkMode }) => {
   const colors = ROLE_COLORS[role || 'player'] || ROLE_COLORS.player;
   const cohostBg = darkMode ? hexToRgba(accent, 0.22) : hexToRgba(accent, 0.12);
   const cohostBorder = hexToRgba(accent, darkMode ? 0.62 : 0.28);
+  const url = String(photoUrl || '').trim();
+  const hasPhoto = /^(https?:\/\/|data:image\/|blob:)/i.test(url);
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%', flexShrink: 0,
@@ -104,8 +106,11 @@ const Avatar = ({ name, size = 32, accent, role, darkMode }) => {
       fontSize: size * 0.36, fontWeight: 900,
       color: role === 'host' ? '#f59e0b' : accent,
       letterSpacing: '-0.02em',
+      overflow: 'hidden',
     }}>
-      {initials(name)}
+      {hasPhoto
+        ? <img src={url} alt={name || ''} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        : initials(name)}
     </div>
   );
 };
@@ -266,7 +271,7 @@ const RosterRow = ({ member, isMe, isHost, accent, darkMode, onKick, onPromote, 
   const secondaryText = darkMode ? '#cbd5e1' : 'var(--color-text-secondary)';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'}` }}>
-      <Avatar name={member.display_name} size={34} accent={accent} role={member.role} darkMode={darkMode} />
+      <Avatar name={member.display_name} photoUrl={member.photoUrl || member.photo_url || member.avatarUrl || member.avatar_url} size={34} accent={accent} role={member.role} darkMode={darkMode} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: darkMode ? '#f8fafc' : 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {member.display_name}{isMe && <span style={{ fontSize: 10, color: darkMode ? '#cbd5e1' : 'var(--color-text-secondary)', fontWeight: 500, marginLeft: 4 }}>(you)</span>}

@@ -411,6 +411,7 @@ export default function PartyEventCardOverlay({
           onPrimaryAction={handleJoin}
           primaryActionLabel={joining ? 'Saving RSVP...' : 'RSVP'}
           hidePrimaryAction={isMember || isFull}
+          onGoToInfo={() => setActiveScreen('detail')}
           onTogglePublic={isHost ? handleTogglePublic : undefined}
           onViewPeople={() => setActiveScreen('people')}
           onOpenChat={() => setActiveScreen('chat')}

@@ -802,7 +802,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
   };
 
   const modalNode = (
-    <div className="fixed inset-0 z-[140] flex items-center justify-center bg-slate-950/55 p-3 pt-6 pb-6 backdrop-blur-md sm:p-6" onClick={onClose}>
+    <div className="fixed inset-0 z-[11020] flex items-center justify-center bg-slate-950/55 p-3 pt-6 pb-6 backdrop-blur-md sm:p-6" onClick={onClose}>
       <form
         className={`flex max-h-[min(78dvh,42rem)] w-full max-w-md flex-col overflow-hidden rounded-[28px] border shadow-[0_30px_80px_rgba(15,23,42,0.24)] ${editorTheme.shell}`}
         onClick={(event) => event.stopPropagation()}
