@@ -7,7 +7,7 @@
 import React, { useState } from 'react';
 import { MapPin, Edit3, AlertCircle, Check } from 'lucide-react';
 
-const APP_FONT_STACK = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+const APP_FONT_STACK = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 

@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 import SportsEventCard from './SportsEventCard';
 import { ChatRoom, LiveMap, RosterRow } from './PopupEventPanel';
 
+const APP_FONT_STACK = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const POPUP_NO_MAX_SENTINEL = 1000000;
 const isUuid = (value) => UUID_RE.test(String(value || '').trim());
@@ -370,14 +371,14 @@ export default function SportsEventCardOverlay({
           borderRadius: 999,
           padding: '7px 12px',
           cursor: 'pointer',
-          fontFamily: "'Caveat', cursive",
+          fontFamily: APP_FONT_STACK,
           fontSize: 13,
           fontWeight: 800,
         }}
       >
         Info
       </button>
-      <div style={{ fontFamily: "'Caveat', cursive", fontSize: 18, fontWeight: 900, color: primaryText }}>
+      <div style={{ fontFamily: APP_FONT_STACK, fontSize: 18, fontWeight: 900, color: primaryText }}>
         {title}
       </div>
       <div style={{ width: 54 }} />
@@ -401,7 +402,7 @@ export default function SportsEventCardOverlay({
               background: active ? (darkMode ? 'rgba(255,255,255,0.04)' : '#f8fafc') : 'transparent',
               color: active ? primaryText : secondaryText,
               cursor: 'pointer',
-              fontFamily: "'Caveat', cursive",
+              fontFamily: APP_FONT_STACK,
               fontSize: 12,
               fontWeight: active ? 800 : 600,
             }}
@@ -420,13 +421,13 @@ export default function SportsEventCardOverlay({
           {renderScreenHeader('People')}
           <div style={{ paddingBottom: 24 }}>
             <div style={{ padding: '12px 16px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-              <div style={{ fontSize: 11, fontWeight: 900, color: accent, fontFamily: "'Caveat', cursive" }}>
+              <div style={{ fontSize: 11, fontWeight: 900, color: accent, fontFamily: APP_FONT_STACK }}>
                 {currentNoMax ? `${memberCount} players` : `${memberCount} / ${event.max_players} players`}
               </div>
               <div style={{ flex: 1, height: 4, borderRadius: 999, background: border, overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: currentNoMax ? '100%' : `${Math.min(100, (memberCount / (event.max_players || 1)) * 100)}%`, background: accent }} />
               </div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: secondaryText, fontFamily: "'Caveat', cursive" }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: secondaryText, fontFamily: APP_FONT_STACK }}>
                 {currentNoMax ? 'Unlimited' : isFull ? 'Full' : `${Math.max(0, (event.max_players || 0) - memberCount)} left`}
               </div>
             </div>
@@ -454,7 +455,7 @@ export default function SportsEventCardOverlay({
                       outline: 'none',
                       fontSize: 13,
                       fontWeight: 700,
-                      fontFamily: "'Caveat', cursive",
+                      fontFamily: APP_FONT_STACK,
                     }}
                   />
                   <button
@@ -475,7 +476,7 @@ export default function SportsEventCardOverlay({
                       opacity: manualAddBusy || isFull || !String(manualPlayerName || '').trim() ? 0.65 : 1,
                       fontSize: 12,
                       fontWeight: 900,
-                      fontFamily: "'Caveat', cursive",
+                      fontFamily: APP_FONT_STACK,
                       whiteSpace: 'nowrap',
                     }}
                   >
@@ -484,7 +485,7 @@ export default function SportsEventCardOverlay({
                   </button>
                 </div>
                 {manualAddError && (
-                  <div style={{ fontSize: 12, fontWeight: 800, color: '#ef4444', fontFamily: "'Caveat', cursive" }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#ef4444', fontFamily: APP_FONT_STACK }}>
                     {manualAddError}
                   </div>
                 )}
@@ -506,7 +507,7 @@ export default function SportsEventCardOverlay({
               />
             ))}
             {sortedPlayers.length === 0 && (
-              <div style={{ padding: 32, textAlign: 'center', fontFamily: "'Caveat', cursive", color: secondaryText, fontWeight: 800 }}>
+              <div style={{ padding: 32, textAlign: 'center', fontFamily: APP_FONT_STACK, color: secondaryText, fontWeight: 800 }}>
                 No players yet
               </div>
             )}
@@ -579,15 +580,15 @@ export default function SportsEventCardOverlay({
           {renderScreenHeader('Play')}
           <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ padding: '12px 14px', borderRadius: 14, background: softBg, border: `1px solid ${border}` }}>
-              <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: accent, marginBottom: 4, fontFamily: "'Caveat', cursive" }}>
+              <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: accent, marginBottom: 4, fontFamily: APP_FONT_STACK }}>
                 Choose a format
               </div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: secondaryText, lineHeight: 1.45, fontFamily: "'Caveat', cursive" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: secondaryText, lineHeight: 1.45, fontFamily: APP_FONT_STACK }}>
                 Pick how you want to organize play for {sortedPlayers.length} player{sortedPlayers.length === 1 ? '' : 's'}.
               </div>
             </div>
             {!isHost && (
-              <div style={{ padding: '10px 14px', borderRadius: 12, background: darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', fontSize: 12, color: secondaryText, fontWeight: 700, textAlign: 'center', fontFamily: "'Caveat', cursive" }}>
+              <div style={{ padding: '10px 14px', borderRadius: 12, background: darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', fontSize: 12, color: secondaryText, fontWeight: 700, textAlign: 'center', fontFamily: APP_FONT_STACK }}>
                 Only the host can launch a play mode.
               </div>
             )}
@@ -609,7 +610,7 @@ export default function SportsEventCardOverlay({
                     cursor: disabled ? 'default' : 'pointer',
                     opacity: disabled ? 0.68 : 1,
                     textAlign: 'left',
-                    fontFamily: "'Caveat', cursive",
+                    fontFamily: APP_FONT_STACK,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',

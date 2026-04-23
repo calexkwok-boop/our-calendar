@@ -3,6 +3,7 @@ import PartyEventCard from './PartyEventCard';
 import { EventEditorModal } from './EventCardRouter';
 import { ChatRoom, LiveMap, RosterRow } from './PopupEventPanel';
 
+const APP_FONT_STACK = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isUuid = (value) => UUID_RE.test(String(value || '').trim());
 
@@ -310,14 +311,14 @@ export default function PartyEventCardOverlay({
           borderRadius: 999,
           padding: '7px 12px',
           cursor: 'pointer',
-          fontFamily: "'Caveat', cursive",
+          fontFamily: APP_FONT_STACK,
           fontSize: 13,
           fontWeight: 800,
         }}
       >
         Info
       </button>
-      <div style={{ fontFamily: "'Caveat', cursive", fontSize: 18, fontWeight: 900, color: primaryText }}>
+      <div style={{ fontFamily: APP_FONT_STACK, fontSize: 18, fontWeight: 900, color: primaryText }}>
         {title}
       </div>
       <div style={{ width: 54 }} />
@@ -341,7 +342,7 @@ export default function PartyEventCardOverlay({
               background: active ? (darkMode ? 'rgba(255,255,255,0.04)' : '#f8fafc') : 'transparent',
               color: active ? primaryText : secondaryText,
               cursor: 'pointer',
-              fontFamily: "'Caveat', cursive",
+              fontFamily: APP_FONT_STACK,
               fontSize: 12,
               fontWeight: active ? 800 : 600,
             }}
@@ -359,7 +360,7 @@ export default function PartyEventCardOverlay({
         <>
           {renderScreenHeader('People')}
           <div style={{ paddingBottom: 24 }}>
-            <div style={{ padding: '12px 16px 8px', fontSize: 11, fontWeight: 900, color: accent, fontFamily: "'Caveat', cursive" }}>
+            <div style={{ padding: '12px 16px 8px', fontSize: 11, fontWeight: 900, color: accent, fontFamily: APP_FONT_STACK }}>
               {sortedGuests.length === 1 ? '1 person going' : `${sortedGuests.length} people going`}
             </div>
             {sortedGuests.map((member) => (
@@ -378,7 +379,7 @@ export default function PartyEventCardOverlay({
               />
             ))}
             {sortedGuests.length === 0 && (
-              <div style={{ padding: 32, textAlign: 'center', fontFamily: "'Caveat', cursive", color: secondaryText, fontWeight: 800 }}>
+              <div style={{ padding: 32, textAlign: 'center', fontFamily: APP_FONT_STACK, color: secondaryText, fontWeight: 800 }}>
                 No guests yet
               </div>
             )}
@@ -486,7 +487,7 @@ export default function PartyEventCardOverlay({
               onOpenMap={() => setActiveScreen('map')}
             />
             {joinError ? (
-              <div style={{ marginTop: 10, color: '#ef4444', fontFamily: "'Caveat', cursive", fontWeight: 800 }}>
+              <div style={{ marginTop: 10, color: '#ef4444', fontFamily: APP_FONT_STACK, fontWeight: 800 }}>
                 {joinError}
               </div>
             ) : null}

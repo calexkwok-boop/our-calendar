@@ -8,6 +8,7 @@ import {
 import EventCardRouter, { resolveEventCardCategory } from './EventCardRouter';
 import SportsEventCard from './SportsEventCard';
 
+const APP_FONT_STACK = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const POPUP_NO_MAX_SENTINEL = 1000000;
 const isUuid = (value) => UUID_RE.test(String(value || '').trim());
@@ -1809,7 +1810,7 @@ export default function PopupEventPanel({
     height: '100%',
     display: 'flex',
     flexDirection: 'column',
-    fontFamily: "'Caveat', cursive",
+    fontFamily: APP_FONT_STACK,
   };
   const headerStyle = {
     position: 'relative',
@@ -1907,7 +1908,6 @@ export default function PopupEventPanel({
 
   if (isSportsPopupEvent && activeScreen === 'detail') return (
     <DragToCloseSheet onClose={onClose} darkMode={darkMode} panelStyle={panelStyle}>
-      <style>{`#popup-event-panel-root, #popup-event-panel-root * { font-family: 'Caveat', cursive !important; }`}</style>
       <SportsEventCard
         event={routedEvent}
         darkMode={darkMode}
@@ -1938,7 +1938,6 @@ export default function PopupEventPanel({
 
   if (!isSportsPopupEvent) return (
     <DragToCloseSheet onClose={onClose} darkMode={darkMode} panelStyle={panelStyle}>
-      <style>{`#popup-event-panel-root, #popup-event-panel-root * { font-family: 'Caveat', cursive !important; }`}</style>
       <EventCardRouter
         event={routedEvent}
         darkMode={darkMode}
@@ -1958,7 +1957,6 @@ export default function PopupEventPanel({
 
   return (
     <div style={panelStyle} id="popup-event-panel-root">
-      <style>{`#popup-event-panel-root, #popup-event-panel-root * { font-family: 'Caveat', cursive !important; }`}</style>
       {/* Header */}
       <div style={headerStyle}>
         {/* Thin gradient bar at top */}
@@ -2035,7 +2033,7 @@ export default function PopupEventPanel({
               cursor: 'pointer',
               whiteSpace: 'nowrap',
               transition: 'all 0.15s',
-              fontFamily: "'Caveat', cursive",
+              fontFamily: APP_FONT_STACK,
               background: activeScreen === id
                 ? `linear-gradient(90deg, ${weEventPanelTheme.headerFrom}, ${weEventPanelTheme.headerTo})`
                 : darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)',
