@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import PartyEventCard from './PartyEventCard';
+import { EventEditorModal } from './EventCardRouter';
+import { ChatRoom, LiveMap, RosterRow } from './PopupEventPanel';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isUuid = (value) => UUID_RE.test(String(value || '').trim());
@@ -36,6 +38,8 @@ export default function PartyEventCardOverlay({
   onClose,
 }) {
   const accent = activeLayerPageTheme?.accent || '#f59e0b';
+  const [activeScreen, setActiveScreen] = useState('detail');
+  const [editorConfig, setEditorConfig] = useState(null);
   const [event, setEvent] = useState(() => normalizeEvent(eventMetaFallback || {}, eventMetaFallback || {}));
   const [members, setMembers] = useState([]);
   const [joining, setJoining] = useState(false);
@@ -164,6 +168,12 @@ export default function PartyEventCardOverlay({
     category: 'party',
     invitees,
   };
+  const sortedGuests = [...invitees].sort((a, b) => {
+    const rank = (role) => (role === 'host' ? 0 : role === 'cohost' ? 1 : 2);
+    const rankDelta = rank(a?.role) - rank(b?.role);
+    if (rankDelta !== 0) return rankDelta;
+    return String(a?.display_name || '').localeCompare(String(b?.display_name || ''));
+  });
 
   const updateEventData = async (patch) => {
     if (!event || !isUuid(event?.id) || !patch || typeof patch !== 'object') return false;
@@ -194,6 +204,17 @@ export default function PartyEventCardOverlay({
     } catch {
       return false;
     }
+  };
+
+  const openEditor = (config) => {
+    setEditorConfig(config || null);
+  };
+  const closeEditor = () => {
+    setEditorConfig(null);
+  };
+  const handleSaveEditor = async (values) => {
+    if (typeof editorConfig?.onSave !== 'function') return false;
+    return editorConfig.onSave(values);
   };
 
   const handleJoin = async () => {
@@ -256,6 +277,154 @@ export default function PartyEventCardOverlay({
     dragCurrentYRef.current = 0;
   };
 
+  const primaryText = darkMode ? '#f8fafc' : '#0f172a';
+  const secondaryText = darkMode ? '#94a3b8' : '#64748b';
+  const border = darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
+  const softBg = darkMode ? `${accent}18` : `${accent}0d`;
+  const tabs = [
+    { id: 'detail', label: 'Info' },
+    { id: 'people', label: 'People' },
+    { id: 'chat', label: 'Chat' },
+    { id: 'map', label: 'Map' },
+  ];
+
+  const renderScreenHeader = (title) => (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 10,
+        padding: '12px 14px',
+        background: darkMode ? '#0f0a1a' : '#fff',
+        borderBottom: `1px solid ${border}`,
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setActiveScreen('detail')}
+        style={{
+          border: `1px solid ${border}`,
+          background: darkMode ? 'rgba(255,255,255,0.05)' : '#f8fafc',
+          color: secondaryText,
+          borderRadius: 999,
+          padding: '7px 12px',
+          cursor: 'pointer',
+          fontFamily: "'Caveat', cursive",
+          fontSize: 13,
+          fontWeight: 800,
+        }}
+      >
+        Info
+      </button>
+      <div style={{ fontFamily: "'Caveat', cursive", fontSize: 18, fontWeight: 900, color: primaryText }}>
+        {title}
+      </div>
+      <div style={{ width: 54 }} />
+    </div>
+  );
+
+  const renderTabs = () => (
+    <div style={{ display: 'flex', borderBottom: `1px solid ${border}`, background: darkMode ? '#0f0a1a' : '#fff' }}>
+      {tabs.map((tab) => {
+        const active = activeScreen === tab.id;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveScreen(tab.id)}
+            style={{
+              flex: 1,
+              padding: '11px 0',
+              border: 'none',
+              borderTop: `2px solid ${active ? accent : 'transparent'}`,
+              background: active ? (darkMode ? 'rgba(255,255,255,0.04)' : '#f8fafc') : 'transparent',
+              color: active ? primaryText : secondaryText,
+              cursor: 'pointer',
+              fontFamily: "'Caveat', cursive",
+              fontSize: 12,
+              fontWeight: active ? 800 : 600,
+            }}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const renderActiveScreen = () => {
+    if (activeScreen === 'people') {
+      return (
+        <>
+          {renderScreenHeader('People')}
+          <div style={{ paddingBottom: 24 }}>
+            <div style={{ padding: '12px 16px 8px', fontSize: 11, fontWeight: 900, color: accent, fontFamily: "'Caveat', cursive" }}>
+              {sortedGuests.length === 1 ? '1 person going' : `${sortedGuests.length} people going`}
+            </div>
+            {sortedGuests.map((member) => (
+              <RosterRow
+                key={member.id || member.user_id || member.display_name}
+                member={member}
+                isMe={String(member?.user_id || '').trim() === currentUserId}
+                isHost={false}
+                accent={accent}
+                darkMode={darkMode}
+                onKick={() => {}}
+                onPromote={() => {}}
+                onDemote={() => {}}
+                attendeeRoleLabel="Guest"
+                canManageRoles={false}
+              />
+            ))}
+            {sortedGuests.length === 0 && (
+              <div style={{ padding: 32, textAlign: 'center', fontFamily: "'Caveat', cursive", color: secondaryText, fontWeight: 800 }}>
+                No guests yet
+              </div>
+            )}
+          </div>
+        </>
+      );
+    }
+    if (activeScreen === 'chat') {
+      return (
+        <>
+          {renderScreenHeader('Chat')}
+          <ChatRoom
+            eventId={event.id}
+            supabase={supabase}
+            user={user}
+            displayName={effectiveDisplayName}
+            accent={accent}
+            darkMode={darkMode}
+            border={border}
+            softBg={softBg}
+            members={sortedGuests}
+          />
+        </>
+      );
+    }
+    if (activeScreen === 'map') {
+      return (
+        <>
+          {renderScreenHeader('Map')}
+          <LiveMap
+            event={event}
+            supabase={supabase}
+            user={user}
+            displayName={effectiveDisplayName}
+            accent={accent}
+            darkMode={darkMode}
+            border={border}
+            softBg={softBg}
+            members={sortedGuests}
+          />
+        </>
+      );
+    }
+    return null;
+  };
+
   return (
     <div
       ref={sheetRef}
@@ -296,25 +465,40 @@ export default function PartyEventCardOverlay({
         />
       </div>
       <div style={{ height: 'calc(100% - 25px)', overflowY: 'auto', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
-        <PartyEventCard
-          event={routedEvent}
-          darkMode={darkMode}
-          accent={accent}
-          currentUserId={currentUserId}
-          currentUserName={effectiveDisplayName || 'Guest'}
-          onUpdateEventData={isHost ? updateEventData : undefined}
-          onClaimPotluck={handlePotluckClaim}
-          canClaimPotluck={Boolean(currentUserId && isMember)}
-          onPrimaryAction={handleJoin}
-          primaryActionLabel={joining ? 'Saving RSVP...' : 'RSVP'}
-          hidePrimaryAction={isMember || isFull}
-        />
-        {joinError ? (
-          <div style={{ marginTop: 10, color: '#ef4444', fontFamily: "'Caveat', cursive", fontWeight: 800 }}>
-            {joinError}
-          </div>
-        ) : null}
-        </div>
+        {activeScreen === 'detail' ? (
+          <>
+            <PartyEventCard
+              event={routedEvent}
+              darkMode={darkMode}
+              accent={accent}
+              activeTab="info"
+              currentUserId={currentUserId}
+              currentUserName={effectiveDisplayName || 'Guest'}
+              onUpdateEventData={isHost ? updateEventData : undefined}
+              openEditor={isHost ? openEditor : undefined}
+              onClaimPotluck={handlePotluckClaim}
+              canClaimPotluck={Boolean(currentUserId && isMember)}
+              onPrimaryAction={handleJoin}
+              primaryActionLabel={joining ? 'Saving RSVP...' : 'RSVP'}
+              hidePrimaryAction={isMember || isFull}
+              onViewPeople={() => setActiveScreen('people')}
+              onOpenChat={() => setActiveScreen('chat')}
+              onOpenMap={() => setActiveScreen('map')}
+            />
+            {joinError ? (
+              <div style={{ marginTop: 10, color: '#ef4444', fontFamily: "'Caveat', cursive", fontWeight: 800 }}>
+                {joinError}
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <>
+            {renderTabs()}
+            {renderActiveScreen()}
+          </>
+        )}
+      </div>
+      <EventEditorModal config={editorConfig} onClose={closeEditor} onSave={handleSaveEditor} />
     </div>
   );
 }

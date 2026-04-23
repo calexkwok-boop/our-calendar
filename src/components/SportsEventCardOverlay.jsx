@@ -1,10 +1,35 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Plus } from 'lucide-react';
 import SportsEventCard from './SportsEventCard';
 import { ChatRoom, LiveMap, RosterRow } from './PopupEventPanel';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const POPUP_NO_MAX_SENTINEL = 1000000;
 const isUuid = (value) => UUID_RE.test(String(value || '').trim());
+const getManualPlayersStorageKey = (eventId) => `popup-manual-players:${String(eventId || '').trim()}`;
+const readManualPlayers = (eventId) => {
+  if (typeof window === 'undefined') return [];
+  const key = getManualPlayersStorageKey(eventId);
+  if (!key) return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(key) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+const writeManualPlayers = (eventId, players) => {
+  if (typeof window === 'undefined') return;
+  const key = getManualPlayersStorageKey(eventId);
+  if (!key) return;
+  try {
+    if (!Array.isArray(players) || players.length === 0) {
+      window.localStorage.removeItem(key);
+      return;
+    }
+    window.localStorage.setItem(key, JSON.stringify(players));
+  } catch {}
+};
 
 const normalizeEvent = (row = {}, fallback = {}) => {
   const eventData = row?.event_data && typeof row.event_data === 'object' && !Array.isArray(row.event_data)
@@ -47,6 +72,9 @@ export default function SportsEventCardOverlay({
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [manualPlayerName, setManualPlayerName] = useState('');
+  const [manualAddBusy, setManualAddBusy] = useState(false);
+  const [manualAddError, setManualAddError] = useState('');
   const fallbackRef = useRef(eventMetaFallback);
   const sheetRef = useRef(null);
   const dragStartYRef = useRef(null);
@@ -121,6 +149,22 @@ export default function SportsEventCardOverlay({
           photo_url: memberPhotoUrl(signup),
           avatarUrl: memberPhotoUrl(signup),
           avatar_url: memberPhotoUrl(signup),
+        });
+      });
+
+      readManualPlayers(id).forEach((player) => {
+        const manualName = String(player?.display_name || '').trim();
+        if (!manualName) return;
+        const duplicate = list.some((entry) => String(entry?.display_name || '').trim().toLowerCase() === manualName.toLowerCase());
+        if (duplicate) return;
+        list.push({
+          id: String(player?.id || `manual-${manualName.toLowerCase()}`),
+          event_id: id,
+          user_id: '',
+          display_name: manualName,
+          role: 'player',
+          joined_at: player?.joined_at || new Date().toISOString(),
+          is_manual: true,
         });
       });
 
@@ -215,6 +259,48 @@ export default function SportsEventCardOverlay({
     } catch (error) {
       setJoinError(error?.message || 'Could not update your RSVP.');
     }
+  };
+
+  const handleAddManualPlayer = async () => {
+    const nextName = String(manualPlayerName || '').trim();
+    if (!isHost || !isUuid(event?.id)) return;
+    if (!nextName) {
+      setManualAddError('Enter a player name.');
+      return;
+    }
+    if (isFull) {
+      setManualAddError('This event is already full.');
+      return;
+    }
+    const alreadyExists = sortedPlayers.some((player) => String(player?.display_name || '').trim().toLowerCase() === nextName.toLowerCase());
+    if (alreadyExists) {
+      setManualAddError('That player is already on the roster.');
+      return;
+    }
+
+    setManualAddBusy(true);
+    setManualAddError('');
+    try {
+      const currentManualPlayers = readManualPlayers(event.id);
+      currentManualPlayers.push({
+        id: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        display_name: nextName,
+        joined_at: new Date().toISOString(),
+      });
+      writeManualPlayers(event.id, currentManualPlayers);
+      setManualPlayerName('');
+      await loadEvent(event.id);
+    } catch (error) {
+      setManualAddError(error?.message || 'Could not add player.');
+    }
+    setManualAddBusy(false);
+  };
+
+  const handleRemoveManualPlayer = async (member) => {
+    if (!isHost || !isUuid(event?.id) || !member?.is_manual) return;
+    const nextManualPlayers = readManualPlayers(event.id).filter((player) => String(player?.id || '') !== String(member?.id || ''));
+    writeManualPlayers(event.id, nextManualPlayers);
+    await loadEvent(event.id);
   };
 
   const handleCopyLink = async () => {
@@ -344,18 +430,79 @@ export default function SportsEventCardOverlay({
                 {currentNoMax ? 'Unlimited' : isFull ? 'Full' : `${Math.max(0, (event.max_players || 0) - memberCount)} left`}
               </div>
             </div>
+            {isHost && isUuid(event?.id) && (
+              <div style={{ padding: '8px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    value={manualPlayerName}
+                    onChange={(e) => { setManualPlayerName(e.target.value); if (manualAddError) setManualAddError(''); }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddManualPlayer();
+                      }
+                    }}
+                    placeholder="Add player name"
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      padding: '9px 12px',
+                      borderRadius: 999,
+                      border: `1.5px solid ${border}`,
+                      background: darkMode ? 'rgba(255,255,255,0.06)' : '#fff',
+                      color: primaryText,
+                      outline: 'none',
+                      fontSize: 13,
+                      fontWeight: 700,
+                      fontFamily: "'Caveat', cursive",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddManualPlayer}
+                    disabled={manualAddBusy || isFull || !String(manualPlayerName || '').trim()}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      padding: '9px 12px',
+                      borderRadius: 999,
+                      border: 'none',
+                      background: accent,
+                      color: '#fff',
+                      cursor: manualAddBusy || isFull || !String(manualPlayerName || '').trim() ? 'default' : 'pointer',
+                      opacity: manualAddBusy || isFull || !String(manualPlayerName || '').trim() ? 0.65 : 1,
+                      fontSize: 12,
+                      fontWeight: 900,
+                      fontFamily: "'Caveat', cursive",
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <Plus style={{ width: 14, height: 14 }} />
+                    {manualAddBusy ? 'Adding...' : 'Add'}
+                  </button>
+                </div>
+                {manualAddError && (
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#ef4444', fontFamily: "'Caveat', cursive" }}>
+                    {manualAddError}
+                  </div>
+                )}
+              </div>
+            )}
             {sortedPlayers.map((member) => (
               <RosterRow
                 key={member.id || member.user_id || member.display_name}
                 member={member}
                 isMe={String(member?.user_id || '').trim() === currentUserId}
-                isHost={false}
+                isHost={Boolean(isHost && member?.is_manual)}
                 accent={accent}
                 darkMode={darkMode}
-                onKick={() => {}}
+                onKick={handleRemoveManualPlayer}
                 onPromote={() => {}}
                 onDemote={() => {}}
                 attendeeRoleLabel="Player"
+                canManageRoles={false}
               />
             ))}
             {sortedPlayers.length === 0 && (

@@ -1746,4 +1746,5 @@ export {
   HangoutEventCard,
   SportsEventCard,
   GenericEventCard,
+  EventEditorModal,
 };

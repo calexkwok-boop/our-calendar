@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // PartyEventCard — v3
-// Dark hero header (balloons + confetti in header only).
+// Dark hero header with clean party sections: theme, guests, music, potluck, notes.
 // Clean white body with party sections: theme, guests, music, potluck, notes.
 // Same props contract as original PartyEventCard.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -88,49 +88,6 @@ const formatTimePretty = (t) => {
   } catch { return null; }
 };
 
-// ── animation keyframes (header only) ────────────────────────────────────────
-
-const ANIMATION_CSS = `
-@keyframes pec-bob   { 0%,100%{transform:translateY(0) rotate(-2deg)} 50%{transform:translateY(-10px) rotate(2deg)} }
-@keyframes pec-float { 0%,100%{transform:translateY(0) rotate(0deg)}  50%{transform:translateY(-8px) rotate(6deg)} }
-@keyframes pec-sway  { 0%,100%{transform:translateX(0)} 50%{transform:translateX(-4px)} }
-`;
-
-// ── header balloon / confetti decorations ─────────────────────────────────────
-// Contained entirely within the dark hero — nothing leaks into the body.
-
-const HeroDecorations = () => (
-  <div style={{
-    position: 'absolute', inset: 0,
-    overflow: 'hidden', pointerEvents: 'none', zIndex: 0,
-  }}>
-    {/* balloons — right side only, out of the way of text */}
-    <div style={{ position: 'absolute', right: '-2px', top: '12px', width: 36, animation: 'pec-bob 5.8s ease-in-out infinite' }}>
-      <div style={{ width: 36, height: 76, borderRadius: '50%', background: 'linear-gradient(to bottom, #fde68a, #f59e0b)', margin: '0 auto', opacity: 0.55 }} />
-      <div style={{ width: 1, height: 32, margin: '0 auto', background: 'linear-gradient(to bottom, rgba(253,230,138,0.5), transparent)' }} />
-    </div>
-    <div style={{ position: 'absolute', right: '38px', top: '6px', width: 28, animation: 'pec-bob 6.4s ease-in-out infinite 0.8s' }}>
-      <div style={{ width: 28, height: 58, borderRadius: '50%', background: 'linear-gradient(to bottom, #6ee7b7, #059669)', margin: '0 auto', opacity: 0.5 }} />
-      <div style={{ width: 1, height: 26, margin: '0 auto', background: 'linear-gradient(to bottom, rgba(110,231,183,0.5), transparent)' }} />
-    </div>
-    <div style={{ position: 'absolute', right: '68px', top: '18px', width: 22, animation: 'pec-bob 5.2s ease-in-out infinite 1.3s' }}>
-      <div style={{ width: 22, height: 46, borderRadius: '50%', background: 'linear-gradient(to bottom, #bae6fd, #0284c7)', margin: '0 auto', opacity: 0.45 }} />
-      <div style={{ width: 1, height: 20, margin: '0 auto', background: 'linear-gradient(to bottom, rgba(186,230,253,0.5), transparent)' }} />
-    </div>
-
-    {/* streamers — subtle dashed arcs */}
-    <div style={{ position: 'absolute', right: '20%', top: '55%', width: 80, height: 30, borderRadius: '50%', borderTop: '3px dashed rgba(253,230,138,0.35)', transform: 'rotate(-10deg)', animation: 'pec-sway 7s ease-in-out infinite' }} />
-    <div style={{ position: 'absolute', left: '5%', top: '60%', width: 60, height: 24, borderRadius: '50%', borderTop: '3px dashed rgba(110,231,183,0.3)', transform: 'rotate(12deg)', animation: 'pec-sway 8s ease-in-out infinite 0.6s' }} />
-
-    {/* confetti — small, sparse */}
-    <div style={{ position: 'absolute', left: '12%', top: '20%', width: 14, height: 6, borderRadius: 999, background: 'rgba(253,230,138,0.5)', transform: 'rotate(20deg)', animation: 'pec-float 7s ease-in-out infinite 0.3s' }} />
-    <div style={{ position: 'absolute', left: '30%', top: '35%', width: 8, height: 8, background: 'rgba(110,231,183,0.45)', transform: 'rotate(45deg)', animation: 'pec-float 8s ease-in-out infinite 1s' }} />
-    <div style={{ position: 'absolute', left: '52%', top: '18%', width: 6, height: 14, borderRadius: 999, background: 'rgba(147,197,253,0.4)', transform: 'rotate(-20deg)', animation: 'pec-float 6.5s ease-in-out infinite 0.5s' }} />
-    <div style={{ position: 'absolute', left: '22%', top: '65%', width: 10, height: 4, borderRadius: 999, background: 'rgba(253,186,116,0.45)', transform: 'rotate(15deg)', animation: 'pec-float 7.5s ease-in-out infinite 1.4s' }} />
-    <div style={{ position: 'absolute', left: '44%', top: '50%', width: 8, height: 8, background: 'rgba(253,230,138,0.4)', transform: 'rotate(30deg)', animation: 'pec-float 9s ease-in-out infinite 0.2s' }} />
-  </div>
-);
-
 // ── spotify icon ──────────────────────────────────────────────────────────────
 
 const SpotifyIcon = () => (
@@ -139,6 +96,13 @@ const SpotifyIcon = () => (
     <path d="M7.2 9.3c3.2-1 6.8-.8 9.8.6"  stroke="#fff" strokeWidth="1.7" strokeLinecap="round"/>
     <path d="M8.1 12.1c2.5-.8 5.2-.6 7.5.5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/>
     <path d="M9 14.7c1.8-.5 3.8-.4 5.2.4"   stroke="#fff" strokeWidth="1.4" strokeLinecap="round"/>
+  </svg>
+);
+
+const AppleMusicIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+    <rect x="3" y="3" width="18" height="18" rx="5" fill="#fa233b" />
+    <path d="M15.8 6.4v8.15a2.35 2.35 0 1 1-1.2-2.05V8.35l-5.2.95v6a2.35 2.35 0 1 1-1.2-2.05V8.15l7.6-1.75Z" fill="#fff" />
   </svg>
 );
 
@@ -222,6 +186,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
     : plusOnesAllowed ? 'Plus-ones welcome' : 'Invite only';
   const currentUserId   = String(props.currentUserId || '').trim();
   const canClaimPotluck = Boolean(props.canClaimPotluck && typeof props.onClaimPotluck === 'function');
+  const activeTab = String(props.activeTab || 'info').trim().toLowerCase();
 
   // invitees
   const invitees  = Array.isArray(event.invitees) ? event.invitees : [];
@@ -312,10 +277,8 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
       fontFamily: "'Caveat', cursive",
       border: `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
     }}>
-      <style>{ANIMATION_CSS}</style>
-
       {/* ══════════════════════════════════════════
-          DARK HERO HEADER — balloons live here only
+          DARK HERO HEADER
       ══════════════════════════════════════════ */}
       <div style={{
         background: heroBg,
@@ -335,9 +298,6 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
             <div style={{ position: 'absolute', inset: 0, zIndex: 0, background: heroBg, opacity: 0.72 }} />
           </>
         )}
-
-        {/* balloons + confetti — right side only */}
-        <HeroDecorations />
 
         {/* edit / delete controls */}
         {(props.onEdit || props.onDelete || openCoverEditor) && (
@@ -410,7 +370,6 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
           fontSize: 26, fontWeight: 900, color: heroText,
           letterSpacing: '-0.02em', lineHeight: 1.15,
           marginBottom: 10, position: 'relative', zIndex: 1,
-          paddingRight: 80, // keep clear of balloons
         }}>
           {titleText || 'Untitled Party'}
         </div>
@@ -447,20 +406,32 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
           borderTop: '1px solid rgba(255,255,255,0.08)',
           position: 'relative', zIndex: 1,
         }}>
-          {['Info', 'People', 'Chat', 'Map'].map((tab, i) => {
-            const active = i === 0;
+          {[
+            { id: 'info', label: 'Info', action: null },
+            { id: 'people', label: 'People', action: props.onViewPeople },
+            { id: 'chat', label: 'Chat', action: props.onOpenChat },
+            { id: 'map', label: 'Map', action: props.onOpenMap },
+          ].map((tab) => {
+            const active = activeTab === tab.id;
             return (
-              <div key={tab} style={{
+              <button
+                key={tab.id}
+                type="button"
+                onClick={tab.action || undefined}
+                style={{
                 flex: 1, padding: '11px 0',
                 fontSize: 12, fontWeight: active ? 600 : 400,
                 textAlign: 'center', cursor: 'pointer',
                 color: active ? heroText : heroMuted,
                 background: active ? bodyBg : 'transparent',
                 borderTop: active ? `2px solid ${accent}` : '2px solid transparent',
+                borderLeft: 'none',
+                borderRight: 'none',
+                borderBottom: 'none',
                 fontFamily: "'Caveat', cursive",
               }}>
-                {tab}
-              </div>
+                {tab.label}
+              </button>
             );
           })}
         </div>
@@ -588,6 +559,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                       textDecoration: 'none',
                     }}>
                     {playlistService?.name === 'Spotify' && <SpotifyIcon />}
+                    {playlistService?.name === 'Apple Music' && <AppleMusicIcon />}
                     {playlistService?.name || 'Open'}
                   </a>
                 </div>
