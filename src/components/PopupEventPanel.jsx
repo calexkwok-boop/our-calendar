@@ -265,10 +265,38 @@ const CreateEventForm = ({ accent, darkMode, btnStyle, border, softBg, supabase,
 // RosterRow
 // ─────────────────────────────────────────────────────────────────────────────
 
-const RosterRow = ({ member, isMe, isHost, accent, darkMode, onKick, onPromote, onDemote, attendeeRoleLabel = 'Player', canManageRoles = true }) => {
+const RosterRow = ({
+  member,
+  isMe,
+  isHost,
+  accent,
+  darkMode,
+  onKick,
+  onPromote,
+  onDemote,
+  attendeeRoleLabel = 'Player',
+  attendeeStatusLabel = '',
+  attendeeStatusTone = '',
+  canManageRoles = true,
+}) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const RoleIcon = ROLE_ICONS[member.role];
   const secondaryText = darkMode ? '#cbd5e1' : 'var(--color-text-secondary)';
+  const normalizedStatusTone = String(attendeeStatusTone || '').trim().toLowerCase();
+  const statusStyles = normalizedStatusTone === 'yes'
+    ? {
+        background: darkMode ? 'rgba(16,185,129,0.16)' : 'rgba(16,185,129,0.12)',
+        color: darkMode ? '#86efac' : '#047857',
+      }
+    : normalizedStatusTone === 'no'
+      ? {
+          background: darkMode ? 'rgba(239,68,68,0.16)' : 'rgba(239,68,68,0.12)',
+          color: darkMode ? '#fca5a5' : '#b91c1c',
+        }
+      : {
+          background: darkMode ? 'rgba(148,163,184,0.16)' : 'rgba(148,163,184,0.14)',
+          color: darkMode ? '#cbd5e1' : '#475569',
+        };
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'}` }}>
       <Avatar name={member.display_name} photoUrl={member.photoUrl || member.photo_url || member.avatarUrl || member.avatar_url} size={34} accent={accent} role={member.role} darkMode={darkMode} />
@@ -281,6 +309,25 @@ const RosterRow = ({ member, isMe, isHost, accent, darkMode, onKick, onPromote, 
           <span style={{ fontSize: 10, fontWeight: 700, color: member.role === 'host' ? '#f59e0b' : member.role === 'cohost' ? accent : (darkMode ? '#cbd5e1' : 'var(--color-text-secondary)') }}>
             {member.role === 'host' ? 'Host' : member.role === 'cohost' ? 'Co-host' : attendeeRoleLabel}
           </span>
+          {attendeeStatusLabel ? (
+            <span
+              style={{
+                marginLeft: 6,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '2px 8px',
+                borderRadius: 999,
+                fontSize: 10,
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                ...statusStyles,
+              }}
+            >
+              {attendeeStatusLabel}
+            </span>
+          ) : null}
         </div>
       </div>
       {isHost && !isMe && member.role !== 'host' && (

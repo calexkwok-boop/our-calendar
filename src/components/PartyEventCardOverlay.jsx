@@ -160,9 +160,46 @@ export default function PartyEventCardOverlay({
     avatar_url: creatorIsCurrentUser ? currentUserProfilePhotoUrl : '',
   };
   const hasHostInvitee = members.some((member) => String(member?.user_id || '').trim() === String(hostInvitee.user_id || '').trim());
-  const invitees = hasHostInvitee || !hostInvitee.display_name
+  const baseInvitees = hasHostInvitee || !hostInvitee.display_name
     ? members
     : [hostInvitee, ...members];
+  const savedGuestList = Array.isArray(event?.guestList)
+    ? event.guestList.filter((guest) => String(guest?.name || '').trim())
+    : [];
+  const seenInviteeUserIds = new Set(
+    baseInvitees
+      .map((invitee) => String(invitee?.user_id || '').trim())
+      .filter(Boolean),
+  );
+  const seenInviteeNames = new Set(
+    baseInvitees
+      .map((invitee) => String(invitee?.display_name || invitee?.name || '').trim().toLowerCase())
+      .filter(Boolean),
+  );
+  const savedGuestInvitees = savedGuestList.reduce((list, guest, index) => {
+    const name = String(guest?.name || '').trim();
+    if (!name) return list;
+    const userId = String(guest?.user_id || guest?.userId || '').trim();
+    const normalizedName = name.toLowerCase();
+    if ((userId && seenInviteeUserIds.has(userId)) || seenInviteeNames.has(normalizedName)) return list;
+    if (userId) seenInviteeUserIds.add(userId);
+    seenInviteeNames.add(normalizedName);
+    list.push({
+      id: `saved-guest-${index}-${normalizedName.replace(/[^a-z0-9]+/g, '-')}`,
+      user_id: userId,
+      display_name: name,
+      name,
+      role: 'guest',
+      rsvp: String(guest?.rsvp || 'pending').trim().toLowerCase() || 'pending',
+      source: 'guest-list',
+      photoUrl: memberPhotoUrl(guest),
+      photo_url: memberPhotoUrl(guest),
+      avatarUrl: memberPhotoUrl(guest),
+      avatar_url: memberPhotoUrl(guest),
+    });
+    return list;
+  }, []);
+  const invitees = [...baseInvitees, ...savedGuestInvitees];
 
   const routedEvent = {
     ...event,
@@ -175,6 +212,12 @@ export default function PartyEventCardOverlay({
     if (rankDelta !== 0) return rankDelta;
     return String(a?.display_name || '').localeCompare(String(b?.display_name || ''));
   });
+  const yesGuestCount = invitees.filter((invitee) => {
+    if (String(invitee?.role || '').trim().toLowerCase() === 'host') return true;
+    if (String(invitee?.source || '').trim().toLowerCase() !== 'guest-list') return true;
+    return String(invitee?.rsvp || '').trim().toLowerCase() === 'yes';
+  }).length;
+  const totalGuestCount = invitees.length;
 
   const updateEventData = async (patch) => {
     if (!event || !isUuid(event?.id) || !patch || typeof patch !== 'object') return false;
@@ -298,7 +341,7 @@ export default function PartyEventCardOverlay({
       return (
         <div style={{ paddingBottom: 4 }}>
             <div style={{ padding: '12px 16px 8px', fontSize: 11, fontWeight: 900, color: accent, fontFamily: APP_FONT_STACK }}>
-              {sortedGuests.length === 1 ? '1 person going' : `${sortedGuests.length} people going`}
+              {`${yesGuestCount}/${totalGuestCount} going`}
             </div>
             {sortedGuests.map((member) => (
               <RosterRow
@@ -312,6 +355,20 @@ export default function PartyEventCardOverlay({
                 onPromote={() => {}}
                 onDemote={() => {}}
                 attendeeRoleLabel="Guest"
+                attendeeStatusLabel={
+                  String(member?.source || '').trim().toLowerCase() === 'guest-list'
+                    ? (String(member?.rsvp || 'pending').trim().toLowerCase() === 'yes'
+                      ? 'Yes'
+                      : String(member?.rsvp || '').trim().toLowerCase() === 'no'
+                        ? 'No'
+                        : 'Pending')
+                    : ''
+                }
+                attendeeStatusTone={
+                  String(member?.source || '').trim().toLowerCase() === 'guest-list'
+                    ? (String(member?.rsvp || 'pending').trim().toLowerCase() || 'pending')
+                    : ''
+                }
                 canManageRoles={false}
               />
             ))}
@@ -404,6 +461,8 @@ export default function PartyEventCardOverlay({
           bodyContent={activeScreen === 'detail' ? null : renderBodyContent()}
           currentUserId={currentUserId}
           currentUserName={effectiveDisplayName || 'Guest'}
+          peopleGoingCount={yesGuestCount}
+          totalPeopleCount={totalGuestCount}
           onUpdateEventData={isHost ? updateEventData : undefined}
           openEditor={isHost ? openEditor : undefined}
           onClaimPotluck={handlePotluckClaim}

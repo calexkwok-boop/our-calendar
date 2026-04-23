@@ -185,6 +185,7 @@ export default function GenericEventCard({
   const dateParts  = formatDateFull(event.date);
   const timePretty = formatTimePretty(event.time);
   const noteText   = event.notes || event.description || '';
+  const openBasicsEditor = canEdit ? () => onEditBasics?.({}) : null;
 
   const hostFirstName = host
     ? (host.display_name || host.name || '').split(' ')[0]
@@ -261,13 +262,14 @@ export default function GenericEventCard({
               : 'You\'re invited to'}
           </div>
           {/* title — the biggest thing on the card */}
-          <div style={{
+          <button type="button" onClick={openBasicsEditor || undefined} style={{
             fontSize: 30, fontWeight: 900, color: primaryText,
             letterSpacing: '-0.02em', lineHeight: 1.1,
             fontFamily: "'Caveat', cursive",
+            background: 'transparent', border: 'none', padding: 0, cursor: openBasicsEditor ? 'pointer' : 'default', textAlign: 'left',
           }}>
             {event.title || 'Untitled Event'}
-          </div>
+          </button>
         </div>
 
         {/* wax seal + optional edit button */}
@@ -292,13 +294,16 @@ export default function GenericEventCard({
       }} />
 
       {/* ── date / time / location block ── */}
-      <div style={{
+      <button type="button" onClick={openBasicsEditor || undefined} style={{
         margin: '0 22px',
         padding: '14px 16px',
         borderRadius: 14,
         background: stripeColor,
         border: `1px solid ${dividerColor}`,
         display: 'flex', flexDirection: 'column', gap: 10,
+        width: 'calc(100% - 44px)',
+        cursor: openBasicsEditor ? 'pointer' : 'default',
+        textAlign: 'left',
       }}>
 
         {dateParts && (
@@ -342,7 +347,7 @@ export default function GenericEventCard({
             </span>
           </div>
         )}
-      </div>
+      </button>
 
       {/* ── personal message from host ── */}
       <div style={{ margin: '14px 22px 0', position: 'relative', zIndex: 1 }}>
@@ -432,9 +437,11 @@ export default function GenericEventCard({
 
       {/* ── who's going ── */}
       {invitees.length > 0 && (
-        <div style={{
+        <button type="button" onClick={openBasicsEditor || undefined} style={{
           margin: '14px 22px 0',
           display: 'flex', alignItems: 'center', gap: 10,
+          width: 'calc(100% - 44px)',
+          background: 'transparent', border: 'none', padding: 0, cursor: openBasicsEditor ? 'pointer' : 'default', textAlign: 'left',
         }}>
           <div style={{ display: 'flex', paddingLeft: 5 }}>
             {preview.map((inv, idx) => (
@@ -464,7 +471,7 @@ export default function GenericEventCard({
           <span style={{ fontSize: 13, fontWeight: 700, color: secondaryText }}>
             {invitees.length === 1 ? '1 person going' : `${invitees.length} people going`}
           </span>
-        </div>
+        </button>
       )}
 
       {/* ── urgent badge ── */}

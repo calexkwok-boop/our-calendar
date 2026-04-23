@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import SportsEventCard from './SportsEventCard';
 import { ChatRoom, LiveMap, RosterRow } from './PopupEventPanel';
+import { EventEditorModal } from './EventCardRouter';
 
 const APP_FONT_STACK = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -74,6 +75,7 @@ export default function SportsEventCardOverlay({
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [editorConfig, setEditorConfig] = useState(null);
   const [manualPlayerName, setManualPlayerName] = useState('');
   const [manualAddBusy, setManualAddBusy] = useState(false);
   const [manualAddError, setManualAddError] = useState('');
@@ -229,6 +231,71 @@ export default function SportsEventCardOverlay({
     if (rankDelta !== 0) return rankDelta;
     return String(a?.display_name || '').localeCompare(String(b?.display_name || ''));
   });
+
+  const updateEventData = async (patch) => {
+    if (!event || !isUuid(event?.id) || !patch || typeof patch !== 'object') return false;
+    const detailKeys = ['title', 'date', 'time', 'location', 'description', 'max_players', 'is_public', 'status', 'category'];
+    const detailPatch = {};
+    const metadataPatch = { ...patch };
+    detailKeys.forEach((key) => {
+      if (Object.prototype.hasOwnProperty.call(metadataPatch, key)) {
+        detailPatch[key] = metadataPatch[key];
+        delete metadataPatch[key];
+      }
+    });
+    const nextEventData = {
+      ...((event?.event_data && typeof event.event_data === 'object' && !Array.isArray(event.event_data)) ? event.event_data : {}),
+      ...metadataPatch,
+    };
+
+    try {
+      await supabase.from('popup_event_details').update({ ...detailPatch, event_data: nextEventData }).eq('id', event.id);
+      if (Object.keys(detailPatch).length > 0) {
+        try {
+          await supabase.from('events').update(detailPatch).eq('id', event.id);
+        } catch {}
+      }
+      setEvent((prev) => (prev ? { ...prev, ...detailPatch, ...metadataPatch, event_data: nextEventData } : prev));
+      await loadEvent(event.id);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const openEditor = (config) => {
+    setEditorConfig(config || null);
+  };
+  const closeEditor = () => {
+    setEditorConfig(null);
+  };
+  const handleSaveEditor = async (values) => {
+    if (typeof editorConfig?.onSave !== 'function') return false;
+    return editorConfig.onSave(values);
+  };
+  const openBasicsEditor = isHost ? () => openEditor({
+    variant: 'party',
+    title: 'Sports Details',
+    fields: [
+      { key: 'title', label: 'Title', value: String(event?.title || '').trim(), placeholder: 'Morning Run Club' },
+      { key: 'date', label: 'Date', type: 'date', value: String(event?.date || '').trim(), placeholder: '2026-04-12' },
+      { key: 'time', label: 'Time', value: String(event?.time || '').trim(), placeholder: '8:00 AM' },
+      { key: 'location', label: 'Location', type: 'location', value: String(event?.location || '').trim(), placeholder: 'Search venue...' },
+      { key: 'max_players', label: 'Max people', value: Number(event?.max_players || 0) >= POPUP_NO_MAX_SENTINEL ? '' : String(event?.max_players || '').trim(), placeholder: '8' },
+    ],
+    onSave: (values) => updateEventData({
+      title: String(values.title || '').trim(),
+      date: String(values.date || '').trim(),
+      time: String(values.time || '').trim(),
+      location: String(values.location || '').trim(),
+      max_players: (() => {
+        const raw = String(values.max_players || '').trim();
+        if (!raw) return POPUP_NO_MAX_SENTINEL;
+        const parsed = Number.parseInt(raw, 10);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : event?.max_players || POPUP_NO_MAX_SENTINEL;
+      })(),
+    }),
+  }) : undefined;
 
   const handleJoin = async () => {
     if (!event || isMember || isFull) return;
@@ -632,6 +699,8 @@ export default function SportsEventCardOverlay({
           onCopyLink={handleCopyLink}
           onGoToInfo={() => setActiveScreen('detail')}
           onTogglePublic={isHost ? handleTogglePublic : undefined}
+          onEditBasics={openBasicsEditor}
+          onEditCapacity={openBasicsEditor}
           onViewRoster={() => setActiveScreen('roster')}
           onOpenChat={() => setActiveScreen('chat')}
           onOpenMap={() => setActiveScreen('map')}
@@ -639,6 +708,7 @@ export default function SportsEventCardOverlay({
           memberCount={memberCount}
           isLegacyInvalidEvent={!isUuid(event?.id)}
         />
+        <EventEditorModal config={editorConfig} onClose={closeEditor} onSave={handleSaveEditor} />
       </div>
     </div>
   );

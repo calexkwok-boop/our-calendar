@@ -6,6 +6,8 @@ import KidsEventCardView from './KidsEventCard';
 import GenericEventCard from './GenericEventCard';
 import SportsEventCard from './SportsEventCard';
 
+const APP_FONT_STACK = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+
 export const resolveEventCardCategory = (event) => {
   const popupSubtype = [
     event?.popupSubtype,
@@ -345,7 +347,7 @@ const ActionPill = ({ href, onClick, children, tone = 'neutral' }) => {
   );
 };
 
-const PlacesAutocompleteField = ({ value, onChange, placeholder, inputClassName, dropdownClassName, optionClassName }) => {
+const PlacesAutocompleteField = ({ value, onChange, placeholder, inputClassName, inputStyle, dropdownClassName, optionClassName }) => {
   const [input, setInput] = useState(value || '');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -468,6 +470,7 @@ const PlacesAutocompleteField = ({ value, onChange, placeholder, inputClassName,
         }}
         placeholder={placeholder || 'Search venue...'}
         className={inputClassName}
+        style={inputStyle}
       />
       {showSuggestions && suggestions.length > 0 && dropdownStyle
         ? createPortal(
@@ -565,14 +568,14 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
               title: 'text-white',
               subtitle: 'text-slate-200/75',
               close: 'border-white/10 bg-white/10 text-slate-100 hover:bg-white/15 hover:text-white dark:border-white/10 dark:bg-white/10 dark:text-slate-100 dark:hover:bg-white/15 dark:hover:text-white',
-              body: 'bg-white dark:bg-[#120b1d]',
+              body: 'bg-[#fdf9f4] dark:bg-[#120b1d]',
               label: 'text-slate-500 dark:text-slate-300',
-              input: 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-amber-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.05] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-amber-300 dark:focus:bg-white/[0.08]',
-              panel: 'border-slate-200 bg-white dark:border-white/10 dark:bg-white/[0.04]',
-              empty: 'border-slate-200 bg-slate-50 text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300',
-              footer: 'border-slate-200 bg-slate-50/85 dark:border-white/10 dark:bg-white/[0.03]',
+              input: 'border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 focus:border-amber-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.05] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-amber-300 dark:focus:bg-white/[0.08]',
+              panel: '!border-0 !bg-transparent !p-0',
+              empty: 'border-slate-200 bg-white/60 text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300',
+              footer: 'border-slate-200/60 bg-[#fdf9f4] dark:border-white/10 dark:bg-white/[0.03]',
               cancel: 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200 dark:hover:bg-white/[0.08]',
-              submit: 'bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-500 dark:text-white dark:hover:bg-amber-400',
+              submit: 'bg-[linear-gradient(90deg,#8b5cf6_0%,#ec4899_52%,#f97316_100%)] text-white hover:opacity-90',
             }
           : {
               shell: 'border-white/10 bg-white dark:border-white/10 dark:bg-slate-950',
@@ -633,14 +636,14 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
           }
         : isPartyEditor
           ? {
-              itemSurface: 'border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-white/[0.04]',
-              remove: 'border-slate-200 bg-white text-slate-500 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:border-rose-400/20 dark:hover:bg-rose-500/10 dark:hover:text-rose-200',
+              itemSurface: '!rounded-none !border-0 !p-0 !shadow-none border-b border-slate-100 pb-3 last:border-b-0 dark:border-white/[0.08]',
+              remove: 'border-slate-200 bg-white text-slate-400 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-400 dark:hover:border-rose-400/20 dark:hover:bg-rose-500/10 dark:hover:text-rose-200',
               optionIdle: 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200 dark:hover:border-white/20',
               addChip: 'border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300 hover:bg-amber-100 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/15',
               claimed: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200',
-              unclaimed: 'text-slate-500 dark:text-slate-400',
+              unclaimed: 'text-slate-400 dark:text-slate-500',
               dropdown: 'border-slate-200 bg-white/98 dark:border-white/10 dark:bg-[#1a1227]/98',
-              option: 'border-slate-100 hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/[0.06]',
+              option: 'border-slate-100 hover:bg-amber-50/50 dark:border-white/10 dark:hover:bg-white/[0.06]',
               toggleOn: 'border-amber-500 bg-amber-500 text-white dark:border-amber-300 dark:bg-amber-500 dark:text-white',
               toggleOff: 'border-slate-200 bg-white text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200',
               help: 'text-slate-500 dark:text-slate-400',
@@ -838,9 +841,10 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
         style={{
           transform: `translateY(${dragY}px)`,
           transition: dragStartYRef.current != null ? 'none' : 'transform 180ms ease',
+          fontFamily: isPartyEditor ? APP_FONT_STACK : undefined,
         }}
       >
-        <div className={`relative overflow-hidden border-b px-5 py-5 ${editorTheme.header}`}>
+        <div className={`relative shrink-0 overflow-hidden border-b px-5 py-5 ${editorTheme.header}`}>
           <div
             className="flex justify-center pb-3"
             onPointerDown={handleDragStart}
@@ -853,7 +857,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
           </div>
           <div className="flex items-start gap-4">
             <div className="min-w-0 flex-1">
-              <div className={`text-[18px] font-bold tracking-tight ${editorTheme.title}`}>{config.title || 'Edit details'}</div>
+              <div className={`pb-0.5 text-[18px] font-bold leading-[1.2] tracking-tight ${editorTheme.title}`}>{config.title || 'Edit details'}</div>
               {config.subtitle ? <div className={`mt-1 text-sm leading-6 ${editorTheme.subtitle}`}>{config.subtitle}</div> : null}
             </div>
           </div>
@@ -863,7 +867,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
           {(config.fields || []).map((field) => (
             <label key={field.key} className="block">
               {field.type !== 'music-link' ? (
-                <div className={`mb-1.5 text-[12px] font-bold uppercase tracking-[0.16em] ${editorTheme.label}`}>{field.label}</div>
+                <div className={`mb-1.5 text-[12px] font-bold uppercase tracking-[0.16em] ${editorTheme.label}`} style={{ fontFamily: isPartyEditor ? APP_FONT_STACK : undefined }}>{field.label}</div>
               ) : null}
               {field.type === 'textarea' ? (
                 <textarea
@@ -872,6 +876,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                   rows={field.rows || 4}
                   placeholder={field.placeholder || ''}
                   className={`min-h-[112px] w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
+                  style={{ fontFamily: isPartyEditor ? APP_FONT_STACK : undefined }}
                 />
               ) : field.type === 'music-link' ? (
                 <div className={`space-y-3 rounded-[24px] border p-3 ${editorTheme.panel}`}>
@@ -905,6 +910,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                     onChange={(event) => setFieldValue(field.key, event.target.value)}
                     placeholder={field.placeholder || ''}
                     className={`w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
+                    style={{ fontFamily: isPartyEditor ? APP_FONT_STACK : undefined }}
                   />
                 </div>
               ) : field.type === 'registry-link' ? (
@@ -931,6 +937,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                     onChange={(event) => setFieldValue(field.key, event.target.value)}
                     placeholder={field.placeholder || ''}
                     className={`w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
+                    style={{ fontFamily: isPartyEditor ? APP_FONT_STACK : undefined }}
                   />
                 </div>
               ) : field.type === 'image-upload' ? (
@@ -1008,20 +1015,21 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                   <div className="space-y-3">
                     {normalizeGuestListDraftEntries(draft[field.key]).map((guest, index) => (
                       <div key={`${field.key}-${index}`} className={`rounded-2xl border p-3 shadow-sm ${editorAccent.itemSurface}`}>
-                        <div className="flex items-start gap-2">
+                        <div className="flex items-center gap-2">
                           <input
                             type="text"
                             value={guest.name}
                             onChange={(event) => handleGuestRowChange(field.key, index, { name: event.target.value })}
                             placeholder={field.placeholder || 'Guest name'}
                             className={`min-w-0 flex-1 rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
+                            style={{ fontFamily: isPartyEditor ? APP_FONT_STACK : undefined }}
                           />
                           <button
                             type="button"
                             onClick={() => handleRemoveGuestRow(field.key, index)}
-                            className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition ${editorAccent.remove}`}
+                            className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition ${editorAccent.remove}`}
                           >
-                            <span className="text-lg leading-none">X</span>
+                            <span className="text-sm font-semibold leading-none opacity-75">x</span>
                           </button>
                         </div>
                         <div className="mt-3 flex flex-wrap gap-2">
@@ -1068,20 +1076,21 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                   <div className="space-y-3">
                     {normalizePotluckDraftEntries(draft[field.key]).map((entry, index) => (
                       <div key={`${field.key}-${index}`} className={`rounded-2xl border p-3 shadow-sm ${editorAccent.itemSurface}`}>
-                        <div className="flex items-start gap-2">
+                        <div className="flex items-center gap-2">
                           <input
                             type="text"
                             value={entry.item}
                             onChange={(event) => handlePotluckRowChange(field.key, index, { item: event.target.value })}
                             placeholder={field.placeholder || 'Potluck item'}
                             className={`min-w-0 flex-1 rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
+                            style={{ fontFamily: isPartyEditor ? APP_FONT_STACK : undefined }}
                           />
                           <button
                             type="button"
                             onClick={() => handleRemovePotluckRow(field.key, index)}
-                            className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition ${editorAccent.remove}`}
+                            className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition ${editorAccent.remove}`}
                           >
-                            <span className="text-lg leading-none">X</span>
+                            <span className="text-xs leading-none opacity-60">×</span>
                           </button>
                         </div>
                         {entry.person ? (
@@ -1110,11 +1119,20 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                     <span>Add item</span>
                   </button>
                 </div>
+              ) : field.type === 'date' ? (
+                <input
+                  type="date"
+                  value={draft[field.key] ?? ''}
+                  onChange={(event) => setFieldValue(field.key, event.target.value)}
+                  className={`w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
+                  style={{ fontFamily: isPartyEditor ? APP_FONT_STACK : undefined }}
+                />
               ) : field.type === 'select' ? (
                 <select
                   value={draft[field.key] ?? field.options?.[0]?.value ?? ''}
                   onChange={(event) => setFieldValue(field.key, event.target.value)}
                   className={`w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
+                  style={{ fontFamily: isPartyEditor ? APP_FONT_STACK : undefined }}
                 >
                   {(field.options || []).map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
@@ -1125,7 +1143,8 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                   value={draft[field.key] ?? ''}
                   onChange={(value) => setFieldValue(field.key, value)}
                   placeholder={field.placeholder || 'Search venue...'}
-                    inputClassName={`w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
+                  inputClassName={`w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
+                  inputStyle={isPartyEditor ? { fontFamily: APP_FONT_STACK } : undefined}
                   dropdownClassName={`overflow-hidden rounded-2xl border backdrop-blur-md ring-1 ring-black/5 shadow-[0_24px_60px_rgba(15,23,42,0.22)] ${editorAccent.dropdown}`}
                   optionClassName={`block w-full border-b px-4 py-3 text-left text-sm last:border-b-0 ${editorAccent.option}`}
                 />
@@ -1147,6 +1166,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                   onChange={(event) => setFieldValue(field.key, event.target.value)}
                   placeholder={field.placeholder || ''}
                   className={`w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
+                  style={{ fontFamily: isPartyEditor ? APP_FONT_STACK : undefined }}
                 />
               )}
               {field.help ? <div className={`mt-1.5 text-xs leading-5 ${editorAccent.help}`}>{field.help}</div> : null}
@@ -1154,11 +1174,21 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
           ))}
         </div>
 
-        <div className={`flex items-center justify-end gap-3 border-t px-5 py-4 ${editorTheme.footer}`}>
-          <button type="button" onClick={onClose} className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${editorTheme.cancel}`}>
+        <div className={`shrink-0 flex items-center justify-end gap-3 border-t px-5 py-4 ${editorTheme.footer}`}>
+          <button
+            type="button"
+            onClick={onClose}
+            className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${editorTheme.cancel}`}
+            style={{ fontFamily: isPartyEditor ? APP_FONT_STACK : undefined }}
+          >
             Cancel
           </button>
-          <button type="submit" disabled={saving} className={`rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:cursor-default disabled:opacity-70 ${editorTheme.submit}`}>
+          <button
+            type="submit"
+            disabled={saving}
+            className={`rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:cursor-default disabled:opacity-70 ${editorTheme.submit}`}
+            style={{ fontFamily: isPartyEditor ? APP_FONT_STACK : undefined }}
+          >
             {saving ? 'Saving...' : (config.saveLabel || 'Save changes')}
           </button>
         </div>
@@ -1711,13 +1741,24 @@ const EventCardRouter = ({ event, onEditBasics, ...props }) => {
         title: 'Edit Event Details',
         fields: [
           { key: 'title', label: 'Event title', value: String(event?.title || '').trim(), placeholder: 'Game Night @ Home' },
+          { key: 'date', label: 'Date', type: 'date', value: String(event?.date || '').trim(), placeholder: '2026-04-12' },
+          { key: 'time', label: 'Time', value: String(event?.time || '').trim(), placeholder: '7:30 PM' },
           { key: 'location', label: 'Location', value: String(event?.location || '').trim(), placeholder: 'Home, rooftop, park...' },
+          { key: 'max_players', label: 'Max people', value: String(event?.max_players || '').trim(), placeholder: '8' },
           { key: 'coverImageUrl', label: 'Cover photo', type: 'image-upload', value: normalizeEventCoverImage(event) },
           { key: 'description', label: 'Notes', type: 'textarea', rows: 5, value: normalizeEventNotes(event), placeholder: 'Add anything guests should know.' },
         ],
         onSave: (values) => onEditBasics({
           title: String(values.title || '').trim() || String(event?.title || '').trim(),
+          date: String(values.date || '').trim() || null,
+          time: String(values.time || '').trim() || null,
           location: String(values.location || '').trim() || null,
+          max_players: (() => {
+            const raw = String(values.max_players || '').trim();
+            if (!raw) return null;
+            const parsed = Number.parseInt(raw, 10);
+            return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+          })(),
           coverImageUrl: String(values.coverImageUrl || '').trim() || null,
           description: String(values.description || '').trim() || null,
         }),

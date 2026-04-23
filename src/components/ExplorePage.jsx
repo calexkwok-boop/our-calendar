@@ -784,15 +784,7 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
       return out;
     }
     // "For this weekend" — interleave movies + board games so both appear
-    const weekendMovies = moviesByRating.slice(0, 3);
-    const weekendGames  = activeCom.filter(p => p.type === 'games').slice(0, 2);
-    const interleaved   = [];
-    const maxLen = Math.max(weekendMovies.length, weekendGames.length);
-    for (let i = 0; i < maxLen; i++) {
-      if (weekendMovies[i]) interleaved.push(weekendMovies[i]);
-      if (weekendGames[i])  interleaved.push(weekendGames[i]);
-    }
-    const weekend = take(interleaved, 5);
+    const weekend = take(moviesByRating, 5);
     // "From your friends" — friend activity posts (omit if empty)
     const friends  = activeFriends.length > 0 ? take(activeFriends, 4) : [];
     // "Dreaming of" — products + hiking + restaurants + destinations

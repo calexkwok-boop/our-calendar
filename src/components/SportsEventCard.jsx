@@ -237,6 +237,7 @@ export default function SportsEventCard({
   onStartPlay,
   onGoToInfo,
   onTogglePublic,
+  onEditBasics,
   activeTab = 'info',
   bodyContent = null,
   onEditCapacity,
@@ -329,19 +330,21 @@ export default function SportsEventCard({
         </div>
 
         {/* title */}
-        <div style={{
+        <button type="button" onClick={onEditBasics || undefined} style={{
           fontSize: 29, fontWeight: 900, color: heroText,
           letterSpacing: '-0.02em', lineHeight: 1.15,
           marginBottom: 10, position: 'relative',
           fontFamily: "'Caveat', cursive",
+          background: 'transparent', border: 'none', padding: 0, cursor: onEditBasics ? 'pointer' : 'default', textAlign: 'left',
         }}>
           {event.title || 'Untitled Event'}
-        </div>
+        </button>
 
         {/* meta row */}
-        <div style={{
+        <button type="button" onClick={onEditBasics || onEditCapacity || undefined} style={{
           display: 'flex', alignItems: 'center', gap: 14,
           flexWrap: 'wrap', marginBottom: 12, position: 'relative',
+          background: 'transparent', border: 'none', padding: 0, cursor: (onEditBasics || onEditCapacity) ? 'pointer' : 'default', textAlign: 'left',
         }}>
           {dateParts && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: heroMuted }}>
@@ -356,14 +359,18 @@ export default function SportsEventCard({
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: heroMuted }}>
             <Users style={{ width: 11, height: 11 }} />{capacityLabel}
           </span>
-        </div>
+        </button>
 
         {/* capacity bar */}
         {!noMax && (
-          <div style={{
+          <button type="button" onClick={onEditCapacity || onEditBasics || undefined} style={{
             height: 3, borderRadius: 999,
             background: 'rgba(255,255,255,0.1)',
             overflow: 'hidden', position: 'relative',
+            width: '100%',
+            border: 'none',
+            padding: 0,
+            cursor: (onEditCapacity || onEditBasics) ? 'pointer' : 'default',
           }}>
             <div style={{
               height: '100%', borderRadius: 999,
@@ -371,7 +378,7 @@ export default function SportsEventCard({
               background: `linear-gradient(90deg, ${accent}, ${accent}bb)`,
               transition: 'width 0.5s',
             }} />
-          </div>
+          </button>
         )}
 
         {/* ── tab bar — flush to bottom of hero ── */}
@@ -426,11 +433,10 @@ export default function SportsEventCard({
 
         {/* ── location ── */}
         {event.location && (
-          <a
-            href={buildMapHref(event.location)}
-            target="_blank" rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            style={{ textDecoration: 'none' }}
+          <button
+            type="button"
+            onClick={onEditBasics || undefined}
+            style={{ textDecoration: 'none', background: 'transparent', border: 'none', padding: 0, width: '100%', cursor: onEditBasics ? 'pointer' : 'default' }}
           >
             <div style={{
               display: 'flex', alignItems: 'center', gap: 12,
@@ -457,7 +463,7 @@ export default function SportsEventCard({
                 <path d="M4.5 2.5 L8 6 L4.5 9.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-          </a>
+          </button>
         )}
 
         {/* ── organizer row ── */}

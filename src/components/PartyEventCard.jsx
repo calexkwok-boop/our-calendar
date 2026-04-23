@@ -216,13 +216,20 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
   const canClaimPotluck = Boolean(props.canClaimPotluck && typeof props.onClaimPotluck === 'function');
   const activeTab = String(props.activeTab || 'info').trim().toLowerCase();
   const bodyContent = props.bodyContent || null;
-
   // invitees
   const invitees  = Array.isArray(event.invitees) ? event.invitees : [];
   const host      = invitees.find((i) => i.role === 'host');
   const preview   = invitees.slice(0, 6);
   const overflow  = Math.max(0, invitees.length - 6);
   const hostFirst = host ? (host.display_name || host.name || '').split(' ')[0] : null;
+  const explicitPeopleGoingCount = Number.isFinite(props.peopleGoingCount) ? props.peopleGoingCount : null;
+  const explicitTotalPeopleCount = Number.isFinite(props.totalPeopleCount) ? props.totalPeopleCount : null;
+  const peopleGoingCount = explicitPeopleGoingCount ?? invitees.filter((invitee) => {
+    if (String(invitee?.role || '').trim().toLowerCase() === 'host') return true;
+    if (String(invitee?.source || '').trim().toLowerCase() !== 'guest-list') return true;
+    return String(invitee?.rsvp || '').trim().toLowerCase() === 'yes';
+  }).length;
+  const totalPeopleCount = explicitTotalPeopleCount ?? invitees.length;
 
   const dateShort  = formatDateShort(event.date);
   const timePretty = formatTimePretty(event.time);
@@ -246,13 +253,20 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
     variant: 'party', title: 'Party Details',
     fields: [
       { key: 'title',    label: 'Title',    value: titleText,                        placeholder: 'House Party @ Mine' },
-      { key: 'date',     label: 'Date',     value: String(event?.date || '').trim(), placeholder: '2026-04-12' },
+      { key: 'date',     label: 'Date',     type: 'date', value: String(event?.date || '').trim(), placeholder: '2026-04-12' },
       { key: 'time',     label: 'Time',     value: String(event?.time || '').trim(), placeholder: '8:00 PM' },
       { key: 'location', label: 'Location', type: 'location', value: String(event?.location || '').trim(), placeholder: 'Search venue...' },
+      { key: 'max_players', label: 'Max people', value: String(event?.max_players || '').trim(), placeholder: '12' },
     ],
     onSave: (values) => onUpdateEventData({
       title: String(values.title || '').trim(), date: String(values.date || '').trim(),
       time: String(values.time || '').trim(), location: String(values.location || '').trim(),
+      max_players: (() => {
+        const raw = String(values.max_players || '').trim();
+        if (!raw) return null;
+        const parsed = Number.parseInt(raw, 10);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+      })(),
     }),
   }) : onEdit;
 
@@ -391,20 +405,22 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
         </div>
 
         {/* title */}
-        <div style={{
+        <button type="button" onClick={openHeaderEditor} style={{
           fontSize: 29, fontWeight: 900, color: heroText,
           letterSpacing: '-0.02em', lineHeight: 1.15,
           marginBottom: 10, position: 'relative', zIndex: 1,
           fontFamily: "'Caveat', cursive",
+          background: 'transparent', border: 'none', padding: 0, cursor: openHeaderEditor ? 'pointer' : 'default', textAlign: 'left',
         }}>
           {titleText || 'Untitled Party'}
-        </div>
+        </button>
 
         {/* meta row */}
-        <div style={{
+        <button type="button" onClick={openHeaderEditor} style={{
           display: 'flex', alignItems: 'center', gap: 14,
           flexWrap: 'wrap', marginBottom: 12,
           position: 'relative', zIndex: 1,
+          background: 'transparent', border: 'none', padding: 0, cursor: openHeaderEditor ? 'pointer' : 'default', textAlign: 'left',
         }}>
           {dateShort && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: heroMuted }}>
@@ -424,7 +440,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
               </span>
             </span>
           )}
-        </div>
+        </button>
 
         {/* tab bar — flush to hero bottom */}
         <div style={{
@@ -464,222 +480,233 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
       </div>
 
       {/* ══════════════════════════════════════════
-          BODY — clean, no decorations
+          BODY — invite / scrapbook style
       ══════════════════════════════════════════ */}
       <div style={{
-        background: bodyBg,
-        padding: '16px 16px 20px',
-        display: 'flex', flexDirection: 'column', gap: 10,
+        background: darkMode ? '#0f0a1a' : '#fdf9f4',
+        padding: '18px 18px 24px',
+        display: 'flex', flexDirection: 'column', gap: 0,
       }}>
         {bodyContent || (
           <>
+            {/* ── RSVP button ── */}
+            {!props.hidePrimaryAction && props.onPrimaryAction && props.primaryActionLabel && (
+              <button onClick={props.onPrimaryAction} style={{
+                width: '100%', padding: '13px 0', borderRadius: 14, border: 'none',
+                cursor: 'pointer', background: accent, color: '#fff',
+                fontSize: 18, fontWeight: 900, fontFamily: APP_FONT_STACK,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                position: 'relative', overflow: 'hidden', marginBottom: 18,
+              }}>
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(105deg,transparent 35%,rgba(255,255,255,0.1) 50%,transparent 65%)', pointerEvents: 'none' }} />
+                {props.primaryActionLabel}
+              </button>
+            )}
 
-        {/* who's coming */}
-        {invitees.length > 0 && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '10px 14px', borderRadius: 14,
-            background: surfaceBg, border: `1px solid ${border}`,
-          }}>
-            <div style={{ display: 'flex', paddingLeft: 5 }}>
-              {preview.map((inv, i) => (
-                <GuestPip key={inv.id || i} person={inv} name={inv.display_name || inv.name}
-                  role={inv.role} accent={accent} darkMode={darkMode} size={28} />
-              ))}
-              {overflow > 0 && (
-                <div style={{
-                  width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                  background: darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)',
-                  border: `2px solid ${border}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, fontWeight: 900, color: secondaryText,
-                  marginLeft: -5, fontFamily: APP_FONT_STACK,
-                }}>+{overflow}</div>
-              )}
-            </div>
-            <span style={{ fontSize: 15, fontWeight: 700, color: secondaryText }}>
-              {invitees.length === 1 ? '1 person going' : `${invitees.length} people going`}
-            </span>
-          </div>
-        )}
-
-        {/* RSVP / join button */}
-        {!props.hidePrimaryAction && props.onPrimaryAction && props.primaryActionLabel && (
-          <button onClick={props.onPrimaryAction} style={{
-            width: '100%', padding: '13px 0', borderRadius: 14, border: 'none',
-            cursor: 'pointer', background: accent, color: '#fff',
-            fontSize: 18, fontWeight: 900, fontFamily: APP_FONT_STACK,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            position: 'relative', overflow: 'hidden',
-          }}>
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(105deg,transparent 35%,rgba(255,255,255,0.1) 50%,transparent 65%)', pointerEvents: 'none' }} />
-            {props.primaryActionLabel}
-          </button>
-        )}
-
-        {/* ── Invitation Details — theme / guests / music ── */}
-        <Section
-          title="Invitation Details"
-          border={border} surfaceBg={surfaceBg}
-          primaryText={primaryText} secondaryText={secondaryText}
-        >
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-
-            {/* Theme */}
-            <button onClick={openThemeEditor} type="button" style={{
-              padding: '10px 12px', borderRadius: 12, textAlign: 'left',
-              border: `1px solid ${border}`, background: bodyBg,
-              cursor: openThemeEditor ? 'pointer' : 'default',
-            }}>
-              <div style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: accent, marginBottom: 5 }}>Theme</div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: primaryText, lineHeight: 1.3 }}>
-                {theme || <span style={{ color: mutedText, fontStyle: 'italic' }}>None set</span>}
-              </div>
-            </button>
-
-            {/* Guests */}
-            <button onClick={openGuestEditor} type="button" style={{
-              padding: '10px 12px', borderRadius: 12, textAlign: 'left',
-              border: `1px solid ${border}`, background: bodyBg,
-              cursor: openGuestEditor ? 'pointer' : 'default',
-            }}>
-              <div style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: secondaryText, marginBottom: 5 }}>Guests</div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: primaryText, lineHeight: 1.3 }}>{guestSummary}</div>
-              {guestList.length > 0 && (
-                <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  {guestList.slice(0, 2).map((g, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: secondaryText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{g.name}</span>
-                      <span style={{
-                        fontSize: 9, fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase',
-                        padding: '1px 5px', borderRadius: 999, flexShrink: 0,
-                        background: g.rsvp === 'yes' ? '#d1fae5' : g.rsvp === 'no' ? '#fee2e2' : darkMode ? 'rgba(255,255,255,0.08)' : '#f3f4f6',
-                        color: g.rsvp === 'yes' ? '#065f46' : g.rsvp === 'no' ? '#991b1b' : secondaryText,
-                      }}>
-                        {g.rsvp === 'yes' ? 'Yes' : g.rsvp === 'no' ? 'No' : 'Pending'}
-                      </span>
-                    </div>
-                  ))}
-                  {guestList.length > 2 && <span style={{ fontSize: 12, color: mutedText, fontWeight: 700 }}>+{guestList.length - 2} more</span>}
-                </div>
-              )}
-            </button>
-
-            {/* Music */}
-            <button onClick={openMusicEditor} type="button" style={{
-              padding: '10px 12px', borderRadius: 12, textAlign: 'left',
-              border: `1px solid ${border}`, background: bodyBg,
-              cursor: openMusicEditor ? 'pointer' : 'default',
-            }}>
-              <div style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: secondaryText, marginBottom: 5 }}>Music</div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: primaryText, lineHeight: 1.3 }}>
-                {musicPlaylist ? (playlistService?.name || 'Ready') : <span style={{ color: mutedText, fontStyle: 'italic' }}>Not set</span>}
-              </div>
-              {musicPlaylist && isProbablyUrl(musicPlaylist) && (
-                <div style={{ marginTop: 6 }}>
-                  <a href={musicPlaylist} target="_blank" rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 4,
-                      padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 800,
-                      background: playlistService?.name === 'Spotify' ? '#1ed76018' : `${accent}18`,
-                      color: playlistService?.name === 'Spotify' ? '#166534' : accent,
-                      textDecoration: 'none',
-                    }}>
-                    {playlistService?.name === 'Spotify' && <SpotifyIcon />}
-                    {playlistService?.name === 'Apple Music' && <AppleMusicIcon />}
-                    {playlistService?.name || 'Open'}
-                  </a>
-                </div>
-              )}
-            </button>
-          </div>
-        </Section>
-
-        {/* ── Potluck ── */}
-        {(potluckItems.length > 0 || openPotluckEditor) && (
-          <Section
-            title="Potluck"
-            subtitle={potluckItems.length > 0 ? `${potluckItems.length} items · ${claimedCount} claimed${openCount ? ` · ${openCount} open` : ''}` : undefined}
-            actions={openPotluckEditor ? <EditPill onClick={openPotluckEditor} accent={accent}>{potluckItems.length > 0 ? 'Edit' : 'Add'}</EditPill> : null}
-            border={border} surfaceBg={surfaceBg} primaryText={primaryText} secondaryText={secondaryText}
-          >
-            {potluckItems.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {potluckPreview.map((item, idx) => (
-                  <div key={idx} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-                    padding: '9px 12px', borderRadius: 12,
-                    border: `1px solid ${border}`, background: bodyBg,
+            {/* ── Theme + Music pills row ── */}
+            {(theme || musicPlaylist || canEdit) && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                {(theme || canEdit) && (
+                  <button type="button" onClick={openThemeEditor} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '7px 14px', borderRadius: 999,
+                    background: `${accent}18`, border: `1px solid ${accent}30`,
+                    cursor: openThemeEditor ? 'pointer' : 'default',
+                    fontFamily: APP_FONT_STACK,
                   }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 15, fontWeight: 800, color: primaryText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item?.item || item}</div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: secondaryText, marginTop: 1 }}>
-                        {item?.person ? `Claimed by ${item.person}` : 'Open signup'}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                      <span style={{
-                        padding: '2px 9px', borderRadius: 999,
-                        fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em',
-                        background: item?.person ? `${accent}18` : '#fef9c3',
-                        color: item?.person ? accent : '#854d0e',
-                      }}>
-                        {item?.person ? 'Claimed' : 'Open'}
-                      </span>
-                      {canClaimPotluck && (!item?.claimedByUserId || item.claimedByUserId === currentUserId) && (
-                        <button type="button" onClick={() => props.onClaimPotluck?.(idx)} style={{
-                          padding: '2px 9px', borderRadius: 999,
-                          fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em',
-                          cursor: 'pointer', border: 'none',
-                          background: item?.claimedByUserId === currentUserId ? '#fee2e2' : '#d1fae5',
-                          color: item?.claimedByUserId === currentUserId ? '#991b1b' : '#065f46',
-                        }}>
-                          {item?.claimedByUserId === currentUserId ? 'Unclaim' : 'Claim'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {potluckItems.length > 3 && (
-                  <button type="button" onClick={openPotluckEditor} style={{
-                    width: '100%', padding: '8px 0', borderRadius: 12, cursor: 'pointer',
-                    background: 'transparent', border: `1px dashed ${accent}33`,
-                    fontSize: 13, fontWeight: 800, color: accent, fontFamily: APP_FONT_STACK,
+                    <span style={{ fontSize: 15 }}>🎨</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: accent }}>
+                      {theme || <span style={{ fontStyle: 'italic', color: mutedText }}>Add theme</span>}
+                    </span>
+                  </button>
+                )}
+                {(musicPlaylist || canEdit) && (
+                  <button type="button" onClick={openMusicEditor} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '7px 14px', borderRadius: 999,
+                    background: darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)',
+                    border: `1px solid ${border}`,
+                    cursor: openMusicEditor ? 'pointer' : 'default',
+                    fontFamily: APP_FONT_STACK,
                   }}>
-                    +{potluckItems.length - 3} more items
+                    {playlistService?.name === 'Spotify' ? <SpotifyIcon /> : playlistService?.name === 'Apple Music' ? <AppleMusicIcon /> : <span style={{ fontSize: 15 }}>🎵</span>}
+                    <span style={{ fontSize: 13, fontWeight: 700, color: primaryText }}>
+                      {musicPlaylist ? (playlistService?.name || 'Playlist') : <span style={{ fontStyle: 'italic', color: mutedText }}>Add music</span>}
+                    </span>
+                    {musicPlaylist && isProbablyUrl(musicPlaylist) && (
+                      <a href={musicPlaylist} target="_blank" rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ fontSize: 11, fontWeight: 800, color: accent, textDecoration: 'none' }}>
+                        Open ↗
+                      </a>
+                    )}
                   </button>
                 )}
               </div>
-            ) : (
-              <div style={{ fontSize: 14, fontWeight: 700, color: mutedText, fontStyle: 'italic' }}>
-                Nothing added yet.
-              </div>
             )}
-          </Section>
-        )}
 
-        {/* ── Party Notes ── */}
-        {(notes || openNotesEditor) && (
-          <Section
-            title="Notes"
-            actions={openNotesEditor ? <EditPill onClick={openNotesEditor} accent={accent}>{notes ? 'Edit' : 'Add'}</EditPill> : null}
-            border={border} surfaceBg={surfaceBg} primaryText={primaryText} secondaryText={secondaryText}
-          >
-            {notes ? (
-              <div style={{ fontSize: 15, fontWeight: 700, color: primaryText, lineHeight: 1.65 }}>
-                {notes}
-              </div>
-            ) : (
-              <div style={{ fontSize: 14, fontWeight: 700, color: mutedText, fontStyle: 'italic' }}>
-                Nothing added yet.
+            {/* ── Guests ── */}
+            {(invitees.length > 0 || guestList.length > 0 || canEdit) && (
+              <div style={{ marginBottom: 16 }}>
+                <button type="button" onClick={openGuestEditor} style={{
+                  width: '100%', background: 'transparent', border: 'none', padding: 0,
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  cursor: openGuestEditor ? 'pointer' : 'default',
+                  fontFamily: APP_FONT_STACK, textAlign: 'left',
+                }}>
+                  {invitees.length > 0 && (
+                    <div style={{ display: 'flex', paddingLeft: 5, flexShrink: 0 }}>
+                      {preview.map((inv, i) => (
+                        <GuestPip key={inv.id || i} person={inv} name={inv.display_name || inv.name}
+                          role={inv.role} accent={accent} darkMode={darkMode} size={32} />
+                      ))}
+                      {overflow > 0 && (
+                        <div style={{
+                          width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                          background: darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)',
+                          border: `2px solid ${border}`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 11, fontWeight: 900, color: secondaryText,
+                          marginLeft: -5, fontFamily: APP_FONT_STACK,
+                        }}>+{overflow}</div>
+                      )}
+                    </div>
+                  )}
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: primaryText }}>
+                      {invitees.length > 0
+                        ? `${peopleGoingCount} / ${totalPeopleCount} going`
+                        : guestList.length > 0 ? guestSummary : 'No guests yet'}
+                    </div>
+                    {guestList.length > 0 && (
+                      <div style={{ fontSize: 12, color: secondaryText, fontWeight: 600, marginTop: 2 }}>
+                        {guestList.filter((g) => g.rsvp === 'yes').length} yes
+                        {' · '}{guestList.filter((g) => g.rsvp === 'pending').length} pending
+                        {guestList.filter((g) => g.rsvp === 'no').length > 0 && ` · ${guestList.filter((g) => g.rsvp === 'no').length} no`}
+                      </div>
+                    )}
+                  </div>
+                </button>
+                {guestList.length > 0 && (
+                  <div style={{ marginTop: 10 }}>
+                    {guestList.map((g, i) => (
+                      <div key={i} style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '7px 0',
+                        borderBottom: `1px solid ${divider}`,
+                      }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: primaryText }}>{g.name}</span>
+                        <span style={{
+                          fontSize: 10, fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase',
+                          padding: '2px 9px', borderRadius: 999,
+                          background: g.rsvp === 'yes' ? '#d1fae5' : g.rsvp === 'no' ? '#fee2e2' : darkMode ? 'rgba(255,255,255,0.08)' : '#f3f4f6',
+                          color: g.rsvp === 'yes' ? '#065f46' : g.rsvp === 'no' ? '#991b1b' : secondaryText,
+                        }}>
+                          {g.rsvp === 'yes' ? 'Yes' : g.rsvp === 'no' ? 'No' : 'Pending'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
-          </Section>
-        )}
+
+            {/* ── Potluck ── */}
+            {(potluckItems.length > 0 || openPotluckEditor) && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <span style={{ fontSize: 16 }}>🍽️</span>
+                    <span style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.09em', color: secondaryText }}>Potluck</span>
+                    {potluckItems.length > 0 && (
+                      <span style={{ fontSize: 12, color: mutedText, fontWeight: 600 }}>
+                        {claimedCount}/{potluckItems.length} claimed
+                      </span>
+                    )}
+                  </div>
+                  {openPotluckEditor && (
+                    <EditPill onClick={openPotluckEditor} accent={accent}>{potluckItems.length > 0 ? 'Edit' : 'Add'}</EditPill>
+                  )}
+                </div>
+                {potluckItems.length > 0 ? (
+                  <>
+                    {potluckPreview.map((item, idx) => (
+                      <div key={idx} style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                        padding: '8px 0',
+                        borderBottom: `1px solid ${divider}`,
+                      }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: primaryText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{item?.item || item}</span>
+                          {item?.person && <span style={{ fontSize: 12, color: secondaryText, fontWeight: 600 }}>by {item.person}</span>}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                          <span style={{
+                            padding: '2px 9px', borderRadius: 999,
+                            fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em',
+                            background: item?.person ? `${accent}18` : '#fef9c3',
+                            color: item?.person ? accent : '#854d0e',
+                          }}>
+                            {item?.person ? 'Claimed' : 'Open'}
+                          </span>
+                          {canClaimPotluck && (!item?.claimedByUserId || item.claimedByUserId === currentUserId) && (
+                            <button type="button" onClick={() => props.onClaimPotluck?.(idx)} style={{
+                              padding: '2px 9px', borderRadius: 999,
+                              fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em',
+                              cursor: 'pointer', border: 'none',
+                              background: item?.claimedByUserId === currentUserId ? '#fee2e2' : '#d1fae5',
+                              color: item?.claimedByUserId === currentUserId ? '#991b1b' : '#065f46',
+                            }}>
+                              {item?.claimedByUserId === currentUserId ? 'Unclaim' : 'Claim'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {potluckItems.length > 3 && (
+                      <button type="button" onClick={openPotluckEditor} style={{
+                        marginTop: 6, background: 'transparent', border: 'none', padding: 0,
+                        fontSize: 13, fontWeight: 800, color: accent, fontFamily: APP_FONT_STACK,
+                        cursor: 'pointer',
+                      }}>
+                        +{potluckItems.length - 3} more items
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <div style={{ fontSize: 13, color: mutedText, fontStyle: 'italic', fontWeight: 600 }}>Nothing added yet.</div>
+                )}
+              </div>
+            )}
+
+            {/* ── Notes ── */}
+            {(notes || openNotesEditor) && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <span style={{ fontSize: 16 }}>📝</span>
+                    <span style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.09em', color: secondaryText }}>Notes</span>
+                  </div>
+                  {openNotesEditor && (
+                    <EditPill onClick={openNotesEditor} accent={accent}>{notes ? 'Edit' : 'Add'}</EditPill>
+                  )}
+                </div>
+                {notes ? (
+                  <div style={{
+                    fontSize: 14, fontWeight: 600, color: primaryText, lineHeight: 1.7,
+                    padding: '10px 14px', borderRadius: 12,
+                    background: darkMode ? 'rgba(255,255,255,0.04)' : `${accent}0d`,
+                    borderLeft: `3px solid ${accent}50`,
+                  }}>
+                    {notes}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 13, color: mutedText, fontStyle: 'italic', fontWeight: 600 }}>Nothing added yet.</div>
+                )}
+              </div>
+            )}
           </>
         )}
-
       </div>
     </div>
   );
