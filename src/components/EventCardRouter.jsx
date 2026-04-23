@@ -96,10 +96,10 @@ const detectPlaylistService = (value) => {
   const normalized = String(value || '').trim().toLowerCase();
   if (!normalized) return null;
   if (normalized.includes('spotify.com')) {
-    return { name: 'Spotify', icon: 'ÃƒÂ¢Ã¢â€žÂ¢Ã‚Âª', chipClass: 'bg-[#1ed760]/15 text-[#15803d] dark:text-[#86efac]' };
+    return { name: 'Spotify', icon: '\u266A', chipClass: 'bg-[#1ed760]/15 text-[#15803d] dark:text-[#86efac]' };
   }
   if (normalized.includes('music.apple.com') || normalized.includes('itunes.apple.com')) {
-    return { name: 'Apple Music', icon: 'ÃƒÂ¢Ã¢â€žÂ¢Ã‚Â«', chipClass: 'bg-[#fa233b]/12 text-[#be123c] dark:text-[#fda4af]' };
+    return { name: 'Apple Music', icon: '\u266B', chipClass: 'bg-[#fa233b]/12 text-[#be123c] dark:text-[#fda4af]' };
   }
   return null;
 };
@@ -482,7 +482,7 @@ const PlacesAutocompleteField = ({ value, onChange, placeholder, inputClassName,
                   }}
                   className={optionClassName}
                 >
-                  <span className="mr-1 text-gray-400 dark:text-gray-500">ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â</span>
+                  <span className="mr-1 text-gray-400 dark:text-gray-500">{'\u{1F4CD}'}</span>
                   <span className="font-medium text-gray-800 dark:text-white">
                     {suggestion.structured_formatting?.main_text || suggestion.description}
                   </span>
@@ -964,7 +964,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                           onClick={() => document.getElementById(inputId)?.click()}
                           className={`inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] transition ${editorAccent.addChip}`}
                         >
-                          {uploadingImageField === field.key ? 'UploadingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦' : (draft[field.key] ? 'Choose photo' : 'Upload photo')}
+                          {uploadingImageField === field.key ? 'Uploading...' : (draft[field.key] ? 'Choose photo' : 'Upload photo')}
                         </button>
                         <button
                           type="button"
@@ -996,7 +996,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                         onClick={() => document.getElementById(inputId)?.click()}
                         className={`inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] transition ${editorAccent.addChip}`}
                       >
-                        {uploadingImageField === field.key ? 'UploadingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦' : 'Choose photo'}
+                        {uploadingImageField === field.key ? 'Uploading...' : 'Choose photo'}
                       </button>
                     </div>
                   )}
@@ -1159,7 +1159,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
             Cancel
           </button>
           <button type="submit" disabled={saving} className={`rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:cursor-default disabled:opacity-70 ${editorTheme.submit}`}>
-            {saving ? 'SavingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦' : (config.saveLabel || 'Save changes')}
+            {saving ? 'Saving...' : (config.saveLabel || 'Save changes')}
           </button>
         </div>
       </form>
@@ -1235,7 +1235,7 @@ const InviteeRow = ({ event, label = 'Invited' }) => {
               key={invitee.id || invitee.user_id || invitee.name || `${index}`}
               className="inline-flex items-center gap-2 rounded-full border-2 border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-sm transition-all hover:border-gray-300 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/8"
             >
-              <span className="text-base leading-none">{invitee.avatar || 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ËœÃ‚Â¤'}</span>
+              <span className="text-base leading-none">{invitee.avatar || '\u{1F642}'}</span>
               <span>{invitee.name || invitee.display_name || 'Guest'}</span>
             </div>
           ))
@@ -1348,7 +1348,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
       event={event}
       categoryLabel="Celebration"
       accentChip={dressCode || null}
-      icon="ÃƒÂ°Ã…Â¸Ã‚Â¥Ã¢â‚¬Å¡"
+      icon={'\u{1F942}'}
       accentClasses={{
         shell: 'border-rose-300/70 bg-gradient-to-br from-rose-50 via-pink-50/80 to-orange-50/50 dark:border-rose-400/25 dark:from-[#2d1a1f] dark:via-[#1e1517] dark:to-[#14110f]',
         header: 'border-rose-200/80 bg-gradient-to-br from-white/95 to-rose-50/60 dark:border-rose-400/15 dark:bg-gradient-to-br dark:from-white/[0.04] dark:to-rose-500/[0.02]',
@@ -1510,7 +1510,7 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
       event={event}
       categoryLabel="Kids Event"
       accentChip={ageRange ? `Ages ${ageRange}` : null}
-      icon="ÃƒÂ°Ã…Â¸Ã…Â½Ã‹â€ "
+      icon={'\u{1F9F8}'}
       accentClasses={{
         shell: 'border-amber-300/70 bg-gradient-to-br from-amber-50 via-yellow-50/80 to-orange-50/50 dark:border-amber-400/25 dark:from-[#2d2314] dark:via-[#1e1911] dark:to-[#13110e]',
         header: 'border-amber-200/80 bg-gradient-to-br from-white/95 to-amber-50/60 dark:border-amber-400/15 dark:bg-gradient-to-br dark:from-white/[0.04] dark:to-amber-500/[0.02]',
@@ -1624,7 +1624,7 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
       event={event}
       categoryLabel="Hangout"
       accentChip={duration ? `~${duration}` : null}
-      icon="ÃƒÂ¢Ã‹Å“Ã¢â‚¬Â¢"
+      icon={'\u2615'}
       accentClasses={{
         shell: 'border-cyan-300/70 bg-gradient-to-br from-cyan-50 via-sky-50/80 to-blue-50/50 dark:border-cyan-400/25 dark:from-[#15242d] dark:via-[#121a1f] dark:to-[#0f1113]',
         header: 'border-cyan-200/80 bg-gradient-to-br from-white/95 to-cyan-50/60 dark:border-cyan-400/15 dark:bg-gradient-to-br dark:from-white/[0.04] dark:to-cyan-500/[0.02]',
