@@ -16,6 +16,24 @@ const gInitials = (name) => {
     : String(name || '?')[0].toUpperCase();
 };
 
+const getProfileImageUrl = (person = {}) => {
+  const candidates = [
+    person.photoUrl,
+    person.photo_url,
+    person.avatarUrl,
+    person.avatar_url,
+    person.profilePhotoUrl,
+    person.profile_photo_url,
+    person.imageUrl,
+    person.image_url,
+    person.picture,
+    person.avatar,
+  ];
+  return candidates
+    .map((value) => String(value || '').trim())
+    .find((value) => /^(https?:\/\/|data:image\/|blob:)/i.test(value)) || '';
+};
+
 // Each invite theme: warm paper tone + complementary ink colour.
 const INVITE_THEMES = [
   // warm parchment / terracotta
@@ -98,20 +116,28 @@ const CornerBR = ({ color }) => (
 );
 
 // ── guest pip ─────────────────────────────────────────────────────────────────
-const GuestPip = ({ name, role, ink, size = 28 }) => {
+const GuestPip = ({ person, name, role, ink, darkMode = false, size = 28 }) => {
   const isHost = role === 'host';
+  const profileImageUrl = getProfileImageUrl(person);
   return (
     <div title={name} style={{
       width: size, height: size, borderRadius: '50%', flexShrink: 0,
-      background: isHost ? ink : 'rgba(0,0,0,0.08)',
-      border: `2px solid ${isHost ? ink : 'rgba(0,0,0,0.12)'}`,
+      background: isHost ? ink : (darkMode ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.08)'),
+      border: `2px solid ${isHost ? ink : (darkMode ? 'rgba(255,255,255,0.24)' : 'rgba(0,0,0,0.12)')}`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: Math.round(size * 0.34), fontWeight: 900,
-      color: isHost ? '#fff' : 'rgba(0,0,0,0.5)',
+      color: isHost ? '#fff' : (darkMode ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.5)'),
       fontFamily: "'Caveat', cursive",
       marginLeft: -5,
+      overflow: 'hidden',
     }}>
-      {gInitials(name)}
+      {profileImageUrl ? (
+        <img
+          src={profileImageUrl}
+          alt={name ? `${name} profile` : 'Guest profile'}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+      ) : gInitials(name)}
     </div>
   );
 };
@@ -403,19 +429,21 @@ export default function GenericEventCard({
             {preview.map((inv, idx) => (
               <GuestPip
                 key={inv.id || idx}
+                person={inv}
                 name={inv.display_name || inv.name}
                 role={inv.role}
                 ink={ink}
+                darkMode={darkMode}
                 size={26}
               />
             ))}
             {overflow > 0 && (
               <div style={{
                 width: 26, height: 26, borderRadius: '50%',
-                background: 'rgba(0,0,0,0.08)',
-                border: '2px solid rgba(0,0,0,0.12)',
+                background: darkMode ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.08)',
+                border: `2px solid ${darkMode ? 'rgba(255,255,255,0.24)' : 'rgba(0,0,0,0.12)'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 10, fontWeight: 900, color: secondaryText,
+                fontSize: 10, fontWeight: 900, color: darkMode ? 'rgba(255,255,255,0.88)' : secondaryText,
                 marginLeft: -5, fontFamily: "'Caveat', cursive",
               }}>
                 +{overflow}

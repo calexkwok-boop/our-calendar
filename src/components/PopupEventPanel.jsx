@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import EventCardRouter, { resolveEventCardCategory } from './EventCardRouter';
 import GenericEventCard from './GenericEventCard';
+import SportsEventCard from './SportsEventCard';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const POPUP_NO_MAX_SENTINEL = 1000000;
@@ -1853,7 +1854,11 @@ export default function PopupEventPanel({
       id: member?.id || member?.user_id || member?.display_name,
       name: member?.display_name || 'Guest',
       display_name: member?.display_name || 'Guest',
-      avatar: '👤',
+      avatar: member?.avatar_url || member?.avatarUrl || member?.photo_url || member?.photoUrl || '👤',
+      avatarUrl: member?.avatarUrl || member?.avatar_url || '',
+      avatar_url: member?.avatar_url || member?.avatarUrl || '',
+      photoUrl: member?.photoUrl || member?.photo_url || '',
+      photo_url: member?.photo_url || member?.photoUrl || '',
       status: 'accepted',
       user_id: member?.user_id || '',
       role: member?.role || 'player',
@@ -1879,6 +1884,37 @@ export default function PopupEventPanel({
           : null
     )
     : null;
+
+  if (isSportsPopupEvent && activeScreen === 'detail') return (
+    <DragToCloseSheet onClose={onClose} darkMode={darkMode} panelStyle={panelStyle}>
+      <style>{`#popup-event-panel-root, #popup-event-panel-root * { font-family: 'Caveat', cursive !important; }`}</style>
+      <SportsEventCard
+        event={routedEvent}
+        darkMode={darkMode}
+        accent={accent}
+        onPrimaryAction={handleJoin}
+        primaryActionLabel={joining ? joiningLabel : joinLabel}
+        onLeave={handleLeave}
+        isHost={isHost}
+        isMember={isMember}
+        isFull={isFull}
+        joining={joining}
+        joinError={joinError}
+        copied={copied}
+        onCopyLink={handleCopyLink}
+        onViewRoster={() => setScreen('roster')}
+        onOpenChat={() => setScreen('chat')}
+        onStartPlay={() => setScreen('game')}
+        onEditCapacity={() => {
+          setCapacityDraft(currentNoMax ? String(POPUP_NO_MAX_SENTINEL) : String(Math.max(memberCount || 1, Number(event?.max_players || 10))));
+          setCapacityError('');
+          setEditingCapacity(true);
+        }}
+        memberCount={memberCount}
+        isLegacyInvalidEvent={isLegacyInvalidEvent}
+      />
+    </DragToCloseSheet>
+  );
 
   if (!isSportsPopupEvent) return (
     <DragToCloseSheet onClose={onClose} darkMode={darkMode} panelStyle={panelStyle}>

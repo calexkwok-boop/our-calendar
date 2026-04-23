@@ -12340,7 +12340,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         time,
         max_players: maxPeople,
         is_public: !isPrivate,
-        event_data: {},
+        event_data: inviteFriends ? {
+          category: newEvent.category,
+          popupSubtype: newEvent.category,
+        } : {},
         status: 'open',
       }).then(({ error }) => { if (error) console.error('popup_event_details insert error (home add):', error); });
       return;

@@ -166,11 +166,11 @@ const AddEventModal = ({
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <Sparkles className="w-5 h-5 text-purple-500" />
-                <div className="text-xs uppercase tracking-widest text-purple-600 dark:text-purple-400 font-semibold">
+                <div className="text-sm uppercase tracking-widest text-purple-600 dark:text-purple-400 font-semibold">
                   {shareLink ? 'Event created' : 'Plan ahead'}
                 </div>
               </div>
-              <h2 className="text-3xl font-bold tracking-tight" style={themeAccentHeadingStyle}>
+              <h2 className="text-4xl font-bold tracking-tight" style={themeAccentHeadingStyle}>
                 {shareLink ? '🎉 Invite friends' : '+ Add Event'}
               </h2>
             </div>
@@ -221,7 +221,7 @@ const AddEventModal = ({
           ) : (
           <>
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2">
+            <label className="block text-sm font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2">
               What you're doing
             </label>
             <input
@@ -233,21 +233,21 @@ const AddEventModal = ({
                 setErrors((prev) => ({ ...prev, title: null }));
               }}
               placeholder="Dinner, workout, meeting, coffee..."
-              className={`w-full px-4 py-3.5 rounded-xl border-2 transition-all text-base ${
+              className={`w-full px-4 py-3.5 rounded-xl border-2 transition-all text-xl ${
                 errors.title
                   ? 'border-red-300 dark:border-red-600 focus:ring-red-400'
                   : 'border-gray-200 dark:border-white/10 focus:ring-purple-400'
               } bg-white dark:bg-white/[0.04] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2`}
             />
             {errors.title && (
-              <p className="text-xs text-red-600 dark:text-red-400 mt-1.5">
+              <p className="text-sm text-red-600 dark:text-red-400 mt-1.5">
                 {errors.title}
               </p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1.5">
+            <label className="block text-sm font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5" />
               Date
             </label>
@@ -258,7 +258,7 @@ const AddEventModal = ({
                   key={suggestion.label}
                   type="button"
                   onClick={() => handleDateSuggestionClick(suggestion.date)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-base font-medium transition-all ${
                     formData.date === formatDateString(suggestion.date)
                       ? 'bg-purple-600 text-white shadow-sm'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -270,7 +270,7 @@ const AddEventModal = ({
               <button
                 type="button"
                 onClick={openDatePicker}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center"
+                className="px-3 py-1.5 rounded-lg text-base font-medium transition-all bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center"
                 aria-label="Open calendar"
                 title="Open calendar"
               >
@@ -289,10 +289,10 @@ const AddEventModal = ({
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className={`text-sm font-medium ${selectedDateObject ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
+                  <div className={`text-xl font-medium ${selectedDateObject ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
                     {selectedDateLabel}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <div className="text-base text-gray-500 dark:text-gray-400 mt-1">
                     {formData.date || 'Open the calendar to choose the right day'}
                   </div>
                 </div>
@@ -313,7 +313,7 @@ const AddEventModal = ({
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <div className="text-lg font-semibold text-gray-900 dark:text-white">
                     {displayMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                   </div>
                   <button
@@ -331,7 +331,7 @@ const AddEventModal = ({
                     {WEEKDAY_LABELS.map((day) => (
                       <div
                         key={day}
-                        className="px-1 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500"
+                          className="px-1 py-2 text-center text-sm font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500"
                       >
                         {day}
                       </div>
@@ -349,7 +349,7 @@ const AddEventModal = ({
                           key={dateValue}
                           type="button"
                           onClick={() => handleCalendarDayClick(day)}
-                          className={`aspect-square rounded-xl text-sm font-medium transition-all ${
+                          className={`aspect-square rounded-xl text-base font-medium transition-all ${
                             isSelected
                               ? 'bg-purple-600 text-white shadow-md'
                               : isToday
@@ -369,14 +369,14 @@ const AddEventModal = ({
             )}
 
             {errors.date && (
-              <p className="text-xs text-red-600 dark:text-red-400 mt-1.5">
+              <p className="text-sm text-red-600 dark:text-red-400 mt-1.5">
                 {errors.date}
               </p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1.5">
+            <label className="block text-sm font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5" />
               Time
             </label>
@@ -387,7 +387,7 @@ const AddEventModal = ({
                   key={time}
                   type="button"
                   onClick={() => handleTimeSuggestionClick(time)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-base font-medium transition-all ${
                     formData.time === time
                       ? 'bg-purple-600 text-white shadow-sm'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -406,21 +406,21 @@ const AddEventModal = ({
                 setErrors((prev) => ({ ...prev, time: null }));
               }}
               placeholder="3:30 PM or 15:30"
-              className={`w-full px-4 py-3 rounded-xl border-2 transition-all text-sm ${
+              className={`w-full px-4 py-3 rounded-xl border-2 transition-all text-xl ${
                 errors.time
                   ? 'border-red-300 dark:border-red-600 focus:ring-red-400'
                   : 'border-gray-200 dark:border-white/10 focus:ring-purple-400'
               } bg-white dark:bg-white/[0.04] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2`}
             />
             {errors.time && (
-              <p className="text-xs text-red-600 dark:text-red-400 mt-1.5">
+              <p className="text-sm text-red-600 dark:text-red-400 mt-1.5">
                 {errors.time}
               </p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1.5">
+            <label className="block text-sm font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5" />
               Location
             </label>
@@ -431,14 +431,14 @@ const AddEventModal = ({
                 setErrors((prev) => ({ ...prev, location: null }));
               }}
               placeholder="Search for a place..."
-              className={`w-full px-4 py-3.5 rounded-xl border-2 transition-all text-base ${
+              className={`w-full px-4 py-3.5 rounded-xl border-2 transition-all text-xl ${
                 errors.location
                   ? 'border-red-300 dark:border-red-600 focus:ring-red-400'
                   : 'border-gray-200 dark:border-white/10 focus:ring-purple-400'
               } bg-white dark:bg-white/[0.04] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2`}
             />
             {errors.location && (
-              <p className="text-xs text-red-600 dark:text-red-400 mt-1.5">
+              <p className="text-sm text-red-600 dark:text-red-400 mt-1.5">
                 {errors.location}
               </p>
             )}
@@ -453,7 +453,7 @@ const AddEventModal = ({
                   setShowInvite(next);
                   setFormData((prev) => ({ ...prev, inviteFriends: next }));
                 }}
-                className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all ${
+                className={`flex items-center gap-2 rounded-full border px-4 py-2 text-lg font-semibold transition-all ${
                   showInvite
                     ? 'text-white shadow-sm'
                     : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.07]'
@@ -466,7 +466,7 @@ const AddEventModal = ({
               <button
                 type="button"
                 onClick={() => setShowAdvancedSettings((v) => !v)}
-                className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all ${
+                className={`flex items-center gap-2 rounded-full border px-4 py-2 text-lg font-semibold transition-all ${
                   showAdvancedSettings
                     ? 'text-white shadow-sm'
                     : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.07]'
@@ -479,44 +479,44 @@ const AddEventModal = ({
             </div>
             {showInvite && (
               <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400 pl-1">What kind of event?</p>
+                <p className="text-sm font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400 pl-1">What kind of event?</p>
                 <div className="flex gap-2">
                   {[
                     { id: 'party', emoji: '🎉', label: 'Party' },
                     { id: 'sports', emoji: '🏃', label: 'Sports' },
-                    { id: 'custom', emoji: '✨', label: 'Custom' },
+                    { id: 'hangout', emoji: '☕', label: 'Hangout' },
                   ].map((t) => (
                     <button
                       key={t.id}
                       type="button"
                       onClick={() => setFormData((prev) => ({ ...prev, weEventType: t.id }))}
-                      className="flex-1 flex flex-col items-center gap-1 rounded-2xl border-2 py-3 text-sm font-semibold transition-all"
+                      className="flex-1 flex flex-col items-center gap-1 rounded-2xl border-2 py-3 text-lg font-semibold transition-all"
                       style={
                         formData.weEventType === t.id
                           ? { ...themeAccentButtonStyle, borderColor: 'transparent' }
                           : { borderColor: darkMode ? 'rgba(255,255,255,0.1)' : '#e5e7eb', background: darkMode ? 'rgba(255,255,255,0.04)' : '#fff', color: darkMode ? '#d1d5db' : '#4b5563' }
                       }
                     >
-                      <span className="text-xl">{t.emoji}</span>
+                      <span className="text-2xl">{t.emoji}</span>
                       <span>{t.label}</span>
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-gray-400 dark:text-gray-500 pl-1">A share link will be generated after saving.</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 pl-1">A share link will be generated after saving.</p>
               </div>
             )}
             {showAdvancedSettings && (
               <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.03] p-4 space-y-4">
                 {categories && Object.keys(categories).filter(k => k !== 'popup_event').length > 0 && (
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Category</label>
+                    <label className="block text-sm font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Category</label>
                     <div className="grid grid-cols-2 gap-2">
                       {Object.entries(categories).filter(([k]) => k !== 'popup_event').map(([key, cat]) => (
                         <button
                           key={key}
                           type="button"
                           onClick={() => setFormData((prev) => ({ ...prev, category: key }))}
-                          className={`rounded-2xl px-3 py-2 text-xs font-semibold transition-all ${
+                          className={`rounded-2xl px-3 py-2 text-base font-semibold transition-all ${
                             formData.category === key
                               ? `${cat.color} text-white shadow-sm scale-[1.02]`
                               : `${cat.lightBg} ${cat.text} hover:shadow-sm`
@@ -529,12 +529,12 @@ const AddEventModal = ({
                   </div>
                 )}
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Event Properties</label>
+                  <label className="block text-sm font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Event Properties</label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => setFormData((prev) => ({ ...prev, isPrivate: !prev.isPrivate }))}
-                      className={`flex items-center justify-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold transition-all ${
+                      className={`flex items-center justify-center gap-2 rounded-2xl px-3 py-2.5 text-base font-semibold transition-all ${
                         formData.isPrivate
                           ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md'
                           : 'border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.05] text-gray-600 dark:text-gray-300'
@@ -546,7 +546,7 @@ const AddEventModal = ({
                     <button
                       type="button"
                       onClick={() => setFormData((prev) => ({ ...prev, isUrgent: !prev.isUrgent }))}
-                      className={`flex items-center justify-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold transition-all ${
+                      className={`flex items-center justify-center gap-2 rounded-2xl px-3 py-2.5 text-base font-semibold transition-all ${
                         formData.isUrgent
                           ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md'
                           : 'border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.05] text-gray-600 dark:text-gray-300'
@@ -558,7 +558,7 @@ const AddEventModal = ({
                   </div>
                 </div>
                 <div>
-                  <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">
+                  <label className="flex items-center gap-1.5 text-sm font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">
                     <Repeat className="w-3.5 h-3.5" />
                     Recurrence
                   </label>
@@ -573,7 +573,7 @@ const AddEventModal = ({
                         key={opt.value}
                         type="button"
                         onClick={() => setFormData((prev) => ({ ...prev, recurrence: opt.value }))}
-                        className={`rounded-2xl px-3 py-2.5 text-sm font-semibold transition-all ${
+                        className={`rounded-2xl px-3 py-2.5 text-base font-semibold transition-all ${
                           (formData.recurrence || 'once') === opt.value
                             ? 'text-white shadow-sm scale-[1.02]'
                             : 'border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.05] text-gray-600 dark:text-gray-300'
@@ -592,14 +592,14 @@ const AddEventModal = ({
           <div className="pt-2 flex gap-3">
             <button
               onClick={validateAndSubmit}
-              className="flex-1 px-5 py-3.5 rounded-xl text-white font-semibold transition-all duration-200 hover:shadow-lg active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2"
+              className="flex-1 px-5 py-3.5 rounded-xl text-xl text-white font-semibold transition-all duration-200 hover:shadow-lg active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2"
               style={themeAccentButtonStyle}
             >
               + Save Event
             </button>
             <button
               onClick={onClose}
-              className="px-5 py-3.5 rounded-xl font-medium transition-all duration-200 hover:bg-gray-100 dark:hover:bg-white/5 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+              className="px-5 py-3.5 rounded-xl text-xl font-medium transition-all duration-200 hover:bg-gray-100 dark:hover:bg-white/5 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
               style={themeAccentSoftButtonStyle}
             >
               Cancel

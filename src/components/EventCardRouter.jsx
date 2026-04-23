@@ -5,6 +5,7 @@ import CelebrationEventCardView from './CelebrationEventCard';
 import KidsEventCardView from './KidsEventCard';
 import HangoutEventCardView from './HangoutEventCard';
 import GenericEventCard from './GenericEventCard';
+import SportsEventCard from './SportsEventCard';
 
 export const resolveEventCardCategory = (event) => {
   const popupSubtype = [
@@ -1721,6 +1722,8 @@ const EventCardRouter = ({ event, onEditBasics, ...props }) => {
       card = <KidsEventCardView event={routedEvent} {...sharedProps} />;
       break;
     case 'sports':
+      card = <SportsEventCard event={routedEvent} {...sharedProps} />;
+      break;
     case 'custom':
     default:
       card = <GenericEventCard event={routedEvent} {...sharedProps} />;
@@ -1741,5 +1744,6 @@ export {
   CelebrationEventCard,
   KidsEventCard,
   HangoutEventCard,
+  SportsEventCard,
   GenericEventCard,
 };
