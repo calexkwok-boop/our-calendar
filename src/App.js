@@ -27570,7 +27570,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {showGauntletPanel && (
           <div
-            className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-stretch justify-stretch p-0`}
+            className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
             style={{ minHeight: '100dvh', touchAction: 'none', overscrollBehavior: 'none' }}
             onClick={() => {
               if (restorePopupSportsModePicker()) return;
@@ -27578,7 +27578,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             }}
           >
             <div
-              className="relative h-full w-full overflow-y-auto overscroll-contain"
+              className="w-full max-w-3xl max-h-[min(88dvh,52rem)] overflow-y-auto overscroll-contain rounded-[28px]"
               style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
                   onClick={(e) => e.stopPropagation()}
   >
@@ -27632,7 +27632,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
 )} {showRoundRobinPanel && (
   <div
-    className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-stretch justify-stretch p-0`}
+    className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
     style={{ minHeight: '100dvh', touchAction: 'none', overscrollBehavior: 'none' }}
     onClick={() => {
       if (restorePopupSportsModePicker()) return;
@@ -27648,7 +27648,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     tabIndex={-1}
   >
     <div
-      className="relative h-full w-full overflow-y-auto overscroll-contain"
+      className="w-full max-w-3xl max-h-[min(88dvh,52rem)] overflow-y-auto overscroll-contain rounded-[28px]"
       style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
       data-round-robin-scroll="true"
           onClick={(e) => e.stopPropagation()}
@@ -27693,7 +27693,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   </div>
 )} {showScramblePanel && (
   <div
-    className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-stretch justify-stretch p-0`}
+    className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
     style={{ minHeight: '100dvh', touchAction: 'none', overscrollBehavior: 'none' }}
     onClick={() => {
       if (restorePopupSportsModePicker()) return;
@@ -27709,7 +27709,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     tabIndex={-1}
   >
     <div
-      className="relative h-full w-full overflow-y-auto overscroll-contain"
+      className="w-full max-w-3xl max-h-[min(88dvh,52rem)] overflow-y-auto overscroll-contain rounded-[28px]"
       style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
           onClick={(e) => e.stopPropagation()}
   >
