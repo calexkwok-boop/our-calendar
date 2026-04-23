@@ -373,15 +373,21 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
               {theme}
             </span>
           )}
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            background: 'rgba(255,255,255,0.08)', color: heroMuted,
-            fontSize: 10, fontWeight: 600, padding: '3px 10px',
-            borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)',
-          }}>
+          <button
+            type="button"
+            onClick={props.onTogglePublic || undefined}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              background: 'rgba(255,255,255,0.08)', color: heroMuted,
+              fontSize: 10, fontWeight: 600, padding: '3px 10px',
+              borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)',
+              cursor: props.onTogglePublic ? 'pointer' : 'default',
+              fontFamily: APP_FONT_STACK,
+            }}
+          >
             {event.is_public ? <Globe style={{ width: 9, height: 9 }} /> : <Lock style={{ width: 9, height: 9 }} />}
             {event.is_public ? 'Public' : 'Private'}
-          </span>
+          </button>
         </div>
 
         {/* title */}

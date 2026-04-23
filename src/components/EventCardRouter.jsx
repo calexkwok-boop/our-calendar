@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import PartyEventCardView from './PartyEventCard';
 import CelebrationEventCardView from './CelebrationEventCard';
 import KidsEventCardView from './KidsEventCard';
-import HangoutEventCardView from './HangoutEventCard';
 import GenericEventCard from './GenericEventCard';
 import SportsEventCard from './SportsEventCard';
 
@@ -1716,7 +1715,7 @@ const EventCardRouter = ({ event, onEditBasics, ...props }) => {
       card = <CelebrationEventCardView event={routedEvent} {...sharedProps} />;
       break;
     case 'hangout':
-      card = <HangoutEventCardView event={routedEvent} {...sharedProps} />;
+      card = <GenericEventCard event={routedEvent} {...sharedProps} />;
       break;
     case 'kids':
       card = <KidsEventCardView event={routedEvent} {...sharedProps} />;

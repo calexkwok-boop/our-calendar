@@ -243,6 +243,17 @@ export default function PartyEventCardOverlay({
     setJoining(false);
   };
 
+  const handleTogglePublic = async () => {
+    if (!isHost || !isUuid(event?.id)) return;
+    const next = !event.is_public;
+    setEvent((prev) => ({ ...prev, is_public: next }));
+    try {
+      await supabase.from('popup_event_details').update({ is_public: next }).eq('id', event.id);
+    } catch {
+      setEvent((prev) => ({ ...prev, is_public: !next }));
+    }
+  };
+
   const handlePotluckClaim = async (itemIndex) => {
     if (!event || !isUuid(event?.id) || !currentUserId || !isMember) return false;
     const existingItems = Array.isArray(event?.potluckItems) ? event.potluckItems : [];
@@ -400,6 +411,7 @@ export default function PartyEventCardOverlay({
           onPrimaryAction={handleJoin}
           primaryActionLabel={joining ? 'Saving RSVP...' : 'RSVP'}
           hidePrimaryAction={isMember || isFull}
+          onTogglePublic={isHost ? handleTogglePublic : undefined}
           onViewPeople={() => setActiveScreen('people')}
           onOpenChat={() => setActiveScreen('chat')}
           onOpenMap={() => setActiveScreen('map')}
