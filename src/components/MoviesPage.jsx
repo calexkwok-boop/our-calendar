@@ -406,9 +406,10 @@ export default function MoviesPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
     <div className="min-h-screen bg-[#faf8f3] dark:bg-[#0e1520] pb-28">
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap'); .font-handwritten { font-family: 'Caveat', cursive; }`}</style>
 
+      <div className="max-w-3xl mx-auto pt-6">
       {/* ── Hero ── */}
       <div
-        className={`relative mx-4 mt-4 mb-4 rounded-3xl p-8 overflow-hidden border bg-gradient-to-br ${
+        className={`relative mx-4 mt-0 mb-4 rounded-3xl p-8 overflow-hidden border bg-gradient-to-br ${
           darkMode
             ? 'from-[#0f1a2e] via-[#1a1535] to-[#0e1520] border-white/5 shadow-[0_18px_40px_rgba(0,0,0,0.32)]'
             : 'from-slate-50 via-violet-50 to-slate-50 border-violet-100 shadow-[0_16px_36px_rgba(124,58,237,0.08)] dark:from-[#0f1a2e] dark:via-[#1a1535] dark:to-[#0e1520] dark:border-white/5 dark:shadow-[0_18px_40px_rgba(0,0,0,0.32)]'
@@ -558,6 +559,7 @@ export default function MoviesPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
           )}
         </>
       )}
+      </div>
 
       {/* ── Detail sheet ── */}
       <MovieDetailSheet

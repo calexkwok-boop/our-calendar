@@ -924,6 +924,7 @@ const DestinationsPage = ({
         @keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:.5} }
       `}</style>
 
+      <div style={{ maxWidth: 768, margin: '0 auto', paddingTop: 24 }}>
       {/* ── Hero ── */}
       <div style={{ margin: '0 16px 16px', borderRadius: 28, padding: '32px 28px 28px', minHeight: 220, position: 'relative', overflow: 'hidden', border: `1px solid ${darkMode ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.18)'}`, background: heroBg }}>
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 60% 80% at 80% 20%, rgba(99,102,241,0.12), transparent)' }} />
@@ -1072,6 +1073,7 @@ const DestinationsPage = ({
               />
             ))
         }
+      </div>
       </div>
 
       {/* ── Detail sheet ── */}

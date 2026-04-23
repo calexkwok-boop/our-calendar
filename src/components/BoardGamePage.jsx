@@ -411,7 +411,7 @@ const SkeletonCard = ({ darkMode }) => (
 const BoardGameHero = ({ darkMode, onBack }) => (
   <div style={{
     position: 'relative',
-    margin: '16px 16px 0',
+    margin: '0 16px',
     borderRadius: 24,
     padding: '54px 24px 36px',
     minHeight: 236,
@@ -594,6 +594,7 @@ const BoardGamePage = ({ onAddEvent, onAddToSomeday, onBack, darkMode = false })
         @keyframes pulse  { 0%,100% { opacity:1 } 50% { opacity:.5 } }
       `}</style>
 
+      <div style={{ maxWidth: 768, margin: '0 auto', paddingTop: 24 }}>
       <BoardGameHero darkMode={darkMode} onBack={onBack} />
 
       <div style={{
@@ -758,7 +759,8 @@ const BoardGamePage = ({ onAddEvent, onAddToSomeday, onBack, darkMode = false })
                 initInSomeday={somedays.has(game.id)}
               />
             ))
-        }
+          }
+        </div>
       </div>
     </div>
   );
