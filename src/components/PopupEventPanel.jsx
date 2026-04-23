@@ -1064,6 +1064,7 @@ export default function PopupEventPanel({
   supabase, user, calendarId, displayName,
   initialEventId,
   eventMetaFallback,
+  currentUserProfilePhotoUrl = '',
   onClose, onEventCreated,
   formatTime, formatDateKeyMMDDYYYY, resolveHandleLikeLabel,
   onLaunchRoundRobin, onLaunchGauntlet, onLaunchScramble,
@@ -1106,6 +1107,18 @@ export default function PopupEventPanel({
       return effectiveDisplayName;
     }
     return nextName || 'Player';
+  };
+  const resolvePopupMemberPhotoUrl = (memberLike = {}) => {
+    const memberUserId = String(memberLike?.user_id || memberLike?.userId || '').trim();
+    const isCurrentUser = memberUserId && memberUserId === String(user?.id || '').trim();
+    return String(
+      memberLike?.photoUrl
+      || memberLike?.photo_url
+      || memberLike?.avatarUrl
+      || memberLike?.avatar_url
+      || (isCurrentUser ? currentUserProfilePhotoUrl : '')
+      || ''
+    ).trim();
   };
   const getPopupRoleOverridesStorageKey = (targetEventId = event?.id) => {
     const normalizedEventId = String(targetEventId || '').trim();
@@ -1288,6 +1301,10 @@ export default function PopupEventPanel({
         dedupedMembers.push({
           ...member,
           display_name: normalizeOwnPopupLabel(memberName, memberUserId),
+          photoUrl: resolvePopupMemberPhotoUrl(member),
+          photo_url: resolvePopupMemberPhotoUrl(member),
+          avatarUrl: resolvePopupMemberPhotoUrl(member),
+          avatar_url: resolvePopupMemberPhotoUrl(member),
         });
       });
       const memberList = [...dedupedMembers];
@@ -1301,6 +1318,10 @@ export default function PopupEventPanel({
           event_id: id,
           user_id: s.user_id,
           display_name: normalizeOwnPopupLabel(s.display_name, s.user_id),
+          photoUrl: resolvePopupMemberPhotoUrl(s),
+          photo_url: resolvePopupMemberPhotoUrl(s),
+          avatarUrl: resolvePopupMemberPhotoUrl(s),
+          avatar_url: resolvePopupMemberPhotoUrl(s),
           role: 'player',
           joined_at: s.created_at,
         });

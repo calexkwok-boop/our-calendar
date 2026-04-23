@@ -27897,6 +27897,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         user={user}
         calendarId={activeLayerId}
         displayName={resolveHandleLikeLabel(currentUser || user?.email || user?.phone || 'Player', user?.id)}
+        currentUserProfilePhotoUrl={currentUserProfilePhotoUrl}
         initialEventId={selectedPopupEventPanelId}
         eventMetaFallback={(() => {
           const meta = popupEventsByEventId[selectedPopupEventPanelId];
