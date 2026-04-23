@@ -13,6 +13,8 @@ import {
   Loader, AlertCircle, Shield,
 } from 'lucide-react';
 
+const APP_FONT_STACK = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 const gInitials = (name) => {
@@ -189,7 +191,7 @@ const PlayerPip = ({ person, name, role, accent, size = 28 }) => {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: Math.round(size * 0.34), fontWeight: 900,
       color: isOrganizer ? '#f59e0b' : isCohost ? accent : 'rgba(255,255,255,0.85)',
-      fontFamily: "'Caveat', cursive",
+      fontFamily: APP_FONT_STACK,
       marginLeft: -5,
       overflow: 'hidden',
     }}>
@@ -271,7 +273,7 @@ export default function SportsEventCard({
     <div style={{
       borderRadius: 20,
       overflow: 'hidden',
-      fontFamily: "'Caveat', cursive",
+      fontFamily: APP_FONT_STACK,
       width: '100%',
       border: `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
     }}>
@@ -315,6 +317,7 @@ export default function SportsEventCard({
           fontSize: 29, fontWeight: 900, color: heroText,
           letterSpacing: '-0.02em', lineHeight: 1.15,
           marginBottom: 10, position: 'relative',
+          fontFamily: "'Caveat', cursive",
         }}>
           {event.title || 'Untitled Event'}
         </div>
@@ -385,7 +388,7 @@ export default function SportsEventCard({
                 borderRight: 'none',
                 borderBottom: 'none',
                 transition: 'all 0.15s',
-                fontFamily: "'Caveat', cursive",
+                fontFamily: APP_FONT_STACK,
               }}>
                 {tab.label}
               </button>
@@ -453,7 +456,7 @@ export default function SportsEventCard({
               background: '#fef3c7', border: '2px solid #fbbf24',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 13, fontWeight: 900, color: '#f59e0b',
-              fontFamily: "'Caveat', cursive",
+              fontFamily: APP_FONT_STACK,
             }}>
               {gInitials(organizer.display_name || organizer.name)}
             </div>
@@ -524,7 +527,7 @@ export default function SportsEventCard({
                   border: '2px solid rgba(255,255,255,0.15)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 11, fontWeight: 900, color: secondaryText,
-                  marginLeft: -5, fontFamily: "'Caveat', cursive",
+                  marginLeft: -5, fontFamily: APP_FONT_STACK,
                 }}>
                   +{overflow}
                 </div>
@@ -559,7 +562,7 @@ export default function SportsEventCard({
               width: '100%', padding: '13px 0',
               borderRadius: 14, border: 'none', cursor: joining ? 'default' : 'pointer',
               background: accent, color: '#fff',
-              fontSize: 18, fontWeight: 900, fontFamily: "'Caveat', cursive",
+              fontSize: 18, fontWeight: 900, fontFamily: APP_FONT_STACK,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               opacity: joining ? 0.75 : 1,
               position: 'relative', overflow: 'hidden',
@@ -608,7 +611,7 @@ export default function SportsEventCard({
               border: '1.5px solid rgba(239,68,68,0.28)',
               background: 'rgba(239,68,68,0.06)', color: '#ef4444',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              fontFamily: "'Caveat', cursive",
+              fontFamily: APP_FONT_STACK,
             }}
           >
             <UserMinus style={{ width: 14, height: 14 }} /> Leave Event
@@ -651,7 +654,7 @@ export default function SportsEventCard({
                     background: darkMode ? 'rgba(255,255,255,0.03)' : '#fff',
                     color: color || primaryText,
                     fontSize: 14, fontWeight: 700,
-                    fontFamily: "'Caveat', cursive",
+                    fontFamily: APP_FONT_STACK,
                   }}
                 >
                   <Icon style={{ width: 13, height: 13, flexShrink: 0 }} />

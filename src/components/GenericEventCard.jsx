@@ -7,6 +7,8 @@
 import React, { useState } from 'react';
 import { MapPin, Edit3, AlertCircle, Check } from 'lucide-react';
 
+const APP_FONT_STACK = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 const gInitials = (name) => {
@@ -89,7 +91,7 @@ const WaxSeal = ({ letter, ink, size = 46 }) => (
     ))}
     <text
       x="23" y="29" textAnchor="middle"
-      fontFamily="'Caveat', cursive" fontWeight="900" fontSize="18"
+      fontFamily={APP_FONT_STACK} fontWeight="900" fontSize="18"
       fill="rgba(255,255,255,0.93)"
     >
       {letter}
@@ -127,7 +129,7 @@ const GuestPip = ({ person, name, role, ink, darkMode = false, size = 28 }) => {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: Math.round(size * 0.34), fontWeight: 900,
       color: isHost ? '#fff' : (darkMode ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.5)'),
-      fontFamily: "'Caveat', cursive",
+      fontFamily: APP_FONT_STACK,
       marginLeft: -5,
       overflow: 'hidden',
     }}>
@@ -205,7 +207,7 @@ export default function GenericEventCard({
       background: cardBg,
       border: `1.5px solid ${darkMode ? `${ink}28` : `${ink}20`}`,
       overflow: 'hidden',
-      fontFamily: "'Caveat', cursive",
+      fontFamily: APP_FONT_STACK,
       width: '100%',
       position: 'relative',
     }}>
@@ -254,6 +256,7 @@ export default function GenericEventCard({
           <div style={{
             fontSize: 30, fontWeight: 900, color: primaryText,
             letterSpacing: '-0.02em', lineHeight: 1.1,
+            fontFamily: "'Caveat', cursive",
           }}>
             {event.title || 'Untitled Event'}
           </div>
@@ -345,7 +348,7 @@ export default function GenericEventCard({
               style={{
                 width: '100%', boxSizing: 'border-box',
                 padding: '10px 12px', borderRadius: 12,
-                fontSize: 16, fontFamily: "'Caveat', cursive", fontWeight: 700,
+                fontSize: 16, fontFamily: APP_FONT_STACK, fontWeight: 700,
                 border: `1.5px solid ${ink}44`,
                 background: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)',
                 color: primaryText, outline: 'none', resize: 'none', lineHeight: 1.6,
@@ -356,7 +359,7 @@ export default function GenericEventCard({
                 style={{
                   padding: '5px 14px', borderRadius: 999, fontSize: 14, fontWeight: 700,
                   background: 'transparent', border: `1px solid ${dividerColor}`,
-                  color: secondaryText, cursor: 'pointer', fontFamily: "'Caveat', cursive",
+                  color: secondaryText, cursor: 'pointer', fontFamily: APP_FONT_STACK,
                 }}>
                 Cancel
               </button>
@@ -365,7 +368,7 @@ export default function GenericEventCard({
                   padding: '5px 18px', borderRadius: 999, fontSize: 14, fontWeight: 700,
                   background: ink, border: 'none', color: '#fff',
                   cursor: savingNote ? 'default' : 'pointer',
-                  opacity: savingNote ? 0.7 : 1, fontFamily: "'Caveat', cursive",
+                  opacity: savingNote ? 0.7 : 1, fontFamily: APP_FONT_STACK,
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                 }}>
                 {savingNote ? 'Saving…' : <><Check style={{ width: 13, height: 13 }} /> Save</>}
@@ -412,7 +415,7 @@ export default function GenericEventCard({
               width: '100%', padding: '10px 14px', borderRadius: 12, cursor: 'pointer',
               background: 'transparent', border: `1px dashed ${ink}22`,
               color: mutedText, fontSize: 14, fontWeight: 700,
-              fontFamily: "'Caveat', cursive", textAlign: 'left',
+              fontFamily: APP_FONT_STACK, textAlign: 'left',
             }}>
             + Add a personal message for your guests…
           </button>
@@ -444,7 +447,7 @@ export default function GenericEventCard({
                 border: `2px solid ${darkMode ? 'rgba(255,255,255,0.24)' : 'rgba(0,0,0,0.12)'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 10, fontWeight: 900, color: darkMode ? 'rgba(255,255,255,0.88)' : secondaryText,
-                marginLeft: -5, fontFamily: "'Caveat', cursive",
+                marginLeft: -5, fontFamily: APP_FONT_STACK,
               }}>
                 +{overflow}
               </div>
@@ -480,7 +483,7 @@ export default function GenericEventCard({
               borderRadius: 14, border: 'none', cursor: 'pointer',
               background: ink,
               color: '#fff', fontSize: 18, fontWeight: 900,
-              fontFamily: "'Caveat', cursive",
+              fontFamily: APP_FONT_STACK,
               letterSpacing: '0.01em',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               position: 'relative', overflow: 'hidden',

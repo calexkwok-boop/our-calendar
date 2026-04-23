@@ -11,6 +11,8 @@ import {
   Edit3, Trash2, Camera, MessageCircle, Check, Copy,
 } from 'lucide-react';
 
+const APP_FONT_STACK = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 const gInitials = (name) => {
@@ -137,7 +139,7 @@ const GuestPip = ({ person, name, role, accent, darkMode, size = 28 }) => {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: Math.round(size * 0.34), fontWeight: 900,
       color: isHost ? '#f59e0b' : darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.45)',
-      fontFamily: "'Caveat', cursive",
+      fontFamily: APP_FONT_STACK,
       marginLeft: -5,
       overflow: 'hidden',
     }}>
@@ -158,7 +160,7 @@ const EditPill = ({ onClick, children, accent }) => (
   <button onClick={onClick} type="button" style={{
     display: 'inline-flex', alignItems: 'center', gap: 4,
     padding: '4px 12px', borderRadius: 999, cursor: 'pointer',
-    fontSize: 13, fontWeight: 800, fontFamily: "'Caveat', cursive",
+    fontSize: 13, fontWeight: 800, fontFamily: APP_FONT_STACK,
     background: 'transparent', border: `1.5px solid ${accent}44`, color: accent,
   }}>
     {children}
@@ -300,7 +302,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
   return (
     <div style={{
       borderRadius: 20, overflow: 'hidden', width: '100%',
-      fontFamily: "'Caveat', cursive",
+      fontFamily: APP_FONT_STACK,
       border: `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
     }}>
       {/* ══════════════════════════════════════════
@@ -396,6 +398,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
           fontSize: 29, fontWeight: 900, color: heroText,
           letterSpacing: '-0.02em', lineHeight: 1.15,
           marginBottom: 10, position: 'relative', zIndex: 1,
+          fontFamily: "'Caveat', cursive",
         }}>
           {titleText || 'Untitled Party'}
         </div>
@@ -454,7 +457,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                 borderLeft: 'none',
                 borderRight: 'none',
                 borderBottom: 'none',
-                fontFamily: "'Caveat', cursive",
+                fontFamily: APP_FONT_STACK,
               }}>
                 {tab.label}
               </button>
@@ -491,7 +494,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                   border: `2px solid ${border}`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 11, fontWeight: 900, color: secondaryText,
-                  marginLeft: -5, fontFamily: "'Caveat', cursive",
+                  marginLeft: -5, fontFamily: APP_FONT_STACK,
                 }}>+{overflow}</div>
               )}
             </div>
@@ -506,7 +509,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
           <button onClick={props.onPrimaryAction} style={{
             width: '100%', padding: '13px 0', borderRadius: 14, border: 'none',
             cursor: 'pointer', background: accent, color: '#fff',
-            fontSize: 18, fontWeight: 900, fontFamily: "'Caveat', cursive",
+            fontSize: 18, fontWeight: 900, fontFamily: APP_FONT_STACK,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             position: 'relative', overflow: 'hidden',
           }}>
@@ -643,7 +646,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                   <button type="button" onClick={openPotluckEditor} style={{
                     width: '100%', padding: '8px 0', borderRadius: 12, cursor: 'pointer',
                     background: 'transparent', border: `1px dashed ${accent}33`,
-                    fontSize: 13, fontWeight: 800, color: accent, fontFamily: "'Caveat', cursive",
+                    fontSize: 13, fontWeight: 800, color: accent, fontFamily: APP_FONT_STACK,
                   }}>
                     +{potluckItems.length - 3} more items
                   </button>
