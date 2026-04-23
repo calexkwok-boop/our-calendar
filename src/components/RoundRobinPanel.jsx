@@ -900,12 +900,13 @@ function RoundRobinPanel({
           <div style={{ position: 'absolute', right: 8, top: '42%', transform: 'translateY(-50%)', opacity: 0.22, pointerEvents: 'none' }}>
             <svg width="90" height="58" viewBox="0 0 90 58" fill="none">
               <rect x="1" y="1" width="88" height="56" rx="3" stroke="white" strokeWidth="2"/>
-              <rect x="1" y="1" width="26" height="56" fill="white" fillOpacity="0.16"/>
-              <rect x="63" y="1" width="26" height="56" fill="white" fillOpacity="0.16"/>
-              <line x1="27" y1="1" x2="27" y2="57" stroke="white" strokeWidth="1.5"/>
-              <line x1="63" y1="1" x2="63" y2="57" stroke="white" strokeWidth="1.5"/>
+              <rect x="1" y="1" width="30" height="56" fill="white" fillOpacity="0.16"/>
+              <rect x="59" y="1" width="30" height="56" fill="white" fillOpacity="0.16"/>
+              <line x1="31" y1="1" x2="31" y2="57" stroke="white" strokeWidth="1.5"/>
+              <line x1="59" y1="1" x2="59" y2="57" stroke="white" strokeWidth="1.5"/>
               <line x1="45" y1="1" x2="45" y2="57" stroke="white" strokeWidth="2.5"/>
-              <line x1="27" y1="29" x2="63" y2="29" stroke="white" strokeWidth="1"/>
+              <line x1="1" y1="29" x2="31" y2="29" stroke="white" strokeWidth="1.5"/>
+              <line x1="59" y1="29" x2="89" y2="29" stroke="white" strokeWidth="1.5"/>
             </svg>
           </div>
           <div style={{ position: 'relative', zIndex: 1, paddingRight: 96, maxWidth: '100%' }}>

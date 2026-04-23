@@ -251,13 +251,10 @@ const TripsTab = ({
         </div>
         <button
           onClick={() => setShowSubCalendarModal(true)}
-          className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 
-                     text-white font-semibold text-sm
-                     hover:shadow-lg hover:shadow-blue-500/25
-                     flex items-center gap-2 transition-all"
-          style={themeAccentButtonStyle}>
-          <Plus className="w-4 h-4" />
-          New Trip
+          className="inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-medium font-handwritten text-white transition-all"
+          style={{ background: 'linear-gradient(90deg, #8b5cf6 0%, #ec4899 52%, #f97316 100%)' }}>
+          <Plus className="w-3 h-3" />
+          Add Trip
         </button>
       </div>
       
