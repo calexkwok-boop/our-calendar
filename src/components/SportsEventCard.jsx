@@ -235,6 +235,7 @@ export default function SportsEventCard({
   onOpenChat,
   onOpenMap,
   onStartPlay,
+  onGoToInfo,
   activeTab = 'info',
   bodyContent = null,
   onEditCapacity,
@@ -373,7 +374,7 @@ export default function SportsEventCard({
           position: 'relative',
         }}>
           {[
-            { id: 'info', label: 'Info', action: null },
+            { id: 'info', label: 'Info', action: onGoToInfo || null },
             { id: 'roster', label: 'People', action: onViewRoster },
             { id: 'chat', label: 'Chat', action: onOpenChat },
             { id: 'map', label: 'Map', action: onOpenMap },

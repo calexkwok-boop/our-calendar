@@ -619,6 +619,7 @@ export default function SportsEventCardOverlay({
           joinError={joinError}
           copied={copied}
           onCopyLink={handleCopyLink}
+          onGoToInfo={() => setActiveScreen('detail')}
           onViewRoster={() => setActiveScreen('roster')}
           onOpenChat={() => setActiveScreen('chat')}
           onOpenMap={() => setActiveScreen('map')}
