@@ -24,6 +24,8 @@ const LAVENDER_DARK_BG = "rgba(168,85,247,0.10)";
 const LAVENDER_BORDER = "rgba(168,85,247,0.25)";
 const LAVENDER_TEXT = "#7c3aed";
 const LAVENDER_TEXT_DARK = "#c4b5fd";
+const NAVY_DEEP    = "#0F1929";
+const NAVY_SURFACE = "#162240";
 const DREAMSHELF_IMAGE_CACHE_STORAGE_KEY = "dream-shelf-image-cache-v1";
 
 const readDreamShelfImageCache = () => {
@@ -905,7 +907,7 @@ function ItemModal({ item, isSaved, onSomeday, onMilestone, onShare, onClose, da
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap');`}</style>
       <div className="w-full max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[92vh] flex flex-col overflow-hidden border"
         style={{
-          background: dm ? CHAR : LINEN,
+          background: dm ? NAVY_DEEP : LINEN,
           borderColor: dm ? "rgba(250,246,240,0.10)" : STONE_LIGHT,
           boxShadow: dm ? '0 8px 40px rgba(0,0,0,0.40)' : '0 8px 32px rgba(42,36,32,0.12)',
         }}>
@@ -916,11 +918,11 @@ function ItemModal({ item, isSaved, onSomeday, onMilestone, onShare, onClose, da
               src={item.image}
               alt={item.name}
               className="w-full h-60 object-contain p-8"
-              style={{ background: dm ? CHAR_SOFT : OAT }}
+              style={{ background: dm ? NAVY_SURFACE : OAT }}
               onError={() => setImageFailed(true)}
             />
           ) : (
-            <div className="w-full h-60 flex flex-col items-center justify-center gap-3" style={{ background: dm ? CHAR_SOFT : OAT }}>
+            <div className="w-full h-60 flex flex-col items-center justify-center gap-3" style={{ background: dm ? NAVY_SURFACE : OAT }}>
               <span className="text-6xl">{item.emoji || cat.emoji}</span>
               <span className="text-[10px] uppercase tracking-[0.22em] font-semibold" style={{ color: AMBER_DARK }}>{item.brand}</span>
             </div>
@@ -990,7 +992,7 @@ const ItemCard = React.memo(function ItemCard({ item, savedIds, onOpen, darkMode
       onClick={() => onOpen(item)}
       className="border overflow-hidden transition-all duration-200 flex flex-col cursor-pointer group hover:-translate-y-0.5"
       style={{
-        background: dm ? CHAR_SOFT : LINEN,
+        background: dm ? NAVY_SURFACE : LINEN,
         borderColor: dm ? "rgba(250,246,240,0.09)" : STONE_LIGHT,
         borderRadius: '16px',
         boxShadow: dm
@@ -999,7 +1001,7 @@ const ItemCard = React.memo(function ItemCard({ item, savedIds, onOpen, darkMode
       }}
     >
       {/* Image / emoji */}
-      <div className={`w-full h-56 flex flex-col items-center justify-center gap-2 relative`} style={{ background: dm ? CHAR : OAT, borderRadius: '16px 16px 0 0' }}>
+      <div className={`w-full h-56 flex flex-col items-center justify-center gap-2 relative`} style={{ background: dm ? NAVY_DEEP : OAT, borderRadius: '16px 16px 0 0' }}>
         {item.image && !imageFailed ? (
           <img
             src={item.image}
@@ -1060,7 +1062,7 @@ const CommunityPost = React.memo(function CommunityPost({ post, photoUrl, curren
   const vibe = getDreamShelfVibe({ name: post.product_name, brand: post.product_brand, description: post.review, category: post.category });
 
   return (
-    <div className="border rounded-2xl p-4" style={{ background: dm ? CHAR_SOFT : LINEN, borderColor: dm ? "rgba(241,230,216,0.10)" : STONE_LIGHT }}>
+    <div className="border rounded-2xl p-4" style={{ background: dm ? NAVY_SURFACE : LINEN, borderColor: dm ? "rgba(241,230,216,0.10)" : STONE_LIGHT }}>
       {/* Header */}
       <div className="flex items-center gap-3 mb-3">
         <div className="w-10 h-10 rounded-full flex items-center justify-center font-['Caveat'] text-base font-bold text-white flex-shrink-0" style={{ background: `linear-gradient(135deg, ${AMBER}, ${CHAR})` }}>
@@ -1081,11 +1083,11 @@ const CommunityPost = React.memo(function CommunityPost({ post, photoUrl, curren
             src={resolvedImage}
             alt={post.product_name}
             className="w-20 h-20 rounded-xl object-contain p-1.5 flex-shrink-0"
-            style={{ background: dm ? CHAR : OAT }}
+            style={{ background: dm ? NAVY_DEEP : OAT }}
             onError={() => setImageFailed(true)}
           />
         ) : (
-          <div className="w-20 h-20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0" style={{ background: dm ? CHAR : OAT }}>
+          <div className="w-20 h-20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0" style={{ background: dm ? NAVY_DEEP : OAT }}>
             {cat?.emoji || "✨"}
           </div>
         )}
@@ -1170,12 +1172,12 @@ function ShareItemModal({ item, onClose, onSubmit, darkMode }) {
   };
 
   const inputCls = "w-full border rounded-xl px-4 py-3 text-sm outline-none transition-colors";
-  const inputStyle = { fontFamily: "'Caveat', cursive", background: dm ? CHAR_SOFT : OAT, borderColor: dm ? "rgba(241,230,216,0.12)" : STONE_LIGHT, color: dm ? LINEN : CHAR };
+  const inputStyle = { fontFamily: "'Caveat', cursive", background: dm ? NAVY_SURFACE : OAT, borderColor: dm ? "rgba(241,230,216,0.12)" : STONE_LIGHT, color: dm ? LINEN : CHAR };
 
   return createPortal(
     <div className="fixed inset-0 z-[10100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
-      <div className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden border" style={{ background: dm ? CHAR : LINEN, borderColor: dm ? "rgba(241,230,216,0.16)" : STONE_LIGHT }}>
+      <div className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden border" style={{ background: dm ? NAVY_DEEP : LINEN, borderColor: dm ? "rgba(241,230,216,0.16)" : STONE_LIGHT }}>
         {/* Header */}
         <div className={`px-6 pt-6 pb-4 border-b flex items-start justify-between ${dm ? 'border-white/5' : 'border-slate-100'}`}>
           <div>
@@ -1229,7 +1231,7 @@ function ShareItemModal({ item, onClose, onSubmit, darkMode }) {
                 <button type="button" onClick={() => photoInputRef.current?.click()} className="absolute bottom-2 left-2 px-3 py-1 rounded-lg bg-white/90 text-xs font-semibold text-slate-700">Change photo</button>
               </div>
             ) : (
-              <button type="button" onClick={() => photoInputRef.current?.click()} className="py-6 rounded-2xl border-2 border-dashed flex flex-col items-center gap-2" style={{ background: dm ? CHAR_SOFT : OAT, borderColor: dm ? "rgba(241,230,216,0.14)" : STONE_LIGHT }}>
+              <button type="button" onClick={() => photoInputRef.current?.click()} className="py-6 rounded-2xl border-2 border-dashed flex flex-col items-center gap-2" style={{ background: dm ? NAVY_SURFACE : OAT, borderColor: dm ? "rgba(241,230,216,0.14)" : STONE_LIGHT }}>
                 <Camera className="w-6 h-6 text-slate-400" />
                 <span className={`text-sm font-['Caveat'] font-bold ${dm ? 'text-slate-400' : 'text-slate-600'}`}>Add a photo</span>
               </button>
@@ -1246,7 +1248,7 @@ function ShareItemModal({ item, onClose, onSubmit, darkMode }) {
           {submitError && <p className="text-sm text-red-500">{submitError}</p>}
         </div>
 
-        <div className="px-6 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] border-t" style={{ background: dm ? CHAR_SOFT : LINEN, borderColor: dm ? "rgba(241,230,216,0.12)" : STONE_LIGHT }}>
+        <div className="px-6 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] border-t" style={{ background: dm ? NAVY_SURFACE : LINEN, borderColor: dm ? "rgba(241,230,216,0.12)" : STONE_LIGHT }}>
           <button
             onClick={handleSubmit}
             disabled={!draft.review.trim() || submitting}
@@ -1732,7 +1734,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen font-['DM_Sans']" style={{ background: dm ? CHAR : OAT, color: dm ? LINEN : CHAR }}>
+    <div className="min-h-screen font-['DM_Sans']" style={{ background: dm ? NAVY_DEEP : OAT, color: dm ? LINEN : CHAR }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap'); .font-handwritten { font-family: 'Caveat', cursive !important; } .dream-shelf-pill { font-family: 'Caveat', cursive !important; } .dream-shelf-product-text { font-family: 'Cormorant Garamond', serif !important; }`}</style>
       <div className="max-w-3xl mx-auto px-5 py-5 pb-24">
 
@@ -1760,7 +1762,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
           onSubmit={handleProductSearch}
           className="rounded-2xl border p-3 mb-5"
           style={{
-            background: dm ? CHAR_SOFT : LINEN,
+            background: dm ? NAVY_SURFACE : LINEN,
             borderColor: dm ? "rgba(250,246,240,0.08)" : STONE_LIGHT,
             boxShadow: dm ? '0 2px 12px rgba(0,0,0,0.16)' : '0 2px 10px rgba(42,36,32,0.05)',
           }}
@@ -1771,7 +1773,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search a dream, ritual, or someday piece..."
               className="flex-1 min-w-0 rounded-xl px-4 py-2.5 text-sm outline-none border"
-              style={{ background: dm ? CHAR : OAT, borderColor: dm ? "rgba(250,246,240,0.10)" : STONE_LIGHT, color: dm ? LINEN : CHAR }}
+              style={{ background: dm ? NAVY_DEEP : OAT, borderColor: dm ? "rgba(250,246,240,0.10)" : STONE_LIGHT, color: dm ? LINEN : CHAR }}
             />
             <button
               type="submit"
@@ -1838,7 +1840,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                 onClick={() => handleWorldClick(world)}
                 className="text-left rounded-2xl border p-3 sm:p-4 transition-all duration-200 hover:-translate-y-0.5 focus:outline-none min-h-[112px] sm:min-h-[150px]"
                 style={{
-                  background: activeWorld?.id === world.id ? (dm ? CHAR_SOFT : LINEN) : (dm ? "rgba(250,246,240,0.035)" : "rgba(250,246,240,0.72)"),
+                  background: activeWorld?.id === world.id ? (dm ? NAVY_SURFACE : LINEN) : (dm ? "rgba(15,25,41,0.60)" : "rgba(250,246,240,0.72)"),
                   borderColor: activeWorld?.id === world.id ? AMBER_BORDER : (dm ? "rgba(250,246,240,0.08)" : "rgba(212,201,187,0.55)"),
                   boxShadow: activeWorld?.id === world.id ? (dm ? "0 8px 22px rgba(0,0,0,0.22)" : "0 8px 22px rgba(42,36,32,0.08)") : "none",
                 }}
@@ -1871,7 +1873,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                 className="dream-shelf-pill flex-shrink-0 rounded-full px-3 py-1 text-sm font-bold transition-all duration-200 border focus:outline-none"
                 style={{
                   background: activeCategory?.id === cat.id
-                    ? (dm ? CHAR_SOFT : LINEN)
+                    ? (dm ? NAVY_SURFACE : LINEN)
                     : 'transparent',
                   border: activeCategory?.id === cat.id
                     ? `1px solid ${dm ? "rgba(250,246,240,0.22)" : STONE_LIGHT}`
@@ -1913,7 +1915,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         {/* ── CTA Card ── */}
         <div style={{
           borderRadius: '16px',
-          background: dm ? CHAR_SOFT : LINEN,
+          background: dm ? NAVY_SURFACE : LINEN,
           border: `1px solid ${dm ? "rgba(250,246,240,0.10)" : STONE_LIGHT}`,
           boxShadow: dm ? '0 4px 20px rgba(0,0,0,0.16)' : '0 2px 12px rgba(42,36,32,0.06)',
           padding: '28px 24px',
@@ -1950,7 +1952,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
         {loading ? (
           <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-4 mb-8">
             {[...Array(2)].map((_, i) => (
-              <div key={i} className="h-80 animate-pulse border" style={{ borderRadius: '16px', background: dm ? CHAR_SOFT : OAT, borderColor: dm ? "rgba(250,246,240,0.08)" : STONE_LIGHT }} />
+              <div key={i} className="h-80 animate-pulse border" style={{ borderRadius: '16px', background: dm ? NAVY_SURFACE : OAT, borderColor: dm ? "rgba(250,246,240,0.08)" : STONE_LIGHT }} />
             ))}
           </div>
         ) : categoryItemPairs.length > 0 ? (
@@ -1973,7 +1975,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                   <>
                     <p className="text-[10px] uppercase tracking-[0.16em] mb-3" style={{ color: STONE }}>Most dreamed about this week</p>
                     <div className="border overflow-hidden mb-8 transition-transform duration-200 cursor-pointer hover:-translate-y-0.5"
-                      style={{ background: dm ? CHAR_SOFT : LINEN, borderColor: dm ? "rgba(250,246,240,0.09)" : STONE_LIGHT, borderRadius: '16px', boxShadow: dm ? '0 4px 20px rgba(0,0,0,0.16)' : '0 2px 12px rgba(42,36,32,0.06)' }}
+                      style={{ background: dm ? NAVY_SURFACE : LINEN, borderColor: dm ? "rgba(250,246,240,0.09)" : STONE_LIGHT, borderRadius: '16px', boxShadow: dm ? '0 4px 20px rgba(0,0,0,0.16)' : '0 2px 12px rgba(42,36,32,0.06)' }}
                       onClick={() => setSelectedItem({
                         id: featured.id,
                         name: featured.product_name,
@@ -1985,7 +1987,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                         emoji: CATEGORIES.find(c => c.id === featured.category)?.emoji || "✨",
                       })}>
                       <div className="grid grid-cols-2 max-sm:grid-cols-1">
-                        <div className="h-52 flex items-center justify-center" style={{ background: dm ? CHAR : OAT }}>
+                        <div className="h-52 flex items-center justify-center" style={{ background: dm ? NAVY_DEEP : OAT }}>
                           {featuredImage ? (
                             <img src={featuredImage} alt={featured.product_name} className="w-full h-full object-contain p-6" />
                           ) : (
