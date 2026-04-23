@@ -251,7 +251,7 @@ const TripsTab = ({
         </div>
         <button
           onClick={() => setShowSubCalendarModal(true)}
-          className="inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-medium font-handwritten text-white transition-all"
+          className="inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-semibold font-handwritten text-white transition-all"
           style={{ background: 'linear-gradient(90deg, #8b5cf6 0%, #ec4899 52%, #f97316 100%)' }}>
           <Plus className="w-3 h-3" />
           Add Trip

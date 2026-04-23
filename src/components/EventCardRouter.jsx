@@ -96,10 +96,10 @@ const detectPlaylistService = (value) => {
   const normalized = String(value || '').trim().toLowerCase();
   if (!normalized) return null;
   if (normalized.includes('spotify.com')) {
-    return { name: 'Spotify', icon: '♪', chipClass: 'bg-[#1ed760]/15 text-[#15803d] dark:text-[#86efac]' };
+    return { name: 'Spotify', icon: 'ÃƒÂ¢Ã¢â€žÂ¢Ã‚Âª', chipClass: 'bg-[#1ed760]/15 text-[#15803d] dark:text-[#86efac]' };
   }
   if (normalized.includes('music.apple.com') || normalized.includes('itunes.apple.com')) {
-    return { name: 'Apple Music', icon: '♫', chipClass: 'bg-[#fa233b]/12 text-[#be123c] dark:text-[#fda4af]' };
+    return { name: 'Apple Music', icon: 'ÃƒÂ¢Ã¢â€žÂ¢Ã‚Â«', chipClass: 'bg-[#fa233b]/12 text-[#be123c] dark:text-[#fda4af]' };
   }
   return null;
 };
@@ -482,7 +482,7 @@ const PlacesAutocompleteField = ({ value, onChange, placeholder, inputClassName,
                   }}
                   className={optionClassName}
                 >
-                  <span className="mr-1 text-gray-400 dark:text-gray-500">📍</span>
+                  <span className="mr-1 text-gray-400 dark:text-gray-500">ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â</span>
                   <span className="font-medium text-gray-800 dark:text-white">
                     {suggestion.structured_formatting?.main_text || suggestion.description}
                   </span>
@@ -557,19 +557,19 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
           }
         : isPartyEditor
           ? {
-              shell: 'border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/95 to-cyan-50/95 dark:border-fuchsia-400/20 dark:bg-gradient-to-br dark:from-[#20162e] dark:via-[#251b38] dark:to-[#16233a]',
-              header: 'border-fuchsia-200/60 bg-gradient-to-br from-white via-rose-50/90 to-cyan-50/90 dark:border-fuchsia-400/15 dark:from-[#2a1d3e] dark:via-[#231933] dark:to-[#1a2940]',
-              title: 'text-fuchsia-950 dark:text-white',
-              subtitle: 'text-fuchsia-700/80 dark:text-fuchsia-100/75',
-              close: 'border-fuchsia-200/80 bg-white/75 text-fuchsia-500 hover:text-fuchsia-700 dark:border-white/10 dark:bg-white/10 dark:text-fuchsia-200 dark:hover:bg-white/15 dark:hover:text-white',
-              body: 'bg-gradient-to-b from-transparent via-white/20 to-white/30 dark:via-white/[0.02] dark:to-white/[0.03]',
-              label: 'text-fuchsia-700 dark:text-fuchsia-200',
-              input: 'border-fuchsia-200 bg-white/85 text-slate-900 placeholder:text-fuchsia-300 focus:border-fuchsia-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-fuchsia-200/40 dark:focus:border-fuchsia-300 dark:focus:bg-white/[0.1]',
-              panel: 'border-fuchsia-200 bg-white/82 dark:border-white/10 dark:bg-white/[0.05]',
-              empty: 'border-fuchsia-200 bg-white/65 text-fuchsia-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-fuchsia-200',
-              footer: 'border-fuchsia-200/60 bg-white/50 dark:border-white/10 dark:bg-white/[0.04]',
-              cancel: 'border-fuchsia-200 bg-white text-fuchsia-700 hover:border-fuchsia-300 hover:bg-fuchsia-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-fuchsia-200 dark:hover:bg-white/[0.08]',
-              submit: 'bg-gradient-to-r from-fuchsia-600 to-cyan-500 text-white hover:from-fuchsia-700 hover:to-cyan-600 dark:from-fuchsia-500 dark:to-cyan-400',
+              shell: 'border-slate-200 bg-white dark:border-white/10 dark:bg-[#120b1d]',
+              header: 'border-white/10 bg-[linear-gradient(135deg,#1a0a2e_0%,#2d1b4e_55%,#1a1040_100%)]',
+              title: 'text-white',
+              subtitle: 'text-slate-200/75',
+              close: 'border-white/10 bg-white/10 text-slate-100 hover:bg-white/15 hover:text-white dark:border-white/10 dark:bg-white/10 dark:text-slate-100 dark:hover:bg-white/15 dark:hover:text-white',
+              body: 'bg-white dark:bg-[#120b1d]',
+              label: 'text-slate-500 dark:text-slate-300',
+              input: 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-amber-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.05] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-amber-300 dark:focus:bg-white/[0.08]',
+              panel: 'border-slate-200 bg-white dark:border-white/10 dark:bg-white/[0.04]',
+              empty: 'border-slate-200 bg-slate-50 text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300',
+              footer: 'border-slate-200 bg-slate-50/85 dark:border-white/10 dark:bg-white/[0.03]',
+              cancel: 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200 dark:hover:bg-white/[0.08]',
+              submit: 'bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-500 dark:text-white dark:hover:bg-amber-400',
             }
           : {
               shell: 'border-white/10 bg-white dark:border-white/10 dark:bg-slate-950',
@@ -630,17 +630,17 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
           }
         : isPartyEditor
           ? {
-              itemSurface: 'border-white/60 bg-white/70 dark:border-white/8 dark:bg-white/[0.04]',
-              remove: 'border-fuchsia-200 bg-white/85 text-fuchsia-500 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-fuchsia-200 dark:hover:border-rose-400/20 dark:hover:bg-rose-500/10 dark:hover:text-rose-200',
-              optionIdle: 'border-fuchsia-200 bg-white/85 text-slate-600 hover:border-fuchsia-300 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200 dark:hover:border-fuchsia-300',
-              addChip: 'border-fuchsia-200 bg-white/85 text-fuchsia-700 hover:border-fuchsia-300 hover:bg-fuchsia-50 dark:border-white/10 dark:bg-white/[0.05] dark:text-fuchsia-200 dark:hover:bg-white/[0.08]',
-              claimed: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-200',
-              unclaimed: 'text-fuchsia-700/75 dark:text-fuchsia-100/65',
-              dropdown: 'border-fuchsia-200 bg-white/98 dark:border-white/10 dark:bg-[#241b38]/98',
-              option: 'border-fuchsia-100 hover:bg-fuchsia-50 dark:border-white/10 dark:hover:bg-white/[0.06]',
-              toggleOn: 'border-fuchsia-500 bg-gradient-to-r from-fuchsia-600 to-cyan-500 text-white dark:border-fuchsia-300 dark:from-fuchsia-500 dark:to-cyan-400 dark:text-white',
-              toggleOff: 'border-fuchsia-200 bg-white/85 text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200',
-              help: 'text-fuchsia-700/80 dark:text-fuchsia-100/70',
+              itemSurface: 'border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-white/[0.04]',
+              remove: 'border-slate-200 bg-white text-slate-500 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:border-rose-400/20 dark:hover:bg-rose-500/10 dark:hover:text-rose-200',
+              optionIdle: 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200 dark:hover:border-white/20',
+              addChip: 'border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300 hover:bg-amber-100 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/15',
+              claimed: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200',
+              unclaimed: 'text-slate-500 dark:text-slate-400',
+              dropdown: 'border-slate-200 bg-white/98 dark:border-white/10 dark:bg-[#1a1227]/98',
+              option: 'border-slate-100 hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/[0.06]',
+              toggleOn: 'border-amber-500 bg-amber-500 text-white dark:border-amber-300 dark:bg-amber-500 dark:text-white',
+              toggleOff: 'border-slate-200 bg-white text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200',
+              help: 'text-slate-500 dark:text-slate-400',
             }
           : {
               itemSurface: 'border-white/60 bg-white/70 dark:border-white/8 dark:bg-white/[0.04]',
@@ -809,17 +809,6 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
         onSubmit={handleSubmit}
       >
         <div className={`relative overflow-hidden border-b px-5 py-5 ${editorTheme.header}`}>
-          {isPartyEditor ? (
-            <div className="pointer-events-none absolute inset-0 overflow-hidden">
-              <div className="absolute left-3 top-3 text-2xl opacity-70 dark:opacity-60">🎉</div>
-              <div className="absolute right-12 top-2 text-[1.7rem] opacity-65 dark:opacity-55">🥂</div>
-              <div className="absolute right-5 top-10 h-2 w-2 rotate-[18deg] rounded-sm bg-cyan-400/75 dark:bg-cyan-300/50" />
-              <div className="absolute right-10 top-[3.75rem] h-1.5 w-4 -rotate-[32deg] rounded-full bg-fuchsia-400/70 dark:bg-fuchsia-300/45" />
-              <div className="absolute left-11 top-8 h-2 w-2 rotate-45 rounded-sm bg-fuchsia-400/70 dark:bg-fuchsia-300/50" />
-              <div className="absolute left-[3.25rem] top-[3.65rem] h-1.5 w-4 -rotate-[24deg] rounded-full bg-cyan-400/70 dark:bg-cyan-300/45" />
-              <div className="absolute left-[38%] top-2 text-xl opacity-55 dark:opacity-50">🎊</div>
-            </div>
-          ) : null}
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
               <div className={`text-[18px] font-bold tracking-tight ${editorTheme.title}`}>{config.title || 'Edit details'}</div>
@@ -830,7 +819,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
               onClick={onClose}
               className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition ${editorTheme.close}`}
             >
-              <span className="text-lg leading-none">×</span>
+              <span className="text-lg leading-none">X</span>
             </button>
           </div>
         </div>
@@ -940,7 +929,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                           onClick={() => document.getElementById(inputId)?.click()}
                           className={`inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] transition ${editorAccent.addChip}`}
                         >
-                          {uploadingImageField === field.key ? 'Uploading…' : (draft[field.key] ? 'Choose photo' : 'Upload photo')}
+                          {uploadingImageField === field.key ? 'UploadingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦' : (draft[field.key] ? 'Choose photo' : 'Upload photo')}
                         </button>
                         <button
                           type="button"
@@ -972,7 +961,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                         onClick={() => document.getElementById(inputId)?.click()}
                         className={`inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] transition ${editorAccent.addChip}`}
                       >
-                        {uploadingImageField === field.key ? 'Uploading…' : 'Choose photo'}
+                        {uploadingImageField === field.key ? 'UploadingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦' : 'Choose photo'}
                       </button>
                     </div>
                   )}
@@ -997,7 +986,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                             onClick={() => handleRemoveGuestRow(field.key, index)}
                             className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition ${editorAccent.remove}`}
                           >
-                            <span className="text-lg leading-none">×</span>
+                            <span className="text-lg leading-none">X</span>
                           </button>
                         </div>
                         <div className="mt-3 flex flex-wrap gap-2">
@@ -1057,7 +1046,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                             onClick={() => handleRemovePotluckRow(field.key, index)}
                             className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition ${editorAccent.remove}`}
                           >
-                            <span className="text-lg leading-none">×</span>
+                            <span className="text-lg leading-none">X</span>
                           </button>
                         </div>
                         {entry.person ? (
@@ -1135,7 +1124,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
             Cancel
           </button>
           <button type="submit" disabled={saving} className={`rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:cursor-default disabled:opacity-70 ${editorTheme.submit}`}>
-            {saving ? 'Saving…' : (config.saveLabel || 'Save changes')}
+            {saving ? 'SavingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦' : (config.saveLabel || 'Save changes')}
           </button>
         </div>
       </form>
@@ -1211,7 +1200,7 @@ const InviteeRow = ({ event, label = 'Invited' }) => {
               key={invitee.id || invitee.user_id || invitee.name || `${index}`}
               className="inline-flex items-center gap-2 rounded-full border-2 border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-sm transition-all hover:border-gray-300 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/8"
             >
-              <span className="text-base leading-none">{invitee.avatar || '👤'}</span>
+              <span className="text-base leading-none">{invitee.avatar || 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ËœÃ‚Â¤'}</span>
               <span>{invitee.name || invitee.display_name || 'Guest'}</span>
             </div>
           ))
@@ -1324,7 +1313,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
       event={event}
       categoryLabel="Celebration"
       accentChip={dressCode || null}
-      icon="🥂"
+      icon="ÃƒÂ°Ã…Â¸Ã‚Â¥Ã¢â‚¬Å¡"
       accentClasses={{
         shell: 'border-rose-300/70 bg-gradient-to-br from-rose-50 via-pink-50/80 to-orange-50/50 dark:border-rose-400/25 dark:from-[#2d1a1f] dark:via-[#1e1517] dark:to-[#14110f]',
         header: 'border-rose-200/80 bg-gradient-to-br from-white/95 to-rose-50/60 dark:border-rose-400/15 dark:bg-gradient-to-br dark:from-white/[0.04] dark:to-rose-500/[0.02]',
@@ -1486,7 +1475,7 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
       event={event}
       categoryLabel="Kids Event"
       accentChip={ageRange ? `Ages ${ageRange}` : null}
-      icon="🎈"
+      icon="ÃƒÂ°Ã…Â¸Ã…Â½Ã‹â€ "
       accentClasses={{
         shell: 'border-amber-300/70 bg-gradient-to-br from-amber-50 via-yellow-50/80 to-orange-50/50 dark:border-amber-400/25 dark:from-[#2d2314] dark:via-[#1e1911] dark:to-[#13110e]',
         header: 'border-amber-200/80 bg-gradient-to-br from-white/95 to-amber-50/60 dark:border-amber-400/15 dark:bg-gradient-to-br dark:from-white/[0.04] dark:to-amber-500/[0.02]',
@@ -1600,7 +1589,7 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
       event={event}
       categoryLabel="Hangout"
       accentChip={duration ? `~${duration}` : null}
-      icon="☕"
+      icon="ÃƒÂ¢Ã‹Å“Ã¢â‚¬Â¢"
       accentClasses={{
         shell: 'border-cyan-300/70 bg-gradient-to-br from-cyan-50 via-sky-50/80 to-blue-50/50 dark:border-cyan-400/25 dark:from-[#15242d] dark:via-[#121a1f] dark:to-[#0f1113]',
         header: 'border-cyan-200/80 bg-gradient-to-br from-white/95 to-cyan-50/60 dark:border-cyan-400/15 dark:bg-gradient-to-br dark:from-white/[0.04] dark:to-cyan-500/[0.02]',
