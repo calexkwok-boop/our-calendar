@@ -346,85 +346,10 @@ export default function SportsEventCardOverlay({
   const border = darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
   const softBg = darkMode ? `${accent}18` : `${accent}0d`;
   const currentNoMax = Number(event?.max_players || 0) >= POPUP_NO_MAX_SENTINEL;
-  const tabs = [
-    { id: 'detail', label: 'Info' },
-    { id: 'roster', label: 'People' },
-    { id: 'chat', label: 'Chat' },
-    { id: 'map', label: 'Map' },
-    { id: 'game', label: 'Play' },
-  ];
-
-  const renderScreenHeader = (title) => (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 10,
-        padding: '12px 14px',
-        background: darkMode ? '#0f172a' : '#fff',
-        borderBottom: `1px solid ${border}`,
-      }}
-    >
-      <button
-        type="button"
-        onClick={() => setActiveScreen('detail')}
-        style={{
-          border: `1px solid ${border}`,
-          background: darkMode ? 'rgba(255,255,255,0.05)' : '#f8fafc',
-          color: secondaryText,
-          borderRadius: 999,
-          padding: '7px 12px',
-          cursor: 'pointer',
-          fontFamily: APP_FONT_STACK,
-          fontSize: 13,
-          fontWeight: 800,
-        }}
-      >
-        Info
-      </button>
-      <div style={{ fontFamily: APP_FONT_STACK, fontSize: 18, fontWeight: 900, color: primaryText }}>
-        {title}
-      </div>
-      <div style={{ width: 54 }} />
-    </div>
-  );
-
-  const renderTabs = () => (
-    <div style={{ display: 'flex', borderBottom: `1px solid ${border}`, background: darkMode ? '#0f172a' : '#fff' }}>
-      {tabs.map((tab) => {
-        const active = activeScreen === tab.id;
-        return (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveScreen(tab.id)}
-            style={{
-              flex: 1,
-              padding: '11px 0',
-              border: 'none',
-              borderTop: `2px solid ${active ? accent : 'transparent'}`,
-              background: active ? (darkMode ? 'rgba(255,255,255,0.04)' : '#f8fafc') : 'transparent',
-              color: active ? primaryText : secondaryText,
-              cursor: 'pointer',
-              fontFamily: APP_FONT_STACK,
-              fontSize: 12,
-              fontWeight: active ? 800 : 600,
-            }}
-          >
-            {tab.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-
-  const renderActiveScreen = () => {
+  const renderBodyContent = () => {
     if (activeScreen === 'roster') {
       return (
-        <>
-          {renderScreenHeader('People')}
-          <div style={{ paddingBottom: 24 }}>
+        <div style={{ paddingBottom: 4 }}>
             <div style={{ padding: '12px 16px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
               <div style={{ fontSize: 11, fontWeight: 900, color: accent, fontFamily: APP_FONT_STACK }}>
                 {currentNoMax ? `${memberCount} players` : `${memberCount} / ${event.max_players} players`}
@@ -516,44 +441,37 @@ export default function SportsEventCardOverlay({
                 No players yet
               </div>
             )}
-          </div>
-        </>
+        </div>
       );
     }
     if (activeScreen === 'chat') {
       return (
-        <>
-          {renderScreenHeader('Chat')}
-          <ChatRoom
-            eventId={event.id}
-            supabase={supabase}
-            user={user}
-            displayName={effectiveDisplayName}
-            accent={accent}
-            darkMode={darkMode}
-            border={border}
-            softBg={softBg}
-            members={sortedPlayers}
-          />
-        </>
+        <ChatRoom
+          eventId={event.id}
+          supabase={supabase}
+          user={user}
+          displayName={effectiveDisplayName}
+          accent={accent}
+          darkMode={darkMode}
+          border={border}
+          softBg={softBg}
+          members={sortedPlayers}
+        />
       );
     }
     if (activeScreen === 'map') {
       return (
-        <>
-          {renderScreenHeader('Map')}
-          <LiveMap
-            event={event}
-            supabase={supabase}
-            user={user}
-            displayName={effectiveDisplayName}
-            accent={accent}
-            darkMode={darkMode}
-            border={border}
-            softBg={softBg}
-            members={sortedPlayers}
-          />
-        </>
+        <LiveMap
+          event={event}
+          supabase={supabase}
+          user={user}
+          displayName={effectiveDisplayName}
+          accent={accent}
+          darkMode={darkMode}
+          border={border}
+          softBg={softBg}
+          members={sortedPlayers}
+        />
       );
     }
     if (activeScreen === 'game') {
@@ -581,9 +499,7 @@ export default function SportsEventCardOverlay({
         },
       ];
       return (
-        <>
-          {renderScreenHeader('Play')}
-          <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ padding: '12px 14px', borderRadius: 14, background: softBg, border: `1px solid ${border}` }}>
               <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: accent, marginBottom: 4, fontFamily: APP_FONT_STACK }}>
                 Choose a format
@@ -641,8 +557,7 @@ export default function SportsEventCardOverlay({
                 </button>
               );
             })}
-          </div>
-        </>
+        </div>
       );
     }
     return null;
@@ -688,35 +603,29 @@ export default function SportsEventCardOverlay({
         />
       </div>
       <div style={{ height: 'calc(100% - 25px)', overflowY: 'auto', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
-        {activeScreen === 'detail' ? (
-          <SportsEventCard
-            event={routedEvent}
-            darkMode={darkMode}
-            accent={accent}
-            activeTab="info"
-            onPrimaryAction={handleJoin}
-            primaryActionLabel={joining ? 'Joining...' : 'Join Event'}
-            onLeave={handleLeave}
-            isHost={isHost}
-            isMember={isMember}
-            isFull={isFull}
-            joining={joining}
-            joinError={joinError}
-            copied={copied}
-            onCopyLink={handleCopyLink}
-            onViewRoster={() => setActiveScreen('roster')}
-            onOpenChat={() => setActiveScreen('chat')}
-            onOpenMap={() => setActiveScreen('map')}
-            onStartPlay={() => setActiveScreen('game')}
-            memberCount={memberCount}
-            isLegacyInvalidEvent={!isUuid(event?.id)}
-          />
-        ) : (
-          <>
-            {renderTabs()}
-            {renderActiveScreen()}
-          </>
-        )}
+        <SportsEventCard
+          event={routedEvent}
+          darkMode={darkMode}
+          accent={accent}
+          activeTab={activeScreen === 'detail' ? 'info' : activeScreen}
+          bodyContent={activeScreen === 'detail' ? null : renderBodyContent()}
+          onPrimaryAction={handleJoin}
+          primaryActionLabel={joining ? 'Joining...' : 'Join Event'}
+          onLeave={handleLeave}
+          isHost={isHost}
+          isMember={isMember}
+          isFull={isFull}
+          joining={joining}
+          joinError={joinError}
+          copied={copied}
+          onCopyLink={handleCopyLink}
+          onViewRoster={() => setActiveScreen('roster')}
+          onOpenChat={() => setActiveScreen('chat')}
+          onOpenMap={() => setActiveScreen('map')}
+          onStartPlay={() => setActiveScreen('game')}
+          memberCount={memberCount}
+          isLegacyInvalidEvent={!isUuid(event?.id)}
+        />
       </div>
     </div>
   );

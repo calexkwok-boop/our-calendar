@@ -24355,7 +24355,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       const colors = ['yellow', 'pink', 'blue', 'green'];
       const color = colors.includes(pin.noteColor) ? pin.noteColor : 'yellow';
       setQuickThoughts((prev) => [
-        { id: pin.id, text: pin.text || pin.label || '', color, createdAt: new Date().toISOString() },
+        {
+          id: pin.id,
+          text: pin.text || pin.label || '',
+          color,
+          status: pin.status || 'dreaming',
+          chapterId: pin.chapterId,
+          createdAt: new Date().toISOString(),
+        },
         ...(Array.isArray(prev) ? prev : []),
       ]);
     } else {
@@ -24389,6 +24396,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             String(d?.id || '') === String(pin.id)
               ? { ...d, ...(pin.status != null ? { status: pin.status } : {}), ...(pin.chapterId !== undefined ? { chapterId: pin.chapterId } : {}) }
               : d
+          )
+        );
+        setQuickThoughts(prev =>
+          (Array.isArray(prev) ? prev : []).map(thought =>
+            String(thought?.id || '') === String(pin.id)
+              ? { ...thought, ...(pin.status != null ? { status: pin.status } : {}), ...(pin.chapterId !== undefined ? { chapterId: pin.chapterId } : {}) }
+              : thought
           )
         );
       }
@@ -30332,7 +30346,8 @@ transform: translateY(0);
                 noteColor: ['yellow', 'pink', 'blue', 'green'].includes(t.color) ? t.color : 'yellow',
                 pinColor: 'purple',
                 categoryId: 'notes',
-                status: 'dreaming',
+                status: t.status || 'dreaming',
+                chapterId: t.chapterId,
                 ...(somedayPinPositions[t.id] || {}),
               })),
               // Label and sticker pins stored with full data — passed through unchanged

@@ -229,6 +229,7 @@ export default function SportsEventCard({
   onOpenMap,
   onStartPlay,
   activeTab = 'info',
+  bodyContent = null,
   onEditCapacity,
   memberCount = 0,
   // legacy guard
@@ -405,6 +406,8 @@ export default function SportsEventCard({
         padding: '18px 18px 20px',
         display: 'flex', flexDirection: 'column', gap: 10,
       }}>
+        {bodyContent || (
+          <>
 
         {/* ── location ── */}
         {event.location && (
@@ -663,6 +666,8 @@ export default function SportsEventCard({
               ))}
             </div>
           </div>
+        )}
+          </>
         )}
 
       </div>
