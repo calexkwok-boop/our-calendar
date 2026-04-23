@@ -198,7 +198,9 @@ export default function SportsEventCard({
   onCopyLink,
   onViewRoster,
   onOpenChat,
+  onOpenMap,
   onStartPlay,
+  activeTab = 'info',
   onEditCapacity,
   memberCount = 0,
   // legacy guard
@@ -333,21 +335,34 @@ export default function SportsEventCard({
           borderTop: '1px solid rgba(255,255,255,0.08)',
           position: 'relative',
         }}>
-          {['Info', 'People', 'Chat', 'Map', 'Play'].map((tab, i) => {
-            const active = i === 0;
+          {[
+            { id: 'info', label: 'Info', action: null },
+            { id: 'roster', label: 'People', action: onViewRoster },
+            { id: 'chat', label: 'Chat', action: onOpenChat },
+            { id: 'map', label: 'Map', action: onOpenMap },
+            { id: 'game', label: 'Play', action: onStartPlay },
+          ].map((tab) => {
+            const active = activeTab === tab.id;
             return (
-              <div key={tab} style={{
+              <button
+                key={tab.id}
+                type="button"
+                onClick={tab.action || undefined}
+                style={{
                 flex: 1, padding: '11px 0',
                 fontSize: 12, fontWeight: active ? 600 : 400,
                 textAlign: 'center', cursor: 'pointer',
                 color: active ? heroText : heroMuted,
                 background: active ? bodyBg : 'transparent',
                 borderTop: active ? `2px solid ${accent}` : '2px solid transparent',
+                borderLeft: 'none',
+                borderRight: 'none',
+                borderBottom: 'none',
                 transition: 'all 0.15s',
                 fontFamily: "'Caveat', cursive",
               }}>
-                {tab}
-              </div>
+                {tab.label}
+              </button>
             );
           })}
         </div>

@@ -13,6 +13,7 @@ import RoundRobinPanel from "./components/RoundRobinPanel";
 import ScramblePanel from "./components/ScramblePanel";
 import PopupEventPanel from "./components/PopupEventPanel";
 import SportsEventCardOverlay from "./components/SportsEventCardOverlay";
+import PartyEventCardOverlay from "./components/PartyEventCardOverlay";
 import AddEventModal from "./components/AddEventModal";
 import DateDetailsCard from "./components/DateDetailsCard_Enhanced";
 import WhatTimeModal from "./components/WhatTimeModal";
@@ -27876,6 +27877,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       calendar_id: meta.layerId || activeLayerId,
       created_by: meta.createdByUserId,
       created_by_user_id: meta.createdByUserId,
+      created_by_name: meta.createdByName,
       title: evObj.title,
       date: evObj.date,
       time: evObj.time,
@@ -27896,6 +27898,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     || ''
   ).trim().toLowerCase();
   const isSelectedSportsPopup = selectedPopupCategory === 'sports';
+  const isSelectedPartyPopup = selectedPopupCategory === 'party';
   const closeSelectedPopup = () => {
     setSelectedPopupEventPanelId(null);
     clearPopupQueryParam();
@@ -27962,6 +27965,19 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             eventMetaFallback={eventMetaFallback}
             resolveHandleLikeLabel={resolveHandleLikeLabel}
             onLaunchRoundRobin={launchRoundRobinFromPopup}
+          />
+        ) : isSelectedPartyPopup ? (
+          <PartyEventCardOverlay
+            activeLayerPageTheme={activeLayerPageTheme}
+            darkMode={darkMode}
+            supabase={supabase}
+            user={user}
+            calendarId={activeLayerId}
+            displayName={resolveHandleLikeLabel(currentUser || user?.email || user?.phone || 'Guest', user?.id)}
+            currentUserProfilePhotoUrl={currentUserProfilePhotoUrl}
+            initialEventId={selectedPopupId}
+            eventMetaFallback={eventMetaFallback}
+            resolveHandleLikeLabel={resolveHandleLikeLabel}
           />
         ) : (
           <PopupEventPanel

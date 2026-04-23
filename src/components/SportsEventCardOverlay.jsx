@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import SportsEventCard from './SportsEventCard';
+import { ChatRoom, GameModeLauncher, LiveMap, RosterRow } from './PopupEventPanel';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const POPUP_NO_MAX_SENTINEL = 1000000;
@@ -35,8 +36,11 @@ export default function SportsEventCardOverlay({
   currentUserProfilePhotoUrl = '',
   resolveHandleLikeLabel,
   onLaunchRoundRobin,
+  onLaunchGauntlet,
+  onLaunchScramble,
 }) {
   const accent = activeLayerPageTheme?.accent || '#16a34a';
+  const [activeScreen, setActiveScreen] = useState('detail');
   const [event, setEvent] = useState(() => normalizeEvent(eventMetaFallback || {}, eventMetaFallback || {}));
   const [members, setMembers] = useState([]);
   const [joining, setJoining] = useState(false);
@@ -165,6 +169,12 @@ export default function SportsEventCardOverlay({
     category: 'sports',
     invitees,
   };
+  const sortedPlayers = [...invitees].sort((a, b) => {
+    const rank = (role) => (role === 'host' ? 0 : role === 'cohost' ? 1 : 2);
+    const rankDelta = rank(a?.role) - rank(b?.role);
+    if (rankDelta !== 0) return rankDelta;
+    return String(a?.display_name || '').localeCompare(String(b?.display_name || ''));
+  });
 
   const handleJoin = async () => {
     if (!event || isMember || isFull) return;
@@ -213,6 +223,184 @@ export default function SportsEventCardOverlay({
     } catch {}
   };
 
+  const primaryText = darkMode ? '#f8fafc' : 'var(--color-text-primary)';
+  const secondaryText = darkMode ? '#cbd5e1' : 'var(--color-text-secondary)';
+  const border = darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
+  const softBg = darkMode ? `${accent}18` : `${accent}0d`;
+  const btnStyle = { backgroundColor: accent, color: '#fff', border: 'none', cursor: 'pointer' };
+  const currentNoMax = Number(event?.max_players || 0) >= POPUP_NO_MAX_SENTINEL;
+  const tabs = [
+    { id: 'detail', label: 'Info' },
+    { id: 'roster', label: 'People' },
+    { id: 'chat', label: 'Chat' },
+    { id: 'map', label: 'Map' },
+    { id: 'game', label: 'Play' },
+  ];
+
+  const renderScreenHeader = (title) => (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 10,
+        padding: '12px 14px',
+        background: darkMode ? '#0f172a' : '#fff',
+        borderBottom: `1px solid ${border}`,
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setActiveScreen('detail')}
+        style={{
+          border: `1px solid ${border}`,
+          background: darkMode ? 'rgba(255,255,255,0.05)' : '#f8fafc',
+          color: secondaryText,
+          borderRadius: 999,
+          padding: '7px 12px',
+          cursor: 'pointer',
+          fontFamily: "'Caveat', cursive",
+          fontSize: 13,
+          fontWeight: 800,
+        }}
+      >
+        Info
+      </button>
+      <div style={{ fontFamily: "'Caveat', cursive", fontSize: 18, fontWeight: 900, color: primaryText }}>
+        {title}
+      </div>
+      <div style={{ width: 54 }} />
+    </div>
+  );
+
+  const renderTabs = () => (
+    <div style={{ display: 'flex', borderBottom: `1px solid ${border}`, background: darkMode ? '#0f172a' : '#fff' }}>
+      {tabs.map((tab) => {
+        const active = activeScreen === tab.id;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveScreen(tab.id)}
+            style={{
+              flex: 1,
+              padding: '11px 0',
+              border: 'none',
+              borderTop: `2px solid ${active ? accent : 'transparent'}`,
+              background: active ? (darkMode ? 'rgba(255,255,255,0.04)' : '#f8fafc') : 'transparent',
+              color: active ? primaryText : secondaryText,
+              cursor: 'pointer',
+              fontFamily: "'Caveat', cursive",
+              fontSize: 12,
+              fontWeight: active ? 800 : 600,
+            }}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const renderActiveScreen = () => {
+    if (activeScreen === 'roster') {
+      return (
+        <>
+          {renderScreenHeader('People')}
+          <div style={{ paddingBottom: 24 }}>
+            <div style={{ padding: '12px 16px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 900, color: accent, fontFamily: "'Caveat', cursive" }}>
+                {currentNoMax ? `${memberCount} players` : `${memberCount} / ${event.max_players} players`}
+              </div>
+              <div style={{ flex: 1, height: 4, borderRadius: 999, background: border, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: currentNoMax ? '100%' : `${Math.min(100, (memberCount / (event.max_players || 1)) * 100)}%`, background: accent }} />
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: secondaryText, fontFamily: "'Caveat', cursive" }}>
+                {currentNoMax ? 'Unlimited' : isFull ? 'Full' : `${Math.max(0, (event.max_players || 0) - memberCount)} left`}
+              </div>
+            </div>
+            {sortedPlayers.map((member) => (
+              <RosterRow
+                key={member.id || member.user_id || member.display_name}
+                member={member}
+                isMe={String(member?.user_id || '').trim() === currentUserId}
+                isHost={false}
+                accent={accent}
+                darkMode={darkMode}
+                onKick={() => {}}
+                onPromote={() => {}}
+                onDemote={() => {}}
+                attendeeRoleLabel="Player"
+              />
+            ))}
+            {sortedPlayers.length === 0 && (
+              <div style={{ padding: 32, textAlign: 'center', fontFamily: "'Caveat', cursive", color: secondaryText, fontWeight: 800 }}>
+                No players yet
+              </div>
+            )}
+          </div>
+        </>
+      );
+    }
+    if (activeScreen === 'chat') {
+      return (
+        <>
+          {renderScreenHeader('Chat')}
+          <ChatRoom
+            eventId={event.id}
+            supabase={supabase}
+            user={user}
+            displayName={effectiveDisplayName}
+            accent={accent}
+            darkMode={darkMode}
+            border={border}
+            softBg={softBg}
+            members={sortedPlayers}
+          />
+        </>
+      );
+    }
+    if (activeScreen === 'map') {
+      return (
+        <>
+          {renderScreenHeader('Map')}
+          <LiveMap
+            event={event}
+            supabase={supabase}
+            user={user}
+            displayName={effectiveDisplayName}
+            accent={accent}
+            darkMode={darkMode}
+            border={border}
+            softBg={softBg}
+            members={sortedPlayers}
+          />
+        </>
+      );
+    }
+    if (activeScreen === 'game') {
+      return (
+        <>
+          {renderScreenHeader('Play')}
+          <GameModeLauncher
+            event={event}
+            members={sortedPlayers}
+            accent={accent}
+            darkMode={darkMode}
+            border={border}
+            softBg={softBg}
+            btnStyle={btnStyle}
+            isHost={isHost}
+            onLaunchRoundRobin={onLaunchRoundRobin}
+            onLaunchGauntlet={onLaunchGauntlet}
+            onLaunchScramble={onLaunchScramble}
+          />
+        </>
+      );
+    }
+    return null;
+  };
+
   return (
     <div
       id="sports-event-card-root"
@@ -225,26 +413,35 @@ export default function SportsEventCardOverlay({
         borderRadius: 20,
       }}
     >
-      <SportsEventCard
-        event={routedEvent}
-        darkMode={darkMode}
-        accent={accent}
-        onPrimaryAction={handleJoin}
-        primaryActionLabel={joining ? 'Joining...' : 'Join Event'}
-        onLeave={handleLeave}
-        isHost={isHost}
-        isMember={isMember}
-        isFull={isFull}
-        joining={joining}
-        joinError={joinError}
-        copied={copied}
-        onCopyLink={handleCopyLink}
-        onViewRoster={() => {}}
-        onOpenChat={() => {}}
-        onStartPlay={() => onLaunchRoundRobin?.(routedEvent, invitees)}
-        memberCount={memberCount}
-        isLegacyInvalidEvent={!isUuid(event?.id)}
-      />
+      {activeScreen === 'detail' ? (
+        <SportsEventCard
+          event={routedEvent}
+          darkMode={darkMode}
+          accent={accent}
+          activeTab="info"
+          onPrimaryAction={handleJoin}
+          primaryActionLabel={joining ? 'Joining...' : 'Join Event'}
+          onLeave={handleLeave}
+          isHost={isHost}
+          isMember={isMember}
+          isFull={isFull}
+          joining={joining}
+          joinError={joinError}
+          copied={copied}
+          onCopyLink={handleCopyLink}
+          onViewRoster={() => setActiveScreen('roster')}
+          onOpenChat={() => setActiveScreen('chat')}
+          onOpenMap={() => setActiveScreen('map')}
+          onStartPlay={() => setActiveScreen('game')}
+          memberCount={memberCount}
+          isLegacyInvalidEvent={!isUuid(event?.id)}
+        />
+      ) : (
+        <>
+          {renderTabs()}
+          {renderActiveScreen()}
+        </>
+      )}
     </div>
   );
 }
