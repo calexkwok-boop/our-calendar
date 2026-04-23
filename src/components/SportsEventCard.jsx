@@ -88,16 +88,23 @@ const SportWatermark = ({ sport }) => {
   const base = { position: 'absolute', right: -8, top: '50%', transform: 'translateY(-50%)', opacity: 0.1, pointerEvents: 'none' };
 
   if (sport === 'pickleball' || sport === 'tennis' || sport === 'badminton') {
-    // Court with net line
+    // Pickleball court: service areas on outside, narrow kitchen zones flanking the net
+    // Real proportions: court 44ft total, kitchen 7ft each side of net (~16% each side)
     return (
       <svg style={base} width="100" height="64" viewBox="0 0 100 64" fill="none">
+        {/* Outer border */}
         <rect x="1" y="1" width="98" height="62" rx="3" stroke="white" strokeWidth="2"/>
-        <rect x="1" y="1" width="28" height="62" fill="white" fillOpacity="0.4"/>
-        <rect x="71" y="1" width="28" height="62" fill="white" fillOpacity="0.4"/>
-        <line x1="29" y1="1" x2="29" y2="63" stroke="white" strokeWidth="1.5"/>
-        <line x1="71" y1="1" x2="71" y2="63" stroke="white" strokeWidth="1.5"/>
-        <line x1="50" y1="1" x2="50" y2="63" stroke="white" strokeWidth="2.5"/>
-        <line x1="29" y1="32" x2="71" y2="32" stroke="white" strokeWidth="1"/>
+        {/* Service area fills */}
+        <rect x="1" y="1" width="33" height="62" fill="white" fillOpacity="0.25"/>
+        <rect x="66" y="1" width="33" height="62" fill="white" fillOpacity="0.25"/>
+        {/* Kitchen boundary lines */}
+        <line x1="34" y1="1" x2="34" y2="63" stroke="white" strokeWidth="1.5"/>
+        <line x1="66" y1="1" x2="66" y2="63" stroke="white" strokeWidth="1.5"/>
+        {/* Net — center */}
+        <line x1="50" y1="1" x2="50" y2="63" stroke="white" strokeWidth="3"/>
+        {/* Center service lines — only in the service courts, not through kitchen */}
+        <line x1="1" y1="32" x2="34" y2="32" stroke="white" strokeWidth="1.5"/>
+        <line x1="66" y1="32" x2="99" y2="32" stroke="white" strokeWidth="1.5"/>
       </svg>
     );
   }
@@ -382,7 +389,7 @@ export default function SportsEventCard({
                 flex: 1, padding: '11px 0',
                 fontSize: 13, fontWeight: active ? 700 : 500,
                 textAlign: 'center', cursor: 'pointer',
-                color: active ? heroText : heroMuted,
+                color: active ? (darkMode ? heroText : '#0f172a') : heroMuted,
                 background: active ? bodyBg : 'transparent',
                 borderTop: active ? `2px solid ${accent}` : '2px solid transparent',
                 borderLeft: 'none',
@@ -459,9 +466,11 @@ export default function SportsEventCard({
               background: '#fef3c7', border: '2px solid #fbbf24',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 13, fontWeight: 900, color: '#f59e0b',
-              fontFamily: APP_FONT_STACK,
+              fontFamily: APP_FONT_STACK, overflow: 'hidden',
             }}>
-              {gInitials(organizer.display_name || organizer.name)}
+              {getProfileImageUrl(organizer)
+                ? <img src={getProfileImageUrl(organizer)} alt={organizer.display_name || organizer.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                : gInitials(organizer.display_name || organizer.name)}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <span style={{ fontSize: 15, color: darkMode ? '#fbbf24' : '#92400e', fontWeight: 700 }}>

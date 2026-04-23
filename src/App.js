@@ -29638,22 +29638,17 @@ transform: translateY(0);
                       })}
                     </div>
                   </div>
-                  {eventsTabView === 'upcoming' && (
-                    <button
-                      onClick={() => { 
-                        setIsPopupEventDraft(true); 
-                        setBottomNavTab('home');
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
-                      style={themeAccentButtonStyle}
-                    >
-                      <Plus className="w-3.5 h-3.5" /> New Event
-                    </button>
-                  )}
                 </div>
                 {eventsTabView === 'upcoming' && (
                 <>
                 <div className="flex flex-wrap items-center gap-2 mb-4 relative">
+                  <button
+                    onClick={() => openHomeAddEventModal()}
+                    className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold font-handwritten text-white shadow-[0_10px_24px_rgba(139,92,246,0.24)] transition-transform hover:scale-[1.01]"
+                    style={{ background: 'linear-gradient(90deg, #8b5cf6 0%, #ec4899 52%, #f97316 100%)' }}
+                  >
+                    <Plus className="w-4 h-4" /> New Event
+                  </button>
                   <button
                     onClick={() => setEventsTabHideRecurring((prev) => !prev)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${eventsTabHideRecurring ? 'bg-stone-700 text-amber-50 border-stone-700 dark:bg-white/[0.08] dark:text-gray-100 dark:border-white/15' : 'bg-white/70 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-stone-200 dark:border-gray-600'}`}

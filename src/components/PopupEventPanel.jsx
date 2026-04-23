@@ -886,18 +886,18 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
         {geoError && <div style={{ fontSize: 11, color: '#ef4444', marginBottom: 8 }}>{geoError}</div>}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: darkMode ? '#f8fafc' : 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Radio style={{ width: 13, height: 13, color: sharing ? '#10b981' : accent }} />
               {sharing ? 'Sharing your location' : 'Location sharing off'}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: darkMode ? '#94a3b8' : 'var(--color-text-secondary)', marginTop: 2 }}>
               {locations.length} player{locations.length !== 1 ? 's' : ''} visible on map
             </div>
           </div>
           <button onClick={sharing ? stopSharing : startSharing}
             style={{ padding: '8px 16px', borderRadius: 12, fontSize: 12, fontWeight: 900, cursor: 'pointer', border: 'none',
               background: sharing ? 'rgba(239,68,68,0.1)' : accent,
-              color: sharing ? '#ef4444' : (darkMode ? '#111' : '#fff'),
+              color: sharing ? '#ef4444' : '#fff',
               border: sharing ? '1.5px solid rgba(239,68,68,0.3)' : 'none' }}>
             {sharing ? 'Stop sharing' : '📍 Share location'}
           </button>
@@ -1878,8 +1878,8 @@ export default function PopupEventPanel({
       avatar: member?.avatar_url || member?.avatarUrl || member?.photo_url || member?.photoUrl || '👤',
       avatarUrl: member?.avatarUrl || member?.avatar_url || '',
       avatar_url: member?.avatar_url || member?.avatarUrl || '',
-      photoUrl: member?.photoUrl || member?.photo_url || '',
-      photo_url: member?.photo_url || member?.photoUrl || '',
+      photoUrl: resolvePopupMemberPhotoUrl(member),
+      photo_url: resolvePopupMemberPhotoUrl(member),
       status: 'accepted',
       user_id: member?.user_id || '',
       role: member?.role || 'player',
