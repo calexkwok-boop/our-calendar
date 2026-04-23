@@ -615,6 +615,7 @@ export default function SportsEventCard({
               ].map(({ label, icon: Icon, action, color }) => (
                 <button
                   key={label}
+                  type="button"
                   onClick={action}
                   style={{
                     padding: '12px 14px',

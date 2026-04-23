@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import SportsEventCard from './SportsEventCard';
-import { ChatRoom, GameModeLauncher, LiveMap, RosterRow } from './PopupEventPanel';
+import { ChatRoom, LiveMap, RosterRow } from './PopupEventPanel';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const POPUP_NO_MAX_SENTINEL = 1000000;
@@ -253,7 +253,6 @@ export default function SportsEventCardOverlay({
   const secondaryText = darkMode ? '#cbd5e1' : 'var(--color-text-secondary)';
   const border = darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
   const softBg = darkMode ? `${accent}18` : `${accent}0d`;
-  const btnStyle = { backgroundColor: accent, color: '#fff', border: 'none', cursor: 'pointer' };
   const currentNoMax = Number(event?.max_players || 0) >= POPUP_NO_MAX_SENTINEL;
   const tabs = [
     { id: 'detail', label: 'Info' },
@@ -405,22 +404,91 @@ export default function SportsEventCardOverlay({
       );
     }
     if (activeScreen === 'game') {
+      const modeOptions = [
+        {
+          id: 'round-robin',
+          title: 'Round Robin',
+          description: 'Build a rotating schedule so everyone gets matched through the group.',
+          action: () => onLaunchRoundRobin?.(event, sortedPlayers),
+          minPlayers: 3,
+        },
+        {
+          id: 'gauntlet',
+          title: 'Gauntlet',
+          description: 'Run ladder-style rounds where winners climb and pairings keep moving.',
+          action: () => onLaunchGauntlet?.(event, sortedPlayers),
+          minPlayers: 4,
+        },
+        {
+          id: 'scramble',
+          title: 'Scramble',
+          description: 'Shuffle fresh teams each round for a more casual rotating format.',
+          action: () => onLaunchScramble?.(event, sortedPlayers),
+          minPlayers: 4,
+        },
+      ];
       return (
         <>
           {renderScreenHeader('Play')}
-          <GameModeLauncher
-            event={event}
-            members={sortedPlayers}
-            accent={accent}
-            darkMode={darkMode}
-            border={border}
-            softBg={softBg}
-            btnStyle={btnStyle}
-            isHost={isHost}
-            onLaunchRoundRobin={onLaunchRoundRobin}
-            onLaunchGauntlet={onLaunchGauntlet}
-            onLaunchScramble={onLaunchScramble}
-          />
+          <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ padding: '12px 14px', borderRadius: 14, background: softBg, border: `1px solid ${border}` }}>
+              <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: accent, marginBottom: 4, fontFamily: "'Caveat', cursive" }}>
+                Choose a format
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: secondaryText, lineHeight: 1.45, fontFamily: "'Caveat', cursive" }}>
+                Pick how you want to organize play for {sortedPlayers.length} player{sortedPlayers.length === 1 ? '' : 's'}.
+              </div>
+            </div>
+            {!isHost && (
+              <div style={{ padding: '10px 14px', borderRadius: 12, background: darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', fontSize: 12, color: secondaryText, fontWeight: 700, textAlign: 'center', fontFamily: "'Caveat', cursive" }}>
+                Only the host can launch a play mode.
+              </div>
+            )}
+            {modeOptions.map((mode) => {
+              const disabled = !isHost || sortedPlayers.length < mode.minPlayers;
+              return (
+                <button
+                  key={mode.id}
+                  type="button"
+                  onClick={disabled ? undefined : mode.action}
+                  disabled={disabled}
+                  style={{
+                    width: '100%',
+                    padding: '14px 16px',
+                    borderRadius: 16,
+                    border: `1px solid ${disabled ? border : `${accent}55`}`,
+                    background: disabled ? (darkMode ? 'rgba(255,255,255,0.03)' : '#f8fafc') : (darkMode ? `${accent}18` : '#fff'),
+                    color: disabled ? secondaryText : primaryText,
+                    cursor: disabled ? 'default' : 'pointer',
+                    opacity: disabled ? 0.68 : 1,
+                    textAlign: 'left',
+                    fontFamily: "'Caveat', cursive",
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 14,
+                  }}
+                >
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: 17, fontWeight: 900, color: disabled ? secondaryText : accent }}>
+                      {mode.title}
+                    </span>
+                    <span style={{ display: 'block', marginTop: 3, fontSize: 13, fontWeight: 700, lineHeight: 1.35, color: secondaryText }}>
+                      {mode.description}
+                    </span>
+                    {sortedPlayers.length < mode.minPlayers && (
+                      <span style={{ display: 'block', marginTop: 6, fontSize: 11, fontWeight: 800, color: '#d97706' }}>
+                        Needs at least {mode.minPlayers} players
+                      </span>
+                    )}
+                  </span>
+                  <span style={{ flexShrink: 0, fontSize: 18, fontWeight: 900, color: disabled ? secondaryText : accent }}>
+                    {disabled ? '' : '>'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </>
       );
     }
