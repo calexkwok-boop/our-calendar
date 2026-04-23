@@ -24,6 +24,24 @@ const LAVENDER_DARK_BG = "rgba(168,85,247,0.10)";
 const LAVENDER_BORDER = "rgba(168,85,247,0.25)";
 const LAVENDER_TEXT = "#7c3aed";
 const LAVENDER_TEXT_DARK = "#c4b5fd";
+const DREAMSHELF_IMAGE_CACHE_STORAGE_KEY = "dream-shelf-image-cache-v1";
+
+const readDreamShelfImageCache = () => {
+  if (typeof window === "undefined") return {};
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(DREAMSHELF_IMAGE_CACHE_STORAGE_KEY) || "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeDreamShelfImageCache = (cache) => {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(DREAMSHELF_IMAGE_CACHE_STORAGE_KEY, JSON.stringify(cache));
+  } catch {}
+};
 
 const getDreamShelfImageKey = (item = {}) => (
   item.id ||
@@ -49,6 +67,10 @@ const getDreamShelfProductSearchQuery = (item = {}) => {
 
 const isDreamShelfWeakImageUrl = (url = "") => (
   /source\.unsplash\.com\/featured/i.test(String(url || ""))
+);
+
+const isDreamShelfCachedImageUrl = (url = "") => (
+  /\/storage\/v1\/object\/public\/dream-shelf-images\//i.test(String(url || ""))
 );
 
 const getDreamShelfCategoryMeta = (categoryId) => (
@@ -111,7 +133,7 @@ const DREAMSHELF_IMAGES = {
   j3: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=80",
   j4: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/j4-cartier-juste-un-clou.avif",
   j5: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/j5-david-yurman-infinity-band.webp",
-  j6: "https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&q=80",
+  j6: "https://media.bulgari.com/image/upload/c_pad,h_851,w_1090/q_auto/f_auto/1556895.png",
   j7: "https://images.unsplash.com/photo-1603561591411-07134e71a2a9?w=600&q=80",
   j8: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&q=80",
   j9: "https://image.brilliantearth.com/media/product_images/I6/BE2277_yellow_top.jpg",
@@ -119,13 +141,13 @@ const DREAMSHELF_IMAGES = {
   s1: "https://images.stockx.com/images/Air-Jordan-1-Retro-High-OG-Chicago-Reimagined-Product.jpg?fit=fill&bg=FFFFFF&w=140&h=75&q=57&dpr=2&trim=color&updated_at=1738193358",
   s2: "https://encrypted-tbn3.gstatic.com/shopping?q=tbn:ANd9GcQhynJlN1yrf037AvDWWDJYI5wC6c8CMshpSyIYM1g90oPfwzSlqUr25x1gNiQSmlfjKeIIxZYrJEfmubsRbgcK54vE7L_ZewlPuLmYVAlPnODL85ERZwoW",
   s3: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=600&q=80",
-  s4: "data:image/webp;base64,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",
+  s4: "https://cdn-images.farfetch-contents.com/17/94/24/02/17942402_37988937_1000.jpg",
   s5: "https://images.unsplash.com/photo-1584735174914-6b1272458e3e?w=600&q=80",
   s6: "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&q=80",
   s7: "https://www.mrporter.com/variants/images/3024088872901549/in/w2000_q60.jpg",
   s8: "https://static.nike.com/a/images/t_web_pdp_535_v2/f_auto,u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/af53d53d-561f-450a-a483-70a7ceee380f/W+NIKE+DUNK+LOW.png",
   a1: "https://images.unsplash.com/photo-1551524559-8af4e6624178?w=600&q=80",
-  a2: "https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?w=600&q=80",
+  a2: "https://images-dynamic-arcteryx.imgix.net/details/1350x1710/F25-X000009990-Alpha-SV-Jacket-Black-Women-s-Front-View.jpg?auto=format&q=70&fit=crop&fill=white&max-w=1350&max-h=1710&ixlib=react-9.10.0&w=594",
   a3: "https://images.unsplash.com/photo-1522163182402-834f871fd851?w=600&q=80",
   a4: "https://images.unsplash.com/photo-1508973379184-7517410fb0c9?w=600&q=80",
   a5: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600&q=80",
@@ -145,6 +167,7 @@ const DREAMSHELF_IMAGES = {
   h8: "https://images.unsplash.com/photo-1547891654-e66ed7ebb968?w=600&q=80",
   h9: "https://assets.wsimgs.com/wsimgs/rk/images/dp/wcm/202552/0013/img84z.jpg",
   h10: "https://cb.scene7.com/is/image/Crate/BrevilleBrstExEsprsAVSSS21_VND?$web_pdp_main_carousel_high$",
+  h11: "https://cdn.sanity.io/images/fr9flhkd/main/fcaa37dfaed0bdedcf501891843e04b8cc082a52-1500x1500.jpg?fm=webp&q=75&w=1280",
   c1: "https://images.vivino.com/thumbs/1Rm8louuTKKSUZvSNVbeLw_pb_x960.png",
   c2: "https://images.vivino.com/thumbs/s5aXYaQiTu-V_xEYI3KXRg_pb_x960.png",
   c3: "https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=600&q=80",
@@ -197,6 +220,7 @@ const DREAMSHELF_IMAGES = {
   wl5: "https://joovv.com/cdn/shop/products/joovv-go-2-0-setup-charging-dock-002_1000x.jpg?v=1708025273",
   wl1: "https://res.cloudinary.com/eightsleep/image/upload/c_fill,g_auto,f_auto,dpr_2.0,h_1000,q_80/v1762291964/Pod5-Desktop_ca1n38.png",
   wl4: "https://infraredsauna.com/wp-content/uploads/2024/10/Sanctuary_1_Hero_Mahogany_Title-scaled.png",
+  wl7: "https://www.recoveryforathletes.com/cdn/shop/products/image_1c701ff6-21a5-4567-9b24-a80a9fbe54de.jpg?v=1666291030&width=800",
   hm1: "https://parachutehome.com/cdn/shop/files/linen-sheet-set-bone-_f-q_k-ck__01_f39c5ff8-36b2-4a81-bba1-b23dbd14fd47.jpg?v=1762839007&width=1200",
   hm3: "https://images.bloomingdalesassets.com/is/image/BLM/products/4/optimized/13797594_fpx.tif?op_sharpen=1&wid=700&fit=fit,1&fmt=webp",
   hm5: "https://images.hermanmiller.group/m/b4efc9b53c699972/W-HAY_2514619_100127979_olive_a.png?trim=auto&trim-sd=1&blend-mode=darken&blend=f8f8f8&bg=f8f8f8&auto=format&w=1000&q=70&h=1000",
@@ -421,7 +445,7 @@ const CURATED_ITEMS = {
     { id: "j3",  name: "Tiffany T Wire Bracelet",      brand: "Tiffany", priceRange: "$800–$1,500",     subFilter: ["tiffany","everyday","gold"],emoji: "💍", description: "The modern Tiffany icon. Thin, architectural, and the kind of thing you never take off." },
     { id: "j4",  name: "Cartier Juste un Clou",        brand: "Cartier", priceRange: "$3,500–$5,500",   subFilter: ["cartier","everyday"],     emoji: "💍", description: "A nail bent into a bracelet. The best proof that simplicity is the ultimate luxury." },
     { id: "j5",  name: "David Yurman Infinity Band",   brand: "Yurman",  priceRange: "$600–$1,200",     subFilter: ["everyday","anniversary"], emoji: "💍", description: "The cable bracelet that defined a generation of American fine jewelry. Instantly recognizable." },
-    { id: "j6",  name: "Bvlgari Serpenti",             brand: "Bvlgari", priceRange: "$3,000–$8,000",   subFilter: ["anniversary"],            emoji: "💍", description: "A coiled serpent in gold and gemstones. The most dramatic thing you'll ever put on your wrist." },
+    { id: "j6",  name: "Bvlgari Serpenti",             brand: "Bvlgari", priceRange: "$3,000–$8,000",   subFilter: ["anniversary"],            emoji: "💍", image: DREAMSHELF_IMAGES.j6, description: "A coiled serpent in gold and gemstones. The most dramatic thing you'll ever put on your wrist." },
     { id: "j7",  name: "Mikimoto Pearl Strand",        brand: "Mikimoto",priceRange: "$1,500–$5,000",   subFilter: ["anniversary","gold"],     emoji: "💍", description: "The original pearl jeweler, still the best. A strand of Mikimoto pearls is an heirloom from day one." },
     { id: "j8",  name: "Harry Winston Round Diamond Solitaire", brand: "Harry Winston", priceRange: "$10,000+", subFilter: ["anniversary"], emoji: "💍", description: "The King of Diamonds. When the moment demands something truly extraordinary." },
     { id: "j9",  name: "Gold Signet Ring",               brand: "Bespoke",  priceRange: "$800–$3,000",     subFilter: ["mens","gold","everyday"],  emoji: "💍", imageQuery: "gold signet ring mens hand pinky", image: DREAMSHELF_IMAGES.j9, description: "The oldest piece of jewelry in history, still the most quietly powerful thing a man can wear." },
@@ -479,7 +503,7 @@ const CURATED_ITEMS = {
     { id: "s1",  name: "Air Jordan 1 Retro High OG",   brand: "Nike/Jordan",priceRange: "$170–$2,000+", subFilter: ["jordan","grail"],         emoji: "👟", description: "The shoe that started everything. Every colorway tells a story. The grail for a reason." },
     { id: "s2",  name: "Nike x Sacai LDWaffle",        brand: "Nike",    priceRange: "$180–$800+",       subFilter: ["collab","grail"],         emoji: "👟", description: "Double swoosh, deconstructed design, and the collab that changed what a running shoe could be." },
     { id: "s3",  name: "Adidas Samba OG",              brand: "Adidas",  priceRange: "$100–$130",        subFilter: ["adidas"],                 emoji: "👟", description: "The 1950s indoor soccer shoe that somehow became the shoe of the decade. Again." },
-    { id: "s4",  name: "New Balance 550",              brand: "New Balance",priceRange: "$110–$140",     subFilter: ["collab"],                 emoji: "👟", description: "Aime Leon Dore put these back on the map and now everyone wants a pair. Deservedly." },
+    { id: "s4",  name: "New Balance 550",              brand: "New Balance",priceRange: "$110–$140",     subFilter: ["collab"],                 emoji: "👟", image: DREAMSHELF_IMAGES.s4, description: "Aime Leon Dore put these back on the map and now everyone wants a pair. Deservedly." },
     { id: "s5",  name: "Air Max 97 Silver Bullet",     brand: "Nike",    priceRange: "$175–$500+",       subFilter: ["nike","grail"],           emoji: "👟", description: "Full-length air unit and a silver upper inspired by bullet trains. Still the best Air Max ever." },
     { id: "s6",  name: "Jordan 4 Retro",               brand: "Jordan",  priceRange: "$200–$1,000+",     subFilter: ["jordan","grail"],         emoji: "👟", description: "The shoe from Do the Right Thing. Every retro release sells out in minutes. For good reason." },
     { id: "s7",  name: "Common Projects Achilles Low", brand: "Common Projects", priceRange: "$500–$750", subFilter: ["grail"],                  emoji: "👟", description: "Minimal, Italian-made, and quietly iconic. The white sneaker that makes everything look more considered." },
@@ -506,7 +530,7 @@ const CURATED_ITEMS = {
   kitchen: [
     { id: "h9",  name: "Le Creuset Dutch Oven",        brand: "Le Creuset",priceRange: "$300–$500",      subFilter: ["cooking","ritual"],       emoji: "🍳", image: DREAMSHELF_IMAGES.h9, description: "The heirloom kitchen piece. Braises, soups, bread, and Sunday sauces all feel more special in enameled cast iron." },
     { id: "h10", name: "Breville Espresso Machine",    brand: "Breville", priceRange: "$500–$900",      subFilter: ["coffee","ritual"],        emoji: "☕", image: DREAMSHELF_IMAGES.h10, description: "A countertop ritual machine for dialing in espresso, steaming milk, and making every morning feel a little more intentional." },
-    { id: "h11", name: "All-Clad D3 10-Piece Set",    brand: "All-Clad", priceRange: "$700–$1,000",    subFilter: ["cooking"],                emoji: "🍳", imageQuery: "All-Clad stainless steel cookware set kitchen", description: "The set professional cooks put in their home kitchens. Tri-ply stainless that lasts decades and only gets better." },
+    { id: "h11", name: "All-Clad D3 10-Piece Set",    brand: "All-Clad", priceRange: "$700–$1,000",    subFilter: ["cooking"],                emoji: "🍳", imageQuery: "All-Clad stainless steel cookware set kitchen", image: DREAMSHELF_IMAGES.h11, description: "The set professional cooks put in their home kitchens. Tri-ply stainless that lasts decades and only gets better." },
     { id: "h12", name: "Vitamix Ascent A3500",        brand: "Vitamix",  priceRange: "$600–$700",      subFilter: ["cooking","ritual"],       emoji: "🥤", imageQuery: "Vitamix blender countertop kitchen", description: "The blender that handles anything. Smoothies, soups, nut butters — the kind of machine that changes what you cook." },
     { id: "h13", name: "Staub Cocotte 5.5qt",         brand: "Staub",    priceRange: "$350–$450",      subFilter: ["cooking"],                emoji: "🍳", imageQuery: "Staub cocotte cast iron black oven", image: DREAMSHELF_IMAGES.h13, description: "Matte enamel interior, self-basting lid, and a weight that means business. The French alternative to Le Creuset." },
     { id: "h14", name: "Ooni Karu 16 Pizza Oven",     brand: "Ooni",     priceRange: "$849",           subFilter: ["cooking","outdoor"],      emoji: "🍕", imageQuery: "Ooni pizza oven outdoor wood fire", image: DREAMSHELF_IMAGES.h14, description: "Restaurant-quality pizza in your backyard in sixty seconds. The oven that turns any evening into an event." },
@@ -533,7 +557,7 @@ const CURATED_ITEMS = {
   ],
   adventure: [
     { id: "a1",  name: "Völkl Mantra M6 Skis",        brand: "Völkl",   priceRange: "$800–$1,000",     subFilter: ["ski"],                    emoji: "🎿", description: "The all-mountain benchmark. Skis that make every run feel intentional and every turn feel earned." },
-    { id: "a2",  name: "Arc'teryx Alpha SV Jacket",    brand: "Arc'teryx",priceRange: "$850–$1,000",    subFilter: ["ski","climb"],            emoji: "🧥", description: "The jacket mountaineers trust in the most severe conditions on earth. Built to last a lifetime." },
+    { id: "a2",  name: "Arc'teryx Alpha SV Jacket",    brand: "Arc'teryx",priceRange: "$850–$1,000",    subFilter: ["ski","climb"],            emoji: "🧥", image: DREAMSHELF_IMAGES.a2, description: "The jacket mountaineers trust in the most severe conditions on earth. Built to last a lifetime." },
     { id: "a3",  name: "Petzl Vertigo Wire-Lock",      brand: "Petzl",   priceRange: "$25–$40",         subFilter: ["climb"],                  emoji: "🧗", description: "The carabiner that professional guides trust. A small thing that means everything." },
     { id: "a4",  name: "Trek Domane SLR 9",            brand: "Trek",    priceRange: "$9,000–$12,000",  subFilter: ["bike","cycling"],         emoji: "🚴", imageQuery: "Trek Domane SLR road bike carbon", description: "Carbon frame, Shimano Dura-Ace, and the smoothest ride on any road surface. The dream cycling setup." },
     { id: "a5",  name: "Patagonia Black Hole Duffel 70L",brand: "Patagonia",priceRange: "$250–$300",   subFilter: ["ski","climb"],            emoji: "🎒", description: "The bag that goes on every adventure and comes back looking fine. Built to outlast the trip." },
@@ -585,7 +609,7 @@ const CURATED_ITEMS = {
     { id: "wl4", name: "Clearlight Sanctuary Sauna",  brand: "Clearlight",priceRange: "$4,000–$6,000",    subFilter: ["sauna","recovery"],       emoji: "🧖", imageQuery: "home infrared sauna wood cedar interior", image: DREAMSHELF_IMAGES.wl4, description: "An infrared sauna that fits in a spare corner. Twenty minutes in, and you remember what relaxed feels like." },
     { id: "wl5", name: "Joovv Red Light Panel",       brand: "Joovv",     priceRange: "$600–$1,200",      subFilter: ["recovery","tracking"],    emoji: "🔴", imageQuery: "red light therapy panel wellness", image: DREAMSHELF_IMAGES.wl5, description: "Ten minutes of red and near-infrared light. The longevity routine that's now standard in performance circles." },
     { id: "wl6", name: "Whoop 4.0 Membership",        brand: "Whoop",     priceRange: "$239/yr",          subFilter: ["tracking","sleep"],       emoji: "⌚", imageQuery: "Whoop fitness tracker wrist", description: "No screen, no distraction — just strain, recovery, and sleep data that quietly rewires your habits." },
-    { id: "wl7", name: "Hyperice Normatec 3 Legs",    brand: "Hyperice",  priceRange: "$699",             subFilter: ["recovery"],               emoji: "🦵", imageQuery: "Normatec compression boots recovery", description: "The compression boots serious athletes use post-run. You feel the difference the next morning." },
+    { id: "wl7", name: "Hyperice Normatec 3 Legs",    brand: "Hyperice",  priceRange: "$699",             subFilter: ["recovery"],               emoji: "🦵", imageQuery: "Normatec compression boots recovery", image: DREAMSHELF_IMAGES.wl7, description: "The compression boots serious athletes use post-run. You feel the difference the next morning." },
   ],
   coffee: [
     { id: "cf1", name: "La Marzocco Linea Mini",       brand: "La Marzocco",priceRange: "$4,500–$5,500",   subFilter: ["espresso","machine"],     emoji: "☕", imageQuery: "La Marzocco Linea Mini espresso home", description: "The machine baristas dream of putting in their kitchen. Commercial quality, counter-sized, completely worth it." },
@@ -1245,6 +1269,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   const [sharingItem, setSharingItem]       = useState(null);
   const [currentUserId, setCurrentUserId]   = useState(null);
   const [itemImages, setItemImages]         = useState({});
+  const [cachedImageUrls, setCachedImageUrls] = useState(() => readDreamShelfImageCache());
   const [searchQuery, setSearchQuery]       = useState("");
   const [searchResults, setSearchResults]   = useState([]);
   const [searching, setSearching]           = useState(false);
@@ -1253,12 +1278,17 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   const imageFetchedRef = useRef(new Set());
   const imageRequestsRef = useRef(new Map());
   const itemImagesRef = useRef({});
+  const cachedImageUrlsRef = useRef(cachedImageUrls);
   const searchRequestIdRef = useRef(0);
   const categoryLoadIdRef = useRef(0);
 
   useEffect(() => {
     itemImagesRef.current = itemImages;
   }, [itemImages]);
+
+  useEffect(() => {
+    cachedImageUrlsRef.current = cachedImageUrls;
+  }, [cachedImageUrls]);
 
   // ── Auth ──
   useEffect(() => {
@@ -1360,6 +1390,29 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     })
   ), []);
 
+  const cacheDreamShelfImage = useCallback(async (imageUrl, name) => {
+    if (!imageUrl || imageUrl.startsWith("data:") || isDreamShelfCachedImageUrl(imageUrl)) return imageUrl || "";
+    if (cachedImageUrlsRef.current[imageUrl]) return cachedImageUrlsRef.current[imageUrl];
+    try {
+      const { data, error } = await supabase.functions.invoke("cache-product-image", {
+        body: { imageUrl, name },
+      });
+      if (error) return imageUrl;
+      const stableImageUrl = data?.imageUrl || imageUrl;
+      if (stableImageUrl && stableImageUrl !== imageUrl && isDreamShelfCachedImageUrl(stableImageUrl)) {
+        setCachedImageUrls(prev => {
+          const next = { ...prev, [imageUrl]: stableImageUrl };
+          cachedImageUrlsRef.current = next;
+          writeDreamShelfImageCache(next);
+          return next;
+        });
+      }
+      return stableImageUrl;
+    } catch {
+      return imageUrl;
+    }
+  }, []);
+
   const fetchDreamShelfImage = useCallback(async (item) => {
     const key = getDreamShelfImageKey(item);
     const cachedImage = itemImagesRef.current[key] || (!item?.preferResolvedImage ? (item?.image || item?.product_image || "") : "");
@@ -1394,6 +1447,8 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
         if (!imageUrl) return "";
 
+        imageUrl = await cacheDreamShelfImage(imageUrl, item?.name || item?.product_name || query);
+
         setItemImages(prev => {
           if (prev[key]) return prev;
           const next = { ...prev, [key]: imageUrl };
@@ -1412,7 +1467,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
 
     imageRequestsRef.current.set(key, request);
     return request;
-  }, []);
+  }, [cacheDreamShelfImage]);
 
   const buildManualSearchItem = useCallback(async (query) => {
     const category = inferDreamShelfCategory(query);
@@ -1431,22 +1486,6 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     const image = await fetchDreamShelfImage(fallbackItem);
     return { ...fallbackItem, image };
   }, [fetchDreamShelfImage]);
-
-  const cacheDreamShelfImage = useCallback(async (imageUrl, name) => {
-    if (!imageUrl || imageUrl.startsWith("data:")) return imageUrl || "";
-    try {
-      const response = await fetch("/api/cache-product-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl, name }),
-      });
-      if (!response.ok) return imageUrl;
-      const data = await response.json();
-      return data.imageUrl || imageUrl;
-    } catch {
-      return imageUrl;
-    }
-  }, []);
 
   const runProductSearch = useCallback(async (query, { allowFallback = false } = {}) => {
     if (!query) return;
@@ -1506,6 +1545,29 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     setSearchError("");
     setSearching(false);
   }, []);
+
+  useEffect(() => {
+    const visibleItems = items
+      .filter(item => item?.image && !isDreamShelfCachedImageUrl(item.image) && !cachedImageUrlsRef.current[item.image])
+      .slice(0, 8);
+    if (!visibleItems.length) return undefined;
+
+    let cancelled = false;
+    visibleItems.forEach(item => {
+      const originalUrl = item.image;
+      cacheDreamShelfImage(originalUrl, item.name).then(stableImageUrl => {
+        if (cancelled || !stableImageUrl || stableImageUrl === originalUrl) return;
+        const key = getDreamShelfImageKey(item);
+        setItemImages(prev => {
+          const next = { ...prev, [key]: stableImageUrl };
+          itemImagesRef.current = next;
+          return next;
+        });
+      });
+    });
+
+    return () => { cancelled = true; };
+  }, [cacheDreamShelfImage, items]);
 
   useEffect(() => {
     const query = searchQuery.trim();
@@ -1584,11 +1646,12 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   }, [onAddEvent]);
 
   const handleShareSubmit = async (draft) => {
+    const stableImageUrl = await cacheDreamShelfImage(draft.image || "", draft.name || "dream-item");
     const payload = {
       user_id: currentUserId,
       product_name: draft.name.trim(),
       product_brand: draft.brand.trim() || null,
-      product_image: draft.image || null,
+      product_image: stableImageUrl || null,
       product_price: draft.price.trim() || null,
       review: draft.review.trim(),
       category: draft.category || null,
@@ -1638,15 +1701,15 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     ? {
         ...selectedItem,
         image: selectedItem.preferResolvedImage
-          ? (itemImages[getDreamShelfImageKey(selectedItem)] || (isDreamShelfWeakImageUrl(selectedItem.image) ? "" : selectedItem.image) || "")
-          : (selectedItem.image || itemImages[getDreamShelfImageKey(selectedItem)] || "")
+          ? (itemImages[getDreamShelfImageKey(selectedItem)] || cachedImageUrls[selectedItem.image] || (isDreamShelfWeakImageUrl(selectedItem.image) ? "" : selectedItem.image) || "")
+          : (cachedImageUrls[selectedItem.image] || selectedItem.image || itemImages[getDreamShelfImageKey(selectedItem)] || "")
       }
     : null;
   const categoryItemsWithImages = items.map(item => ({
     ...item,
     image: item.preferResolvedImage
-      ? (itemImages[getDreamShelfImageKey(item)] || (isDreamShelfWeakImageUrl(item.image) ? "" : item.image) || "")
-      : (item.image || itemImages[getDreamShelfImageKey(item)] || ""),
+      ? (itemImages[getDreamShelfImageKey(item)] || cachedImageUrls[item.image] || (isDreamShelfWeakImageUrl(item.image) ? "" : item.image) || "")
+      : (cachedImageUrls[item.image] || item.image || itemImages[getDreamShelfImageKey(item)] || ""),
   }));
   const categoryItemPairs = Array.from(
     { length: Math.ceil(categoryItemsWithImages.length / 2) },
@@ -1736,8 +1799,8 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
                 const itemWithImage = {
                   ...item,
                   image: item.preferResolvedImage
-                    ? (itemImages[getDreamShelfImageKey(item)] || (isDreamShelfWeakImageUrl(item.image) ? "" : item.image) || "")
-                    : (item.image || itemImages[getDreamShelfImageKey(item)] || "")
+                    ? (itemImages[getDreamShelfImageKey(item)] || cachedImageUrls[item.image] || (isDreamShelfWeakImageUrl(item.image) ? "" : item.image) || "")
+                    : (cachedImageUrls[item.image] || item.image || itemImages[getDreamShelfImageKey(item)] || "")
                 };
                 return (
                   <ItemCard
