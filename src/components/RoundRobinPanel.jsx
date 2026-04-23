@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { X, Trophy, RotateCcw, ChevronDown, ChevronUp, Users, Target } from 'lucide-react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { Trophy, RotateCcw, ChevronDown, ChevronUp, Users, Target } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Theme - Blue/Teal accent to differentiate from Gauntlet (gold) and Scramble (neon green)
@@ -741,6 +741,9 @@ function RoundRobinPanel({
 }) {
   const [activeTab, setActiveTab] = useState('matches');
   const [expandedRounds, setExpandedRounds] = useState(new Set([0]));
+  const sheetRef = useRef(null);
+  const dragStartYRef = useRef(null);
+  const dragCurrentYRef = useRef(0);
   const setEquals = (left, right) => {
     if (left.size !== right.size) return false;
     for (const value of left) {
@@ -782,6 +785,28 @@ function RoundRobinPanel({
     setExpandedRounds(newSet);
   };
 
+  const handleDragStart = (eventLike) => {
+    dragStartYRef.current = eventLike.clientY;
+    dragCurrentYRef.current = 0;
+  };
+  const handleDragMove = (eventLike) => {
+    if (dragStartYRef.current === null) return;
+    const deltaY = eventLike.clientY - dragStartYRef.current;
+    if (deltaY < 0) return;
+    dragCurrentYRef.current = deltaY;
+    if (sheetRef.current) sheetRef.current.style.transform = `translateY(${deltaY}px)`;
+  };
+  const handleDragEnd = () => {
+    if (dragStartYRef.current === null) return;
+    dragStartYRef.current = null;
+    if (dragCurrentYRef.current > 80) {
+      onClose();
+    } else if (sheetRef.current) {
+      sheetRef.current.style.transform = '';
+    }
+    dragCurrentYRef.current = 0;
+  };
+
   const getTeamSlotStyle = (match, team) => {
     if (!match.completed) return teamSlotBase;
     const a = parseInt(String(match.scoreA || ''), 10);
@@ -807,7 +832,29 @@ function RoundRobinPanel({
         `}
       </style>
 
-      <div style={shell}>
+      <div ref={sheetRef} style={{ ...shell, transition: 'transform 0.2s ease' }}>
+        <div
+          onPointerDown={handleDragStart}
+          onPointerMove={handleDragMove}
+          onPointerUp={handleDragEnd}
+          onPointerLeave={handleDragEnd}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '12px 0 8px',
+            cursor: 'grab',
+            touchAction: 'none',
+            flexShrink: 0,
+          }}
+        >
+          <div style={{
+            width: 36,
+            height: 4,
+            borderRadius: 999,
+            background: 'rgba(255,255,255,0.2)',
+          }} />
+        </div>
         <div style={heroStyle}>
           <div style={heroBg} />
           <div style={{ position: 'absolute', right: 8, top: '42%', transform: 'translateY(-50%)', opacity: 0.22, pointerEvents: 'none' }}>
@@ -833,17 +880,6 @@ function RoundRobinPanel({
               Single Elimination. May the best team or player win!
             </p>
           </div>
-          <button
-            type="button"
-            aria-label="Close round robin panel"
-            onClick={(event) => {
-              event.stopPropagation();
-              onClose();
-            }}
-            style={{ ...closeBtn, zIndex: 2 }}
-          >
-            <X size={14} />
-          </button>
         </div>
 
         <div style={{ padding: '0 14px 18px' }}>

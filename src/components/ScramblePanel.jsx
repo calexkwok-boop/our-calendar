@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shuffle, X, Zap, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Shuffle, Zap, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const T = {
   bg: '#0a0e1a',
@@ -775,6 +775,9 @@ function ScramblePanel({
   currentUserAliases,
   currentUserProfilePhotoUrl,
 }) {
+  const sheetRef = React.useRef(null);
+  const dragStartYRef = React.useRef(null);
+  const dragCurrentYRef = React.useRef(0);
   const signupCount = signups.length;
   const selectedEntry =
     selectedEvent && eligibleScramblePopupEvents
@@ -789,6 +792,28 @@ function ScramblePanel({
       (team === 'A' && result.scoreA > result.scoreB) ||
       (team === 'B' && result.scoreB > result.scoreA);
     return isWinner ? teamSlotWinner : teamSlotBase;
+  };
+
+  const handleDragStart = (eventLike) => {
+    dragStartYRef.current = eventLike.clientY;
+    dragCurrentYRef.current = 0;
+  };
+  const handleDragMove = (eventLike) => {
+    if (dragStartYRef.current === null) return;
+    const deltaY = eventLike.clientY - dragStartYRef.current;
+    if (deltaY < 0) return;
+    dragCurrentYRef.current = deltaY;
+    if (sheetRef.current) sheetRef.current.style.transform = `translateY(${deltaY}px)`;
+  };
+  const handleDragEnd = () => {
+    if (dragStartYRef.current === null) return;
+    dragStartYRef.current = null;
+    if (dragCurrentYRef.current > 80) {
+      onClose();
+    } else if (sheetRef.current) {
+      sheetRef.current.style.transform = '';
+    }
+    dragCurrentYRef.current = 0;
   };
 
   return (
@@ -883,7 +908,29 @@ function ScramblePanel({
         `}
       </style>
 
-      <div className="scramble-shell" style={shell}>
+      <div ref={sheetRef} className="scramble-shell" style={{ ...shell, transition: 'transform 0.2s ease' }}>
+        <div
+          onPointerDown={handleDragStart}
+          onPointerMove={handleDragMove}
+          onPointerUp={handleDragEnd}
+          onPointerLeave={handleDragEnd}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '12px 0 8px',
+            cursor: 'grab',
+            touchAction: 'none',
+            flexShrink: 0,
+          }}
+        >
+          <div style={{
+            width: 36,
+            height: 4,
+            borderRadius: 999,
+            background: 'rgba(255,255,255,0.2)',
+          }} />
+        </div>
         <div style={heroStyle}>
           <div style={heroBg} />
           <div style={{ position: 'absolute', right: 8, top: '42%', transform: 'translateY(-50%)', opacity: 0.22, pointerEvents: 'none' }}>
@@ -907,17 +954,6 @@ function ScramblePanel({
           <div style={heroSub}>
             Random pairings every round with the stats tracked. May the odds be ever in your favor!
           </div>
-          <button
-            type="button"
-            aria-label="Close scramble panel"
-            onClick={(event) => {
-              event.stopPropagation();
-              onClose();
-            }}
-            style={closeBtn}
-          >
-            <X size={14} />
-          </button>
         </div>
 
         <div style={{ padding: '0 14px 18px' }}>

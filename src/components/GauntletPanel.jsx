@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Trophy, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
 
 const T = {
   bg: '#0d0f14',
@@ -675,6 +675,9 @@ function GauntletPanel({
   currentUserAliases,
   currentUserProfilePhotoUrl,
 }) {
+  const sheetRef = React.useRef(null);
+  const dragStartYRef = React.useRef(null);
+  const dragCurrentYRef = React.useRef(0);
   const selectedEntry =
     eligibleGauntletPopupEvents.find(
       (entry) => String(entry?.eventId || '') === String(selectedGauntletEventId || '')
@@ -715,10 +718,54 @@ function GauntletPanel({
     return won ? teamSlotWinner : teamSlotLoser;
   };
 
+  const handleDragStart = (eventLike) => {
+    dragStartYRef.current = eventLike.clientY;
+    dragCurrentYRef.current = 0;
+  };
+  const handleDragMove = (eventLike) => {
+    if (dragStartYRef.current === null) return;
+    const deltaY = eventLike.clientY - dragStartYRef.current;
+    if (deltaY < 0) return;
+    dragCurrentYRef.current = deltaY;
+    if (sheetRef.current) sheetRef.current.style.transform = `translateY(${deltaY}px)`;
+  };
+  const handleDragEnd = () => {
+    if (dragStartYRef.current === null) return;
+    dragStartYRef.current = null;
+    if (dragCurrentYRef.current > 80) {
+      setShowGauntletPanel(false);
+    } else if (sheetRef.current) {
+      sheetRef.current.style.transform = '';
+    }
+    dragCurrentYRef.current = 0;
+  };
+
   return (
     <>
       <style>{FONT_STYLE}</style>
-      <div style={shell}>
+      <div ref={sheetRef} style={{ ...shell, transition: 'transform 0.2s ease' }}>
+        <div
+          onPointerDown={handleDragStart}
+          onPointerMove={handleDragMove}
+          onPointerUp={handleDragEnd}
+          onPointerLeave={handleDragEnd}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '12px 0 8px',
+            cursor: 'grab',
+            touchAction: 'none',
+            flexShrink: 0,
+          }}
+        >
+          <div style={{
+            width: 36,
+            height: 4,
+            borderRadius: 999,
+            background: 'rgba(255,255,255,0.2)',
+          }} />
+        </div>
         <div style={heroStyle}>
           <div style={heroBg} />
           <div style={{ position: 'absolute', right: 8, top: '42%', transform: 'translateY(-50%)', opacity: 0.22, pointerEvents: 'none' }}>
@@ -754,9 +801,6 @@ function GauntletPanel({
               </>
             )}
           </div>
-          <button onClick={() => setShowGauntletPanel(false)} style={closeBtn} aria-label="Close">
-            <X style={{ width: 14, height: 14 }} />
-          </button>
         </div>
 
 

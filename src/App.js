@@ -27648,7 +27648,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     tabIndex={-1}
   >
     <div
-      className="w-full max-w-3xl max-h-[min(88dvh,52rem)] overflow-y-auto overscroll-contain rounded-[28px]"
+      className="w-full max-w-3xl h-[min(88dvh,52rem)] max-h-[min(88dvh,52rem)] overflow-y-auto overscroll-contain rounded-[28px]"
       style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
       data-round-robin-scroll="true"
           onClick={(e) => e.stopPropagation()}
