@@ -536,6 +536,46 @@ function PodiumAvatar({ participant, label, fallbackPhotoUrl = '', currentUserId
   );
 }
 
+function RosterAvatar({ participant, label }) {
+  const photoUrl = getParticipantPhotoUrl(participant);
+  if (photoUrl) {
+    return (
+      <img
+        src={photoUrl}
+        alt={label}
+        style={{
+          width: 24,
+          height: 24,
+          borderRadius: '50%',
+          objectFit: 'cover',
+          border: `1.5px solid ${T.borderGlow}`,
+          flexShrink: 0,
+        }}
+      />
+    );
+  }
+  return (
+    <div
+      style={{
+        width: 24,
+        height: 24,
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 11,
+        fontWeight: 900,
+        background: 'rgba(255,214,0,0.1)',
+        color: T.gold,
+        border: `1.5px solid ${T.borderGlow}`,
+        flexShrink: 0,
+      }}
+    >
+      {String(label || '?').trim().charAt(0).toUpperCase() || '?'}
+    </div>
+  );
+}
+
 function CelebrationPodium({ rows, currentUserId, currentUserAliases, currentUserProfilePhotoUrl }) {
   const pieces = Array.from({ length: 18 }, (_, idx) => ({
     id: idx,
@@ -1011,6 +1051,7 @@ function GauntletPanel({
                           cursor: 'pointer',
                         }}
                       >
+                        <RosterAvatar participant={participant} label={participant.displayName || 'Player'} />
                         <span>{participant.displayName || 'Player'}</span>
                         <span style={{ color: T.red }}>Leave</span>
                       </button>

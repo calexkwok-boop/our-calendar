@@ -610,6 +610,46 @@ function PodiumAvatar({ participant, label, fallbackPhotoUrl = '', currentUserId
   );
 }
 
+function RosterAvatar({ participant, label }) {
+  const photoUrl = getParticipantPhotoUrl(participant);
+  if (photoUrl) {
+    return (
+      <img
+        src={photoUrl}
+        alt={label}
+        style={{
+          width: 24,
+          height: 24,
+          borderRadius: '50%',
+          objectFit: 'cover',
+          border: `1.5px solid ${T.neon1}55`,
+          flexShrink: 0,
+        }}
+      />
+    );
+  }
+  return (
+    <div
+      style={{
+        width: 24,
+        height: 24,
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 11,
+        fontWeight: 900,
+        background: `${T.neon1}18`,
+        color: T.neon1,
+        border: `1.5px solid ${T.neon1}55`,
+        flexShrink: 0,
+      }}
+    >
+      {String(label || '?').trim().charAt(0).toUpperCase() || '?'}
+    </div>
+  );
+}
+
 const CelebrationPodium = ({ rows, currentUserId, currentUserAliases, currentUserProfilePhotoUrl }) => {
   const pieces = Array.from({ length: 18 }, (_, idx) => ({
     id: idx,
@@ -1138,6 +1178,7 @@ function ScramblePanel({
                           cursor: 'pointer',
                         }}
                       >
+                        <RosterAvatar participant={participant} label={participant.displayName || 'Player'} />
                         <span>{participant.displayName || 'Player'}</span>
                         <span style={{ color: T.neon2 }}>Leave</span>
                       </button>
