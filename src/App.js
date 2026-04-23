@@ -25562,9 +25562,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         roundedClass="rounded-xl"
                         textClass="text-base sm:text-lg"
                       />
-                      {unreadInAppCount > 0 && (
+                      {(unreadInAppCount + pendingTripInvites.length) > 0 && (
                         <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full border border-white bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-md dark:border-gray-900">
-                          {unreadInAppCount > 99 ? '99+' : unreadInAppCount}
+                          {(unreadInAppCount + pendingTripInvites.length) > 99 ? '99+' : (unreadInAppCount + pendingTripInvites.length)}
                         </span>
                       )}
                     </span>
@@ -35438,7 +35438,7 @@ transform: translateY(0);
   );
 }
 
-function PlacesAutocomplete({ value, onSelect, placeholder, className }) {
+function PlacesAutocomplete({ value, onSelect, placeholder, className, inputStyle }) {
   const [input, setInput] = React.useState(value || '');
   const [suggestions, setSuggestions] = React.useState([]);
   const [showSuggestions, setShowSuggestions] = React.useState(false);
@@ -35512,6 +35512,7 @@ function PlacesAutocomplete({ value, onSelect, placeholder, className }) {
         }}
         placeholder={placeholder || '📍 Add location (optional)'}
         className={className}
+        style={inputStyle}
       />
       {showSuggestions && suggestions.length > 0 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-600 overflow-hidden" style={{zIndex: 9999}}>

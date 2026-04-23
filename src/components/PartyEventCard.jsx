@@ -20,6 +20,24 @@ const gInitials = (name) => {
     : String(name || '?')[0].toUpperCase();
 };
 
+const getProfileImageUrl = (person = {}) => {
+  const candidates = [
+    person.photoUrl,
+    person.photo_url,
+    person.avatarUrl,
+    person.avatar_url,
+    person.profilePhotoUrl,
+    person.profile_photo_url,
+    person.imageUrl,
+    person.image_url,
+    person.picture,
+    person.avatar,
+  ];
+  return candidates
+    .map((value) => String(value || '').trim())
+    .find((value) => /^(https?:\/\/|data:image\/|blob:)/i.test(value)) || '';
+};
+
 const isProbablyUrl = (v) => /^(https?:\/\/|data:image\/|blob:)/i.test(String(v || '').trim());
 
 const getCardBackdropUrl = (event) => {
@@ -108,8 +126,9 @@ const AppleMusicIcon = () => (
 
 // ── guest pip ─────────────────────────────────────────────────────────────────
 
-const GuestPip = ({ name, role, accent, darkMode, size = 28 }) => {
+const GuestPip = ({ person, name, role, accent, darkMode, size = 28 }) => {
   const isHost = role === 'host';
+  const profileImageUrl = getProfileImageUrl(person);
   return (
     <div title={name} style={{
       width: size, height: size, borderRadius: '50%', flexShrink: 0,
@@ -120,8 +139,15 @@ const GuestPip = ({ name, role, accent, darkMode, size = 28 }) => {
       color: isHost ? '#f59e0b' : darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.45)',
       fontFamily: "'Caveat', cursive",
       marginLeft: -5,
+      overflow: 'hidden',
     }}>
-      {gInitials(name)}
+      {profileImageUrl ? (
+        <img
+          src={profileImageUrl}
+          alt={name ? `${name} profile` : 'Guest profile'}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+      ) : gInitials(name)}
     </div>
   );
 };
@@ -132,7 +158,7 @@ const EditPill = ({ onClick, children, accent }) => (
   <button onClick={onClick} type="button" style={{
     display: 'inline-flex', alignItems: 'center', gap: 4,
     padding: '4px 12px', borderRadius: 999, cursor: 'pointer',
-    fontSize: 12, fontWeight: 800, fontFamily: "'Caveat', cursive",
+    fontSize: 13, fontWeight: 800, fontFamily: "'Caveat', cursive",
     background: 'transparent', border: `1.5px solid ${accent}44`, color: accent,
   }}>
     {children}
@@ -152,8 +178,8 @@ const Section = ({ title, subtitle, actions, children, border, surfaceBg, primar
       borderBottom: `1px solid ${border}`,
     }}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.09em', color: secondaryText }}>{title}</div>
-        {subtitle && <div style={{ marginTop: 3, fontSize: 12, fontWeight: 700, color: secondaryText }}>{subtitle}</div>}
+        <div style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.09em', color: secondaryText }}>{title}</div>
+        {subtitle && <div style={{ marginTop: 3, fontSize: 13, fontWeight: 700, color: secondaryText }}>{subtitle}</div>}
       </div>
       {actions && <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>{actions}</div>}
     </div>
@@ -367,7 +393,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
 
         {/* title */}
         <div style={{
-          fontSize: 26, fontWeight: 900, color: heroText,
+          fontSize: 29, fontWeight: 900, color: heroText,
           letterSpacing: '-0.02em', lineHeight: 1.15,
           marginBottom: 10, position: 'relative', zIndex: 1,
         }}>
@@ -381,17 +407,17 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
           position: 'relative', zIndex: 1,
         }}>
           {dateShort && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: heroMuted }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: heroMuted }}>
               <Calendar style={{ width: 11, height: 11 }} />{dateShort}
             </span>
           )}
           {timePretty && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: heroMuted }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: heroMuted }}>
               <Clock style={{ width: 11, height: 11 }} />{timePretty}
             </span>
           )}
           {event.location && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: heroMuted }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: heroMuted }}>
               <MapPin style={{ width: 11, height: 11 }} />
               <span style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {event.location}
@@ -420,7 +446,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                 onClick={tab.action || undefined}
                 style={{
                 flex: 1, padding: '11px 0',
-                fontSize: 12, fontWeight: active ? 600 : 400,
+                fontSize: 13, fontWeight: active ? 700 : 500,
                 textAlign: 'center', cursor: 'pointer',
                 color: active ? heroText : heroMuted,
                 background: active ? bodyBg : 'transparent',
@@ -455,7 +481,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
           }}>
             <div style={{ display: 'flex', paddingLeft: 5 }}>
               {preview.map((inv, i) => (
-                <GuestPip key={inv.id || i} name={inv.display_name || inv.name}
+                <GuestPip key={inv.id || i} person={inv} name={inv.display_name || inv.name}
                   role={inv.role} accent={accent} darkMode={darkMode} size={28} />
               ))}
               {overflow > 0 && (
@@ -464,12 +490,12 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                   background: darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)',
                   border: `2px solid ${border}`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 10, fontWeight: 900, color: secondaryText,
+                  fontSize: 11, fontWeight: 900, color: secondaryText,
                   marginLeft: -5, fontFamily: "'Caveat', cursive",
                 }}>+{overflow}</div>
               )}
             </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: secondaryText }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: secondaryText }}>
               {invitees.length === 1 ? '1 person going' : `${invitees.length} people going`}
             </span>
           </div>
@@ -480,7 +506,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
           <button onClick={props.onPrimaryAction} style={{
             width: '100%', padding: '13px 0', borderRadius: 14, border: 'none',
             cursor: 'pointer', background: accent, color: '#fff',
-            fontSize: 16, fontWeight: 900, fontFamily: "'Caveat', cursive",
+            fontSize: 18, fontWeight: 900, fontFamily: "'Caveat', cursive",
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             position: 'relative', overflow: 'hidden',
           }}>
@@ -503,8 +529,8 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
               border: `1px solid ${border}`, background: bodyBg,
               cursor: openThemeEditor ? 'pointer' : 'default',
             }}>
-              <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: accent, marginBottom: 5 }}>Theme</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: primaryText, lineHeight: 1.3 }}>
+              <div style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: accent, marginBottom: 5 }}>Theme</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: primaryText, lineHeight: 1.3 }}>
                 {theme || <span style={{ color: mutedText, fontStyle: 'italic' }}>None set</span>}
               </div>
             </button>
@@ -515,13 +541,13 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
               border: `1px solid ${border}`, background: bodyBg,
               cursor: openGuestEditor ? 'pointer' : 'default',
             }}>
-              <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: secondaryText, marginBottom: 5 }}>Guests</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: primaryText, lineHeight: 1.3 }}>{guestSummary}</div>
+              <div style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: secondaryText, marginBottom: 5 }}>Guests</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: primaryText, lineHeight: 1.3 }}>{guestSummary}</div>
               {guestList.length > 0 && (
                 <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
                   {guestList.slice(0, 2).map((g, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: secondaryText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{g.name}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: secondaryText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{g.name}</span>
                       <span style={{
                         fontSize: 9, fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase',
                         padding: '1px 5px', borderRadius: 999, flexShrink: 0,
@@ -532,7 +558,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                       </span>
                     </div>
                   ))}
-                  {guestList.length > 2 && <span style={{ fontSize: 11, color: mutedText, fontWeight: 700 }}>+{guestList.length - 2} more</span>}
+                  {guestList.length > 2 && <span style={{ fontSize: 12, color: mutedText, fontWeight: 700 }}>+{guestList.length - 2} more</span>}
                 </div>
               )}
             </button>
@@ -543,8 +569,8 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
               border: `1px solid ${border}`, background: bodyBg,
               cursor: openMusicEditor ? 'pointer' : 'default',
             }}>
-              <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: secondaryText, marginBottom: 5 }}>Music</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: primaryText, lineHeight: 1.3 }}>
+              <div style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: secondaryText, marginBottom: 5 }}>Music</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: primaryText, lineHeight: 1.3 }}>
                 {musicPlaylist ? (playlistService?.name || 'Ready') : <span style={{ color: mutedText, fontStyle: 'italic' }}>Not set</span>}
               </div>
               {musicPlaylist && isProbablyUrl(musicPlaylist) && (
@@ -585,8 +611,8 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                     border: `1px solid ${border}`, background: bodyBg,
                   }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: primaryText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item?.item || item}</div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: secondaryText, marginTop: 1 }}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: primaryText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item?.item || item}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: secondaryText, marginTop: 1 }}>
                         {item?.person ? `Claimed by ${item.person}` : 'Open signup'}
                       </div>
                     </div>
@@ -617,14 +643,14 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                   <button type="button" onClick={openPotluckEditor} style={{
                     width: '100%', padding: '8px 0', borderRadius: 12, cursor: 'pointer',
                     background: 'transparent', border: `1px dashed ${accent}33`,
-                    fontSize: 12, fontWeight: 800, color: accent, fontFamily: "'Caveat', cursive",
+                    fontSize: 13, fontWeight: 800, color: accent, fontFamily: "'Caveat', cursive",
                   }}>
                     +{potluckItems.length - 3} more items
                   </button>
                 )}
               </div>
             ) : (
-              <div style={{ fontSize: 13, fontWeight: 700, color: mutedText, fontStyle: 'italic' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: mutedText, fontStyle: 'italic' }}>
                 Nothing added yet.
               </div>
             )}
@@ -639,11 +665,11 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
             border={border} surfaceBg={surfaceBg} primaryText={primaryText} secondaryText={secondaryText}
           >
             {notes ? (
-              <div style={{ fontSize: 14, fontWeight: 700, color: primaryText, lineHeight: 1.65 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: primaryText, lineHeight: 1.65 }}>
                 {notes}
               </div>
             ) : (
-              <div style={{ fontSize: 13, fontWeight: 700, color: mutedText, fontStyle: 'italic' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: mutedText, fontStyle: 'italic' }}>
                 Nothing added yet.
               </div>
             )}

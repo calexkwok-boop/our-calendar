@@ -190,27 +190,27 @@ export default function SportsEventCardOverlay({
   const creatorUserId = String(event?.created_by || event?.created_by_user_id || '').trim();
   const currentUserId = String(user?.id || '').trim();
   const creatorIsCurrentUser = Boolean(creatorUserId && currentUserId && creatorUserId === currentUserId);
-  const myMember = members.find((member) => String(member?.user_id || '').trim() === currentUserId);
+  const hasHostMember = members.some((member) => String(member?.role || '').trim() === 'host');
+  const displayMembers = !hasHostMember && creatorIsCurrentUser
+    ? [{
+      id: currentUserId || 'host',
+      user_id: currentUserId,
+      display_name: effectiveDisplayName || 'Player',
+      role: 'host',
+      photoUrl: currentUserProfilePhotoUrl,
+      photo_url: currentUserProfilePhotoUrl,
+      avatarUrl: currentUserProfilePhotoUrl,
+      avatar_url: currentUserProfilePhotoUrl,
+    }, ...members]
+    : members;
+  const myMember = displayMembers.find((member) => String(member?.user_id || '').trim() === currentUserId);
   const isHost = myMember?.role === 'host' || creatorIsCurrentUser;
   const isMember = Boolean(myMember) || creatorIsCurrentUser;
   const noMax = Number(event?.max_players || 0) >= POPUP_NO_MAX_SENTINEL;
-  const memberCount = Math.max(members.length, creatorIsCurrentUser && members.length === 0 ? 1 : 0);
+  const memberCount = displayMembers.length;
   const isFull = Boolean(event) && !noMax && memberCount >= (event.max_players || 99);
 
-  const invitees = members.length > 0
-    ? members
-    : creatorIsCurrentUser
-      ? [{
-        id: currentUserId || 'host',
-        user_id: currentUserId,
-        display_name: effectiveDisplayName || 'Player',
-        role: 'host',
-        photoUrl: currentUserProfilePhotoUrl,
-        photo_url: currentUserProfilePhotoUrl,
-        avatarUrl: currentUserProfilePhotoUrl,
-        avatar_url: currentUserProfilePhotoUrl,
-      }]
-      : [];
+  const invitees = displayMembers;
 
   const routedEvent = {
     ...event,

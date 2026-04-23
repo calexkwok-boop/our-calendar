@@ -22,6 +22,24 @@ const gInitials = (name) => {
     : String(name || '?')[0].toUpperCase();
 };
 
+const getProfileImageUrl = (person = {}) => {
+  const candidates = [
+    person.photoUrl,
+    person.photo_url,
+    person.avatarUrl,
+    person.avatar_url,
+    person.profilePhotoUrl,
+    person.profile_photo_url,
+    person.imageUrl,
+    person.image_url,
+    person.picture,
+    person.avatar,
+  ];
+  return candidates
+    .map((value) => String(value || '').trim())
+    .find((value) => /^(https?:\/\/|data:image\/|blob:)/i.test(value)) || '';
+};
+
 const formatDateFull = (dateStr) => {
   if (!dateStr) return null;
   try {
@@ -159,9 +177,10 @@ const StatusBadge = ({ status }) => {
 
 // ── player pip ────────────────────────────────────────────────────────────────
 
-const PlayerPip = ({ name, role, accent, size = 28 }) => {
+const PlayerPip = ({ person, name, role, accent, size = 28 }) => {
   const isOrganizer = role === 'host';
   const isCohost    = role === 'cohost';
+  const profileImageUrl = getProfileImageUrl(person);
   return (
     <div title={name} style={{
       width: size, height: size, borderRadius: '50%', flexShrink: 0,
@@ -172,8 +191,15 @@ const PlayerPip = ({ name, role, accent, size = 28 }) => {
       color: isOrganizer ? '#f59e0b' : isCohost ? accent : 'rgba(255,255,255,0.85)',
       fontFamily: "'Caveat', cursive",
       marginLeft: -5,
+      overflow: 'hidden',
     }}>
-      {gInitials(name)}
+      {profileImageUrl ? (
+        <img
+          src={profileImageUrl}
+          alt={name ? `${name} profile` : 'Player profile'}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+      ) : gInitials(name)}
     </div>
   );
 };
@@ -286,7 +312,7 @@ export default function SportsEventCard({
 
         {/* title */}
         <div style={{
-          fontSize: 26, fontWeight: 900, color: heroText,
+          fontSize: 29, fontWeight: 900, color: heroText,
           letterSpacing: '-0.02em', lineHeight: 1.15,
           marginBottom: 10, position: 'relative',
         }}>
@@ -299,16 +325,16 @@ export default function SportsEventCard({
           flexWrap: 'wrap', marginBottom: 12, position: 'relative',
         }}>
           {dateParts && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: heroMuted }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: heroMuted }}>
               <Calendar style={{ width: 11, height: 11 }} />{dateParts.short}
             </span>
           )}
           {timePretty && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: heroMuted }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: heroMuted }}>
               <Clock style={{ width: 11, height: 11 }} />{timePretty}
             </span>
           )}
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: heroMuted }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: heroMuted }}>
             <Users style={{ width: 11, height: 11 }} />{capacityLabel}
           </span>
         </div>
@@ -350,7 +376,7 @@ export default function SportsEventCard({
                 onClick={tab.action || undefined}
                 style={{
                 flex: 1, padding: '11px 0',
-                fontSize: 12, fontWeight: active ? 600 : 400,
+                fontSize: 13, fontWeight: active ? 700 : 500,
                 textAlign: 'center', cursor: 'pointer',
                 color: active ? heroText : heroMuted,
                 background: active ? bodyBg : 'transparent',
@@ -398,9 +424,9 @@ export default function SportsEventCard({
                 <MapPin style={{ width: 14, height: 14, color: accent }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 11, color: secondaryText, marginBottom: 2 }}>Location</div>
+                <div style={{ fontSize: 12, color: secondaryText, marginBottom: 2 }}>Location</div>
                 <div style={{
-                  fontSize: 14, fontWeight: 700, color: primaryText,
+                  fontSize: 15, fontWeight: 700, color: primaryText,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>
                   {event.location}
@@ -426,13 +452,13 @@ export default function SportsEventCard({
               width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
               background: '#fef3c7', border: '2px solid #fbbf24',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 12, fontWeight: 900, color: '#f59e0b',
+              fontSize: 13, fontWeight: 900, color: '#f59e0b',
               fontFamily: "'Caveat', cursive",
             }}>
               {gInitials(organizer.display_name || organizer.name)}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ fontSize: 13, color: darkMode ? '#fbbf24' : '#92400e', fontWeight: 700 }}>
+              <span style={{ fontSize: 15, color: darkMode ? '#fbbf24' : '#92400e', fontWeight: 700 }}>
                 Organized by{' '}
                 <span style={{ color: darkMode ? '#fde68a' : '#78350f', fontWeight: 900 }}>
                   {organizer.display_name || organizer.name}
@@ -447,7 +473,7 @@ export default function SportsEventCard({
                 background: `${accent}18`, border: `1px solid ${accent}33`,
               }}>
                 <Shield style={{ width: 11, height: 11, color: accent }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: accent }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: accent }}>
                   {c.display_name || c.name}
                 </span>
               </div>
@@ -462,12 +488,12 @@ export default function SportsEventCard({
             background: surfaceBg, border: `1px solid ${border}`,
           }}>
             <div style={{
-              fontSize: 10, fontWeight: 900, textTransform: 'uppercase',
+              fontSize: 11, fontWeight: 900, textTransform: 'uppercase',
               letterSpacing: '0.08em', color: accent, marginBottom: 5,
             }}>
               About
             </div>
-            <div style={{ fontSize: 14, color: secondaryText, lineHeight: 1.6, fontWeight: 700 }}>
+            <div style={{ fontSize: 15, color: secondaryText, lineHeight: 1.6, fontWeight: 700 }}>
               {event.description}
             </div>
           </div>
@@ -484,6 +510,7 @@ export default function SportsEventCard({
               {preview.map((p, i) => (
                 <PlayerPip
                   key={p.id || i}
+                  person={p}
                   name={p.display_name || p.name}
                   role={p.role}
                   accent={accent}
@@ -496,14 +523,14 @@ export default function SportsEventCard({
                   background: 'rgba(255,255,255,0.08)',
                   border: '2px solid rgba(255,255,255,0.15)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 10, fontWeight: 900, color: secondaryText,
+                  fontSize: 11, fontWeight: 900, color: secondaryText,
                   marginLeft: -5, fontFamily: "'Caveat', cursive",
                 }}>
                   +{overflow}
                 </div>
               )}
             </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: secondaryText }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: secondaryText }}>
               {allPlayers.length === 1 ? '1 player in' : `${allPlayers.length} players in`}
             </span>
           </div>
@@ -517,7 +544,7 @@ export default function SportsEventCard({
             background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)',
           }}>
             <AlertCircle style={{ width: 15, height: 15, color: '#d97706', flexShrink: 0, marginTop: 1 }} />
-            <div style={{ fontSize: 13, color: '#b45309', lineHeight: 1.5, fontWeight: 700 }}>
+            <div style={{ fontSize: 14, color: '#b45309', lineHeight: 1.5, fontWeight: 700 }}>
               Legacy event — can be viewed but not joined or managed. Recreate it to use the full panel.
             </div>
           </div>
@@ -532,7 +559,7 @@ export default function SportsEventCard({
               width: '100%', padding: '13px 0',
               borderRadius: 14, border: 'none', cursor: joining ? 'default' : 'pointer',
               background: accent, color: '#fff',
-              fontSize: 16, fontWeight: 900, fontFamily: "'Caveat', cursive",
+              fontSize: 18, fontWeight: 900, fontFamily: "'Caveat', cursive",
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               opacity: joining ? 0.75 : 1,
               position: 'relative', overflow: 'hidden',
@@ -554,7 +581,7 @@ export default function SportsEventCard({
           <div style={{
             padding: '10px 14px', borderRadius: 12,
             background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)',
-            fontSize: 12, fontWeight: 700, color: '#ef4444',
+            fontSize: 13, fontWeight: 700, color: '#ef4444',
           }}>
             {joinError}
           </div>
@@ -565,7 +592,7 @@ export default function SportsEventCard({
           <div style={{
             padding: '12px 14px', borderRadius: 14,
             background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)',
-            fontSize: 13, fontWeight: 700, color: '#d97706', textAlign: 'center',
+            fontSize: 14, fontWeight: 700, color: '#d97706', textAlign: 'center',
           }}>
             Event is full
           </div>
@@ -577,7 +604,7 @@ export default function SportsEventCard({
             onClick={onLeave}
             style={{
               width: '100%', padding: '11px 0',
-              borderRadius: 14, fontSize: 13, fontWeight: 800, cursor: 'pointer',
+              borderRadius: 14, fontSize: 14, fontWeight: 800, cursor: 'pointer',
               border: '1.5px solid rgba(239,68,68,0.28)',
               background: 'rgba(239,68,68,0.06)', color: '#ef4444',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -596,7 +623,7 @@ export default function SportsEventCard({
           }}>
             <div style={{
               padding: '8px 14px',
-              fontSize: 10, fontWeight: 900, textTransform: 'uppercase',
+              fontSize: 11, fontWeight: 900, textTransform: 'uppercase',
               letterSpacing: '0.1em', color: accent,
               background: surfaceBg,
               borderBottom: `1px solid ${border}`,
@@ -623,7 +650,7 @@ export default function SportsEventCard({
                     cursor: 'pointer', border: 'none',
                     background: darkMode ? 'rgba(255,255,255,0.03)' : '#fff',
                     color: color || primaryText,
-                    fontSize: 13, fontWeight: 700,
+                    fontSize: 14, fontWeight: 700,
                     fontFamily: "'Caveat', cursive",
                   }}
                 >
