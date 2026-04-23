@@ -326,15 +326,17 @@ const ScrapbookHomeHybrid = ({
                   </div>
                 </div>
               </button>
-              <button
-                type="button"
-                onClick={onAddEvent}
-                className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(139,92,246,0.24)] transition-transform hover:scale-[1.01]"
-                style={{ background: 'linear-gradient(90deg, #8b5cf6 0%, #ec4899 52%, #f97316 100%)' }}
-              >
-                <Plus className="w-4 h-4" />
-                Add event
-              </button>
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={onAddEvent}
+                  className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold font-handwritten text-white shadow-[0_10px_24px_rgba(139,92,246,0.24)] transition-transform hover:scale-[1.01]"
+                  style={{ background: 'linear-gradient(90deg, #8b5cf6 0%, #ec4899 52%, #f97316 100%)' }}
+                >
+                  <Plus className="w-4 h-4" />
+                  Add something
+                </button>
+              </div>
             </div>
           ) : (
             <div className="py-4 text-center">
