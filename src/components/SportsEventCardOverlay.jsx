@@ -58,6 +58,7 @@ export default function SportsEventCardOverlay({
   user,
   displayName,
   initialEventId,
+  initialScreen = 'detail',
   eventMetaFallback,
   currentUserProfilePhotoUrl = '',
   resolveHandleLikeLabel,
@@ -67,7 +68,7 @@ export default function SportsEventCardOverlay({
   onClose,
 }) {
   const accent = activeLayerPageTheme?.accent || '#16a34a';
-  const [activeScreen, setActiveScreen] = useState('detail');
+  const [activeScreen, setActiveScreen] = useState(initialScreen === 'game' ? 'game' : 'detail');
   const [event, setEvent] = useState(() => normalizeEvent(eventMetaFallback || {}, eventMetaFallback || {}));
   const [members, setMembers] = useState([]);
   const [joining, setJoining] = useState(false);
@@ -90,6 +91,10 @@ export default function SportsEventCardOverlay({
     fallbackRef.current = eventMetaFallback;
     if (eventMetaFallback) setEvent((prev) => normalizeEvent(prev || eventMetaFallback, eventMetaFallback));
   }, [eventMetaFallback]);
+
+  useEffect(() => {
+    setActiveScreen(initialScreen === 'game' ? 'game' : 'detail');
+  }, [initialScreen]);
 
   const memberPhotoUrl = (memberLike = {}) => {
     const memberUserId = String(memberLike?.user_id || memberLike?.userId || '').trim();

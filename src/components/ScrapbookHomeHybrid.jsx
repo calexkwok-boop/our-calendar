@@ -129,6 +129,7 @@ const ScrapbookHomeHybrid = ({
 
   // What's Next Today (current)
   todaySpotlightEvent = null,
+  onOpenTodayEvent = () => {},
 
   // Coming Up This Week (current)
   upcomingPreviewEvents = [],
@@ -296,31 +297,44 @@ const ScrapbookHomeHybrid = ({
         </div>
 
         {/* WHAT'S NEXT TODAY */}
-        <button
-          type="button"
-          onClick={onAddEvent}
+        <div
           className="w-full rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-4 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
         >
           <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400 mb-3">
             ☀️ WHAT'S NEXT TODAY
           </div>
           {todaySpotlightEvent ? (
-            <div className="flex gap-4">
-              {todaySpotlightPhoto && (
-                <div
-                  className="w-24 h-24 rounded-2xl bg-cover bg-center flex-shrink-0"
-                  style={{ backgroundImage: `url(${todaySpotlightPhoto})` }}
-                />
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="text-base font-semibold text-gray-900 dark:text-white">
-                  {todaySpotlightEvent.title}
+            <div className="space-y-4">
+              <button
+                type="button"
+                onClick={() => onOpenTodayEvent?.(todaySpotlightEvent)}
+                className="w-full flex gap-4 rounded-2xl px-1 py-1 text-left transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
+              >
+                {todaySpotlightPhoto && (
+                  <div
+                    className="w-24 h-24 rounded-2xl bg-cover bg-center flex-shrink-0"
+                    style={{ backgroundImage: `url(${todaySpotlightPhoto})` }}
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="text-base font-semibold text-gray-900 dark:text-white">
+                    {todaySpotlightEvent.title}
+                  </div>
+                  <div className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    {formatDisplayTime(todaySpotlightEvent.time)}
+                    {todaySpotlightEvent.location && ` · ${todaySpotlightEvent.location}`}
+                  </div>
                 </div>
-                <div className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                  {formatDisplayTime(todaySpotlightEvent.time)}
-                  {todaySpotlightEvent.location && ` · ${todaySpotlightEvent.location}`}
-                </div>
-              </div>
+              </button>
+              <button
+                type="button"
+                onClick={onAddEvent}
+                className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(139,92,246,0.24)] transition-transform hover:scale-[1.01]"
+                style={{ background: 'linear-gradient(90deg, #8b5cf6 0%, #ec4899 52%, #f97316 100%)' }}
+              >
+                <Plus className="w-4 h-4" />
+                Add event
+              </button>
             </div>
           ) : (
             <div className="py-4 text-center">
@@ -338,7 +352,7 @@ const ScrapbookHomeHybrid = ({
               </button>
             </div>
           )}
-        </button>
+        </div>
 
         {/* PHOTO OF THE DAY */}
         <div className="rounded-[28px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-purple-50/60 via-white/90 to-pink-50/60 dark:from-purple-950/30 dark:via-slate-900/80 dark:to-pink-950/20 p-5 shadow-lg">

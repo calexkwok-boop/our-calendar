@@ -7816,6 +7816,8 @@ function App() {
   const [useManualScrambleRoster, setUseManualScrambleRoster] = useState(true);
   const [scrambleError, setScrambleError] = useState('');
   const [selectedPopupEventPanelId, setSelectedPopupEventPanelId] = useState(null);
+  const [selectedPopupOverlayScreen, setSelectedPopupOverlayScreen] = useState('detail');
+  const [popupSportsModeReturnTarget, setPopupSportsModeReturnTarget] = useState(null);
   const [showCalendarSwitcher, setShowCalendarSwitcher] = useState(false);
   const [calendarSwitcherMode, setCalendarSwitcherMode] = useState('calendars');
   const [manualRoundRobinRosterInput, setManualRoundRobinRosterInput] = useState(
@@ -8391,6 +8393,17 @@ function App() {
     setShowSportsImportModal(false);
     setShowCategoryEditor(false);
   }, []);
+  const restorePopupSportsModePicker = React.useCallback(() => {
+    const returnEventId = String(popupSportsModeReturnTarget?.eventId || '').trim();
+    if (!returnEventId) return false;
+    setShowGauntletPanel(false);
+    setShowRoundRobinPanel(false);
+    setShowScramblePanel(false);
+    setSelectedPopupOverlayScreen('game');
+    setSelectedPopupEventPanelId(returnEventId);
+    setPopupSportsModeReturnTarget(null);
+    return true;
+  }, [popupSportsModeReturnTarget]);
   const widgetCardOpenById = React.useMemo(() => ({
     account: Boolean(showSharePanel),
     notifications: Boolean(showNotificationSettings),
@@ -8421,6 +8434,7 @@ function App() {
     showCategoryEditor,
   ]);
   const showHomeCalendarWidgets = bottomNavTab === 'calendar';
+  const hideBottomNavForTournament = showGauntletPanel || showRoundRobinPanel || showScramblePanel;
   const hasOpenWidgetWindow = showControlWidgetAddPanel || Object.values(widgetCardOpenById).some(Boolean);
   useEffect(() => {
     if (!coverHeaderControlsVisible) return;
@@ -22455,6 +22469,48 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     });
     return lookup;
   })();
+  const appendPopupOrganizerParticipant = (participants, eventId, event = null) => {
+    const nextParticipants = Array.isArray(participants) ? [...participants] : [];
+    const popupMeta = popupEventsByEventId[String(eventId || '').trim()] || null;
+    const creatorUserId = String(
+      popupMeta?.createdByUserId
+      || event?.created_by_user_id
+      || event?.created_by
+      || ''
+    ).trim();
+    const creatorDisplayName = String(
+      popupMeta?.createdByName
+      || event?.created_by_name
+      || (creatorUserId && creatorUserId === String(user?.id || '').trim()
+        ? resolveHandleLikeLabel(String(currentUser || user?.email || user?.phone || 'Member'), String(user?.id || ''))
+        : '')
+      || ''
+    ).trim();
+    if (!creatorUserId && !creatorDisplayName) return nextParticipants;
+    const creatorNameKey = creatorDisplayName.toLowerCase();
+    const alreadyIncluded = nextParticipants.some((entry) => {
+      const entryUserId = String(entry?.userId || entry?.user_id || '').trim();
+      const entryName = String(entry?.displayName || entry?.display_name || '').trim().toLowerCase();
+      return (creatorUserId && entryUserId && entryUserId === creatorUserId)
+        || (creatorNameKey && entryName === creatorNameKey);
+    });
+    if (alreadyIncluded) return nextParticipants;
+    const creatorPhotoUrl = creatorUserId === String(user?.id || '').trim()
+      ? String(currentUserProfilePhotoUrl || '').trim()
+      : '';
+    nextParticipants.unshift({
+      memberId: creatorUserId || `creator-${String(eventId || '').trim()}`,
+      userId: creatorUserId,
+      displayName: creatorDisplayName || 'Organizer',
+      photoUrl: creatorPhotoUrl,
+      photo_url: creatorPhotoUrl,
+      avatarUrl: creatorPhotoUrl,
+      avatar_url: creatorPhotoUrl,
+      manual: false,
+      createdAt: String(popupMeta?.createdAt || ''),
+    });
+    return nextParticipants;
+  };
   const eligibleGauntletPopupEvents = Object.keys(popupEventsByEventId || {})
     .map((eventId) => {
       const event = popupEventDetailsById[String(eventId || '')] || null;
@@ -22493,7 +22549,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         createdAt: String(player?.joined_at || ''),
       });
     });
-    return { eventId: String(eventId || ''), event, signups: mergedSignups, signupCount: mergedSignups.length };
+    const rosterWithOrganizer = appendPopupOrganizerParticipant(mergedSignups, eventId, event);
+    return { eventId: String(eventId || ''), event, signups: rosterWithOrganizer, signupCount: rosterWithOrganizer.length };
   })
   .filter((entry) => entry.event && entry.signupCount >= 3)
   .sort((a, b) => {
@@ -22553,6 +22610,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           createdAt: String(player?.joined_at || ''),
         });
       });
+      const rosterWithOrganizer = appendPopupOrganizerParticipant(mergedSignups, eventId, event);
       return {
         id: String(eventId || ''),
         eventId: String(eventId || ''),
@@ -22561,8 +22619,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         date: String(event?.dateKey || event?.date || ''),
         time: String(event?.time || ''),
         location: String(event?.location || ''),
-        signups: mergedSignups,
-        eligible: mergedSignups.length >= 4,
+        signups: rosterWithOrganizer,
+        eligible: rosterWithOrganizer.length >= 4,
       };
     })
     .filter((entry) => entry.title)
@@ -27512,11 +27570,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {showGauntletPanel && (
           <div
-            className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
+            className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-stretch justify-stretch p-0`}
+            style={{ minHeight: '100dvh', touchAction: 'none', overscrollBehavior: 'none' }}
+            onClick={() => {
+              if (restorePopupSportsModePicker()) return;
+              setShowGauntletPanel(false);
+            }}
           >
             <div
-              className="w-full max-w-3xl max-h-[min(88dvh,52rem)] overflow-y-auto overscroll-contain rounded-[28px]"
-              style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+              className="relative h-full w-full overflow-y-auto overscroll-contain"
+              style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
                   onClick={(e) => e.stopPropagation()}
   >
   <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
@@ -27541,7 +27604,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 setGauntletError={setGauntletError}
                 setManualGauntletRosterInput={setManualGauntletRosterInput}
                 setSelectedGauntletEventId={setSelectedGauntletEventId}
-                setShowGauntletPanel={setShowGauntletPanel}
+                setShowGauntletPanel={(nextOpen) => {
+                  if (nextOpen) {
+                    setShowGauntletPanel(true);
+                    return;
+                  }
+                  if (restorePopupSportsModePicker()) return;
+                  setShowGauntletPanel(false);
+                }}
                 setUseManualGauntletRoster={setUseManualGauntletRoster}
                 startGauntletTournament={startGauntletTournament}
                 removeGauntletParticipantFromTournament={removeGauntletParticipantFromTournament}
@@ -27562,25 +27632,33 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
 )} {showRoundRobinPanel && (
   <div
-    className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
+    className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-stretch justify-stretch p-0`}
     style={{ minHeight: '100dvh', touchAction: 'none', overscrollBehavior: 'none' }}
-    onClick={() => setShowRoundRobinPanel(false)}
+    onClick={() => {
+      if (restorePopupSportsModePicker()) return;
+      setShowRoundRobinPanel(false);
+    }}
     onKeyDown={(e) => {
-      if (e.key === 'Escape') setShowRoundRobinPanel(false);
+      if (e.key !== 'Escape') return;
+      if (restorePopupSportsModePicker()) return;
+      setShowRoundRobinPanel(false);
     }}
     role="dialog"
     aria-modal="true"
     tabIndex={-1}
   >
     <div
-      className="w-full max-w-3xl max-h-[min(88dvh,52rem)] overflow-y-auto overscroll-contain rounded-[28px]"
+      className="relative h-full w-full overflow-y-auto overscroll-contain"
       style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
       data-round-robin-scroll="true"
           onClick={(e) => e.stopPropagation()}
   >
   <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
       <RoundRobinPanel
-        onClose={() => setShowRoundRobinPanel(false)}
+        onClose={() => {
+          if (restorePopupSportsModePicker()) return;
+          setShowRoundRobinPanel(false);
+        }}
         participants={activeRoundRobinTournament?.participants?.length ? activeRoundRobinTournament.participants : selectedRoundRobinParticipants}
         eligibleRoundRobinEvents={eligibleRoundRobinEvents}
         selectedRoundRobinEventId={selectedRoundRobinEventId}
@@ -27615,23 +27693,32 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   </div>
 )} {showScramblePanel && (
   <div
-    className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
-    onClick={() => setShowScramblePanel(false)}
+    className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-stretch justify-stretch p-0`}
+    style={{ minHeight: '100dvh', touchAction: 'none', overscrollBehavior: 'none' }}
+    onClick={() => {
+      if (restorePopupSportsModePicker()) return;
+      setShowScramblePanel(false);
+    }}
     onKeyDown={(e) => {
-      if (e.key === 'Escape') setShowScramblePanel(false);
+      if (e.key !== 'Escape') return;
+      if (restorePopupSportsModePicker()) return;
+      setShowScramblePanel(false);
     }}
     role="dialog"
     aria-modal="true"
     tabIndex={-1}
   >
     <div
-      className="w-full max-w-3xl max-h-[min(88dvh,52rem)] overflow-y-auto overscroll-contain rounded-[28px]"
-      style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+      className="relative h-full w-full overflow-y-auto overscroll-contain"
+      style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
           onClick={(e) => e.stopPropagation()}
   >
   <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
       <ScramblePanel
-        onClose={() => setShowScramblePanel(false)}
+        onClose={() => {
+          if (restorePopupSportsModePicker()) return;
+          setShowScramblePanel(false);
+        }}
         eligibleScramblePopupEvents={eligibleScramblePopupEvents}
         selectedEvent={selectedScrambleEvent}
         setSelectedEvent={(event) => setSelectedScrambleEventId(String(event?.id || event?.eventId || ''))}
@@ -27901,6 +27988,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   const isSelectedPartyPopup = selectedPopupCategory === 'party';
   const closeSelectedPopup = () => {
     setSelectedPopupEventPanelId(null);
+    setSelectedPopupOverlayScreen('detail');
+    setPopupSportsModeReturnTarget(null);
     clearPopupQueryParam();
   };
   const launchRoundRobinFromPopup = (ev, mems) => {
@@ -27908,22 +27997,28 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     setSelectedRoundRobinEventId(String(ev?.id || ''));
     setUseManualRoundRobinRoster(false);
     setRoundRobinError('');
+    setPopupSportsModeReturnTarget({ eventId: selectedPopupId, screen: 'game' });
     setShowRoundRobinPanel(true);
-    closeSelectedPopup();
+    setSelectedPopupEventPanelId(null);
+    clearPopupQueryParam();
   };
   const launchGauntletFromPopup = (ev, mems) => {
     setManualGauntletRosterInput(mems.map((m) => m.display_name).join('\n'));
     setUseManualGauntletRoster(true);
+    setPopupSportsModeReturnTarget({ eventId: selectedPopupId, screen: 'game' });
     setShowGauntletPanel(true);
-    closeSelectedPopup();
+    setSelectedPopupEventPanelId(null);
+    clearPopupQueryParam();
   };
   const launchScrambleFromPopup = (ev, mems) => {
     setManualScramblePlayerNames(mems.map((m) => m.display_name).join(', '));
     setSelectedScrambleEventId(String(ev?.id || ''));
     setUseManualScrambleRoster(false);
     setScrambleError('');
+    setPopupSportsModeReturnTarget({ eventId: selectedPopupId, screen: 'game' });
     setShowScramblePanel(true);
-    closeSelectedPopup();
+    setSelectedPopupEventPanelId(null);
+    clearPopupQueryParam();
   };
 
   return (
@@ -27964,6 +28059,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             displayName={resolveHandleLikeLabel(currentUser || user?.email || user?.phone || 'Player', user?.id)}
             currentUserProfilePhotoUrl={currentUserProfilePhotoUrl}
             initialEventId={selectedPopupId}
+            initialScreen={selectedPopupOverlayScreen}
             eventMetaFallback={eventMetaFallback}
             resolveHandleLikeLabel={resolveHandleLikeLabel}
             onLaunchRoundRobin={launchRoundRobinFromPopup}
@@ -28123,6 +28219,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             momentsThisWeek={homeMomentsThisWeek}
             onThisDayMemory={homeOnThisDayMemory}
             todaySpotlightEvent={homeTodaySpotlightEvent}
+            onOpenTodayEvent={openUserTabEvent}
             upcomingPreviewEvents={homeUpcomingPreviewEvents}
             tripSpotlight={homeTripSpotlight}
             memoryCollagePhotos={homeMemoryCollagePhotos}
@@ -30285,7 +30382,7 @@ transform: translateY(0);
       </div>
     </div>
     {/* -- Create Sub-Calendar Modal -- */}
-    {!activeSubCalendar && !showMemorySystem && (
+    {!activeSubCalendar && !showMemorySystem && !hideBottomNavForTournament && (
       <div
         className="fixed inset-x-0 bottom-0 z-[10001]"
         style={{
