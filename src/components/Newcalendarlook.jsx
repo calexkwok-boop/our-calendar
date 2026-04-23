@@ -37,6 +37,9 @@ const getWeEventDisplayBadge = (event, popupMeta) => {
     || /\b(birthday|party|wedding|shower|celebration|engagement|graduation|hangout|brunch|coffee|drinks|playdate|kids event|game night|sports)\b/.test(text);
 
   if (!isWeEventLike) return null;
+  if (normalizedCategory === 'sports' || /\b(sports|run|running|race|workout|training|pickleball|tennis|golf)\b/.test(text)) {
+    return { icon: '🏃', label: 'We Event' };
+  }
   if (normalizedCategory === 'party' || /\b(party|birthday|holiday|game night)\b/.test(text)) {
     return { icon: '🥳', label: 'We Event' };
   }
@@ -55,8 +58,8 @@ const getWeEventDisplayBadge = (event, popupMeta) => {
   if (/\bcoffee\b/.test(text)) {
     return { icon: '☕', label: 'We Event' };
   }
-  if (normalizedCategory === 'hangout' || /\b(hangout|brunch|drinks|movie)\b/.test(text)) {
-    return { icon: '🎉', label: 'We Event' };
+  if (normalizedCategory === 'hangout' || /\b(hangout|brunch|drinks|movie|coffee)\b/.test(text)) {
+    return { icon: '☕', label: 'We Event' };
   }
   return { icon: '🎉', label: 'We Event' };
 };
