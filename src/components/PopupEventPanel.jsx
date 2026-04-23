@@ -6,7 +6,6 @@ import {
   Navigation, Radio, Gamepad2, MessageCircle, Map,
 } from 'lucide-react';
 import EventCardRouter, { resolveEventCardCategory } from './EventCardRouter';
-import GenericEventCard from './GenericEventCard';
 import SportsEventCard from './SportsEventCard';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -1940,11 +1939,14 @@ export default function PopupEventPanel({
   if (!isSportsPopupEvent) return (
     <DragToCloseSheet onClose={onClose} darkMode={darkMode} panelStyle={panelStyle}>
       <style>{`#popup-event-panel-root, #popup-event-panel-root * { font-family: 'Caveat', cursive !important; }`}</style>
-      <GenericEventCard
+      <EventCardRouter
         event={routedEvent}
         darkMode={darkMode}
+        accent={accent}
         onEditBasics={isHostOrCohost ? handleEditEventBasics : undefined}
         onUpdateEventData={isHostOrCohost ? handleUpdateEventData : undefined}
+        onClaimPotluck={handlePotluckClaim}
+        canClaimPotluck={Boolean(user?.id) && (isMember || isHostOrCohost)}
         currentUserId={String(user?.id || '').trim()}
         currentUserName={effectiveDisplayName || 'Guest'}
         onPrimaryAction={nonSportsPrimaryAction?.action}

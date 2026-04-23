@@ -12,6 +12,7 @@ import ExpenseTrackerPanel from "./components/ExpenseTrackerPanel";
 import RoundRobinPanel from "./components/RoundRobinPanel";
 import ScramblePanel from "./components/ScramblePanel";
 import PopupEventPanel from "./components/PopupEventPanel";
+import SportsEventCardOverlay from "./components/SportsEventCardOverlay";
 import AddEventModal from "./components/AddEventModal";
 import DateDetailsCard from "./components/DateDetailsCard_Enhanced";
 import WhatTimeModal from "./components/WhatTimeModal";
@@ -27861,100 +27862,131 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   </div>
 )}
 
-{selectedPopupEventPanelId && renderJourneyPortal((
-  <div
-    className="fixed inset-0 z-[10002] bg-black/50 p-3 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center"
-    onClick={() => {
-      setSelectedPopupEventPanelId(null);
-      clearPopupQueryParam();
-    }}
-    style={{
-      inset: '0 0 -2px 0',
-      minHeight: '100dvh',
-      height: '100dvh',
-      paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))',
-      paddingBottom: 'max(0px, env(safe-area-inset-bottom))',
-      background: 'rgba(2, 6, 23, 0.56)',
-      touchAction: 'none',
-      overscrollBehavior: 'none'
-    }}
-  >
+{selectedPopupEventPanelId && renderJourneyPortal((() => {
+  const selectedPopupId = String(selectedPopupEventPanelId || '');
+  const meta = popupEventsByEventId[selectedPopupId];
+  const evObj = (userTabPopupEvents || []).find(e => String(e.id) === selectedPopupId)
+    || Object.values(events || {}).flat().find(e => String(e.id) === selectedPopupId);
+  const eventData = evObj?.event_data && typeof evObj.event_data === 'object' && !Array.isArray(evObj.event_data)
+    ? evObj.event_data
+    : {};
+  const eventMetaFallback = meta && evObj
+    ? {
+      id: selectedPopupId,
+      calendar_id: meta.layerId || activeLayerId,
+      created_by: meta.createdByUserId,
+      created_by_user_id: meta.createdByUserId,
+      title: evObj.title,
+      date: evObj.date,
+      time: evObj.time,
+      location: evObj.location || null,
+      description: evObj.description || '',
+      category: evObj.category || eventData.category || eventData.popupSubtype || null,
+      max_players: meta.maxPeople,
+      is_public: true,
+      status: 'open',
+      event_data: eventData,
+    }
+    : null;
+  const selectedPopupCategory = String(
+    eventMetaFallback?.event_data?.popupSubtype
+    || eventMetaFallback?.event_data?.popup_subtype
+    || eventMetaFallback?.event_data?.category
+    || eventMetaFallback?.category
+    || ''
+  ).trim().toLowerCase();
+  const isSelectedSportsPopup = selectedPopupCategory === 'sports';
+  const closeSelectedPopup = () => {
+    setSelectedPopupEventPanelId(null);
+    clearPopupQueryParam();
+  };
+  const launchRoundRobinFromPopup = (ev, mems) => {
+    setManualRoundRobinRosterInput(mems.map((m) => m.display_name).join('\n'));
+    setSelectedRoundRobinEventId(String(ev?.id || ''));
+    setUseManualRoundRobinRoster(false);
+    setRoundRobinError('');
+    setShowRoundRobinPanel(true);
+    closeSelectedPopup();
+  };
+  const launchGauntletFromPopup = (ev, mems) => {
+    setManualGauntletRosterInput(mems.map((m) => m.display_name).join('\n'));
+    setUseManualGauntletRoster(true);
+    setShowGauntletPanel(true);
+    closeSelectedPopup();
+  };
+  const launchScrambleFromPopup = (ev, mems) => {
+    setManualScramblePlayerNames(mems.map((m) => m.display_name).join(', '));
+    setSelectedScrambleEventId(String(ev?.id || ''));
+    setUseManualScrambleRoster(false);
+    setScrambleError('');
+    setShowScramblePanel(true);
+    closeSelectedPopup();
+  };
+
+  return (
     <div
-      className="relative w-full h-full sm:h-auto sm:max-w-lg sm:max-h-[90vh] overflow-hidden overscroll-contain"
+      className="fixed inset-0 z-[10002] bg-black/50 p-3 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center"
+      onClick={closeSelectedPopup}
       style={{
-        WebkitOverflowScrolling: 'touch',
-        touchAction: 'pan-y',
-        overscrollBehaviorY: 'contain',
-        height: 'calc(100dvh - max(2.75rem, env(safe-area-inset-top) + 1rem) - max(0px, env(safe-area-inset-bottom)) + 2px)',
-        maxHeight: 'calc(100dvh - max(2.75rem, env(safe-area-inset-top) + 1rem) - max(0px, env(safe-area-inset-bottom)) + 2px)'
+        inset: '0 0 -2px 0',
+        minHeight: '100dvh',
+        height: '100dvh',
+        paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))',
+        paddingBottom: 'max(0px, env(safe-area-inset-bottom))',
+        background: 'rgba(2, 6, 23, 0.56)',
+        touchAction: 'none',
+        overscrollBehavior: 'none'
       }}
-      onClick={(e) => e.stopPropagation()}
     >
-      <PopupEventPanel
-        activeLayerPageTheme={activeLayerPageTheme}
-        darkMode={darkMode}
-        supabase={supabase}
-        user={user}
-        calendarId={activeLayerId}
-        displayName={resolveHandleLikeLabel(currentUser || user?.email || user?.phone || 'Player', user?.id)}
-        currentUserProfilePhotoUrl={currentUserProfilePhotoUrl}
-        initialEventId={selectedPopupEventPanelId}
-        eventMetaFallback={(() => {
-          const meta = popupEventsByEventId[selectedPopupEventPanelId];
-          const evObj = (userTabPopupEvents || []).find(e => String(e.id) === selectedPopupEventPanelId)
-            || Object.values(events || {}).flat().find(e => String(e.id) === selectedPopupEventPanelId);
-          if (!meta || !evObj) return null;
-          return {
-            id: selectedPopupEventPanelId,
-            calendar_id: meta.layerId || activeLayerId,
-            created_by: meta.createdByUserId,
-            title: evObj.title,
-            date: evObj.date,
-            time: evObj.time,
-            location: evObj.location || null,
-            description: evObj.description || '',
-            category: evObj.category || null,
-            max_players: meta.maxPeople,
-            is_public: true,
-            status: 'open',
-          };
-        })()}
-        onClose={() => {
-          setSelectedPopupEventPanelId(null);
-          clearPopupQueryParam();
+      <div
+        className="relative w-full h-full sm:h-auto sm:max-w-lg sm:max-h-[90vh] overflow-hidden overscroll-contain"
+        style={{
+          WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-y',
+          overscrollBehaviorY: 'contain',
+          height: 'calc(100dvh - max(2.75rem, env(safe-area-inset-top) + 1rem) - max(0px, env(safe-area-inset-bottom)) + 2px)',
+          maxHeight: 'calc(100dvh - max(2.75rem, env(safe-area-inset-top) + 1rem) - max(0px, env(safe-area-inset-bottom)) + 2px)'
         }}
-        formatTime={formatTime}
-        formatDateKeyMMDDYYYY={formatDateKeyMMDDYYYY}
-        resolveHandleLikeLabel={resolveHandleLikeLabel}
-        onLaunchRoundRobin={(ev, mems) => {
-          setManualRoundRobinRosterInput(mems.map((m) => m.display_name).join('\n'));
-          setSelectedRoundRobinEventId(String(ev?.id || ''));
-          setUseManualRoundRobinRoster(false);
-          setRoundRobinError('');
-          setShowRoundRobinPanel(true);
-          setSelectedPopupEventPanelId(null);
-          clearPopupQueryParam();
-        }}
-        onLaunchGauntlet={(ev, mems) => {
-          setManualGauntletRosterInput(mems.map((m) => m.display_name).join('\n'));
-          setUseManualGauntletRoster(true);
-          setShowGauntletPanel(true);
-          setSelectedPopupEventPanelId(null);
-          clearPopupQueryParam();
-        }}
-        onLaunchScramble={(ev, mems) => {
-          setManualScramblePlayerNames(mems.map((m) => m.display_name).join(', '));
-          setSelectedScrambleEventId(String(ev?.id || ''));
-          setUseManualScrambleRoster(false);
-          setScrambleError('');
-          setShowScramblePanel(true);
-          setSelectedPopupEventPanelId(null);
-          clearPopupQueryParam();
-        }}
-      />
+        onClick={(e) => e.stopPropagation()}
+      >
+        {isSelectedSportsPopup ? (
+          <SportsEventCardOverlay
+            activeLayerPageTheme={activeLayerPageTheme}
+            darkMode={darkMode}
+            supabase={supabase}
+            user={user}
+            calendarId={activeLayerId}
+            displayName={resolveHandleLikeLabel(currentUser || user?.email || user?.phone || 'Player', user?.id)}
+            currentUserProfilePhotoUrl={currentUserProfilePhotoUrl}
+            initialEventId={selectedPopupId}
+            eventMetaFallback={eventMetaFallback}
+            resolveHandleLikeLabel={resolveHandleLikeLabel}
+            onLaunchRoundRobin={launchRoundRobinFromPopup}
+          />
+        ) : (
+          <PopupEventPanel
+            activeLayerPageTheme={activeLayerPageTheme}
+            darkMode={darkMode}
+            supabase={supabase}
+            user={user}
+            calendarId={activeLayerId}
+            displayName={resolveHandleLikeLabel(currentUser || user?.email || user?.phone || 'Player', user?.id)}
+            currentUserProfilePhotoUrl={currentUserProfilePhotoUrl}
+            initialEventId={selectedPopupId}
+            eventMetaFallback={eventMetaFallback}
+            onClose={closeSelectedPopup}
+            formatTime={formatTime}
+            formatDateKeyMMDDYYYY={formatDateKeyMMDDYYYY}
+            resolveHandleLikeLabel={resolveHandleLikeLabel}
+            onLaunchRoundRobin={launchRoundRobinFromPopup}
+            onLaunchGauntlet={launchGauntletFromPopup}
+            onLaunchScramble={launchScrambleFromPopup}
+          />
+        )}
+      </div>
     </div>
-  </div>
-))}
+  );
+})())}
 
         {showCategoryEditor && (
           <div className="glass-panel rounded-2xl p-6 mb-6">

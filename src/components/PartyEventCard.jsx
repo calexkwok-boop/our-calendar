@@ -1,830 +1,682 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// PartyEventCard — v3
+// Dark hero header (balloons + confetti in header only).
+// Clean white body with party sections: theme, guests, music, potluck, notes.
+// Same props contract as original PartyEventCard.
+// ─────────────────────────────────────────────────────────────────────────────
+
 import React from 'react';
+import {
+  MapPin, Clock, Calendar, Users, Lock, Globe,
+  Edit3, Trash2, Camera, MessageCircle, Check, Copy,
+} from 'lucide-react';
 
-const formatEventDateTime = (date, time) => {
-  const rawDate = String(date || '').trim();
-  if (!rawDate) return '';
+// ── helpers ───────────────────────────────────────────────────────────────────
 
-  const dateObj = new Date(`${rawDate}T00:00:00`);
-  const dateStr = Number.isNaN(dateObj.getTime())
-    ? rawDate
-    : dateObj.toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-      });
-
-  if (!time) return dateStr;
-
-  const timeObj = new Date(`2000-01-01T${time}`);
-  const timeStr = Number.isNaN(timeObj.getTime())
-    ? String(time)
-    : timeObj.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      });
-
-  return `${dateStr} at ${timeStr}`;
+const gInitials = (name) => {
+  const parts = String(name || '?').trim().split(/\s+/);
+  return parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : String(name || '?')[0].toUpperCase();
 };
 
-const isProbablyUrl = (value) => /^(https?:\/\/|data:image\/|blob:)/i.test(String(value || '').trim());
+const isProbablyUrl = (v) => /^(https?:\/\/|data:image\/|blob:)/i.test(String(v || '').trim());
+
 const getCardBackdropUrl = (event) => {
   const candidates = [
-    event?.coverImageUrl,
-    event?.event_data?.coverImageUrl,
-    event?.event_data?.cover_image_url,
-    event?.backgroundImageUrl,
-    event?.event_data?.backgroundImageUrl,
-    event?.event_data?.background_image_url,
-    event?.cover_image_url,
-    event?.background_image_url,
+    event?.coverImageUrl, event?.event_data?.coverImageUrl,
+    event?.event_data?.cover_image_url, event?.backgroundImageUrl,
+    event?.event_data?.backgroundImageUrl, event?.event_data?.background_image_url,
+    event?.cover_image_url, event?.background_image_url,
   ];
-  return candidates
-    .map((value) => String(value || '').trim())
-    .find((value) => isProbablyUrl(value)) || '';
+  return candidates.map((v) => String(v || '').trim()).find(isProbablyUrl) || '';
 };
 
-const detectPlaylistService = (value) => {
-  const normalized = String(value || '').trim().toLowerCase();
-  if (!normalized) return null;
-  if (normalized.includes('spotify.com')) {
-    return {
-      name: 'Spotify',
-      icon: 'Spotify',
-      chipClass: 'bg-[#1ed760]/15 text-[#15803d] dark:text-[#86efac]',
-    };
-  }
-  if (normalized.includes('music.apple.com') || normalized.includes('itunes.apple.com')) {
-    return {
-      name: 'Apple Music',
-      icon: 'Apple',
-      chipClass: 'bg-[#fa233b]/12 text-[#be123c] dark:text-[#fda4af]',
-    };
-  }
-  return null;
-};
-
-const SpotifyIcon = ({ className = 'h-4 w-4' }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <circle cx="12" cy="12" r="10" fill="currentColor" />
-    <path d="M7.2 9.3c3.2-1 6.8-.8 9.8.6" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" />
-    <path d="M8.1 12.1c2.5-.8 5.2-.6 7.5.5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
-    <path d="M9 14.7c1.8-.5 3.8-.4 5.2.4" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" />
-  </svg>
-);
-
-const AppleMusicIcon = ({ className = 'h-4 w-4' }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <defs>
-      <linearGradient id="apple-music-gradient" x1="4" y1="4" x2="20" y2="20" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#ff7aa2" />
-        <stop offset="0.52" stopColor="#fa233b" />
-        <stop offset="1" stopColor="#b3125d" />
-      </linearGradient>
-    </defs>
-    <rect x="3.5" y="3.5" width="17" height="17" rx="5" fill="url(#apple-music-gradient)" />
-    <path
-      d="M12.98 8.08c.33-.44.56-1.03.5-1.63-.48.03-1.08.34-1.42.79-.31.39-.58 1-.5 1.57.54.04 1.1-.28 1.42-.73Zm1.98 4.92c.01-1.26 1.03-1.86 1.08-1.89-.59-.86-1.49-.98-1.81-1-.78-.08-1.52.47-1.91.47-.39 0-.98-.46-1.61-.45-.83.01-1.6.49-2.02 1.23-.86 1.49-.22 3.71.62 4.93.41.59.89 1.26 1.53 1.23.61-.02.84-.39 1.58-.39.74 0 .95.39 1.58.38.65-.01 1.06-.59 1.46-1.18.47-.69.66-1.36.67-1.39-.01-.01-1.27-.49-1.28-1.94Z"
-      fill="#fff"
-    />
-  </svg>
-);
-
-const PlaylistServiceIcon = ({ service, className }) => {
-  if (service?.name === 'Spotify') {
-    return <SpotifyIcon className={className} />;
-  }
-  if (service?.name === 'Apple Music') {
-    return <AppleMusicIcon className={className} />;
-  }
+const detectPlaylistService = (v) => {
+  const s = String(v || '').trim().toLowerCase();
+  if (!s) return null;
+  if (s.includes('spotify.com'))  return { name: 'Spotify' };
+  if (s.includes('music.apple.com') || s.includes('itunes.apple.com')) return { name: 'Apple Music' };
   return null;
 };
 
 const normalizeEventNotes = (event) => {
-  const rawNotes = String(event?.description || '').trim();
-  if (!rawNotes) return '';
-  const normalized = rawNotes.toLowerCase().replace(/\s+/g, ' ').trim();
-  if (/^(party|kids event|celebration|hangout|custom|sports)( we event)?$/.test(normalized)) {
-    return '';
-  }
-  if (/^[a-z ]+ we event$/.test(normalized)) {
-    return '';
-  }
-  return rawNotes;
+  const raw = String(event?.description || '').trim();
+  if (!raw) return '';
+  const n = raw.toLowerCase().replace(/\s+/g, ' ').trim();
+  if (/^(party|kids event|celebration|hangout|custom|sports)( we event)?$/.test(n)) return '';
+  if (/^[a-z ]+ we event$/.test(n)) return '';
+  return raw;
 };
 
-const buildMapHref = (location) =>
-  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(String(location || '').trim())}`;
+const buildMapHref = (loc) =>
+  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(String(loc || '').trim())}`;
 
-const parseLineItems = (value) =>
-  String(value || '')
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [item, person] = line.split('|').map((part) => part.trim());
-      return { item: item || '', person: person || '' };
-    })
-    .filter((entry) => entry.item);
+const parseLineItems = (v) =>
+  String(v || '').split('\n').map((l) => l.trim()).filter(Boolean)
+    .map((l) => { const [item, person] = l.split('|').map((p) => p.trim()); return { item: item || '', person: person || '' }; })
+    .filter((e) => e.item);
 
-const normalizePotluckItems = (value) =>
-  Array.isArray(value)
-    ? value
-        .map((entry) => ({
-          item: String(entry?.item || '').trim(),
-          person: String(entry?.person || '').trim(),
-          claimedByUserId: String(entry?.claimedByUserId || '').trim(),
-        }))
-        .filter((entry) => entry.item)
+const normalizePotluckItems = (v) =>
+  Array.isArray(v)
+    ? v.map((e) => ({ item: String(e?.item || '').trim(), person: String(e?.person || '').trim(), claimedByUserId: String(e?.claimedByUserId || '').trim() })).filter((e) => e.item)
     : [];
 
-const parseGuestListItems = (value) =>
-  String(value || '')
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [name, status] = line.split('|').map((part) => part.trim());
-      const normalizedStatus = String(status || '').trim().toLowerCase();
-      let rsvp = 'pending';
-      if (normalizedStatus === 'yes' || normalizedStatus === 'going') rsvp = 'yes';
-      if (normalizedStatus === 'no' || normalizedStatus === 'declined') rsvp = 'no';
-      return { name: name || '', rsvp };
-    })
-    .filter((entry) => entry.name);
+const parseGuestListItems = (v) =>
+  String(v || '').split('\n').map((l) => l.trim()).filter(Boolean)
+    .map((l) => {
+      const [name, status] = l.split('|').map((p) => p.trim());
+      const ns = String(status || '').toLowerCase();
+      return { name: name || '', rsvp: (ns === 'yes' || ns === 'going') ? 'yes' : (ns === 'no' || ns === 'declined') ? 'no' : 'pending' };
+    }).filter((e) => e.name);
 
-const EditIcon = () => (
-  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+const formatDateShort = (dateStr) => {
+  if (!dateStr) return null;
+  try {
+    const [y, m, d] = String(dateStr).split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    return dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  } catch { return null; }
+};
+
+const formatTimePretty = (t) => {
+  if (!t) return null;
+  try {
+    const [h, m] = String(t).split(':').map(Number);
+    const d = new Date(); d.setHours(h, m, 0, 0);
+    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  } catch { return null; }
+};
+
+// ── animation keyframes (header only) ────────────────────────────────────────
+
+const ANIMATION_CSS = `
+@keyframes pec-bob   { 0%,100%{transform:translateY(0) rotate(-2deg)} 50%{transform:translateY(-10px) rotate(2deg)} }
+@keyframes pec-float { 0%,100%{transform:translateY(0) rotate(0deg)}  50%{transform:translateY(-8px) rotate(6deg)} }
+@keyframes pec-sway  { 0%,100%{transform:translateX(0)} 50%{transform:translateX(-4px)} }
+`;
+
+// ── header balloon / confetti decorations ─────────────────────────────────────
+// Contained entirely within the dark hero — nothing leaks into the body.
+
+const HeroDecorations = () => (
+  <div style={{
+    position: 'absolute', inset: 0,
+    overflow: 'hidden', pointerEvents: 'none', zIndex: 0,
+  }}>
+    {/* balloons — right side only, out of the way of text */}
+    <div style={{ position: 'absolute', right: '-2px', top: '12px', width: 36, animation: 'pec-bob 5.8s ease-in-out infinite' }}>
+      <div style={{ width: 36, height: 76, borderRadius: '50%', background: 'linear-gradient(to bottom, #fde68a, #f59e0b)', margin: '0 auto', opacity: 0.55 }} />
+      <div style={{ width: 1, height: 32, margin: '0 auto', background: 'linear-gradient(to bottom, rgba(253,230,138,0.5), transparent)' }} />
+    </div>
+    <div style={{ position: 'absolute', right: '38px', top: '6px', width: 28, animation: 'pec-bob 6.4s ease-in-out infinite 0.8s' }}>
+      <div style={{ width: 28, height: 58, borderRadius: '50%', background: 'linear-gradient(to bottom, #6ee7b7, #059669)', margin: '0 auto', opacity: 0.5 }} />
+      <div style={{ width: 1, height: 26, margin: '0 auto', background: 'linear-gradient(to bottom, rgba(110,231,183,0.5), transparent)' }} />
+    </div>
+    <div style={{ position: 'absolute', right: '68px', top: '18px', width: 22, animation: 'pec-bob 5.2s ease-in-out infinite 1.3s' }}>
+      <div style={{ width: 22, height: 46, borderRadius: '50%', background: 'linear-gradient(to bottom, #bae6fd, #0284c7)', margin: '0 auto', opacity: 0.45 }} />
+      <div style={{ width: 1, height: 20, margin: '0 auto', background: 'linear-gradient(to bottom, rgba(186,230,253,0.5), transparent)' }} />
+    </div>
+
+    {/* streamers — subtle dashed arcs */}
+    <div style={{ position: 'absolute', right: '20%', top: '55%', width: 80, height: 30, borderRadius: '50%', borderTop: '3px dashed rgba(253,230,138,0.35)', transform: 'rotate(-10deg)', animation: 'pec-sway 7s ease-in-out infinite' }} />
+    <div style={{ position: 'absolute', left: '5%', top: '60%', width: 60, height: 24, borderRadius: '50%', borderTop: '3px dashed rgba(110,231,183,0.3)', transform: 'rotate(12deg)', animation: 'pec-sway 8s ease-in-out infinite 0.6s' }} />
+
+    {/* confetti — small, sparse */}
+    <div style={{ position: 'absolute', left: '12%', top: '20%', width: 14, height: 6, borderRadius: 999, background: 'rgba(253,230,138,0.5)', transform: 'rotate(20deg)', animation: 'pec-float 7s ease-in-out infinite 0.3s' }} />
+    <div style={{ position: 'absolute', left: '30%', top: '35%', width: 8, height: 8, background: 'rgba(110,231,183,0.45)', transform: 'rotate(45deg)', animation: 'pec-float 8s ease-in-out infinite 1s' }} />
+    <div style={{ position: 'absolute', left: '52%', top: '18%', width: 6, height: 14, borderRadius: 999, background: 'rgba(147,197,253,0.4)', transform: 'rotate(-20deg)', animation: 'pec-float 6.5s ease-in-out infinite 0.5s' }} />
+    <div style={{ position: 'absolute', left: '22%', top: '65%', width: 10, height: 4, borderRadius: 999, background: 'rgba(253,186,116,0.45)', transform: 'rotate(15deg)', animation: 'pec-float 7.5s ease-in-out infinite 1.4s' }} />
+    <div style={{ position: 'absolute', left: '44%', top: '50%', width: 8, height: 8, background: 'rgba(253,230,138,0.4)', transform: 'rotate(30deg)', animation: 'pec-float 9s ease-in-out infinite 0.2s' }} />
+  </div>
+);
+
+// ── spotify icon ──────────────────────────────────────────────────────────────
+
+const SpotifyIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="10" fill="#1db954"/>
+    <path d="M7.2 9.3c3.2-1 6.8-.8 9.8.6"  stroke="#fff" strokeWidth="1.7" strokeLinecap="round"/>
+    <path d="M8.1 12.1c2.5-.8 5.2-.6 7.5.5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M9 14.7c1.8-.5 3.8-.4 5.2.4"   stroke="#fff" strokeWidth="1.4" strokeLinecap="round"/>
   </svg>
 );
 
-const TrashIcon = () => (
-  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-  </svg>
-);
-const CameraIcon = () => (
-  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4.75 8.75h2.6l1.35-2h6.6l1.35 2h2.6a1.5 1.5 0 011.5 1.5v7a1.5 1.5 0 01-1.5 1.5H4.75a1.5 1.5 0 01-1.5-1.5v-7a1.5 1.5 0 011.5-1.5Z" />
-    <circle cx="12" cy="13" r="3.1" strokeWidth={1.8} />
-  </svg>
-);
+// ── guest pip ─────────────────────────────────────────────────────────────────
 
-const ActionPill = ({ href, onClick, children, subdued = false }) => {
-  const className = subdued
-    ? 'inline-flex items-center gap-1.5 rounded-full border border-fuchsia-200 bg-white/88 px-3 py-1.25 text-[11px] font-medium text-fuchsia-700 shadow-sm transition-all hover:border-fuchsia-300 hover:bg-fuchsia-50/70 hover:text-fuchsia-800 hover:shadow-md active:scale-[0.98] dark:border-fuchsia-200/45 dark:bg-[linear-gradient(135deg,rgba(91,33,182,0.34),rgba(30,41,59,0.92))] dark:text-fuchsia-50 dark:shadow-[0_10px_24px_rgba(0,0,0,0.34)] dark:hover:border-fuchsia-100/70 dark:hover:bg-[linear-gradient(135deg,rgba(192,38,211,0.30),rgba(45,27,77,0.96))] dark:hover:text-white'
-    : 'inline-flex items-center gap-1.5 rounded-full border-2 border-fuchsia-200 bg-white/95 px-3.5 py-1.5 text-xs font-semibold text-fuchsia-700 shadow-sm transition-all hover:border-fuchsia-300 hover:bg-fuchsia-50/80 hover:text-fuchsia-800 hover:shadow-md active:scale-[0.98] dark:border-fuchsia-200/50 dark:bg-[linear-gradient(135deg,rgba(126,34,206,0.38),rgba(30,41,59,0.96))] dark:text-fuchsia-50 dark:shadow-[0_12px_28px_rgba(0,0,0,0.36)] dark:hover:border-fuchsia-100/75 dark:hover:bg-[linear-gradient(135deg,rgba(217,70,239,0.34),rgba(60,28,102,0.98))] dark:hover:text-white';
-
-  if (href) {
-    return (
-      <a className={className} href={href} target="_blank" rel="noopener noreferrer">
-        {children}
-      </a>
-    );
-  }
-
+const GuestPip = ({ name, role, accent, darkMode, size = 28 }) => {
+  const isHost = role === 'host';
   return (
-    <button className={className} onClick={onClick} type="button">
-      {children}
-    </button>
+    <div title={name} style={{
+      width: size, height: size, borderRadius: '50%', flexShrink: 0,
+      background: isHost ? '#fef3c7' : darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)',
+      border: `2px solid ${isHost ? '#fbbf24' : darkMode ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.1)'}`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: Math.round(size * 0.34), fontWeight: 900,
+      color: isHost ? '#f59e0b' : darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.45)',
+      fontFamily: "'Caveat', cursive",
+      marginLeft: -5,
+    }}>
+      {gInitials(name)}
+    </div>
   );
 };
 
-const PartyTileConfetti = () => (
-  <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-55 dark:opacity-40">
-    <div className="absolute left-3 top-3 h-2.5 w-2.5 rotate-12 rounded-sm bg-fuchsia-300/80 dark:bg-fuchsia-300/55" />
-    <div className="absolute right-5 top-4 h-3 w-1.5 rotate-[28deg] rounded-full bg-cyan-300/80 dark:bg-cyan-300/55" />
-    <div className="absolute left-[22%] top-[58%] h-2 w-4 rotate-[22deg] rounded-full bg-pink-300/75 dark:bg-pink-300/50" />
-    <div className="absolute right-[28%] top-[62%] h-2.5 w-2.5 rotate-45 bg-sky-300/80 dark:bg-sky-300/55" />
-    <div className="absolute left-[58%] top-[20%] h-1.5 w-5 rotate-[-18deg] rounded-full bg-fuchsia-200/75 dark:bg-fuchsia-200/45" />
-    <div className="absolute left-[70%] top-[70%] h-3 w-1.5 rotate-[40deg] rounded-full bg-cyan-200/80 dark:bg-cyan-200/50" />
-  </div>
-);
+// ── edit pill ─────────────────────────────────────────────────────────────────
 
-const Section = ({ title, subtitle, actions, children }) => (
-  <div className="group/section rounded-[22px] border border-fuchsia-100/80 bg-white/96 p-5 shadow-[0_10px_26px_rgba(15,23,42,0.05)] backdrop-blur-sm transition-all hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/[0.06] dark:shadow-none dark:hover:bg-white/[0.09]">
-    <div className="mb-4 flex items-start justify-between gap-3">
-      <div className="min-w-0 flex-1">
-        <div className="text-[15px] font-bold text-gray-900 dark:text-white">{title}</div>
-        {subtitle ? <div className="mt-1.5 text-[13px] font-medium text-gray-500 dark:text-gray-400">{subtitle}</div> : null}
-      </div>
-      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
-    </div>
+const EditPill = ({ onClick, children, accent }) => (
+  <button onClick={onClick} type="button" style={{
+    display: 'inline-flex', alignItems: 'center', gap: 4,
+    padding: '4px 12px', borderRadius: 999, cursor: 'pointer',
+    fontSize: 12, fontWeight: 800, fontFamily: "'Caveat', cursive",
+    background: 'transparent', border: `1.5px solid ${accent}44`, color: accent,
+  }}>
     {children}
+  </button>
+);
+
+// ── section wrapper ───────────────────────────────────────────────────────────
+
+const Section = ({ title, subtitle, actions, children, border, surfaceBg, primaryText, secondaryText }) => (
+  <div style={{
+    borderRadius: 14, border: `1px solid ${border}`,
+    background: surfaceBg, overflow: 'hidden',
+  }}>
+    <div style={{
+      display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+      gap: 12, padding: '10px 14px',
+      borderBottom: `1px solid ${border}`,
+    }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.09em', color: secondaryText }}>{title}</div>
+        {subtitle && <div style={{ marginTop: 3, fontSize: 12, fontWeight: 700, color: secondaryText }}>{subtitle}</div>}
+      </div>
+      {actions && <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>{actions}</div>}
+    </div>
+    <div style={{ padding: '12px 14px' }}>{children}</div>
   </div>
 );
 
-const EmptySection = ({ title, subtitle, actions }) => (
-  <Section title={title} subtitle={subtitle} actions={actions}>
-    <div className="relative overflow-hidden rounded-2xl border border-dashed border-fuchsia-100 bg-white px-4 py-4 text-sm text-slate-600 dark:border-white/12 dark:bg-white/[0.04] dark:text-slate-300">
-      <PartyTileConfetti />
-      <div className="relative">Nothing added yet.</div>
-    </div>
-  </Section>
-);
-
-const NotesSection = ({ event, onEdit, onUpdateEventData, openEditor }) => {
-  const notes = normalizeEventNotes(event);
-  const sectionTitle = 'Party Notes';
-  const openNotesEditor =
-    onUpdateEventData && openEditor
-      ? () =>
-          openEditor({
-            variant: 'party',
-            title: 'Notes',
-            fields: [
-              {
-                key: 'description',
-                label: 'Notes',
-                type: 'textarea',
-                rows: 6,
-                value: notes,
-                placeholder: 'Add party notes, house rules, parking info, or anything guests should know...',
-              },
-            ],
-            onSave: (values) =>
-              onUpdateEventData({
-                description: String(values.description || '').trim(),
-              }),
-          })
-      : onEdit;
-
-  if (notes) {
-    return (
-      <Section title={sectionTitle} actions={typeof openNotesEditor === 'function' ? <ActionPill onClick={openNotesEditor}>Edit</ActionPill> : null}>
-        <div className="relative overflow-hidden rounded-2xl border border-fuchsia-100/80 bg-white/88 px-4 py-4 text-sm leading-6 text-gray-700 dark:border-white/10 dark:bg-white/[0.045] dark:text-gray-300">
-          <PartyTileConfetti />
-          <div className="relative">{notes}</div>
-        </div>
-      </Section>
-    );
-  }
-
-  if (typeof openNotesEditor === 'function') {
-    return <EmptySection title={sectionTitle} actions={<ActionPill onClick={openNotesEditor}>Add</ActionPill>} />;
-  }
-
-  return null;
-};
-
-const animationStyles = `
-@keyframes party-card-float {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-14px) rotate(8deg); }
-}
-@keyframes party-card-twinkle {
-  0%, 100% { opacity: 0.55; transform: scale(1); }
-  50% { opacity: 0.18; transform: scale(0.85); }
-}
-@keyframes party-card-wiggle {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-4deg); }
-  75% { transform: rotate(4deg); }
-}
-@keyframes party-card-sway {
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(-5px); }
-}
-@keyframes party-card-balloon {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-10px) scale(1.05); }
-}
-@keyframes party-card-bob {
-  0%, 100% { transform: translateY(0) rotate(-2deg); }
-  50% { transform: translateY(-12px) rotate(2deg); }
-}
-`;
+// ── main component ────────────────────────────────────────────────────────────
 
 const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props }) => {
-  const potluckItems = Array.isArray(event?.potluckItems) ? event.potluckItems : [];
-  const guestList = Array.isArray(event?.guestList) ? event.guestList.filter((guest) => String(guest?.name || '').trim()) : [];
-  const theme = String(event?.theme || '').trim();
-  const musicPlaylist = String(event?.musicPlaylist || '').trim();
+  const darkMode = props.darkMode || false;
+  const accent   = props.accent   || '#f59e0b'; // warm amber — party accent
+
+  // party-specific data
+  const potluckItems    = Array.isArray(event?.potluckItems) ? event.potluckItems : [];
+  const guestList       = Array.isArray(event?.guestList) ? event.guestList.filter((g) => String(g?.name || '').trim()) : [];
+  const theme           = String(event?.theme || '').trim();
+  const musicPlaylist   = String(event?.musicPlaylist || '').trim();
   const playlistService = detectPlaylistService(musicPlaylist);
   const plusOnesAllowed = event?.plusOnesAllowed !== false;
-  const titleText = String(event?.title || '').trim();
-  const shouldShowLocationLine = Boolean(event?.location);
-  const coverImageUrl = getCardBackdropUrl(event);
-  const claimedPotluckCount = potluckItems.filter((item) => String(item?.claimedByUserId || item?.person || '').trim()).length;
-  const openPotluckCount = Math.max(0, potluckItems.length - claimedPotluckCount);
-  const potluckPreviewItems = potluckItems.slice(0, 3);
-  const guestSummary = guestList.length
-    ? `${guestList.filter((guest) => guest?.rsvp === 'yes').length}/${guestList.length} RSVP'd yes`
-    : (plusOnesAllowed ? 'Plus-ones welcome' : 'Invite only');
-  const currentUserId = String(props.currentUserId || '').trim();
+  const titleText       = String(event?.title || '').trim();
+  const coverImageUrl   = getCardBackdropUrl(event);
+  const notes           = normalizeEventNotes(event);
+
+  const claimedCount  = potluckItems.filter((i) => String(i?.claimedByUserId || i?.person || '').trim()).length;
+  const openCount     = Math.max(0, potluckItems.length - claimedCount);
+  const potluckPreview = potluckItems.slice(0, 3);
+  const guestSummary  = guestList.length
+    ? `${guestList.filter((g) => g?.rsvp === 'yes').length} / ${guestList.length} going`
+    : plusOnesAllowed ? 'Plus-ones welcome' : 'Invite only';
+  const currentUserId   = String(props.currentUserId || '').trim();
   const canClaimPotluck = Boolean(props.canClaimPotluck && typeof props.onClaimPotluck === 'function');
-  const openHeaderEditor =
-    onUpdateEventData && openEditor
-      ? () =>
-          openEditor({
-            variant: 'party',
-            title: 'Invitation',
-            fields: [
-              { key: 'title', label: 'Title', value: titleText, placeholder: 'House Party @ Home' },
-              { key: 'date', label: 'Date', value: String(event?.date || '').trim(), placeholder: '2026-04-12' },
-              { key: 'time', label: 'Time', value: String(event?.time || '').trim(), placeholder: '7:00 PM' },
-              { key: 'location', label: 'Location', type: 'location', value: String(event?.location || '').trim(), placeholder: 'Search venue...' },
-            ],
-            onSave: (values) =>
-              onUpdateEventData({
-                title: String(values.title || '').trim(),
-                date: String(values.date || '').trim(),
-                time: String(values.time || '').trim(),
-                location: String(values.location || '').trim(),
-              }),
-          })
-      : onEdit;
-  const openCoverEditor = onUpdateEventData && openEditor
-    ? () =>
-        openEditor({
-          variant: 'party',
-          title: coverImageUrl ? 'Change Cover Photo' : 'Add Cover Photo',
-          fields: [
-            { key: 'coverImageUrl', label: 'Cover photo', type: 'image-upload', value: coverImageUrl },
-          ],
-          onSave: (values) => onUpdateEventData({ coverImageUrl: String(values.coverImageUrl || '').trim() || null }),
-        })
-    : null;
+
+  // invitees
+  const invitees  = Array.isArray(event.invitees) ? event.invitees : [];
+  const host      = invitees.find((i) => i.role === 'host');
+  const preview   = invitees.slice(0, 6);
+  const overflow  = Math.max(0, invitees.length - 6);
+  const hostFirst = host ? (host.display_name || host.name || '').split(' ')[0] : null;
+
+  const dateShort  = formatDateShort(event.date);
+  const timePretty = formatTimePretty(event.time);
+
+  // colour tokens — body matches sports card (clean, neutral)
+  const heroBg      = 'linear-gradient(135deg, #1a0a2e 0%, #2d1b4e 55%, #1a1040 100%)'; // deep violet-purple
+  const heroText    = '#f8fafc';
+  const heroMuted   = 'rgba(248,250,252,0.5)';
+  const bodyBg      = darkMode ? '#0f0a1a' : '#ffffff';
+  const surfaceBg   = darkMode ? 'rgba(255,255,255,0.04)' : '#f8fafc';
+  const border      = darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
+  const primaryText = darkMode ? '#f1f5f9' : '#0f172a';
+  const secondaryText = darkMode ? '#94a3b8' : '#64748b';
+  const mutedText   = darkMode ? '#475569' : '#94a3b8';
+  const divider     = darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+
+  const canEdit = typeof onUpdateEventData === 'function' && typeof openEditor === 'function';
+
+  // ── editor openers ──
+  const openHeaderEditor = canEdit ? () => openEditor({
+    variant: 'party', title: 'Party Details',
+    fields: [
+      { key: 'title',    label: 'Title',    value: titleText,                        placeholder: 'House Party @ Mine' },
+      { key: 'date',     label: 'Date',     value: String(event?.date || '').trim(), placeholder: '2026-04-12' },
+      { key: 'time',     label: 'Time',     value: String(event?.time || '').trim(), placeholder: '8:00 PM' },
+      { key: 'location', label: 'Location', type: 'location', value: String(event?.location || '').trim(), placeholder: 'Search venue...' },
+    ],
+    onSave: (values) => onUpdateEventData({
+      title: String(values.title || '').trim(), date: String(values.date || '').trim(),
+      time: String(values.time || '').trim(), location: String(values.location || '').trim(),
+    }),
+  }) : onEdit;
+
+  const openCoverEditor = canEdit ? () => openEditor({
+    variant: 'party', title: coverImageUrl ? 'Change Cover' : 'Add Cover Photo',
+    fields: [{ key: 'coverImageUrl', label: 'Cover photo', type: 'image-upload', value: coverImageUrl }],
+    onSave: (values) => onUpdateEventData({ coverImageUrl: String(values.coverImageUrl || '').trim() || null }),
+  }) : null;
+
+  const openThemeEditor = canEdit ? () => openEditor({
+    variant: 'party', title: 'Theme',
+    fields: [{ key: 'theme', label: 'Theme', value: theme, placeholder: 'Game night, disco, rooftop glow...' }],
+    onSave: (values) => onUpdateEventData({ theme: String(values.theme || '').trim() }),
+  }) : undefined;
+
+  const openGuestEditor = canEdit ? () => openEditor({
+    variant: 'party', title: 'Guest List',
+    fields: [
+      { key: 'guestList', label: 'Guest List', type: 'guest-list', value: guestList, placeholder: 'Guest name' },
+      { key: 'plusOnesAllowed', label: 'Allow plus-ones', type: 'toggle', value: plusOnesAllowed },
+    ],
+    onSave: (values) => onUpdateEventData({
+      guestList: Array.isArray(values.guestList)
+        ? values.guestList.map((g) => ({ name: String(g?.name || '').trim(), rsvp: String(g?.rsvp || 'pending').toLowerCase() === 'yes' ? 'yes' : String(g?.rsvp || '').toLowerCase() === 'no' ? 'no' : 'pending' })).filter((g) => g.name)
+        : parseGuestListItems(values.guestList),
+      plusOnesAllowed: Boolean(values.plusOnesAllowed),
+    }),
+  }) : undefined;
+
+  const openMusicEditor = canEdit ? () => openEditor({
+    variant: 'party', title: 'Music',
+    fields: [{ key: 'musicPlaylist', label: 'Music link', type: 'music-link', value: musicPlaylist, placeholder: 'Paste a Spotify or Apple Music link...' }],
+    onSave: (values) => onUpdateEventData({ musicPlaylist: String(values.musicPlaylist || '').trim() }),
+  }) : undefined;
+
+  const openPotluckEditor = canEdit ? () => openEditor({
+    variant: 'party', title: 'Potluck',
+    fields: [{ key: 'potluckItems', label: 'Items', type: 'potluck-list', value: potluckItems, placeholder: 'Chips' }],
+    onSave: (values) => onUpdateEventData({ potluckItems: Array.isArray(values.potluckItems) ? normalizePotluckItems(values.potluckItems) : parseLineItems(values.potluckItems) }),
+  }) : undefined;
+
+  const openNotesEditor = canEdit ? () => openEditor({
+    variant: 'party', title: 'Party Notes',
+    fields: [{ key: 'description', label: 'Notes', type: 'textarea', rows: 5, value: notes, placeholder: 'Parking, dress code, what to bring...' }],
+    onSave: (values) => onUpdateEventData({ description: String(values.description || '').trim() }),
+  }) : onEdit;
 
   return (
-    <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/55 to-cyan-50/60 shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-fuchsia-400/20 dark:bg-gradient-to-br dark:from-[#15111f] dark:via-[#1b1930] dark:to-[#0f1727] dark:shadow-[0_24px_80px_rgba(0,0,0,0.38)]">
-      <style>{animationStyles}</style>
+    <div style={{
+      borderRadius: 20, overflow: 'hidden', width: '100%',
+      fontFamily: "'Caveat', cursive",
+      border: `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
+    }}>
+      <style>{ANIMATION_CSS}</style>
 
-      {coverImageUrl ? (
-        <>
-          <div
-            className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.5] saturate-[1.12] contrast-[1.03]"
-            style={{ backgroundImage: `url(${coverImageUrl})` }}
-          />
-          <div className={`pointer-events-none absolute inset-0 ${coverImageUrl ? 'bg-gradient-to-br from-white/22 via-rose-50/12 to-cyan-50/14 dark:from-[#15111f]/34 dark:via-[#1b1930]/24 dark:to-[#0f1727]/32' : 'bg-gradient-to-br from-white/78 via-rose-50/68 to-cyan-50/70 dark:from-[#15111f]/88 dark:via-[#1b1930]/84 dark:to-[#0f1727]/88'}`} />
-        </>
-      ) : null}
+      {/* ══════════════════════════════════════════
+          DARK HERO HEADER — balloons live here only
+      ══════════════════════════════════════════ */}
+      <div style={{
+        background: heroBg,
+        padding: '20px 20px 0',
+        position: 'relative', overflow: 'hidden',
+        minHeight: 140,
+      }}>
+        {/* cover image as subtle background tint */}
+        {coverImageUrl && (
+          <>
+            <div style={{
+              position: 'absolute', inset: 0, zIndex: 0,
+              backgroundImage: `url(${coverImageUrl})`,
+              backgroundSize: 'cover', backgroundPosition: 'center',
+              opacity: 0.18,
+            }} />
+            <div style={{ position: 'absolute', inset: 0, zIndex: 0, background: heroBg, opacity: 0.72 }} />
+          </>
+        )}
 
-      <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-42 dark:opacity-26">
-        <div className="absolute left-6 top-12 text-[2.8rem] opacity-80 drop-shadow-[0_10px_22px_rgba(236,72,153,0.22)] dark:opacity-70" style={{ animation: 'party-card-float 8.6s ease-in-out infinite 0.2s' }}>
-          🥂
-        </div>
-        <div className="absolute right-28 top-10 text-[2.4rem] opacity-75 drop-shadow-[0_10px_20px_rgba(6,182,212,0.2)] dark:opacity-68" style={{ animation: 'party-card-float 7.8s ease-in-out infinite 1.1s' }}>
-          🎉
-        </div>
-        <div className="absolute left-[38%] top-6 text-[2.2rem] opacity-70 drop-shadow-[0_10px_18px_rgba(139,92,246,0.18)] dark:opacity-64" style={{ animation: 'party-card-float 9.2s ease-in-out infinite 0.7s' }}>
-          🎊
-        </div>
-        <div className="absolute right-8 top-[8.5rem] text-[2.6rem] opacity-72 drop-shadow-[0_10px_22px_rgba(251,191,36,0.2)] dark:opacity-68" style={{ animation: 'party-card-float 8.1s ease-in-out infinite 1.8s' }}>
-          🍾
-        </div>
-        <div className="absolute left-[8%] top-[52%] text-[2.5rem] opacity-68 drop-shadow-[0_10px_20px_rgba(251,191,36,0.22)] dark:opacity-64" style={{ animation: 'party-card-float 8.9s ease-in-out infinite 1.4s' }}>
-          🍾
-        </div>
-        <div className="absolute right-[18%] top-[72%] text-[2.2rem] opacity-72 drop-shadow-[0_10px_20px_rgba(244,63,94,0.2)] dark:opacity-66" style={{ animation: 'party-card-float 9.5s ease-in-out infinite 0.9s' }}>
-          🥂
-        </div>
-        <div className="absolute left-[62%] top-[12%] text-[2rem] opacity-72 drop-shadow-[0_10px_18px_rgba(217,70,239,0.18)] dark:opacity-66" style={{ animation: 'party-card-float 7.4s ease-in-out infinite 1.5s' }}>
-          🎉
-        </div>
-        <div className="absolute left-[74%] top-[48%] text-[2rem] opacity-66 drop-shadow-[0_10px_18px_rgba(6,182,212,0.18)] dark:opacity-62" style={{ animation: 'party-card-float 8.7s ease-in-out infinite 0.6s' }}>
-          🎊
-        </div>
-        <div className="absolute left-[12%] top-[32%] h-10 w-24 rounded-full border-t-[5px] border-dashed border-fuchsia-300/90 opacity-80 dark:border-fuchsia-300/60 dark:opacity-60" style={{ transform: 'rotate(-12deg)', animation: 'party-card-sway 7.4s ease-in-out infinite' }} />
-        <div className="absolute right-[14%] top-[34%] h-10 w-24 rounded-full border-t-[5px] border-dashed border-cyan-300/90 opacity-80 dark:border-cyan-300/60 dark:opacity-60" style={{ transform: 'rotate(14deg)', animation: 'party-card-sway 8.2s ease-in-out infinite 0.9s' }} />
-        <div className="absolute left-[28%] top-[73%] h-10 w-28 rounded-full border-t-[5px] border-dashed border-amber-300/90 opacity-75 dark:border-amber-300/55 dark:opacity-58" style={{ transform: 'rotate(10deg)', animation: 'party-card-sway 8.8s ease-in-out infinite 0.6s' }} />
-        <div className="absolute left-[52%] top-[28%] h-12 w-32 rounded-full border-t-[5px] border-dashed border-violet-300/90 opacity-78 dark:border-violet-300/55 dark:opacity-58" style={{ transform: 'rotate(-8deg)', animation: 'party-card-sway 7.8s ease-in-out infinite 1.2s' }} />
-        <div className="absolute right-[24%] top-[82%] h-10 w-24 rounded-full border-t-[5px] border-dashed border-rose-300/90 opacity-75 dark:border-rose-300/55 dark:opacity-56" style={{ transform: 'rotate(-14deg)', animation: 'party-card-sway 8.6s ease-in-out infinite 0.4s' }} />
-        <div className="absolute -left-3 top-20 h-44 w-[4.75rem]" style={{ animation: 'party-card-bob 5.5s ease-in-out infinite' }}>
-          <div className="mx-auto h-28 w-[4.75rem] rounded-full bg-gradient-to-b from-fuchsia-300 to-pink-500 opacity-90 shadow-[0_18px_44px_rgba(236,72,153,0.28)] dark:opacity-88" />
-          <div className="mx-auto h-16 w-px bg-gradient-to-b from-pink-300/75 to-transparent dark:from-pink-300/45" />
-        </div>
-        <div className="absolute right-2 top-14 h-40 w-16" style={{ animation: 'party-card-bob 6.3s ease-in-out infinite 0.7s' }}>
-          <div className="mx-auto h-24 w-16 rounded-full bg-gradient-to-b from-sky-200 to-cyan-500 opacity-84 shadow-[0_18px_44px_rgba(6,182,212,0.24)] dark:opacity-82" />
-          <div className="mx-auto h-16 w-px bg-gradient-to-b from-cyan-300/75 to-transparent dark:from-cyan-300/45" />
-        </div>
-        <div className="absolute right-20 top-24 h-34 w-14" style={{ animation: 'party-card-bob 5.9s ease-in-out infinite 1.2s' }}>
-          <div className="mx-auto h-20 w-14 rounded-full bg-gradient-to-b from-violet-200 to-violet-500 opacity-82 shadow-[0_18px_44px_rgba(139,92,246,0.22)] dark:opacity-80" />
-          <div className="mx-auto h-14 w-px bg-gradient-to-b from-violet-300/75 to-transparent dark:from-violet-300/45" />
-        </div>
-        <div className="absolute left-[18%] top-10 h-28 w-11" style={{ animation: 'party-card-bob 6.1s ease-in-out infinite 0.4s' }}>
-          <div className="mx-auto h-16 w-11 rounded-full bg-gradient-to-b from-yellow-200 to-amber-400 opacity-80 shadow-[0_12px_32px_rgba(251,191,36,0.22)] dark:opacity-78" />
-          <div className="mx-auto h-12 w-px bg-gradient-to-b from-amber-300/75 to-transparent dark:from-amber-300/45" />
-        </div>
-        <div className="absolute left-[56%] top-[58%] h-38 w-16" style={{ animation: 'party-card-bob 6.8s ease-in-out infinite 1.6s' }}>
-          <div className="mx-auto h-24 w-16 rounded-full bg-gradient-to-b from-rose-200 to-fuchsia-500 opacity-78 shadow-[0_18px_44px_rgba(244,63,94,0.2)] dark:opacity-76" />
-          <div className="mx-auto h-14 w-px bg-gradient-to-b from-rose-300/75 to-transparent dark:from-rose-300/45" />
-        </div>
-        <div className="absolute right-[36%] top-[63%] h-32 w-14" style={{ animation: 'party-card-bob 7.1s ease-in-out infinite 0.3s' }}>
-          <div className="mx-auto h-20 w-14 rounded-full bg-gradient-to-b from-cyan-200 to-sky-500 opacity-76 shadow-[0_18px_44px_rgba(59,130,246,0.18)] dark:opacity-74" />
-          <div className="mx-auto h-12 w-px bg-gradient-to-b from-sky-300/75 to-transparent dark:from-sky-300/45" />
-        </div>
+        {/* balloons + confetti — right side only */}
+        <HeroDecorations />
 
-        <div className="absolute left-[10%] top-[15%] h-4 w-4 rotate-12 rounded-sm bg-gradient-to-br from-pink-400 to-rose-400 opacity-90 dark:opacity-90" style={{ animation: 'party-card-float 8s ease-in-out infinite' }} />
-        <div className="absolute left-[25%] top-[45%] h-3 w-3 rotate-45 rounded-full bg-gradient-to-br from-blue-400 to-cyan-400 opacity-90 dark:opacity-86" style={{ animation: 'party-card-float 6s ease-in-out infinite 1s' }} />
-        <div className="absolute right-[15%] top-[25%] h-6 w-2 rotate-[30deg] rounded-full bg-gradient-to-b from-yellow-300 to-fuchsia-400 opacity-88 dark:opacity-84" style={{ animation: 'party-card-float 7s ease-in-out infinite 0.5s' }} />
-        <div className="absolute left-[70%] top-[60%] h-3.5 w-3.5 rotate-[60deg] bg-gradient-to-br from-purple-400 to-pink-400 opacity-86 dark:opacity-84" style={{ animation: 'party-card-float 9s ease-in-out infinite 1.5s' }} />
-        <div className="absolute right-[30%] top-[70%] h-4 w-4 -rotate-12 rounded-sm bg-gradient-to-br from-green-400 to-emerald-400 opacity-82 dark:opacity-82" style={{ animation: 'party-card-float 8.5s ease-in-out infinite 2s' }} />
-        <div className="absolute left-[45%] top-[35%] h-3 w-3 rotate-90 bg-gradient-to-br from-fuchsia-400 to-red-400 opacity-92 dark:opacity-86" style={{ animation: 'party-card-float 7.5s ease-in-out infinite 0.8s' }} />
-        <div className="absolute right-[60%] top-[80%] h-5 w-2 rotate-[15deg] rounded-full bg-gradient-to-b from-pink-400 to-purple-400 opacity-86 dark:opacity-84" style={{ animation: 'party-card-float 6.5s ease-in-out infinite 1.2s' }} />
-        <div className="absolute right-[20%] top-[50%] h-3 w-3 rotate-[75deg] rounded-sm bg-gradient-to-br from-cyan-400 to-blue-400 opacity-84 dark:opacity-82" style={{ animation: 'party-card-float 8s ease-in-out infinite 2.5s' }} />
-        <div className="absolute left-[15%] top-[90%] h-2.5 w-2.5 rotate-45 bg-yellow-400 opacity-100 dark:opacity-90" style={{ animation: 'party-card-twinkle 3s ease-in-out infinite' }} />
-        <div className="absolute right-[25%] top-[20%] h-2 w-2 rotate-12 bg-pink-400 opacity-95 dark:opacity-88" style={{ animation: 'party-card-twinkle 2.5s ease-in-out infinite 0.5s' }} />
-        <div className="absolute left-[80%] top-[75%] h-2.5 w-2.5 rotate-[30deg] bg-fuchsia-400 opacity-95 dark:opacity-88" style={{ animation: 'party-card-twinkle 3.5s ease-in-out infinite 1s' }} />
-        <div className="absolute right-[75%] top-[40%] h-2 w-2 rotate-[60deg] bg-purple-400 opacity-84 dark:opacity-84" style={{ animation: 'party-card-twinkle 2.8s ease-in-out infinite 1.5s' }} />
-        <div className="absolute left-[36%] top-[16%] h-2.5 w-5 rotate-[18deg] rounded-full bg-rose-300 opacity-88 dark:opacity-84" style={{ animation: 'party-card-float 7.7s ease-in-out infinite 0.3s' }} />
-        <div className="absolute left-[58%] top-[22%] h-4 w-2 -rotate-[22deg] rounded-full bg-cyan-300 opacity-88 dark:opacity-84" style={{ animation: 'party-card-float 6.8s ease-in-out infinite 1.1s' }} />
-        <div className="absolute left-[52%] top-[74%] h-3 w-5 rotate-[28deg] rounded-full bg-lime-300 opacity-78 dark:opacity-76" style={{ animation: 'party-card-float 7.2s ease-in-out infinite 1.8s' }} />
-        <div className="absolute right-[9%] top-[62%] h-3.5 w-3.5 rotate-[35deg] rounded-sm bg-red-400 opacity-82 dark:opacity-82" style={{ animation: 'party-card-float 8.8s ease-in-out infinite 0.9s' }} />
-      </div>
-
-      <div className={`relative border-b-2 border-fuchsia-200/70 px-6 py-6 dark:border-fuchsia-400/15 sm:px-7 ${coverImageUrl ? 'bg-white/6 dark:bg-white/[0.03]' : 'bg-gradient-to-br from-white via-rose-50/40 to-cyan-50/45 dark:bg-gradient-to-br dark:from-[#211533] dark:via-[#1c2740] dark:to-[#19162d]'}`}>
-        {(props.onEdit || props.onDelete) ? (
-          <div className="absolute right-6 top-6 z-10 flex items-center gap-2">
-            {props.onEdit ? (
-              <button
-                className="rounded-full border-2 border-fuchsia-200 bg-white/95 p-2.5 text-fuchsia-600 shadow-sm transition-all hover:border-fuchsia-300 hover:text-fuchsia-800 hover:shadow-md dark:border-fuchsia-400/20 dark:bg-white/8 dark:text-fuchsia-200 dark:hover:bg-white/12 dark:hover:text-white"
-                onClick={props.onEdit}
-                type="button"
-              >
-                <EditIcon />
+        {/* edit / delete controls */}
+        {(props.onEdit || props.onDelete || openCoverEditor) && (
+          <div style={{ position: 'absolute', top: 14, left: 16, display: 'flex', gap: 7, zIndex: 10 }}>
+            {openCoverEditor && (
+              <button onClick={openCoverEditor} type="button" style={{
+                width: 30, height: 30, borderRadius: '50%', cursor: 'pointer',
+                background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.18)',
+                color: 'rgba(255,255,255,0.7)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }} title={coverImageUrl ? 'Change cover' : 'Add cover'}>
+                <Camera style={{ width: 13, height: 13 }} />
               </button>
-            ) : null}
-            {props.onDelete ? (
-              <button
-                className="rounded-full border-2 border-fuchsia-200 bg-white/95 p-2.5 text-fuchsia-600 shadow-sm transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-600 hover:shadow-md dark:border-fuchsia-400/20 dark:bg-white/8 dark:text-fuchsia-200 dark:hover:border-red-400/20 dark:hover:bg-red-500/10 dark:hover:text-red-400"
-                onClick={props.onDelete}
-                type="button"
-              >
-                <TrashIcon />
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-
-        <div className={`relative mx-auto max-w-[30rem] rounded-[28px] border border-fuchsia-200/80 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:border-fuchsia-400/15 dark:backdrop-blur-[12px] ${coverImageUrl ? 'bg-white/42 dark:bg-[rgba(38,28,57,0.44)]' : 'bg-white/82 dark:bg-[rgba(38,28,57,0.76)]'}`}>
-          {typeof openCoverEditor === 'function' ? (
-            <button
-              type="button"
-              onClick={openCoverEditor}
-              className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-fuchsia-200 bg-white/92 text-fuchsia-600 shadow-sm transition hover:border-fuchsia-300 hover:bg-white hover:text-fuchsia-700 dark:border-white/10 dark:bg-white/10 dark:text-fuchsia-200 dark:hover:bg-white/15 dark:hover:text-white"
-              title={coverImageUrl ? 'Change cover photo' : 'Add cover photo'}
-            >
-              <CameraIcon />
-            </button>
-          ) : null}
-          <div className="pointer-events-none absolute inset-0 hidden overflow-hidden dark:block">
-            <div className="absolute -left-2 top-6 h-16 w-11 rounded-full bg-gradient-to-b from-fuchsia-300/45 to-pink-500/55 blur-[0.2px]" style={{ animation: 'party-card-bob 5.8s ease-in-out infinite' }} />
-            <div className="absolute left-4 top-[4.5rem] h-10 w-px bg-gradient-to-b from-fuchsia-200/70 to-transparent" />
-            <div className="absolute right-3 top-5 h-14 w-10 rounded-full bg-gradient-to-b from-cyan-200/40 to-cyan-500/55 blur-[0.2px]" style={{ animation: 'party-card-bob 6.4s ease-in-out infinite 0.8s' }} />
-            <div className="absolute right-7 top-[4.1rem] h-9 w-px bg-gradient-to-b from-cyan-200/60 to-transparent" />
-            <div className="absolute right-16 top-12 h-12 w-9 rounded-full bg-gradient-to-b from-violet-200/35 to-violet-500/45 blur-[0.2px]" style={{ animation: 'party-card-bob 6.9s ease-in-out infinite 1.2s' }} />
-            <div className="absolute right-[4.7rem] top-[5rem] h-7 w-px bg-gradient-to-b from-violet-200/55 to-transparent" />
-          </div>
-          <div className="mx-auto max-w-[24rem] rounded-[22px] border border-white/60 bg-white/48 px-4 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.08)] backdrop-blur-md dark:border-white/10 dark:bg-black/14">
-            <div className="mb-3 flex items-center justify-center">
-              <div className="text-[15px] font-semibold text-fuchsia-700 dark:text-fuchsia-200">
-                You're Invited
-              </div>
-            </div>
-
-            {typeof openHeaderEditor === 'function' ? (
-              <button
-                type="button"
-                onClick={openHeaderEditor}
-                className="mx-auto block rounded-2xl px-2 py-1 text-center transition-colors hover:bg-white/30 dark:hover:bg-white/5"
-              >
-                <h3 className="text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white sm:text-[36px]">
-                  {event?.title || 'Untitled party'}
-                </h3>
-              </button>
-            ) : (
-              <h3 className="relative text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white sm:text-[36px]">
-                {event?.title || 'Untitled party'}
-              </h3>
             )}
-
-            <div className="mx-auto mt-4 h-px w-24 bg-gradient-to-r from-transparent via-fuchsia-400 to-transparent dark:via-cyan-300/80" />
-
-            <div className="mt-4 space-y-2 text-[15px] text-gray-700 dark:text-gray-200">
-              {typeof openHeaderEditor === 'function' ? (
-                <button
-                  type="button"
-                  onClick={openHeaderEditor}
-                  className="mx-auto block rounded-2xl px-3 py-1.5 transition-colors hover:bg-white/30 dark:hover:bg-white/5"
-                >
-                  <div className="font-normal">{formatEventDateTime(event?.date, event?.time)}</div>
-                  {shouldShowLocationLine ? <div className="mt-1 font-normal">{event.location}</div> : null}
-                </button>
-              ) : (
-                <>
-                  <div className="font-normal">{formatEventDateTime(event?.date, event?.time)}</div>
-                  {shouldShowLocationLine ? <div className="font-normal">{event.location}</div> : null}
-                </>
-              )}
-              {theme ? (
-                <div className="inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-50/70 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-fuchsia-700 dark:border-fuchsia-400/20 dark:bg-fuchsia-500/10 dark:text-fuchsia-200">
-                  {theme}
-                </div>
-              ) : null}
-            </div>
-
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
-              <span className="rounded-full border border-cyan-200 bg-cyan-50/88 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-cyan-700 shadow-sm dark:border-cyan-400/20 dark:bg-cyan-500/12 dark:text-cyan-200">
-                {plusOnesAllowed ? 'Plus-Ones Welcome' : 'Invite Only'}
-              </span>
-              {event?.location ? <ActionPill href={buildMapHref(event.location)} subdued>View map</ActionPill> : null}
-            </div>
+            {props.onEdit && (
+              <button onClick={props.onEdit} type="button" style={{
+                width: 30, height: 30, borderRadius: '50%', cursor: 'pointer',
+                background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.18)',
+                color: 'rgba(255,255,255,0.7)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Edit3 style={{ width: 13, height: 13 }} />
+              </button>
+            )}
+            {props.onDelete && (
+              <button onClick={props.onDelete} type="button" style={{
+                width: 30, height: 30, borderRadius: '50%', cursor: 'pointer',
+                background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.18)',
+                color: 'rgba(255,255,255,0.7)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Trash2 style={{ width: 13, height: 13 }} />
+              </button>
+            )}
           </div>
+        )}
+
+        {/* party badge + privacy */}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10, position: 'relative', zIndex: 1 }}>
+          <span style={{
+            background: 'rgba(245,158,11,0.25)', color: '#fcd34d',
+            fontSize: 10, fontWeight: 700, padding: '3px 10px',
+            borderRadius: 999, border: '1px solid rgba(245,158,11,0.35)',
+          }}>
+            🎉 Party
+          </span>
+          {theme && (
+            <span style={{
+              background: 'rgba(255,255,255,0.1)', color: heroMuted,
+              fontSize: 10, fontWeight: 600, padding: '3px 10px',
+              borderRadius: 999, border: '1px solid rgba(255,255,255,0.15)',
+              textTransform: 'capitalize',
+            }}>
+              {theme}
+            </span>
+          )}
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            background: 'rgba(255,255,255,0.08)', color: heroMuted,
+            fontSize: 10, fontWeight: 600, padding: '3px 10px',
+            borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)',
+          }}>
+            {event.is_public ? <Globe style={{ width: 9, height: 9 }} /> : <Lock style={{ width: 9, height: 9 }} />}
+            {event.is_public ? 'Public' : 'Private'}
+          </span>
+        </div>
+
+        {/* title */}
+        <div style={{
+          fontSize: 26, fontWeight: 900, color: heroText,
+          letterSpacing: '-0.02em', lineHeight: 1.15,
+          marginBottom: 10, position: 'relative', zIndex: 1,
+          paddingRight: 80, // keep clear of balloons
+        }}>
+          {titleText || 'Untitled Party'}
+        </div>
+
+        {/* meta row */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 14,
+          flexWrap: 'wrap', marginBottom: 12,
+          position: 'relative', zIndex: 1,
+        }}>
+          {dateShort && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: heroMuted }}>
+              <Calendar style={{ width: 11, height: 11 }} />{dateShort}
+            </span>
+          )}
+          {timePretty && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: heroMuted }}>
+              <Clock style={{ width: 11, height: 11 }} />{timePretty}
+            </span>
+          )}
+          {event.location && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: heroMuted }}>
+              <MapPin style={{ width: 11, height: 11 }} />
+              <span style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {event.location}
+              </span>
+            </span>
+          )}
+        </div>
+
+        {/* tab bar — flush to hero bottom */}
+        <div style={{
+          display: 'flex', marginLeft: -20, marginRight: -20,
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+          position: 'relative', zIndex: 1,
+        }}>
+          {['Info', 'People', 'Chat', 'Map'].map((tab, i) => {
+            const active = i === 0;
+            return (
+              <div key={tab} style={{
+                flex: 1, padding: '11px 0',
+                fontSize: 12, fontWeight: active ? 600 : 400,
+                textAlign: 'center', cursor: 'pointer',
+                color: active ? heroText : heroMuted,
+                background: active ? bodyBg : 'transparent',
+                borderTop: active ? `2px solid ${accent}` : '2px solid transparent',
+                fontFamily: "'Caveat', cursive",
+              }}>
+                {tab}
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      <div className="relative space-y-5 px-6 py-6 sm:px-7">
+      {/* ══════════════════════════════════════════
+          BODY — clean, no decorations
+      ══════════════════════════════════════════ */}
+      <div style={{
+        background: bodyBg,
+        padding: '16px 16px 20px',
+        display: 'flex', flexDirection: 'column', gap: 10,
+      }}>
+
+        {/* who's coming */}
+        {invitees.length > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '10px 14px', borderRadius: 14,
+            background: surfaceBg, border: `1px solid ${border}`,
+          }}>
+            <div style={{ display: 'flex', paddingLeft: 5 }}>
+              {preview.map((inv, i) => (
+                <GuestPip key={inv.id || i} name={inv.display_name || inv.name}
+                  role={inv.role} accent={accent} darkMode={darkMode} size={28} />
+              ))}
+              {overflow > 0 && (
+                <div style={{
+                  width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                  background: darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)',
+                  border: `2px solid ${border}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 10, fontWeight: 900, color: secondaryText,
+                  marginLeft: -5, fontFamily: "'Caveat', cursive",
+                }}>+{overflow}</div>
+              )}
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: secondaryText }}>
+              {invitees.length === 1 ? '1 person going' : `${invitees.length} people going`}
+            </span>
+          </div>
+        )}
+
+        {/* RSVP / join button */}
+        {!props.hidePrimaryAction && props.onPrimaryAction && props.primaryActionLabel && (
+          <button onClick={props.onPrimaryAction} style={{
+            width: '100%', padding: '13px 0', borderRadius: 14, border: 'none',
+            cursor: 'pointer', background: accent, color: '#fff',
+            fontSize: 16, fontWeight: 900, fontFamily: "'Caveat', cursive",
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            position: 'relative', overflow: 'hidden',
+          }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(105deg,transparent 35%,rgba(255,255,255,0.1) 50%,transparent 65%)', pointerEvents: 'none' }} />
+            {props.primaryActionLabel}
+          </button>
+        )}
+
+        {/* ── Invitation Details — theme / guests / music ── */}
         <Section
           title="Invitation Details"
+          border={border} surfaceBg={surfaceBg}
+          primaryText={primaryText} secondaryText={secondaryText}
         >
-          <div className="grid gap-3 sm:grid-cols-3">
-            <button
-              type="button"
-              onClick={
-                onUpdateEventData && openEditor
-                  ? () =>
-                      openEditor({
-                        variant: 'party',
-                        title: 'Theme',
-                        fields: [
-                          { key: 'theme', label: 'Theme', value: theme, placeholder: 'Game night, disco, rooftop glow...' },
-                        ],
-                        onSave: (values) =>
-                          onUpdateEventData({
-                            theme: String(values.theme || '').trim(),
-                          }),
-                      })
-                  : undefined
-              }
-              className="relative overflow-hidden rounded-2xl border border-slate-200/85 bg-white/93 px-4 py-4 text-left backdrop-blur-md transition-all hover:border-fuchsia-200 hover:shadow-sm dark:border-white/10 dark:bg-slate-950/55 dark:hover:border-fuchsia-400/20"
-            >
-              <PartyTileConfetti />
-              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-fuchsia-600 dark:text-fuchsia-300">Theme</div>
-              <div className="relative mt-2 text-sm font-semibold text-gray-900 dark:text-white">{theme || 'Open celebration vibe'}</div>
-            </button>
-            <button
-              type="button"
-              onClick={
-                onUpdateEventData && openEditor
-                  ? () =>
-                      openEditor({
-                        variant: 'party',
-                        title: 'Guest List',
-                        fields: [
-                          {
-                            key: 'guestList',
-                            label: 'Guest List',
-                            type: 'guest-list',
-                            value: guestList,
-                            placeholder: 'Guest name',
-                          },
-                          { key: 'plusOnesAllowed', label: 'Allow plus-ones', type: 'toggle', value: plusOnesAllowed, toggleLabel: 'Allow plus-ones' },
-                        ],
-                        onSave: (values) =>
-                          onUpdateEventData({
-                            guestList: Array.isArray(values.guestList)
-                              ? values.guestList
-                                  .map((guest) => ({
-                                    name: String(guest?.name || '').trim(),
-                                    rsvp: String(guest?.rsvp || 'pending').trim().toLowerCase() === 'yes'
-                                      ? 'yes'
-                                      : String(guest?.rsvp || 'pending').trim().toLowerCase() === 'no'
-                                        ? 'no'
-                                        : 'pending',
-                                  }))
-                                  .filter((guest) => guest.name)
-                              : parseGuestListItems(values.guestList),
-                            plusOnesAllowed: Boolean(values.plusOnesAllowed),
-                          }),
-                      })
-                  : undefined
-              }
-              className="relative overflow-hidden rounded-2xl border border-slate-200/85 bg-white/93 px-4 py-4 text-left backdrop-blur-md transition-all hover:border-cyan-200 hover:shadow-sm dark:border-white/10 dark:bg-slate-950/55 dark:hover:border-cyan-400/20"
-            >
-              <PartyTileConfetti />
-              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">Guest List</div>
-              <div className="relative mt-2 text-sm font-semibold text-gray-900 dark:text-white">
-                {guestSummary}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+
+            {/* Theme */}
+            <button onClick={openThemeEditor} type="button" style={{
+              padding: '10px 12px', borderRadius: 12, textAlign: 'left',
+              border: `1px solid ${border}`, background: bodyBg,
+              cursor: openThemeEditor ? 'pointer' : 'default',
+            }}>
+              <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: accent, marginBottom: 5 }}>Theme</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: primaryText, lineHeight: 1.3 }}>
+                {theme || <span style={{ color: mutedText, fontStyle: 'italic' }}>None set</span>}
               </div>
-              {guestList.length ? (
-                <div className="relative mt-3 space-y-1.5">
-                  {guestList.slice(0, 3).map((guest, index) => (
-                    <div key={`${guest.name}-${index}`} className="flex items-center justify-between gap-2 text-xs">
-                      <span className="truncate text-gray-600 dark:text-gray-300">{guest.name}</span>
-                      <span
-                        className={`shrink-0 rounded-full px-2 py-0.5 font-semibold uppercase tracking-[0.12em] ${
-                          guest.rsvp === 'yes'
-                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
-                            : guest.rsvp === 'no'
-                              ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-200'
-                              : 'bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300'
-                        }`}
-                      >
-                        {guest.rsvp === 'yes' ? 'Yes' : guest.rsvp === 'no' ? 'No' : 'Pending'}
+            </button>
+
+            {/* Guests */}
+            <button onClick={openGuestEditor} type="button" style={{
+              padding: '10px 12px', borderRadius: 12, textAlign: 'left',
+              border: `1px solid ${border}`, background: bodyBg,
+              cursor: openGuestEditor ? 'pointer' : 'default',
+            }}>
+              <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: secondaryText, marginBottom: 5 }}>Guests</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: primaryText, lineHeight: 1.3 }}>{guestSummary}</div>
+              {guestList.length > 0 && (
+                <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  {guestList.slice(0, 2).map((g, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: secondaryText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{g.name}</span>
+                      <span style={{
+                        fontSize: 9, fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase',
+                        padding: '1px 5px', borderRadius: 999, flexShrink: 0,
+                        background: g.rsvp === 'yes' ? '#d1fae5' : g.rsvp === 'no' ? '#fee2e2' : darkMode ? 'rgba(255,255,255,0.08)' : '#f3f4f6',
+                        color: g.rsvp === 'yes' ? '#065f46' : g.rsvp === 'no' ? '#991b1b' : secondaryText,
+                      }}>
+                        {g.rsvp === 'yes' ? 'Yes' : g.rsvp === 'no' ? 'No' : 'Pending'}
                       </span>
                     </div>
                   ))}
-                  {guestList.length > 3 ? (
-                    <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
-                      +{guestList.length - 3} more
-                    </div>
-                  ) : null}
+                  {guestList.length > 2 && <span style={{ fontSize: 11, color: mutedText, fontWeight: 700 }}>+{guestList.length - 2} more</span>}
                 </div>
-              ) : null}
+              )}
             </button>
-            <button
-              type="button"
-              onClick={
-                onUpdateEventData && openEditor
-                  ? () =>
-                        openEditor({
-                          variant: 'party',
-                          title: 'Music',
-                          fields: [
-                          {
-                            key: 'musicPlaylist',
-                            label: 'Music link',
-                            type: 'music-link',
-                            value: musicPlaylist,
-                            placeholder: 'Paste a Spotify or Apple Music link...',
-                            spotifyHref: 'https://open.spotify.com/',
-                            appleMusicHref: 'https://music.apple.com/',
-                          },
-                          ],
-                          onSave: (values) =>
-                            onUpdateEventData({
-                            musicPlaylist: String(values.musicPlaylist || '').trim(),
-                          }),
-                      })
-                  : undefined
-              }
-              className="relative overflow-hidden rounded-2xl border border-slate-200/85 bg-white/93 px-4 py-4 text-left backdrop-blur-md transition-all hover:border-violet-200 hover:shadow-sm dark:border-white/10 dark:bg-slate-950/55 dark:hover:border-violet-400/20"
-            >
-              <PartyTileConfetti />
-              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">Music</div>
-              <div className="relative mt-2 text-sm font-semibold text-gray-900 dark:text-white">
-                {musicPlaylist ? (playlistService?.name || 'Playlist ready') : 'Set the soundtrack'}
+
+            {/* Music */}
+            <button onClick={openMusicEditor} type="button" style={{
+              padding: '10px 12px', borderRadius: 12, textAlign: 'left',
+              border: `1px solid ${border}`, background: bodyBg,
+              cursor: openMusicEditor ? 'pointer' : 'default',
+            }}>
+              <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: secondaryText, marginBottom: 5 }}>Music</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: primaryText, lineHeight: 1.3 }}>
+                {musicPlaylist ? (playlistService?.name || 'Ready') : <span style={{ color: mutedText, fontStyle: 'italic' }}>Not set</span>}
               </div>
-              {musicPlaylist ? (
-                isProbablyUrl(musicPlaylist) ? (
-                  <div className="relative mt-3 flex flex-wrap gap-2">
-                    <a
-                      href={musicPlaylist}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(event) => event.stopPropagation()}
-                      className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em] transition-opacity hover:opacity-90 ${playlistService?.chipClass || 'bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-200'}`}
-                    >
-                      <PlaylistServiceIcon service={playlistService} className="h-3.5 w-3.5" />
-                      <span>{playlistService?.name || 'Playlist'}</span>
-                    </a>
-                  </div>
-                ) : (
-                  <div className="relative mt-2 text-xs font-medium text-gray-500 dark:text-gray-400">{musicPlaylist}</div>
-                )
-              ) : null}
+              {musicPlaylist && isProbablyUrl(musicPlaylist) && (
+                <div style={{ marginTop: 6 }}>
+                  <a href={musicPlaylist} target="_blank" rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 800,
+                      background: playlistService?.name === 'Spotify' ? '#1ed76018' : `${accent}18`,
+                      color: playlistService?.name === 'Spotify' ? '#166534' : accent,
+                      textDecoration: 'none',
+                    }}>
+                    {playlistService?.name === 'Spotify' && <SpotifyIcon />}
+                    {playlistService?.name || 'Open'}
+                  </a>
+                </div>
+              )}
             </button>
           </div>
         </Section>
 
-        {potluckItems.length > 0 ? (
+        {/* ── Potluck ── */}
+        {(potluckItems.length > 0 || openPotluckEditor) && (
           <Section
             title="Potluck"
-            subtitle={`${potluckItems.length} items • ${claimedPotluckCount} claimed${openPotluckCount ? ` • ${openPotluckCount} open` : ''}`}
-            actions={onUpdateEventData && openEditor ? (
-              <ActionPill
-                onClick={() =>
-                  openEditor({
-                    variant: 'party',
-                    title: 'Potluck Signups',
-                    fields: [
-                      {
-                        key: 'potluckItems',
-                        label: 'Potluck list',
-                        type: 'potluck-list',
-                        value: potluckItems,
-                        placeholder: 'Chips',
-                      },
-                    ],
-                    onSave: (values) => onUpdateEventData({
-                      potluckItems: Array.isArray(values.potluckItems)
-                        ? normalizePotluckItems(values.potluckItems)
-                        : parseLineItems(values.potluckItems),
-                    }),
-                  })
-                }
-              >
-                Edit
-              </ActionPill>
-            ) : null}
+            subtitle={potluckItems.length > 0 ? `${potluckItems.length} items · ${claimedCount} claimed${openCount ? ` · ${openCount} open` : ''}` : undefined}
+            actions={openPotluckEditor ? <EditPill onClick={openPotluckEditor} accent={accent}>{potluckItems.length > 0 ? 'Edit' : 'Add'}</EditPill> : null}
+            border={border} surfaceBg={surfaceBg} primaryText={primaryText} secondaryText={secondaryText}
           >
-            <div className="space-y-2.5">
-              {potluckPreviewItems.map((item, index) => (
-                <div
-                  key={`${item?.item || item}-${index}`}
-                  className="group/item relative overflow-hidden flex items-center justify-between gap-3 rounded-2xl border border-fuchsia-100/80 bg-white/88 px-3.5 py-2.5 text-sm shadow-sm transition-all hover:border-fuchsia-200 hover:shadow-md dark:border-fuchsia-500/10 dark:bg-white/[0.045] dark:hover:border-fuchsia-500/20"
-                >
-                  <PartyTileConfetti />
-                  <div className="relative min-w-0 flex-1">
-                    <div className="truncate font-semibold text-gray-900 dark:text-white">{item?.item || item}</div>
-                    <div className="mt-0.5 text-[11px] font-medium text-gray-500 dark:text-gray-400">
-                      {item?.person ? `Claimed by ${item.person}` : 'Open signup'}
+            {potluckItems.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {potluckPreview.map((item, idx) => (
+                  <div key={idx} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                    padding: '9px 12px', borderRadius: 12,
+                    border: `1px solid ${border}`, background: bodyBg,
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: primaryText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item?.item || item}</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: secondaryText, marginTop: 1 }}>
+                        {item?.person ? `Claimed by ${item.person}` : 'Open signup'}
+                      </div>
                     </div>
-                  </div>
-                  <div className="relative ml-2 flex shrink-0 items-center gap-2">
-                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${
-                      item?.person
-                        ? 'bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-500/10 dark:text-fuchsia-300'
-                        : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200'
-                    }`}>
-                      {item?.person ? 'Claimed' : 'Open'}
-                    </span>
-                    {canClaimPotluck ? (
-                      item?.claimedByUserId && item.claimedByUserId !== currentUserId ? null : (
-                        <button
-                          type="button"
-                          onClick={() => props.onClaimPotluck?.(index)}
-                          className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] transition ${
-                            item?.claimedByUserId === currentUserId
-                              ? 'bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-500/12 dark:text-rose-200 dark:hover:bg-rose-500/18'
-                              : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/12 dark:text-emerald-200 dark:hover:bg-emerald-500/18'
-                          }`}
-                        >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                      <span style={{
+                        padding: '2px 9px', borderRadius: 999,
+                        fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em',
+                        background: item?.person ? `${accent}18` : '#fef9c3',
+                        color: item?.person ? accent : '#854d0e',
+                      }}>
+                        {item?.person ? 'Claimed' : 'Open'}
+                      </span>
+                      {canClaimPotluck && (!item?.claimedByUserId || item.claimedByUserId === currentUserId) && (
+                        <button type="button" onClick={() => props.onClaimPotluck?.(idx)} style={{
+                          padding: '2px 9px', borderRadius: 999,
+                          fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em',
+                          cursor: 'pointer', border: 'none',
+                          background: item?.claimedByUserId === currentUserId ? '#fee2e2' : '#d1fae5',
+                          color: item?.claimedByUserId === currentUserId ? '#991b1b' : '#065f46',
+                        }}>
                           {item?.claimedByUserId === currentUserId ? 'Unclaim' : 'Claim'}
                         </button>
-                      )
-                    ) : null}
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-              {potluckItems.length > potluckPreviewItems.length ? (
-                <button
-                  type="button"
-                  onClick={() =>
-                    onUpdateEventData && openEditor
-                      ? openEditor({
-                          variant: 'party',
-                          title: 'Potluck Signups',
-                          fields: [
-                            {
-                              key: 'potluckItems',
-                              label: 'Potluck list',
-                              type: 'potluck-list',
-                              value: potluckItems,
-                              placeholder: 'Chips',
-                            },
-                          ],
-                          onSave: (values) => onUpdateEventData({
-                            potluckItems: Array.isArray(values.potluckItems)
-                              ? normalizePotluckItems(values.potluckItems)
-                              : parseLineItems(values.potluckItems),
-                          }),
-                        })
-                      : undefined
-                  }
-                  className="relative w-full overflow-hidden rounded-2xl border border-dashed border-fuchsia-200/90 bg-white/65 px-4 py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.16em] text-fuchsia-700 transition hover:border-fuchsia-300 hover:bg-fuchsia-50/70 dark:border-white/10 dark:bg-white/[0.03] dark:text-fuchsia-200 dark:hover:bg-white/[0.06]"
-                >
-                  <PartyTileConfetti />
-                  <span className="relative">+{potluckItems.length - potluckPreviewItems.length} more items</span>
-                </button>
-              ) : null}
-            </div>
+                ))}
+                {potluckItems.length > 3 && (
+                  <button type="button" onClick={openPotluckEditor} style={{
+                    width: '100%', padding: '8px 0', borderRadius: 12, cursor: 'pointer',
+                    background: 'transparent', border: `1px dashed ${accent}33`,
+                    fontSize: 12, fontWeight: 800, color: accent, fontFamily: "'Caveat', cursive",
+                  }}>
+                    +{potluckItems.length - 3} more items
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div style={{ fontSize: 13, fontWeight: 700, color: mutedText, fontStyle: 'italic' }}>
+                Nothing added yet.
+              </div>
+            )}
           </Section>
-        ) : (
-          <EmptySection
-            title="Potluck"
-            actions={onUpdateEventData && openEditor ? (
-              <ActionPill
-                onClick={() =>
-                  openEditor({
-                    variant: 'party',
-                title: 'Potluck Signups',
-                    fields: [
-                      {
-                        key: 'potluckItems',
-                        label: 'Potluck list',
-                        type: 'potluck-list',
-                        value: [],
-                        placeholder: 'Brownies',
-                      },
-                    ],
-                    onSave: (values) => onUpdateEventData({
-                      potluckItems: Array.isArray(values.potluckItems)
-                        ? normalizePotluckItems(values.potluckItems)
-                        : parseLineItems(values.potluckItems),
-                    }),
-                  })
-                }
-              >
-                Add
-              </ActionPill>
-            ) : null}
-          />
         )}
 
-        <NotesSection event={event} onEdit={onEdit} onUpdateEventData={onUpdateEventData} openEditor={openEditor} />
+        {/* ── Party Notes ── */}
+        {(notes || openNotesEditor) && (
+          <Section
+            title="Notes"
+            actions={openNotesEditor ? <EditPill onClick={openNotesEditor} accent={accent}>{notes ? 'Edit' : 'Add'}</EditPill> : null}
+            border={border} surfaceBg={surfaceBg} primaryText={primaryText} secondaryText={secondaryText}
+          >
+            {notes ? (
+              <div style={{ fontSize: 14, fontWeight: 700, color: primaryText, lineHeight: 1.65 }}>
+                {notes}
+              </div>
+            ) : (
+              <div style={{ fontSize: 13, fontWeight: 700, color: mutedText, fontStyle: 'italic' }}>
+                Nothing added yet.
+              </div>
+            )}
+          </Section>
+        )}
 
       </div>
     </div>
