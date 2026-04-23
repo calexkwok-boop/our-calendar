@@ -1403,6 +1403,7 @@ const RestaurantPage = ({
         @keyframes fadeUp { from { opacity:0; transform:translateY(14px) } to { opacity:1; transform:translateY(0) } }
         @keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:.5} }
       `}</style>
+      <div style={{ maxWidth: 768, margin: '0 auto', paddingTop: 24 }}>
 
       {/* ── Hero ── */}
       <div style={{ margin: '0 16px 16px', borderRadius: 28, padding: '32px 28px 28px', minHeight: 220, position: 'relative', overflow: 'hidden', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(201,161,93,0.2)'}`, background: heroBg }}>
@@ -1589,6 +1590,7 @@ const RestaurantPage = ({
               />
             ))
         }
+      </div>
       </div>
 
       {/* ── Detail sheet ── */}
