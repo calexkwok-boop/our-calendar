@@ -27942,13 +27942,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       }}
     >
       <div
-        className="relative w-full h-full sm:h-auto sm:max-w-lg sm:max-h-[90vh] overflow-hidden overscroll-contain"
+        className="relative w-full h-full sm:h-auto overflow-hidden overscroll-contain"
         style={{
           WebkitOverflowScrolling: 'touch',
           touchAction: 'pan-y',
           overscrollBehaviorY: 'contain',
-          height: 'calc(100dvh - max(2.75rem, env(safe-area-inset-top) + 1rem) - max(0px, env(safe-area-inset-bottom)) + 2px)',
-          maxHeight: 'calc(100dvh - max(2.75rem, env(safe-area-inset-top) + 1rem) - max(0px, env(safe-area-inset-bottom)) + 2px)'
+          width: '100%',
+          maxWidth: (isSelectedSportsPopup || isSelectedPartyPopup) ? 620 : 512,
+          height: 'calc(100dvh - max(2rem, env(safe-area-inset-top) + 0.5rem) - max(0px, env(safe-area-inset-bottom)) + 2px)',
+          maxHeight: 'calc(100dvh - max(2rem, env(safe-area-inset-top) + 0.5rem) - max(0px, env(safe-area-inset-bottom)) + 2px)'
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -27965,6 +27967,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             eventMetaFallback={eventMetaFallback}
             resolveHandleLikeLabel={resolveHandleLikeLabel}
             onLaunchRoundRobin={launchRoundRobinFromPopup}
+            onLaunchGauntlet={launchGauntletFromPopup}
+            onLaunchScramble={launchScrambleFromPopup}
+            onClose={closeSelectedPopup}
           />
         ) : isSelectedPartyPopup ? (
           <PartyEventCardOverlay
@@ -27978,6 +27983,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             initialEventId={selectedPopupId}
             eventMetaFallback={eventMetaFallback}
             resolveHandleLikeLabel={resolveHandleLikeLabel}
+            onClose={closeSelectedPopup}
           />
         ) : (
           <PopupEventPanel

@@ -33,6 +33,7 @@ export default function PartyEventCardOverlay({
   eventMetaFallback,
   currentUserProfilePhotoUrl = '',
   resolveHandleLikeLabel,
+  onClose,
 }) {
   const accent = activeLayerPageTheme?.accent || '#f59e0b';
   const [event, setEvent] = useState(() => normalizeEvent(eventMetaFallback || {}, eventMetaFallback || {}));
@@ -40,6 +41,9 @@ export default function PartyEventCardOverlay({
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState('');
   const fallbackRef = useRef(eventMetaFallback);
+  const sheetRef = useRef(null);
+  const dragStartYRef = useRef(null);
+  const dragCurrentYRef = useRef(0);
 
   const currentUserId = String(user?.id || '').trim();
   const effectiveDisplayName = String(displayName || '').trim()
@@ -230,36 +234,87 @@ export default function PartyEventCardOverlay({
     return updateEventData({ potluckItems: nextItems });
   };
 
+  const handleDragStart = (eventLike) => {
+    dragStartYRef.current = eventLike.clientY;
+    dragCurrentYRef.current = 0;
+  };
+  const handleDragMove = (eventLike) => {
+    if (dragStartYRef.current === null) return;
+    const deltaY = eventLike.clientY - dragStartYRef.current;
+    if (deltaY < 0) return;
+    dragCurrentYRef.current = deltaY;
+    if (sheetRef.current) sheetRef.current.style.transform = `translateY(${deltaY}px)`;
+  };
+  const handleDragEnd = () => {
+    if (dragStartYRef.current === null) return;
+    dragStartYRef.current = null;
+    if (dragCurrentYRef.current > 80) {
+      onClose?.();
+    } else if (sheetRef.current) {
+      sheetRef.current.style.transform = '';
+    }
+    dragCurrentYRef.current = 0;
+  };
+
   return (
     <div
+      ref={sheetRef}
       id="party-event-card-root"
       style={{
         height: '100%',
         width: '100%',
-        overflowY: 'auto',
+        overflow: 'hidden',
         overscrollBehavior: 'contain',
         WebkitOverflowScrolling: 'touch',
         borderRadius: 20,
+        background: darkMode ? '#0f0a1a' : '#fff',
+        transition: 'transform 0.2s',
       }}
     >
-      <PartyEventCard
-        event={routedEvent}
-        darkMode={darkMode}
-        accent={accent}
-        currentUserId={currentUserId}
-        currentUserName={effectiveDisplayName || 'Guest'}
-        onUpdateEventData={isHost ? updateEventData : undefined}
-        onClaimPotluck={handlePotluckClaim}
-        canClaimPotluck={Boolean(currentUserId && isMember)}
-        onPrimaryAction={handleJoin}
-        primaryActionLabel={joining ? 'Saving RSVP...' : 'RSVP'}
-        hidePrimaryAction={isMember || isFull}
-      />
-      {joinError ? (
-        <div style={{ marginTop: 10, color: '#ef4444', fontFamily: "'Caveat', cursive", fontWeight: 800 }}>
-          {joinError}
+      <div
+        onPointerDown={handleDragStart}
+        onPointerMove={handleDragMove}
+        onPointerUp={handleDragEnd}
+        onPointerLeave={handleDragEnd}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '12px 0 8px',
+          cursor: 'grab',
+          touchAction: 'none',
+          background: darkMode ? '#0f0a1a' : '#fff',
+        }}
+      >
+        <div
+          style={{
+            width: 42,
+            height: 5,
+            borderRadius: 999,
+            background: darkMode ? 'rgba(255,255,255,0.24)' : 'rgba(15,23,42,0.18)',
+          }}
+        />
+      </div>
+      <div style={{ height: 'calc(100% - 25px)', overflowY: 'auto', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
+        <PartyEventCard
+          event={routedEvent}
+          darkMode={darkMode}
+          accent={accent}
+          currentUserId={currentUserId}
+          currentUserName={effectiveDisplayName || 'Guest'}
+          onUpdateEventData={isHost ? updateEventData : undefined}
+          onClaimPotluck={handlePotluckClaim}
+          canClaimPotluck={Boolean(currentUserId && isMember)}
+          onPrimaryAction={handleJoin}
+          primaryActionLabel={joining ? 'Saving RSVP...' : 'RSVP'}
+          hidePrimaryAction={isMember || isFull}
+        />
+        {joinError ? (
+          <div style={{ marginTop: 10, color: '#ef4444', fontFamily: "'Caveat', cursive", fontWeight: 800 }}>
+            {joinError}
+          </div>
+        ) : null}
         </div>
-      ) : null}
     </div>
   );
 }

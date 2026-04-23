@@ -38,6 +38,7 @@ export default function SportsEventCardOverlay({
   onLaunchRoundRobin,
   onLaunchGauntlet,
   onLaunchScramble,
+  onClose,
 }) {
   const accent = activeLayerPageTheme?.accent || '#16a34a';
   const [activeScreen, setActiveScreen] = useState('detail');
@@ -47,6 +48,9 @@ export default function SportsEventCardOverlay({
   const [joinError, setJoinError] = useState('');
   const [copied, setCopied] = useState(false);
   const fallbackRef = useRef(eventMetaFallback);
+  const sheetRef = useRef(null);
+  const dragStartYRef = useRef(null);
+  const dragCurrentYRef = useRef(0);
 
   const effectiveDisplayName = String(displayName || '').trim()
     || (typeof resolveHandleLikeLabel === 'function'
@@ -221,6 +225,28 @@ export default function SportsEventCardOverlay({
       setCopied(true);
       setTimeout(() => setCopied(false), 1400);
     } catch {}
+  };
+
+  const handleDragStart = (eventLike) => {
+    dragStartYRef.current = eventLike.clientY;
+    dragCurrentYRef.current = 0;
+  };
+  const handleDragMove = (eventLike) => {
+    if (dragStartYRef.current === null) return;
+    const deltaY = eventLike.clientY - dragStartYRef.current;
+    if (deltaY < 0) return;
+    dragCurrentYRef.current = deltaY;
+    if (sheetRef.current) sheetRef.current.style.transform = `translateY(${deltaY}px)`;
+  };
+  const handleDragEnd = () => {
+    if (dragStartYRef.current === null) return;
+    dragStartYRef.current = null;
+    if (dragCurrentYRef.current > 80) {
+      onClose?.();
+    } else if (sheetRef.current) {
+      sheetRef.current.style.transform = '';
+    }
+    dragCurrentYRef.current = 0;
   };
 
   const primaryText = darkMode ? '#f8fafc' : 'var(--color-text-primary)';
@@ -403,45 +429,74 @@ export default function SportsEventCardOverlay({
 
   return (
     <div
+      ref={sheetRef}
       id="sports-event-card-root"
       style={{
         height: '100%',
         width: '100%',
-        overflowY: 'auto',
+        overflow: 'hidden',
         overscrollBehavior: 'contain',
         WebkitOverflowScrolling: 'touch',
         borderRadius: 20,
+        background: darkMode ? '#0f172a' : '#fff',
+        transition: 'transform 0.2s',
       }}
     >
-      {activeScreen === 'detail' ? (
-        <SportsEventCard
-          event={routedEvent}
-          darkMode={darkMode}
-          accent={accent}
-          activeTab="info"
-          onPrimaryAction={handleJoin}
-          primaryActionLabel={joining ? 'Joining...' : 'Join Event'}
-          onLeave={handleLeave}
-          isHost={isHost}
-          isMember={isMember}
-          isFull={isFull}
-          joining={joining}
-          joinError={joinError}
-          copied={copied}
-          onCopyLink={handleCopyLink}
-          onViewRoster={() => setActiveScreen('roster')}
-          onOpenChat={() => setActiveScreen('chat')}
-          onOpenMap={() => setActiveScreen('map')}
-          onStartPlay={() => setActiveScreen('game')}
-          memberCount={memberCount}
-          isLegacyInvalidEvent={!isUuid(event?.id)}
+      <div
+        onPointerDown={handleDragStart}
+        onPointerMove={handleDragMove}
+        onPointerUp={handleDragEnd}
+        onPointerLeave={handleDragEnd}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '12px 0 8px',
+          cursor: 'grab',
+          touchAction: 'none',
+          background: darkMode ? '#0f172a' : '#fff',
+        }}
+      >
+        <div
+          style={{
+            width: 42,
+            height: 5,
+            borderRadius: 999,
+            background: darkMode ? 'rgba(255,255,255,0.24)' : 'rgba(15,23,42,0.18)',
+          }}
         />
-      ) : (
-        <>
-          {renderTabs()}
-          {renderActiveScreen()}
-        </>
-      )}
+      </div>
+      <div style={{ height: 'calc(100% - 25px)', overflowY: 'auto', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
+        {activeScreen === 'detail' ? (
+          <SportsEventCard
+            event={routedEvent}
+            darkMode={darkMode}
+            accent={accent}
+            activeTab="info"
+            onPrimaryAction={handleJoin}
+            primaryActionLabel={joining ? 'Joining...' : 'Join Event'}
+            onLeave={handleLeave}
+            isHost={isHost}
+            isMember={isMember}
+            isFull={isFull}
+            joining={joining}
+            joinError={joinError}
+            copied={copied}
+            onCopyLink={handleCopyLink}
+            onViewRoster={() => setActiveScreen('roster')}
+            onOpenChat={() => setActiveScreen('chat')}
+            onOpenMap={() => setActiveScreen('map')}
+            onStartPlay={() => setActiveScreen('game')}
+            memberCount={memberCount}
+            isLegacyInvalidEvent={!isUuid(event?.id)}
+          />
+        ) : (
+          <>
+            {renderTabs()}
+            {renderActiveScreen()}
+          </>
+        )}
+      </div>
     </div>
   );
 }
