@@ -189,7 +189,15 @@ export default function GenericEventCard({
   const hostFirstName = host
     ? (host.display_name || host.name || '').split(' ')[0]
     : null;
-  const sealLetter = String(event.title || '?')[0].toUpperCase();
+  const creatorName = String(
+    host?.display_name
+    || host?.name
+    || event.created_by_name
+    || event.createdBy
+    || currentUserName
+    || '?'
+  ).trim();
+  const sealLetter = gInitials(creatorName);
 
   const handleSaveNote = async () => {
     if (!onUpdateEventData) return;

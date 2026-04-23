@@ -29861,7 +29861,7 @@ transform: translateY(0);
                     getSubCalEndRaw={getSubCalEndRaw}
                     getTripCoverPhoto={(subCalId) => {
                       const cover = (tripPhotos || []).find((p) => String(p?.sub_calendar_id || '') === String(subCalId) && p?.is_cover);
-                      return cover?.url || null;
+                      return cover ? (getTripPhotoDisplayUrl(cover) || getTripPhotoFallbackUrl(cover) || null) : null;
                     }}
                     getTripMemberCount={(subCalId) => {
                       const members = (subCalMembers || []).filter((m) => String(m?.sub_calendar_id || '') === String(subCalId));
@@ -29889,7 +29889,7 @@ transform: translateY(0);
                 getSubCalEndRaw={getSubCalEndRaw}
                 getTripCoverPhoto={(subCalId) => {
                   const cover = (tripPhotos || []).find((p) => String(p?.sub_calendar_id || '') === String(subCalId) && p?.is_cover);
-                  return cover?.url || null;
+                  return cover ? (getTripPhotoDisplayUrl(cover) || getTripPhotoFallbackUrl(cover) || null) : null;
                 }}
                 getTripMemberCount={(subCalId) => {
                   const members = (subCalMembers || []).filter((m) => String(m?.sub_calendar_id || '') === String(subCalId));

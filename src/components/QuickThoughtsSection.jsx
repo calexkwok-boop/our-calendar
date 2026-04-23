@@ -10,6 +10,16 @@ const colorClasses = {
   green: 'bg-green-200 dark:bg-green-900/50',
 };
 
+const hashThoughtOrderKey = (value) => {
+  let hash = 0;
+  const text = String(value || '');
+  for (let index = 0; index < text.length; index += 1) {
+    hash = ((hash << 5) - hash) + text.charCodeAt(index);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+};
+
 const QuickThoughtsSection = ({
   quickThoughts = [],
   onAddThought,
@@ -20,6 +30,14 @@ const QuickThoughtsSection = ({
   const [isAdding, setIsAdding] = useState(false);
   const [draftText, setDraftText] = useState('');
   const [draftColor, setDraftColor] = useState('yellow');
+  const shuffleSeedRef = React.useRef(`thought-session-${Date.now()}-${Math.random()}`);
+  const shuffledQuickThoughts = React.useMemo(() => (
+    [...quickThoughts].sort((left, right) => {
+      const leftKey = `${shuffleSeedRef.current}:${String(left?.id || left?.text || '')}`;
+      const rightKey = `${shuffleSeedRef.current}:${String(right?.id || right?.text || '')}`;
+      return hashThoughtOrderKey(leftKey) - hashThoughtOrderKey(rightKey);
+    })
+  ), [quickThoughts]);
 
   const closeAddThought = () => {
     setIsAdding(false);
@@ -55,9 +73,9 @@ const QuickThoughtsSection = ({
         </button>
       </div>
 
-      {quickThoughts.length > 0 ? (
+      {shuffledQuickThoughts.length > 0 ? (
         <div className="space-y-3">
-          {quickThoughts.map((thought, idx) => (
+          {shuffledQuickThoughts.map((thought, idx) => (
             <div
               key={thought.id || idx}
               onClick={onOpenSomeday}
