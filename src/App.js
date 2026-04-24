@@ -24703,7 +24703,21 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           let parsed = coverNoteRow.checklist;
           if (typeof parsed === 'string') { try { parsed = JSON.parse(parsed); } catch {} }
           const rawUrl = String(parsed?.url || parsed?.thumb_url || parsed?.thumbnail_url || '').trim();
-          if (rawUrl) noteCoverUrl = normalizeTripPhotoUrl(rawUrl);
+          if (rawUrl) {
+            const normalizedUrl = normalizeTripPhotoUrl(rawUrl);
+            const hydratedCovers = await hydrateR2TripPhotoDisplayUrls([{
+              url: normalizedUrl,
+              medium_url: normalizedUrl,
+              thumbnail_url: normalizedUrl,
+              original_url: normalizedUrl,
+            }]);
+            noteCoverUrl = String(
+              hydratedCovers[0]?.resolved_medium_url
+              || hydratedCovers[0]?.resolved_url
+              || hydratedCovers[0]?.resolved_thumbnail_url
+              || normalizedUrl
+            ).trim();
+          }
         }
       } catch {}
     }
