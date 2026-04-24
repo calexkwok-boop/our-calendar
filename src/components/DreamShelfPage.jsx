@@ -212,6 +212,7 @@ const DREAMSHELF_IMAGES = {
   sp15f: "https://img.runningwarehouse.com/watermark/rs.php?path=SADV129-BK-1.jpg&nw=1102",
   sp16: "https://pisces.bbystatic.com/image2/BestBuy_US/images/products/2433eb08-dc1a-48fa-b5f3-6199eac24e22.jpg;maxHeight=1920;maxWidth=900?format=webp",
   sp17g: "https://www.statebicycle.com/cdn/shop/products/Zipp303STubelssDisc-BrakeWheelSet_Shimano_SRAM11_12speed_5_1024x1024.jpg?v=1759257662",
+  sp17f: "https://media.rapha.cc/image/upload/w_480,dpr_2,f_auto,q_auto:eco,b_white,c_fill,ar_1/mannequin/CUN01XX_CAI_Mens-Pro-Team-Training-Jersey_H126_mannequin_26.jpg",
   sp6: "https://lh3.googleusercontent.com/p/AF1QipPSQ8zuzwTy3fJRluIw4RI5E3OZ6VMsXZv4jnVH=s1360-w1360-h1020-rw",
   s3: "https://dks.scene7.com/is/image/GolfGalaxy/24ADIWSMBGBLCKGRNFTW_White_Black_White?wid=2000&hei=2000&fit=constrain&fmt=pjpeg",
   wl2: "https://insider.fitt.co/wp-content/uploads/2024/10/Oura-Ring-4.png",
