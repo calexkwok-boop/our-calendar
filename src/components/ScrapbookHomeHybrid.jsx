@@ -71,6 +71,16 @@ const formatDisplayTime = (value) => {
   return `${displayHours}:${String(minutes).padStart(2, '0')} ${suffix}`;
 };
 
+const hashHomeShuffleKey = (value) => {
+  let hash = 0;
+  const text = String(value || '');
+  for (let index = 0; index < text.length; index += 1) {
+    hash = ((hash << 5) - hash) + text.charCodeAt(index);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+};
+
 const getMemoryCover = (memory) => String(
   memory?.coverPhoto || memory?.photos?.[0]?.url || ''
 ).trim();
@@ -196,9 +206,17 @@ const ScrapbookHomeHybrid = ({
   const tripSpotlightImage = String(tripSpotlight?.chapterCoverUrl || '').trim();
 
   const todayKey = toLocalDateKey(new Date());
+  const komoShuffleSeedRef = React.useRef(`komo-home-${Date.now()}-${Math.random()}`);
   const todayMoment = momentsThisWeek.find(
     (m) => String(m?.date || '').trim().slice(0, 10) === todayKey
   ) || null;
+  const shuffledBucketList = React.useMemo(() => (
+    [...bucketList].sort((left, right) => {
+      const leftKey = `${komoShuffleSeedRef.current}:${String(left?.id || left?.text || '')}`;
+      const rightKey = `${komoShuffleSeedRef.current}:${String(right?.id || right?.text || '')}`;
+      return hashHomeShuffleKey(leftKey) - hashHomeShuffleKey(rightKey);
+    })
+  ), [bucketList]);
 
   return (
     <div className="min-h-screen bg-[#faf8f3] dark:bg-slate-950 p-4 sm:p-6">
@@ -568,9 +586,9 @@ const ScrapbookHomeHybrid = ({
             </button>
           </div>
 
-          {bucketList.length > 0 ? (
+          {shuffledBucketList.length > 0 ? (
             <div className="flex gap-4 overflow-x-auto overflow-y-hidden pb-2 pl-0.5 pr-5 scrollbar-hide snap-x snap-mandatory [touch-action:pan-x]">
-              {bucketList.slice(0, 4).map((dream, idx) => (
+              {shuffledBucketList.slice(0, 4).map((dream, idx) => (
                 <div
                   key={dream.id || idx}
                   className="group flex-shrink-0 snap-start w-40 sm:w-48 cursor-pointer"

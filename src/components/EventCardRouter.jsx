@@ -1124,8 +1124,8 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                   type="date"
                   value={draft[field.key] ?? ''}
                   onChange={(event) => setFieldValue(field.key, event.target.value)}
-                  className={`w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
-                  style={{ fontFamily: isPartyEditor ? APP_FONT_STACK : undefined }}
+                  className={`min-w-0 max-w-full w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
+                  style={{ fontFamily: isPartyEditor ? APP_FONT_STACK : undefined, boxSizing: 'border-box' }}
                 />
               ) : field.type === 'select' ? (
                 <select

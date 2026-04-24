@@ -83,6 +83,8 @@ const TripsTab = ({
     const duration = getTripDuration(trip);
     const daysUntil = isUpcoming ? getDaysUntil(trip) : null;
     const [showMenu, setShowMenu] = useState(false);
+    const [imageFailed, setImageFailed] = useState(false);
+    const showCoverPhoto = Boolean(coverPhoto) && !imageFailed;
     
     return (
       <div
@@ -96,11 +98,12 @@ const TripsTab = ({
         
         {/* Cover Photo or Gradient */}
         <div className="relative h-40 overflow-hidden">
-          {coverPhoto ? (
+          {showCoverPhoto ? (
             <img
               src={coverPhoto}
               alt={trip.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              onError={() => setImageFailed(true)}
             />
           ) : (
             <div className={`w-full h-full bg-gradient-to-br ${

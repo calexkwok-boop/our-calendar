@@ -29870,7 +29870,8 @@ transform: translateY(0);
                     getSubCalStartRaw={getSubCalStartRaw}
                     getSubCalEndRaw={getSubCalEndRaw}
                     getTripCoverPhoto={(subCalId) => {
-                      const cover = (tripPhotos || []).find((p) => String(p?.sub_calendar_id || '') === String(subCalId) && p?.is_cover);
+                      const photosForTrip = (tripPhotos || []).filter((p) => String(p?.sub_calendar_id || '') === String(subCalId));
+                      const cover = photosForTrip.find((p) => p?.is_cover) || photosForTrip[0] || null;
                       return cover ? (getTripPhotoDisplayUrl(cover) || getTripPhotoFallbackUrl(cover) || null) : null;
                     }}
                     getTripMemberCount={(subCalId) => {
@@ -29898,7 +29899,8 @@ transform: translateY(0);
                 getSubCalStartRaw={getSubCalStartRaw}
                 getSubCalEndRaw={getSubCalEndRaw}
                 getTripCoverPhoto={(subCalId) => {
-                  const cover = (tripPhotos || []).find((p) => String(p?.sub_calendar_id || '') === String(subCalId) && p?.is_cover);
+                  const photosForTrip = (tripPhotos || []).filter((p) => String(p?.sub_calendar_id || '') === String(subCalId));
+                  const cover = photosForTrip.find((p) => p?.is_cover) || photosForTrip[0] || null;
                   return cover ? (getTripPhotoDisplayUrl(cover) || getTripPhotoFallbackUrl(cover) || null) : null;
                 }}
                 getTripMemberCount={(subCalId) => {
