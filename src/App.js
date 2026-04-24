@@ -24689,6 +24689,25 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       }))
       .filter((photo) => photo.url);
 
+    // If no trip_photos, fall back to the trip cover photo stored in sub_calendar_notes
+    let noteCoverUrl = '';
+    if (photos.length === 0) {
+      try {
+        const { data: coverNoteRow } = await supabase
+          .from('sub_calendar_notes')
+          .select('checklist')
+          .eq('sub_calendar_id', tripId)
+          .eq('text', TRIP_COVER_PHOTO_NOTE_TEXT)
+          .maybeSingle();
+        if (coverNoteRow?.checklist) {
+          let parsed = coverNoteRow.checklist;
+          if (typeof parsed === 'string') { try { parsed = JSON.parse(parsed); } catch {} }
+          const rawUrl = String(parsed?.url || parsed?.thumb_url || parsed?.thumbnail_url || '').trim();
+          if (rawUrl) noteCoverUrl = normalizeTripPhotoUrl(rawUrl);
+        }
+      } catch {}
+    }
+
     return {
       id: String(overrides?.id || `trip-memory-${tripId}`),
       title: String(trip?.name || 'Trip memory').trim(),
@@ -24697,7 +24716,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       location: '',
       highlights: [''],
       photos,
-      coverPhoto: photos[0]?.url || '',
+      coverPhoto: photos[0]?.url || noteCoverUrl || '',
       taggedPeople,
       sourceTripId: tripId,
       sourceTripTitle: String(trip?.name || '').trim(),
