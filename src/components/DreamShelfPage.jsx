@@ -247,6 +247,7 @@ const DREAMSHELF_IMAGES = {
   hm5: "https://images.hermanmiller.group/m/b4efc9b53c699972/W-HAY_2514619_100127979_olive_a.png?trim=auto&trim-sd=1&blend-mode=darken&blend=f8f8f8&bg=f8f8f8&auto=format&w=1000&q=70&h=1000",
   hm6: "https://www.byredo.com/cdn-cgi/image/width=auto,height=1200,fit=scale-down,gravity=auto,format=webp,quality=70/https://www.byredo.com/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/8/0/806168_1_full_no.jpg",
   hm7: "https://www.framebridge.com/cdn/shop/files/GW_EndlessOrganicBlack.jpg?v=1694542627&width=1070",
+  ex5: "https://cdn.prod.website-files.com/63b6ce0006af9431cafdc845/6894d331c72df45d8df2c0f2_unnamed.png",
 };
 
 // ─── Category config ──────────────────────────────────────────────────────────
