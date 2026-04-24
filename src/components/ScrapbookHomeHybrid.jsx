@@ -175,6 +175,7 @@ const ScrapbookHomeHybrid = ({
 
   // Account / avatar
   profilePhotoUrl = '',
+  profileBadgeCount = 0,
   onOpenAccountMenu,
   onEditProfilePhoto,
 }) => {
@@ -267,6 +268,11 @@ const ScrapbookHomeHybrid = ({
                     <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-white/40 dark:border-white/10 bg-white/70 dark:bg-white/10" />
                   )}
                 </button>
+                {profileBadgeCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full border border-white bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-md dark:border-gray-900">
+                    {profileBadgeCount > 99 ? '99+' : profileBadgeCount}
+                  </span>
+                )}
                 {typeof onEditProfilePhoto === 'function' && (
                   <button
                     type="button"

@@ -28273,6 +28273,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               streakHelpText: homeReflectionStats.helpText,
             }}
              profilePhotoUrl={currentUserProfilePhotoUrl}
+             profileBadgeCount={unreadInAppCount + pendingTripInvites.length}
               onOpenAccountMenu={toggleAccountMenu}
               onEditProfilePhoto={openLayerMediaMenu}
             />
