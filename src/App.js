@@ -34,6 +34,7 @@ import useHomeScreenData from "./hooks/useHomeScreenData";
 import TripsTab from "./components/TripsTab";
 import TripRatingSystem from "./components/TripRatingSystem";
 import TripHighlightReel from "./components/TripHighlightReel";
+import ProfilePage from "./components/ProfilePage";
 import JOURNEY_QUOTES from "./data/journeyQuotes";
 
 const MemoryCreator = ImportedMemoryCreator || (() => null);
@@ -3329,6 +3330,7 @@ function App() {
   const [showReactionPicker, setShowReactionPicker] = useState(null);
   const [showDateDetailModal, setShowDateDetailModal] = useState(false);
   const [bottomNavTab, setBottomNavTab] = useState('home');
+  const [profileViewState, setProfileViewState] = useState({ open: false, email: null, userId: null });
   const [profilePhotoOverrideUrl, setProfilePhotoOverrideUrl] = useState(() => (
     normalizeProfilePhotoUrl(readStoredProfilePhotoOverrideUrl() || readCachedProfilePhotoUrl('last'))
   ));
@@ -7741,6 +7743,11 @@ function App() {
   const [holidays, setHolidays] = useState({});
   const [layers, setLayers] = useState([]);
   const [activeLayerId, setActiveLayerId] = useState(null);
+  // Stable string dep — only changes when the set of layer IDs actually changes
+  const layerIdsKey = useMemo(
+    () => (layers || []).map(l => String(l?.id || '').trim()).filter(Boolean).sort().join(','),
+    [layers]
+  );
   const [publicCalendars, setPublicCalendars] = useState([]);
   const [expandedExploreDescriptions, setExpandedExploreDescriptions] = useState({});
   const [exploreSearch, setExploreSearch] = useState('');
@@ -15096,7 +15103,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
     if (!shouldLoadPopupCollections) return;
     loadPopupEventData();
-  }, [activeLayerId, layers, layerRefreshToken, bottomNavTab, selectedPopupEventPanelId]);
+  }, [activeLayerId, layerIdsKey, layerRefreshToken, bottomNavTab, selectedPopupEventPanelId]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -27920,6 +27927,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         <button
           onClick={() => {
             setShowCalendarSwitcher(false);
+            setProfileViewState({ open: true, email: null, userId: null });
+          }}
+          className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+        >
+          Your profile
+        </button>
+        <button
+          onClick={() => {
+            setShowCalendarSwitcher(false);
             setAccountPanelMode('account');
             setShowNotificationSettings(false);
             setShowSharePanel(true);
@@ -35578,6 +35594,22 @@ transform: translateY(0);
       </div>
     )}
     </div>
+
+    {/* Profile view overlay */}
+    {profileViewState.open && (
+      <ProfilePage
+        viewedUserEmail={profileViewState.email}
+        viewedUserId={profileViewState.userId}
+        currentUser={user}
+        accountHandle={currentUser}
+        profilePhotoUrl={currentUserProfilePhotoUrl}
+        darkMode={darkMode}
+        onBack={() => setProfileViewState({ open: false, email: null, userId: null })}
+        onOpenProfile={({ email, userId }) => setProfileViewState({ open: true, email: email || null, userId: userId || null })}
+        knownHandlesByEmail={knownHandlesByEmail}
+      />
+    )}
+
       <style>{`
         @media (max-width: 640px) {
           input,
