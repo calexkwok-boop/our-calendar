@@ -690,8 +690,8 @@ function CategoryGrid({ onPageTap }) {
     { key: 'movies',       icon: '🎬', label: 'Movies',             sub: 'Find your next watch',    page: 'movies' },
     { key: 'games',        icon: '🎲', label: 'Board Games',        sub: 'Plan a game night',       page: 'games' },
     { key: 'hiking',       icon: '🥾', label: 'Hiking & Outdoors',  sub: 'Get outside',             page: 'hiking' },
-    { key: 'restaurants',  icon: '🍜', label: 'Restaurants',        sub: 'Discover new spots',      page: 'restaurants' },
-    { key: 'products',     icon: '✨', label: 'Someday',             sub: 'Build your dream shelf',  page: 'products' },
+    { key: 'restaurants',  icon: '🍜', label: 'Restaurants',        sub: 'Spots worth the trip',      page: 'restaurants' },
+    { key: 'products',     icon: '✨', label: 'Someday',             sub: 'Build your wishlist',  page: 'products' },
     { key: 'destinations', icon: '✈️', label: 'Destinations',       sub: 'Trip inspiration',        page: 'destinations' },
   ];
   return (
