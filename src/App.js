@@ -29617,7 +29617,16 @@ transform: translateY(0);
                   .ev-heading { font-family: 'Caveat', cursive; }
                 `}</style>
                 <div className="flex items-center justify-between gap-3 mb-4">
-                  <div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setBottomNavTab('home')}
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center active:opacity-70 flex-shrink-0 ${darkMode ? 'bg-white/5 text-slate-300' : 'bg-white/80 text-slate-600 border border-slate-200/70'}`}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                        <path d="M11 4l-5 5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                    <div>
                     <h3 className="ev-heading font-bold" style={{ fontSize: 32, color: darkMode ? 'rgba(255,255,255,0.88)' : '#44372a' }}>Events</h3>
                     <div className="mt-2 inline-flex items-center gap-1 p-1" style={{
                       backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : '#f5f0e4',
@@ -29656,6 +29665,7 @@ transform: translateY(0);
                           </button>
                         );
                       })}
+                    </div>
                     </div>
                   </div>
                 </div>
