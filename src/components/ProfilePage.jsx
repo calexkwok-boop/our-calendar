@@ -217,19 +217,25 @@ const ProfilePage = ({
   useEffect(() => {
     if (!isOwnProfile || (!userEmail && !currentUser?.id)) { setLoading(false); return; }
 
+    // Dedup rows by user_id (prevents double-counting when same row exists in both handle tables)
+    const dedupeById = (rows) =>
+      [...new Map(rows.filter(h => h.user_id).map(h => [h.user_id, h])).values()];
+
     const load = async () => {
       setLoading(true);
       try {
-        const tripNameById = await getMyTripData();
-        const allTripIds = Object.keys(tripNameById);
         const friendMap = new Map(); // email → { trips: string[], sharedCalendars: number, sharedEvents: number, userId: string|null }
 
-        // Batch 1: all queries that only need trip IDs / user identity — run in parallel
-        const [coMembersRes, myLayerAccessRes, ownedLayersRes, myEventMembershipsRes] = await Promise.all([
-          allTripIds.length > 0
-            ? supabase.from('sub_calendar_members').select('email, sub_calendar_id').in('sub_calendar_id', allTripIds).neq('email', userEmail)
+        // Step 1 (6 parallel): no inter-dependencies, only needs user identity.
+        // Inlines getMyTripData's first half alongside the layer/event queries so they all fire together.
+        const [ownedTripsRes, memberTripIdsRes, myLayerAccessRes, ownedLayersRes, myEventMembershipsRes] = await Promise.all([
+          currentUser?.id
+            ? supabase.from('sub_calendars').select('id, name').eq('owner_id', currentUser.id)
             : Promise.resolve({ data: [] }),
-          supabase.from('shared_access').select('layer_id').eq('shared_with_email', userEmail),
+          userEmail
+            ? supabase.from('sub_calendar_members').select('sub_calendar_id').eq('email', userEmail)
+            : Promise.resolve({ data: [] }),
+          supabase.from('shared_access').select('layer_id, owner_id').eq('shared_with_email', userEmail),
           currentUser?.id
             ? supabase.from('categories').select('id').eq('owner_id', currentUser.id)
             : Promise.resolve({ data: [] }),
@@ -238,66 +244,126 @@ const ProfilePage = ({
             : Promise.resolve({ data: [] }),
         ]);
 
-        for (const m of (coMembersRes.data || [])) {
-          const email = String(m.email || '').toLowerCase().trim();
-          if (!email) continue;
-          if (!friendMap.has(email)) friendMap.set(email, { trips: [], sharedCalendars: 0, sharedEvents: 0, userId: null });
-          const tripName = tripNameById[m.sub_calendar_id] || 'Shared trip';
-          const entry = friendMap.get(email);
-          if (!entry.trips.includes(tripName)) entry.trips.push(tripName);
-        }
+        const ownedTripNameById = {};
+        for (const t of (ownedTripsRes.data || [])) ownedTripNameById[t.id] = t.name || 'Trip';
+
+        const memberTripIds = (memberTripIdsRes.data || [])
+          .map(m => m.sub_calendar_id).filter(id => id && !ownedTripNameById[id]);
+        const allTripIds = [...Object.keys(ownedTripNameById), ...memberTripIds];
 
         const receivedLayerIds = (myLayerAccessRes.data || []).map(a => a.layer_id).filter(Boolean);
+        // owner_id is read directly from shared_access — no extra categories round trip needed
+        const calendarOwnerIds = [...new Set(
+          (myLayerAccessRes.data || []).map(a => a.owner_id).filter(id => id && id !== currentUser?.id)
+        )];
+        const calendarOwnerIdSet = new Set(calendarOwnerIds);
         const ownedLayerIds = (ownedLayersRes.data || []).map(l => l.id).filter(Boolean);
         const uniqueLayerIds = [...new Set([...receivedLayerIds, ...ownedLayerIds])];
         const myEventIds = (myEventMembershipsRes.data || []).map(m => m.event_id).filter(Boolean);
 
-        // Batch 2: queries that depend on layer IDs — run in parallel
-        const [coCalMembersRes, layerOwnersRes] = await Promise.all([
+        // Step 2 (5 parallel): needs trip IDs and layer IDs from Step 1.
+        // memberTripDataRes replaces getMyTripData's second query + memberTripOwnersRes — one query yields both names and owners.
+        // Calendar owner emails can start here since calendarOwnerIds is already known.
+        const [memberTripDataRes, coMembersRes, coCalMembersRes, calOwnerHandlesRes, calOwnerHandlesFbRes] = await Promise.all([
+          memberTripIds.length > 0
+            ? supabase.from('sub_calendars').select('id, owner_id, name').in('id', memberTripIds)
+            : Promise.resolve({ data: [] }),
+          allTripIds.length > 0
+            ? supabase.from('sub_calendar_members').select('email, sub_calendar_id').in('sub_calendar_id', allTripIds).neq('email', userEmail)
+            : Promise.resolve({ data: [] }),
           uniqueLayerIds.length > 0
             ? supabase.from('shared_access').select('shared_with_email, shared_with_id').in('layer_id', uniqueLayerIds).neq('shared_with_email', userEmail)
             : Promise.resolve({ data: [] }),
-          receivedLayerIds.length > 0
-            ? supabase.from('categories').select('owner_id').in('id', receivedLayerIds).neq('owner_id', currentUser?.id || '')
+          calendarOwnerIds.length > 0
+            ? supabase.from('user_handles').select('email, user_id').in('user_id', calendarOwnerIds)
+            : Promise.resolve({ data: [] }),
+          calendarOwnerIds.length > 0
+            ? supabase.from('handles').select('email, user_id').in('user_id', calendarOwnerIds)
             : Promise.resolve({ data: [] }),
         ]);
 
+        // Build full trip name map and collect trip owner IDs
+        const tripNameById = { ...ownedTripNameById };
+        const tripOwnerIdToName = {};
+        for (const t of (memberTripDataRes.data || [])) {
+          if (!t.id) continue;
+          tripNameById[t.id] = t.name || 'Trip';
+          if (t.owner_id && t.owner_id !== currentUser?.id) {
+            tripOwnerIdToName[t.owner_id] = t.name || 'Shared trip';
+          }
+        }
+        const tripOwnerIds = Object.keys(tripOwnerIdToName);
+
+        // Populate friendMap from trip co-members
+        for (const m of (coMembersRes.data || [])) {
+          const email = String(m.email || '').toLowerCase().trim();
+          if (!email) continue;
+          const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedEvents: 0, userId: null };
+          const tripName = tripNameById[m.sub_calendar_id] || 'Shared trip';
+          if (!entry.trips.includes(tripName)) entry.trips.push(tripName);
+          friendMap.set(email, entry);
+        }
+
+        // Populate friendMap from calendar co-members
         for (const m of (coCalMembersRes.data || [])) {
           const email = String(m.shared_with_email || '').toLowerCase().trim();
           if (!email) continue;
-          if (!friendMap.has(email)) friendMap.set(email, { trips: [], sharedCalendars: 0, sharedEvents: 0, userId: null });
-          const entry = friendMap.get(email);
+          const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedEvents: 0, userId: null };
           entry.sharedCalendars++;
           if (!entry.userId && m.shared_with_id) entry.userId = m.shared_with_id;
+          friendMap.set(email, entry);
         }
 
-        const ownerIds = [...new Set((layerOwnersRes.data || []).map(l => l.owner_id).filter(Boolean))];
+        // Add calendar owners (deduped across both handle tables)
+        for (const h of dedupeById([...(calOwnerHandlesRes.data || []), ...(calOwnerHandlesFbRes.data || [])])) {
+          const email = String(h.email || '').toLowerCase().trim();
+          if (!email || email === userEmail) continue;
+          const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedEvents: 0, userId: null };
+          if (!entry.userId) entry.userId = h.user_id;
+          if (calendarOwnerIdSet.has(h.user_id)) entry.sharedCalendars++;
+          friendMap.set(email, entry);
+        }
 
-        // Batch 3: resolve owner emails + missing userIds for trip-only friends — run in parallel
+        // Step 3 (4 parallel): trip owner emails + userId resolution for event counting.
+        // Both sets of inputs are ready after Step 2.
         const emailsMissingId = [...friendMap.entries()].filter(([, ctx]) => !ctx.userId).map(([email]) => email);
-        const [ownerHandlesRes, handleRowsRes] = await Promise.all([
-          ownerIds.length > 0
-            ? supabase.from('user_handles').select('email, user_id').in('user_id', ownerIds)
+        const [tripOwnerHandlesRes, tripOwnerHandlesFbRes, handleRowsRes, handleRowsFbRes] = await Promise.all([
+          tripOwnerIds.length > 0
+            ? supabase.from('user_handles').select('email, user_id').in('user_id', tripOwnerIds)
+            : Promise.resolve({ data: [] }),
+          tripOwnerIds.length > 0
+            ? supabase.from('handles').select('email, user_id').in('user_id', tripOwnerIds)
             : Promise.resolve({ data: [] }),
           emailsMissingId.length > 0
             ? supabase.from('user_handles').select('email, user_id').in('email', emailsMissingId)
             : Promise.resolve({ data: [] }),
+          emailsMissingId.length > 0
+            ? supabase.from('handles').select('email, user_id').in('email', emailsMissingId)
+            : Promise.resolve({ data: [] }),
         ]);
 
-        for (const h of (ownerHandlesRes.data || [])) {
+        // Add trip owners
+        for (const h of dedupeById([...(tripOwnerHandlesRes.data || []), ...(tripOwnerHandlesFbRes.data || [])])) {
           const email = String(h.email || '').toLowerCase().trim();
           if (!email || email === userEmail) continue;
-          if (!friendMap.has(email)) friendMap.set(email, { trips: [], sharedCalendars: 0, sharedEvents: 0, userId: null });
-          const entry = friendMap.get(email);
-          entry.sharedCalendars++;
-          if (!entry.userId && h.user_id) entry.userId = h.user_id;
-        }
-        for (const row of (handleRowsRes.data || [])) {
-          const email = String(row.email || '').toLowerCase().trim();
-          if (row.user_id && friendMap.has(email)) friendMap.get(email).userId = row.user_id;
+          const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedEvents: 0, userId: null };
+          if (!entry.userId) entry.userId = h.user_id;
+          if (h.user_id && tripOwnerIdToName[h.user_id]) {
+            const tripName = tripOwnerIdToName[h.user_id];
+            if (!entry.trips.includes(tripName)) entry.trips.push(tripName);
+          }
+          friendMap.set(email, entry);
         }
 
-        // Batch 4: shared event counts — now that all userIds are resolved
+        // Fill missing userIds (needed for event counting in Step 4)
+        for (const row of [...(handleRowsRes.data || []), ...(handleRowsFbRes.data || [])]) {
+          const email = String(row.email || '').toLowerCase().trim();
+          if (row.user_id && friendMap.has(email) && !friendMap.get(email).userId) {
+            friendMap.get(email).userId = row.user_id;
+          }
+        }
+
+        // Step 4: shared event counts — all userIds are resolved
         const friendUserIds = [...friendMap.values()].map(ctx => ctx.userId).filter(Boolean);
         if (myEventIds.length > 0 && friendUserIds.length > 0) {
           const { data: friendEventRows } = await supabase
@@ -340,7 +406,7 @@ const ProfilePage = ({
     };
 
     load();
-  }, [isOwnProfile, userEmail, currentUser?.id, getMyTripData]);
+  }, [isOwnProfile, userEmail, currentUser?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Load friend profile + connection context
   useEffect(() => {
