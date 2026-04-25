@@ -31525,11 +31525,8 @@ transform: translateY(0);
             </div>
           </div>
           {tripHeaderActionsShowRightHint && (
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pl-6 pr-1">
-              <div className="absolute inset-y-0 right-0 w-24 rounded-r-3xl bg-gradient-to-r from-transparent via-white/75 to-white dark:via-slate-950/70 dark:to-slate-950" />
-              <div className="relative rounded-full border border-purple-200/80 bg-white/95 px-2.5 py-1 text-[11px] font-semibold tracking-[0.01em] text-purple-600 shadow-sm dark:border-purple-400/20 dark:bg-slate-900/95 dark:text-purple-300">
-                More →
-              </div>
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-16">
+              <div className="absolute inset-y-0 right-0 w-16 rounded-r-3xl bg-gradient-to-r from-transparent to-white/95 dark:to-slate-950/95" />
             </div>
           )}
           {tripHeaderActionsHasOverflow && !tripHeaderActionsShowRightHint && (
@@ -32019,11 +32016,8 @@ transform: translateY(0);
           >Expenses</button>
           </div>
           {subCalTabsShowRightHint && (
-            <div className="pointer-events-none absolute inset-y-1 right-1 flex items-center pl-6 pr-1">
-              <div className="absolute inset-y-0 right-0 w-20 rounded-r-2xl bg-gradient-to-r from-transparent via-white/70 to-white dark:via-slate-950/65 dark:to-slate-950" />
-              <div className="relative rounded-full border border-purple-200/80 bg-white/95 px-2.5 py-1 text-[11px] font-semibold tracking-[0.01em] text-purple-600 shadow-sm dark:border-purple-400/20 dark:bg-slate-900/95 dark:text-purple-300">
-                More →
-              </div>
+            <div className="pointer-events-none absolute inset-y-1 right-1 w-14">
+              <div className="absolute inset-y-0 right-0 w-14 rounded-r-2xl bg-gradient-to-r from-transparent to-white/95 dark:to-slate-950/95" />
             </div>
           )}
           {subCalTabsHasOverflow && !subCalTabsShowRightHint && (
