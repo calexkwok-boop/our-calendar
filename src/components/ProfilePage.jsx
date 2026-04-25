@@ -142,6 +142,7 @@ const ProfilePage = ({
     shareMemories: false,
     shareKomoItems: false,
   });
+  const [accountExpanded, setAccountExpanded] = useState(false);
   const [friendsList, setFriendsList] = useState([]);
   const [friendProfile, setFriendProfile] = useState(null);
   const [connectionContext, setConnectionContext] = useState(null);
@@ -586,6 +587,98 @@ const ProfilePage = ({
         {/* ── OWN PROFILE ── */}
         {isOwnProfile && (
           <>
+            {/* Account */}
+            <div className="rounded-3xl mb-4 overflow-hidden" style={{ background: cardBg, border: `1px solid ${cardBorder}` }}>
+              <button
+                onClick={() => setAccountExpanded(v => !v)}
+                className="w-full flex items-center justify-between px-5 py-4 active:opacity-70"
+              >
+                <p className="font-semibold text-sm" style={{ color: headingColor }}>Account</p>
+                <svg
+                  width="16" height="16" viewBox="0 0 16 16" fill="none"
+                  className="flex-shrink-0 transition-transform"
+                  style={{ color: mutedColor, transform: accountExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                >
+                  <path d="M3 6l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+
+              {accountExpanded && (
+                <div className="px-5 pb-5">
+                  {/* Handle */}
+                  <div className="mb-4">
+                    <p className="text-xs mb-1.5" style={{ color: mutedColor }}>Username</p>
+                    <input
+                      type="text"
+                      value={accountHandleInput}
+                      onChange={e => onAccountHandleChange?.(e.target.value)}
+                      onBlur={() => onSaveHandle?.()}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); onSaveHandle?.(); } }}
+                      placeholder="Set your handle"
+                      maxLength={40}
+                      className="w-full px-3 py-2.5 rounded-2xl text-sm outline-none"
+                      style={{ background: darkMode ? 'rgba(255,255,255,0.06)' : '#f0ede8', color: headingColor, border: `1px solid ${cardBorder}` }}
+                    />
+                    {accountHandleMessage && (
+                      <p className={`text-xs mt-1.5 ${/updated|already set/i.test(accountHandleMessage) ? 'text-green-500' : 'text-red-400'}`}>
+                        {accountHandleMessage}
+                      </p>
+                    )}
+                    {currentUser?.email && (
+                      <p className="text-xs mt-1.5 truncate" style={{ color: mutedColor }}>{currentUser.email}</p>
+                    )}
+                  </div>
+
+                  {/* Payment handles */}
+                  <div className="mb-5">
+                    <p className="text-xs mb-1.5" style={{ color: mutedColor }}>Payment handles</p>
+                    <div className="flex flex-col gap-2">
+                      <input
+                        type="text"
+                        value={accountVenmoInput}
+                        onChange={e => onVenmoChange?.(e.target.value)}
+                        placeholder="Venmo @username"
+                        className="w-full px-3 py-2.5 rounded-2xl text-sm outline-none"
+                        style={{ background: darkMode ? 'rgba(255,255,255,0.06)' : '#f0ede8', color: headingColor, border: `1px solid ${cardBorder}` }}
+                      />
+                      <input
+                        type="text"
+                        value={accountCashAppInput}
+                        onChange={e => onCashAppChange?.(e.target.value)}
+                        placeholder="Cash App $cashtag"
+                        className="w-full px-3 py-2.5 rounded-2xl text-sm outline-none"
+                        style={{ background: darkMode ? 'rgba(255,255,255,0.06)' : '#f0ede8', color: headingColor, border: `1px solid ${cardBorder}` }}
+                      />
+                    </div>
+                    <div className="mt-2.5 flex items-center justify-between gap-3">
+                      {accountPaymentMessage ? (
+                        <p className={`text-xs ${/updated|saved/i.test(accountPaymentMessage) ? 'text-green-500' : 'text-red-400'}`}>
+                          {accountPaymentMessage}
+                        </p>
+                      ) : (
+                        <p className="text-xs" style={{ color: mutedColor }}>Used in expense tracker payment links</p>
+                      )}
+                      <button
+                        onClick={() => onSavePaymentHandles?.()}
+                        disabled={savingAccountPayments}
+                        className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-500 text-white disabled:opacity-50 flex-shrink-0"
+                      >
+                        {savingAccountPayments ? 'Saving…' : 'Save'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Logout */}
+                  <button
+                    onClick={() => onLogout?.()}
+                    className={`w-full py-2.5 rounded-2xl text-sm font-medium ${darkMode ? 'bg-white/8 text-white/70 hover:bg-white/12' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'} transition-colors`}
+                  >
+                    Sign out
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Sharing preferences */}
             <div className="rounded-3xl p-5 mb-4" style={{ background: cardBg, border: `1px solid ${cardBorder}` }}>
               <p className="font-semibold text-sm" style={{ color: headingColor }}>Share with friends</p>
@@ -615,82 +708,6 @@ const ProfilePage = ({
                   darkMode={darkMode}
                 />
               </div>
-            </div>
-
-            {/* Account */}
-            <div className="rounded-3xl p-5 mb-4" style={{ background: cardBg, border: `1px solid ${cardBorder}` }}>
-              <p className="font-semibold text-sm mb-4" style={{ color: headingColor }}>Account</p>
-
-              {/* Handle */}
-              <div className="mb-4">
-                <p className="text-xs mb-1.5" style={{ color: mutedColor }}>Username</p>
-                <input
-                  type="text"
-                  value={accountHandleInput}
-                  onChange={e => onAccountHandleChange?.(e.target.value)}
-                  onBlur={() => onSaveHandle?.()}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); onSaveHandle?.(); } }}
-                  placeholder="Set your handle"
-                  maxLength={40}
-                  className="w-full px-3 py-2.5 rounded-2xl text-sm outline-none"
-                  style={{ background: darkMode ? 'rgba(255,255,255,0.06)' : '#f0ede8', color: headingColor, border: `1px solid ${cardBorder}` }}
-                />
-                {accountHandleMessage && (
-                  <p className={`text-xs mt-1.5 ${/updated|already set/i.test(accountHandleMessage) ? 'text-green-500' : 'text-red-400'}`}>
-                    {accountHandleMessage}
-                  </p>
-                )}
-                {currentUser?.email && (
-                  <p className="text-xs mt-1.5 truncate" style={{ color: mutedColor }}>{currentUser.email}</p>
-                )}
-              </div>
-
-              {/* Payment handles */}
-              <div className="mb-5">
-                <p className="text-xs mb-1.5" style={{ color: mutedColor }}>Payment handles</p>
-                <div className="flex flex-col gap-2">
-                  <input
-                    type="text"
-                    value={accountVenmoInput}
-                    onChange={e => onVenmoChange?.(e.target.value)}
-                    placeholder="Venmo @username"
-                    className="w-full px-3 py-2.5 rounded-2xl text-sm outline-none"
-                    style={{ background: darkMode ? 'rgba(255,255,255,0.06)' : '#f0ede8', color: headingColor, border: `1px solid ${cardBorder}` }}
-                  />
-                  <input
-                    type="text"
-                    value={accountCashAppInput}
-                    onChange={e => onCashAppChange?.(e.target.value)}
-                    placeholder="Cash App $cashtag"
-                    className="w-full px-3 py-2.5 rounded-2xl text-sm outline-none"
-                    style={{ background: darkMode ? 'rgba(255,255,255,0.06)' : '#f0ede8', color: headingColor, border: `1px solid ${cardBorder}` }}
-                  />
-                </div>
-                <div className="mt-2.5 flex items-center justify-between gap-3">
-                  {accountPaymentMessage ? (
-                    <p className={`text-xs ${/updated|saved/i.test(accountPaymentMessage) ? 'text-green-500' : 'text-red-400'}`}>
-                      {accountPaymentMessage}
-                    </p>
-                  ) : (
-                    <p className="text-xs" style={{ color: mutedColor }}>Used in expense tracker payment links</p>
-                  )}
-                  <button
-                    onClick={() => onSavePaymentHandles?.()}
-                    disabled={savingAccountPayments}
-                    className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-500 text-white disabled:opacity-50 flex-shrink-0"
-                  >
-                    {savingAccountPayments ? 'Saving…' : 'Save'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Logout */}
-              <button
-                onClick={() => onLogout?.()}
-                className={`w-full py-2.5 rounded-2xl text-sm font-medium ${darkMode ? 'bg-white/8 text-white/70 hover:bg-white/12' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'} transition-colors`}
-              >
-                Sign out
-              </button>
             </div>
 
             {/* Friends list */}
