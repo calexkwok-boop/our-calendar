@@ -1256,6 +1256,7 @@ const SomedayPage = ({
   const didDrag         = useRef(false);
   const draggingTypeRef = useRef(null);
   const dreamsSyncedRef = useRef(false);
+  const autoSortPendingRef = useRef(false);
 
   const groups = useMemo(() => detectGroups(pins), [pins]);
 
@@ -1298,6 +1299,15 @@ const SomedayPage = ({
   useEffect(() => {
     onChaptersChange?.(chapters);
   }, [chapters, onChaptersChange]);
+
+  // Auto-sort board whenever a new chapter is created so all items land in the
+  // right zones without requiring the user to manually press the wand.
+  useEffect(() => {
+    if (!autoSortPendingRef.current) return;
+    autoSortPendingRef.current = false;
+    const startY = chapterTotalHeight > 20 ? chapterTotalHeight + 32 : 20;
+    setPins(prev => buildAutoSortedPins(prev, onAddDream, onDeleteDream, onUpdateDream, startY, chapters));
+  }, [chapters]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Supabase helpers ────────────────────────────────────────────────────────
   const pinToRow = (pin, chapterId, position = 0) => ({
@@ -1613,6 +1623,7 @@ const SomedayPage = ({
     });
     setChapterPromptGroup(null);
     setShowCreateChapter(false);
+    autoSortPendingRef.current = true;
   }
 
   function addPinToChapter(pinId, chapterId) {
