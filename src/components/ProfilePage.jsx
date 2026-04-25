@@ -45,7 +45,7 @@ const avatarGradient = (seed) => {
 };
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
-const ProfileAvatar = ({ url, name, size = 72, darkMode }) => {
+const ProfileAvatar = ({ url, name, gradientSeed, size = 72, darkMode }) => {
   const [imgError, setImgError] = useState(false);
   const initial = String(name || '?').trim().charAt(0).toUpperCase();
 
@@ -56,7 +56,7 @@ const ProfileAvatar = ({ url, name, size = 72, darkMode }) => {
         style={{
           width: size,
           height: size,
-          background: avatarGradient(name),
+          background: avatarGradient(gradientSeed ?? name),
           fontSize: size * 0.38,
           color: '#fff',
         }}
@@ -103,7 +103,7 @@ const FriendCard = ({ friend, onTap, darkMode }) => (
     onClick={() => onTap(friend)}
     className={`flex items-center gap-3 w-full text-left p-3 rounded-2xl active:opacity-70 transition-opacity ${darkMode ? 'bg-white/5' : 'bg-slate-50'}`}
   >
-    <ProfileAvatar url={friend.avatarUrl} name={friend.displayName || friend.handle || friend.email} size={44} darkMode={darkMode} />
+    <ProfileAvatar url={friend.avatarUrl} name={friend.displayName || friend.handle || friend.email} gradientSeed={friend.email} size={44} darkMode={darkMode} />
     <div className="flex-1 min-w-0">
       <p className={`text-sm font-semibold truncate ${darkMode ? 'text-white/90' : 'text-slate-800'}`}>
         {friend.displayName || friend.handle || friend.email}
