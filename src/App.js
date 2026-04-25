@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getFirebaseStorageIfConfigured, getMessagingIfSupported } from "./firebase";
 import imageCompression from 'browser-image-compression';
 import GauntletPanel from "./components/GauntletPanel";
+import InvitePicker from "./components/InvitePicker";
 import ExpenseTrackerPanel from "./components/ExpenseTrackerPanel";
 import RoundRobinPanel from "./components/RoundRobinPanel";
 import ScramblePanel from "./components/ScramblePanel";
@@ -7893,6 +7894,7 @@ function App() {
   const [listError, setListError] = useState('');
   const [shareEmailInput, setShareEmailInput] = useState('');
   const [shareMessage, setShareMessage] = useState('');
+  const [showCalendarInvitePicker, setShowCalendarInvitePicker] = useState(false);
   const [mergeTargetLayerId, setMergeTargetLayerId] = useState('');
   const [mergeInProgress, setMergeInProgress] = useState(false);
   const autoMergeSeenRef = useRef(new Set());
@@ -12917,13 +12919,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setShowAuth(true);
   };
 
-  const handleShareCalendar = async () => {
-    if (!shareEmailInput.trim() || !activeLayerId) return;
+  const handleShareCalendar = async (emailOverride) => {
+    const rawInput = emailOverride || shareEmailInput;
+    if (!rawInput.trim() || !activeLayerId) return;
     if (!canManageActiveLayer) {
       setShareMessage('Only owner/admin can change sharing settings.');
       return;
     }
-    const recipient = resolveInviteRecipient(shareEmailInput);
+    const recipient = resolveInviteRecipient(rawInput);
     if (!recipient?.value) {
       setShareMessage('Enter a valid email or phone number.');
       return;
@@ -26364,6 +26367,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               {!canManageActiveLayer && (
                 <p className="text-xs text-amber-600 dark:text-amber-300">Only owner/admin can copy and manage sharing.</p>
               )}
+              {canManageActiveLayer && (
+                <button
+                  onClick={() => setShowCalendarInvitePicker(true)}
+                  className="mt-3 w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-700"
+                >
+                  + Add member
+                </button>
+              )}
               {shareMessage && (
                 <p className={`text-sm mt-2 ${shareMessage.startsWith('?') ? 'text-green-600' : 'text-red-500'}`}>
                   {shareMessage}
@@ -30315,6 +30326,7 @@ transform: translateY(0);
                 onConvertToEvent={planFromDream}
                 onConvertToTrip={planFromDream}
                 currentUser={currentUser}
+                userEmail={user?.email || ''}
                 onChaptersChange={setKomoChapters}
                 onCreateTripFromChapter={startTripFromKomoChapter}
                 chaptersWithLinkedTrips={chaptersWithLinkedTrips}
@@ -31139,72 +31151,29 @@ transform: translateY(0);
     )}
 
     {showSubCalInviteModal && activeSubCalendar && (
-      <div
-        className="fixed inset-0 z-50 bg-black/50 p-4 flex items-center justify-center"
-        onClick={() => {
-          setShowSubCalInviteModal(false);
-          setTripInviteLinkCopied(false);
-        }}
-      >
-        <div
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-sm"
-              onClick={(e) => e.stopPropagation()}
-  >
-  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h3 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                Invite to Trip
-              </h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Add someone to {activeSubCalendar.name}
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                setShowSubCalInviteModal(false);
-                setTripInviteLinkCopied(false);
-              }}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              aria-label="Close invite modal"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
-          </div>
-            <input
-              type="text"
-              value={subCalInviteEmail}
-              onChange={(e) => setSubCalInviteEmail(e.target.value)}
-            placeholder="Enter email or phone"
-            className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl mb-4 focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
-              autoFocus
-              onKeyPress={(e) => e.key === 'Enter' && inviteToSubCalendar()}
-            />
-            <button
-              onClick={copyTripInviteLink}
-              className="w-full mb-4 px-3 py-2 rounded-xl border border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 text-sm font-semibold"
-            >
-              {tripInviteLinkCopied ? 'Link Copied' : 'Copy Shareable Link'}
-            </button>
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  setShowSubCalInviteModal(false);
-                  setTripInviteLinkCopied(false);
-                }}
-                className="flex-1 px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium"
-              >
-                Cancel
-            </button>
-            <button
-              onClick={() => inviteToSubCalendar()}
-              className="flex-1 px-3 py-2 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 text-white text-sm font-semibold"
-            >
-              Send Invite
-            </button>
-          </div>
-        </div>
-      </div>
+      <InvitePicker
+        targetType="trip"
+        targetId={activeSubCalendar.id}
+        targetTitle={activeSubCalendar.name}
+        ownerId={activeSubCalendar.owner_id || user?.id || ''}
+        collaborators={(subCalMembers || []).map(m => ({ email: m.email || m.phone || '' })).filter(m => m.email)}
+        onInvite={async (email) => { await inviteToSubCalendar(email); }}
+        onClose={() => { setShowSubCalInviteModal(false); setTripInviteLinkCopied(false); }}
+        darkMode={darkMode}
+      />
+    )}
+
+    {showCalendarInvitePicker && activeLayerId && (
+      <InvitePicker
+        targetType="calendar"
+        targetId={activeLayerId}
+        targetTitle={activeLayer?.name || calendarTitle || 'Calendar'}
+        ownerId={activeLayerOwnerId || user?.id || ''}
+        collaborators={(myShares || []).map(s => ({ email: s.shared_with_email || s.shared_with_phone || '' })).filter(s => s.email)}
+        onInvite={async (email) => { await handleShareCalendar(email); }}
+        onClose={() => setShowCalendarInvitePicker(false)}
+        darkMode={darkMode}
+      />
     )}
 
     {showSubCalNotesModal && activeSubCalendar && (

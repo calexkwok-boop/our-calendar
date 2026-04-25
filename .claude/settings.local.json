@@ -13,7 +13,8 @@
       "Bash(echo \"exit: $?\")",
       "Bash(npx acorn *)",
       "Bash(grep -n \"useEffect.*{$\\\\|useCallback\\\\|useMemo\" /c/Users/a_kwo/Desktop/our-calendar/src/App.js)",
-      "Bash(grep -v \"^\\\\s*//\")"
+      "Bash(grep -v \"^\\\\s*//\")",
+      "Bash(node -e ' *)"
     ]
   }
 }

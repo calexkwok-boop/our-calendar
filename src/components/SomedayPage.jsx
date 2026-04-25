@@ -4,6 +4,8 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { supabase } from '../supabaseClient';
+import InvitePicker from './InvitePicker';
 
 const CAVEAT = '"Caveat", cursive';
 
@@ -858,14 +860,18 @@ function ChapterPinSheet({ pin, onClose, onRemove, darkMode, hasLinkedTrip = fal
   );
 }
 
+
+
 // ─── Chapter Page ─────────────────────────────────────────────────────────────
-function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, darkMode, hasLinkedTrip = false }) {
+function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, darkMode, hasLinkedTrip = false, onInvite }) {
   const [showAddMemory, setShowAddMemory] = useState(false);
   const [memoryText, setMemoryText] = useState('');
   const [selectedPin, setSelectedPin] = useState(null);
+  const [showInvite, setShowInvite] = useState(false);
   // seed rotates each time the page mounts (chapter reopened)
   const [suggestionSeed] = useState(() => Math.floor(Math.random() * 997));
-  const chapterPins = pins.filter(p => chapter.itemIds.includes(p.id));
+  // Use Supabase-loaded pins if available, fall back to filtering from dreams
+  const chapterPins = chapter.pins || pins.filter(p => chapter.itemIds.includes(p.id));
   const coverPin = chapterPins.find(p => p.imageUrl) || null;
   const pageBg = darkMode ? '#0e1520' : '#faf8f3';
   const tp     = darkMode ? '#e8eaf0' : '#1a1a2e';
@@ -892,6 +898,12 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            {onInvite && (
+              <button
+                onClick={() => setShowInvite(true)}
+                style={{ background: darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfb', border: `1px solid ${darkMode ? 'rgba(45,212,191,0.28)' : '#99f6e4'}`, borderRadius: 20, padding: '5px 12px', fontSize: 12, color: darkMode ? '#2dd4bf' : '#0d9488', cursor: 'pointer', flexShrink: 0, fontWeight: 700 }}
+              >Invite</button>
+            )}
             {onCreateTrip && (
               <button
                 onClick={() => onCreateTrip(chapter)}
@@ -1011,6 +1023,19 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
           </div>
         )}
       </div>
+
+      {showInvite && (
+        <InvitePicker
+          targetType="chapter"
+          targetId={chapter.id}
+          targetTitle={chapter.title}
+          ownerId={chapter.owner_id || ''}
+          collaborators={chapter.collaborators || []}
+          onInvite={onInvite}
+          onClose={() => setShowInvite(false)}
+          darkMode={darkMode}
+        />
+      )}
 
       {selectedPin && (
         <ChapterPinSheet
@@ -1156,6 +1181,7 @@ const SomedayPage = ({
   onCreateTripFromChapter,
   darkMode = false,
   chaptersWithLinkedTrips = new Set(),
+  userEmail = '',
 }) => {
   const [pins, setPins] = useState(() => dreams.map((d, idx) => {
     const pos = (d.x == null || d.y == null) ? gridPosition(idx) : { x: d.x, y: d.y, rot: d.rot };
@@ -1166,8 +1192,7 @@ const SomedayPage = ({
   const [detailPin, setDetailPin]         = useState(null);
   const [dragging, setDragging]           = useState(null);
   const [heroId, setHeroId]               = useState(() => { try { return localStorage.getItem('someday-hero-id') || null; } catch { return null; } });
-  const chaptersKey = `someday-chapters-${currentUser || 'guest'}`;
-  const [chapters, setChapters]           = useState(() => { try { const s = localStorage.getItem(chaptersKey); return s ? JSON.parse(s) : []; } catch { return []; } });
+  const [chapters, setChapters]           = useState([]);
   const [activeChapterId, setActiveChapterId] = useState(null);
   const [showCreateChapter, setShowCreateChapter] = useState(false);
   const [chapterPromptGroup, setChapterPromptGroup] = useState(null);
@@ -1192,9 +1217,160 @@ const SomedayPage = ({
   }, [heroId]);
 
   useEffect(() => {
-    try { localStorage.setItem(chaptersKey, JSON.stringify(chapters)); } catch {}
     onChaptersChange?.(chapters);
-  }, [chapters, chaptersKey, onChaptersChange]);
+  }, [chapters, onChaptersChange]);
+
+  // ── Supabase helpers ────────────────────────────────────────────────────────
+  const pinToRow = (pin, chapterId, position = 0) => ({
+    id: pin.id,
+    chapter_id: chapterId,
+    label: pin.label || '',
+    description: pin.description || '',
+    image_url: pin.imageUrl || '',
+    emoji: pin.emoji || '',
+    category_id: pin.categoryId || '',
+    status: pin.status || 'dreaming',
+    tip: pin.tip || '',
+    map_query: pin.mapQuery || '',
+    pin_color: pin.pinColor || '',
+    note_color: pin.noteColor || 'yellow',
+    type: pin.type || 'note',
+    x: pin.x || 0,
+    y: pin.y || 0,
+    rot: pin.rot || 0,
+    position,
+  });
+
+  const rowToPin = (row) => ({
+    id: row.id,
+    label: row.label || '',
+    description: row.description || '',
+    imageUrl: row.image_url || '',
+    emoji: row.emoji || '',
+    categoryId: row.category_id || '',
+    status: row.status || 'dreaming',
+    tip: row.tip || '',
+    mapQuery: row.map_query || '',
+    pinColor: row.pin_color || 'teal',
+    noteColor: row.note_color || 'yellow',
+    type: row.type || 'note',
+    x: row.x || 0,
+    y: row.y || 0,
+    rot: row.rot || 0,
+  });
+
+  useEffect(() => {
+    if (!currentUser || currentUser === 'guest') return;
+    loadChapters();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser, userEmail]);
+
+  async function loadChapters() {
+    const [ownedResult, memberResult] = await Promise.all([
+      supabase.from('chapters').select('id, title, created_at, owner_id').eq('owner_id', currentUser),
+      userEmail
+        ? supabase.from('chapter_collaborators').select('chapter_id').eq('email', userEmail)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const owned = ownedResult.data || [];
+    const collabIds = (memberResult.data || []).map(r => r.chapter_id).filter(id => !owned.some(c => c.id === id));
+
+    let collab = [];
+    if (collabIds.length > 0) {
+      const { data } = await supabase.from('chapters').select('id, title, created_at, owner_id').in('id', collabIds);
+      collab = data || [];
+    }
+
+    const remote = [...owned, ...collab];
+
+    // One-time migration from localStorage
+    if (remote.length === 0) {
+      const localKey = `someday-chapters-${currentUser}`;
+      let local = [];
+      try { local = JSON.parse(localStorage.getItem(localKey) || '[]'); } catch {}
+      if (local.length > 0) {
+        await migrateLocalChapters(local);
+        const { data: afterMigrate } = await supabase.from('chapters').select('id, title, created_at, owner_id').eq('owner_id', currentUser);
+        const migrated = (afterMigrate || []).map(c => ({ ...c, itemIds: [], memories: [], collaborators: [], loaded: false }));
+        setChapters(migrated);
+        return;
+      }
+    }
+
+    setChapters(prev => {
+      const remoteIds = new Set(remote.map(c => c.id));
+      const localOnly = prev.filter(c => !remoteIds.has(c.id));
+      return [
+        ...remote.map(c => {
+          const ex = prev.find(p => p.id === c.id);
+          return { ...c, itemIds: ex?.itemIds || [], memories: ex?.memories || [], collaborators: ex?.collaborators || [], loaded: ex?.loaded || false };
+        }),
+        ...localOnly,
+      ];
+    });
+  }
+
+  async function migrateLocalChapters(localChapters) {
+    for (const ch of localChapters) {
+      const { data: inserted } = await supabase
+        .from('chapters')
+        .insert({ owner_id: currentUser, title: ch.title })
+        .select('id')
+        .single();
+      if (!inserted) continue;
+
+      const pinsToMigrate = (ch.itemIds || []).map((pinId, idx) => {
+        const pin = dreams.find(d => d.id === pinId);
+        return pin ? pinToRow(pin, inserted.id, idx) : null;
+      }).filter(Boolean);
+      if (pinsToMigrate.length > 0) await supabase.from('chapter_pins').insert(pinsToMigrate);
+
+      const mems = (ch.memories || []).map(m => ({ id: m.id, chapter_id: inserted.id, type: m.type || 'note', text: m.text || '', date_label: m.date || '' }));
+      if (mems.length > 0) await supabase.from('chapter_memories').insert(mems);
+    }
+    try { localStorage.removeItem(`someday-chapters-${currentUser}`); } catch {}
+  }
+
+  async function loadChapterContent(chapterId) {
+    const { data } = await supabase
+      .from('chapters')
+      .select('id, chapter_pins(*), chapter_collaborators(email, invited_by, created_at), chapter_memories(id, type, text, date_label)')
+      .eq('id', chapterId)
+      .single();
+    if (!data) return;
+
+    const loadedPins = (data.chapter_pins || []).sort((a, b) => (a.position || 0) - (b.position || 0)).map(rowToPin);
+    const loadedMemories = (data.chapter_memories || []).map(m => ({ id: m.id, type: m.type, text: m.text, date: m.date_label }));
+
+    setChapters(prev => prev.map(c => c.id === chapterId ? {
+      ...c,
+      pins: loadedPins,
+      itemIds: [...new Set([...(c.itemIds || []), ...loadedPins.map(p => p.id)])],
+      memories: loadedMemories,
+      collaborators: data.chapter_collaborators || [],
+      loaded: true,
+    } : c));
+  }
+
+  function openChapter(chapterId) {
+    setActiveChapterId(chapterId);
+    const ch = chapters.find(c => c.id === chapterId);
+    if (!ch?.loaded) loadChapterContent(chapterId);
+  }
+
+  async function inviteToChapter(chapterId, email) {
+    if (!email.trim()) return;
+    const normalized = email.trim().toLowerCase();
+    await supabase.from('chapter_collaborators').upsert(
+      { chapter_id: chapterId, email: normalized, invited_by: currentUser },
+      { onConflict: 'chapter_id,email' }
+    );
+    setChapters(prev => prev.map(c => c.id === chapterId ? {
+      ...c,
+      collaborators: [...(c.collaborators || []).filter(x => x.email !== normalized), { email: normalized, invited_by: currentUser }],
+    } : c));
+  }
 
   useEffect(() => {
     setPins(prev => {
@@ -1313,19 +1489,43 @@ const SomedayPage = ({
     setDetailPin(pin);
   }
 
-  function createChapter(title, itemIds = []) {
-    const newChapter = { id: `chapter-${Date.now()}`, title, itemIds: [...itemIds], memories: [], createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) };
+  async function createChapter(title, itemIds = []) {
+    const { data: inserted } = await supabase
+      .from('chapters')
+      .insert({ owner_id: currentUser, title })
+      .select('id, title, created_at, owner_id')
+      .single();
+
+    const chapterId = inserted?.id || `chapter-${Date.now()}`;
+    const newChapter = {
+      ...(inserted || {}),
+      id: chapterId,
+      title,
+      itemIds: [...itemIds],
+      memories: [],
+      collaborators: [],
+      loaded: true,
+      createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    };
+
+    if (inserted && itemIds.length > 0) {
+      const rows = itemIds.map((pinId, idx) => {
+        const pin = pins.find(p => p.id === pinId);
+        return pin ? pinToRow(pin, inserted.id, idx) : null;
+      }).filter(Boolean);
+      if (rows.length > 0) supabase.from('chapter_pins').insert(rows).then(() => {});
+    }
+
     setChapters(prev => {
       const updated = [...prev, newChapter];
-      // Position pins into cluster
       if (itemIds.length > 0) {
-        const clusterY = getChapterClusterY(updated, newChapter.id, pins);
+        const clusterY = getChapterClusterY(updated, chapterId, pins);
         setPins(ps => ps.map(p => {
           if (!itemIds.includes(p.id)) return p;
           const idx = itemIds.indexOf(p.id);
           const col = idx % 2, row = Math.floor(idx / 2);
           const rowH = p.type === 'note' ? CLUSTER_NOTE_ROW_H : CLUSTER_PHOTO_ROW_H;
-          const updated2 = { ...p, chapterId: newChapter.id, x: (col === 0 ? 16 : 208) + (Math.random() - 0.5) * 10, y: clusterY + CLUSTER_LABEL_H + row * rowH + (Math.random() - 0.5) * 8, rot: (col === 0 ? -1 : 1) * (0.5 + Math.random() * 1.8) };
+          const updated2 = { ...p, chapterId, x: (col === 0 ? 16 : 208) + (Math.random() - 0.5) * 10, y: clusterY + CLUSTER_LABEL_H + row * rowH + (Math.random() - 0.5) * 8, rot: (col === 0 ? -1 : 1) * (0.5 + Math.random() * 1.8) };
           onUpdateDream?.(updated2);
           return updated2;
         }));
@@ -1350,15 +1550,18 @@ const SomedayPage = ({
         const rowH = p.type === 'note' ? CLUSTER_NOTE_ROW_H : CLUSTER_PHOTO_ROW_H;
         const updated = { ...p, chapterId, x: (col === 0 ? 16 : 208) + (Math.random() - 0.5) * 10, y: clusterY + CLUSTER_LABEL_H + row * rowH + (Math.random() - 0.5) * 8, rot: (col === 0 ? -1 : 1) * (0.5 + Math.random() * 1.8) };
         onUpdateDream?.(updated);
+        const position = chapterPinsCount;
+        supabase.from('chapter_pins').upsert(pinToRow(updated, chapterId, position)).then(() => {});
         return updated;
       });
     });
   }
 
   function removePinFromChapter(pinId) {
-    setChapters(prev => prev.map(c => ({ ...c, itemIds: c.itemIds.filter(id => id !== pinId) })));
+    setChapters(prev => prev.map(c => ({ ...c, itemIds: c.itemIds.filter(id => id !== pinId), pins: (c.pins || []).filter(p => p.id !== pinId) })));
     setPins(prev => prev.filter(p => p.id !== pinId));
     onDeleteDream?.(pinId);
+    supabase.from('chapter_pins').delete().eq('id', pinId).then(() => {});
   }
 
   function addSuggestionToChapter(suggestion, chapterId) {
@@ -1378,6 +1581,9 @@ const SomedayPage = ({
     setPins(prev => [...prev, newPin]);
     onAddDream?.(newPin);
     addPinToChapter(newPin.id, chapterId);
+    // Also write directly to chapter_pins so collaborators see it
+    const position = chapters.find(c => c.id === chapterId)?.itemIds?.length || 0;
+    supabase.from('chapter_pins').upsert(pinToRow({ ...newPin, chapterId }, chapterId, position)).then(() => {});
   }
 
   function deleteChapter(chapterId) {
@@ -1389,14 +1595,17 @@ const SomedayPage = ({
     }));
     setChapters(prev => prev.filter(c => c.id !== chapterId));
     if (activeChapterId === chapterId) setActiveChapterId(null);
+    supabase.from('chapters').delete().eq('id', chapterId).then(() => {});
   }
 
   function addMemoryToChapter(chapterId, memory) {
     setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, memories: [...(c.memories || []), memory] } : c));
+    supabase.from('chapter_memories').insert({ id: memory.id, chapter_id: chapterId, type: memory.type || 'note', text: memory.text || '', date_label: memory.date || '' }).then(() => {});
   }
 
   function deleteMemoryFromChapter(chapterId, memoryId) {
     setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, memories: (c.memories || []).filter(m => m.id !== memoryId) } : c));
+    supabase.from('chapter_memories').delete().eq('id', memoryId).then(() => {});
   }
 
   function autoSort() {
@@ -1430,7 +1639,7 @@ const SomedayPage = ({
       return (
         <>
           <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
-          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={() => deleteChapter(activeChapterId)} onCreateTrip={onCreateTripFromChapter} darkMode={darkMode} hasLinkedTrip={chaptersWithLinkedTrips.has(String(chapter.id))} />
+          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={() => deleteChapter(activeChapterId)} onCreateTrip={onCreateTripFromChapter} darkMode={darkMode} hasLinkedTrip={chaptersWithLinkedTrips.has(String(chapter.id))} onInvite={email => inviteToChapter(activeChapterId, email)} />
         </>
       );
     }
@@ -1470,7 +1679,7 @@ const SomedayPage = ({
               📌 Someday
             </button>
             {chapters.map(ch => (
-              <button key={ch.id} onClick={() => setActiveChapterId(ch.id)} style={{ flexShrink: 0, padding: '8px 14px', background: 'transparent', border: 'none', borderBottom: `2px solid ${activeChapterId === ch.id ? '#5eadce' : 'transparent'}`, fontFamily: CAVEAT, fontSize: 15, color: activeChapterId === ch.id ? (darkMode ? '#5eadce' : '#0e7490') : ts, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'color 0.15s' }}>
+              <button key={ch.id} onClick={() => openChapter(ch.id)} style={{ flexShrink: 0, padding: '8px 14px', background: 'transparent', border: 'none', borderBottom: `2px solid ${activeChapterId === ch.id ? '#5eadce' : 'transparent'}`, fontFamily: CAVEAT, fontSize: 15, color: activeChapterId === ch.id ? (darkMode ? '#5eadce' : '#0e7490') : ts, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'color 0.15s' }}>
                 📖 {ch.title}
               </button>
             ))}
@@ -1534,7 +1743,7 @@ const SomedayPage = ({
           return (
             <div
               key={`cluster-label-${chapter.id}`}
-              onClick={() => setActiveChapterId(chapter.id)}
+              onClick={() => openChapter(chapter.id)}
               style={{ position: 'absolute', left: 16, top: cl.labelY, zIndex: 11, cursor: 'pointer', userSelect: 'none' }}
             >
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: darkMode ? 'rgba(94,173,206,0.14)' : 'rgba(94,173,206,0.1)', border: '1px solid rgba(94,173,206,0.35)', borderRadius: 8, padding: '7px 16px 7px 12px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
