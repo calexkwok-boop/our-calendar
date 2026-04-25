@@ -25988,8 +25988,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {/* Notification Settings Panel */}
         {showSharePanel && accountPanelMode === 'notifications' && showNotificationSettings && (
-          <div className="account-handwritten glass-panel rounded-2xl p-6 mb-6">
-            <style>{`.account-handwritten, .account-handwritten * { font-family: 'Caveat', cursive !important; } .account-handwritten { font-size: 1.08rem; } .account-handwritten .text-\\[10px\\] { font-size: 0.78rem !important; } .account-handwritten .text-\\[11px\\] { font-size: 0.84rem !important; } .account-handwritten .text-xs { font-size: 0.9rem !important; } .account-handwritten .text-sm { font-size: 1rem !important; } .account-handwritten .text-xl { font-size: 1.42rem !important; }`}</style>
+          <div className="glass-panel rounded-2xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold text-green-600 dark:text-green-400">Notification Settings</h3>
               <button onClick={() => { setShowSharePanel(false); setShowNotificationSettings(false); }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
@@ -26310,10 +26309,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         )}
 
         {showSharePanel && accountPanelMode !== 'notifications' && (
-          <div className="account-handwritten glass-panel rounded-2xl p-6 mb-6">
-            <style>{`.account-handwritten, .account-handwritten * { font-family: 'Caveat', cursive !important; } .account-handwritten { font-size: 1.08rem; } .account-handwritten .text-\\[10px\\] { font-size: 0.78rem !important; } .account-handwritten .text-\\[11px\\] { font-size: 0.84rem !important; } .account-handwritten .text-xs { font-size: 0.9rem !important; } .account-handwritten .text-sm { font-size: 1rem !important; } .account-handwritten .text-xl { font-size: 1.42rem !important; }`}</style>
+          <div className="glass-panel rounded-2xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold" style={{ ...themeAccentHeadingStyle, fontFamily: "'Caveat', cursive" }}>
+              <h3 className="text-xl font-semibold" style={themeAccentHeadingStyle}>
                 {accountPanelMode === 'sharing'
                   ? `Sharing (${activeLayer?.name || calendarTitle || 'Current Calendar'})`
                   : 'Account Settings'}
@@ -26322,123 +26320,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
             </div>
-            {accountPanelMode === 'account' && (
-              <>
-                <div className="mb-4 p-3 rounded-xl border bg-gray-100 dark:bg-gray-700/70" style={{ borderColor: themeAccentBorder }}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Signed in as</div>
-                      <div className="mt-2">
-                        <input
-                          type="text"
-                          value={accountHandleInput}
-                          onChange={(e) => {
-                            setAccountHandleInput(e.target.value);
-                            setAccountHandleMessage('');
-                          }}
-                          placeholder="Set your handle"
-                          maxLength={40}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              saveAccountHandle();
-                            }
-                          }}
-                          onBlur={() => {
-                            const nextHandle = normalizeUsernameHandle(accountHandleInput);
-                            if (!nextHandle) return;
-                            if (nextHandle === String(currentUser || '').trim()) return;
-                            saveAccountHandle();
-                          }}
-                        />
-                      </div>
-                      {(user?.email || user?.phone) && (
-                        <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-2">{user?.email || user?.phone || ''}</div>
-                      )}
-                    </div>
-                    <button
-                      onClick={handleLogout}
-                      className={`self-center px-3 py-2 rounded-xl text-[11px] font-semibold shrink-0 transition-all ${darkMode ? 'text-gray-100 border border-white/10 bg-white/10 hover:bg-white/15' : ''}`}
-                      style={darkMode ? undefined : themeAccentSoftButtonStyle}
-                    >
-                      Logout
-                    </button>
-                  </div>
-                  {accountHandleMessage && (
-                    <div className={`mt-2 text-xs ${/updated|already set/i.test(accountHandleMessage) ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
-                      {accountHandleMessage}
-                    </div>
-                  )}
-                </div>
-                <div className="mb-4 p-3 rounded-xl border bg-gray-50 dark:bg-gray-800/70" style={{ borderColor: themeAccentBorder }}>
-                  <button
-                    onClick={() => setShowAccountPaymentHandles((prev) => !prev)}
-                    className="w-full flex items-center justify-between gap-3 text-left"
-                  >
-                    <div>
-                      <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Payment Handles</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {showAccountPaymentHandles ? 'Hide Venmo and Cash App' : 'Expand to manage Venmo and Cash App'}
-                      </div>
-                    </div>
-                    <div className={`text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-600'}`}>
-                      {showAccountPaymentHandles ? 'Hide' : 'Show'}
-                    </div>
-                  </button>
-                  {showAccountPaymentHandles && (
-                    <>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
-                        <div>
-                          <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">Venmo</div>
-                          <input
-                            type="text"
-                            value={accountVenmoInput}
-                            onChange={(e) => {
-                              setAccountVenmoInput(e.target.value);
-                              setAccountPaymentMessage('');
-                            }}
-                            placeholder="@username"
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
-                          />
-                        </div>
-                        <div>
-                          <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">Cash App</div>
-                          <input
-                            type="text"
-                            value={accountCashAppInput}
-                            onChange={(e) => {
-                              setAccountCashAppInput(e.target.value);
-                              setAccountPaymentMessage('');
-                            }}
-                            placeholder="$cashtag"
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
-                          />
-                        </div>
-                      </div>
-                      <div className="mt-3 flex items-center justify-between gap-3">
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          These handles will be used in the expense tracker payment links.
-                        </p>
-                        <button
-                          onClick={saveAccountPaymentHandles}
-                          disabled={savingAccountPayments}
-                          className="px-3 py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-50"
-                          style={themeAccentButtonStyle}
-                        >
-                          {savingAccountPayments ? 'Saving...' : 'Save Payments'}
-                        </button>
-                      </div>
-                      {accountPaymentMessage && (
-                        <div className={`mt-2 text-xs ${/updated|saved/i.test(accountPaymentMessage) ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
-                          {accountPaymentMessage}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </>
-            )}
             {accountPanelMode === 'sharing' && (
               <>
             <div className="mb-5">
@@ -27910,8 +27791,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
       {/* Account section */}
       {calendarSwitcherMode === 'account' && (
-      <div className="account-handwritten p-4">
-        <style>{`.account-handwritten, .account-handwritten * { font-family: 'Caveat', cursive !important; } .account-handwritten { font-size: 1.08rem; } .account-handwritten .text-\\[10px\\] { font-size: 0.78rem !important; } .account-handwritten .text-\\[11px\\] { font-size: 0.84rem !important; } .account-handwritten .text-xs { font-size: 0.9rem !important; } .account-handwritten .text-sm { font-size: 1rem !important; } .account-handwritten .text-xl { font-size: 1.42rem !important; }`}</style>
+      <div className="p-4">
         <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3">Account</h3>
         <div className="flex items-center gap-3 mb-3">
           <span className="relative inline-flex">
@@ -27941,17 +27821,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
         >
           Your profile
-        </button>
-        <button
-          onClick={() => {
-            setShowCalendarSwitcher(false);
-            setAccountPanelMode('account');
-            setShowNotificationSettings(false);
-            setShowSharePanel(true);
-          }}
-          className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
-        >
-          Account settings
         </button>
         <button
           onClick={() => {
@@ -30975,8 +30844,7 @@ transform: translateY(0);
 
     {showPublishLayerModal && (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="account-handwritten bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
-          <style>{`.account-handwritten, .account-handwritten * { font-family: 'Caveat', cursive !important; } .account-handwritten { font-size: 1.08rem; } .account-handwritten .text-\\[10px\\] { font-size: 0.78rem !important; } .account-handwritten .text-\\[11px\\] { font-size: 0.84rem !important; } .account-handwritten .text-xs { font-size: 0.9rem !important; } .account-handwritten .text-sm { font-size: 1rem !important; } .account-handwritten .text-lg { font-size: 1.32rem !important; }`}</style>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               {publishTargetIsPublic ? 'Edit Public Calendar' : 'Publish Calendar'}
@@ -35612,6 +35480,18 @@ transform: translateY(0);
         onBack={() => setProfileViewState({ open: false, email: null, userId: null })}
         onOpenProfile={({ email, userId }) => setProfileViewState({ open: true, email: email || null, userId: userId || null })}
         knownHandlesByEmail={knownHandlesByEmail}
+        accountHandleInput={accountHandleInput}
+        onAccountHandleChange={(val) => { setAccountHandleInput(val); setAccountHandleMessage(''); }}
+        accountHandleMessage={accountHandleMessage}
+        onSaveHandle={saveAccountHandle}
+        accountVenmoInput={accountVenmoInput}
+        onVenmoChange={(val) => { setAccountVenmoInput(val); setAccountPaymentMessage(''); }}
+        accountCashAppInput={accountCashAppInput}
+        onCashAppChange={(val) => { setAccountCashAppInput(val); setAccountPaymentMessage(''); }}
+        accountPaymentMessage={accountPaymentMessage}
+        savingAccountPayments={savingAccountPayments}
+        onSavePaymentHandles={saveAccountPaymentHandles}
+        onLogout={handleLogout}
       />
     )}
 

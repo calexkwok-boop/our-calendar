@@ -12,7 +12,8 @@
       "Bash(npx --yes acorn --ecma2020 --module src/components/PopupEventPanel.jsx)",
       "Bash(echo \"exit: $?\")",
       "Bash(npx acorn *)",
-      "Bash(grep -n \"useEffect.*{$\\\\|useCallback\\\\|useMemo\" /c/Users/a_kwo/Desktop/our-calendar/src/App.js)"
+      "Bash(grep -n \"useEffect.*{$\\\\|useCallback\\\\|useMemo\" /c/Users/a_kwo/Desktop/our-calendar/src/App.js)",
+      "Bash(grep -v \"^\\\\s*//\")"
     ]
   }
 }
