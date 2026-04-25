@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 
 // ─── Supabase setup required ─────────────────────────────────────────────────
@@ -133,6 +133,9 @@ const ProfilePage = ({
 }) => {
   const userEmail = currentUser?.email?.toLowerCase().trim() || '';
   const isOwnProfile = !viewedUserEmail || viewedUserEmail === userEmail;
+
+  const knownHandlesRef = useRef(knownHandlesByEmail);
+  useEffect(() => { knownHandlesRef.current = knownHandlesByEmail; }, [knownHandlesByEmail]);
 
   const [sharingPrefs, setSharingPrefs] = useState({
     sharePhotoOfDay: false,
@@ -344,7 +347,7 @@ const ProfilePage = ({
 
         const friends = [];
         for (const [email, ctx] of friendMap.entries()) {
-          const handle = knownHandlesByEmail[email] || email.split('@')[0];
+          const handle = knownHandlesRef.current[email] || email.split('@')[0];
           const parts = [];
           if (ctx.trips.length === 1) parts.push(ctx.trips[0]);
           else if (ctx.trips.length > 1) parts.push(`${ctx.trips.length} trips`);
@@ -367,7 +370,7 @@ const ProfilePage = ({
     };
 
     load();
-  }, [isOwnProfile, userEmail, currentUser?.id, knownHandlesByEmail, getMyTripData]);
+  }, [isOwnProfile, userEmail, currentUser?.id, getMyTripData]);
 
   // ─── Load friend profile + connection context
   useEffect(() => {
@@ -385,7 +388,7 @@ const ProfilePage = ({
           .ilike('email', email)
           .maybeSingle();
 
-        const handle = handleRow?.handle || knownHandlesByEmail[email] || email.split('@')[0];
+        const handle = handleRow?.handle || knownHandlesRef.current[email] || email.split('@')[0];
 
         // TODO: Load sharing prefs from user_profiles table once created:
         // const { data: profileRow } = await supabase.from('user_profiles').select('*').eq('user_id', viewedUserId).maybeSingle()
@@ -522,7 +525,7 @@ const ProfilePage = ({
     };
 
     load();
-  }, [isOwnProfile, viewedUserEmail, viewedUserId, userEmail, knownHandlesByEmail, getMyTripData]);
+  }, [isOwnProfile, viewedUserEmail, viewedUserId, userEmail, getMyTripData]);
 
   // ─── Styles
   const bg = darkMode ? '#0f1117' : '#f8f5f0';
