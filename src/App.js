@@ -19972,6 +19972,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     getJourneyGoalType,
   });
   const homeReflectionStreak = homeReflectionStats.streak;
+  const homeYearStatsForHome = React.useMemo(() => ({
+    ...homeYearStats,
+    streak: homeReflectionStats.streak,
+    streakHelpText: homeReflectionStats.helpText,
+  }), [homeYearStats, homeReflectionStats.streak, homeReflectionStats.helpText]);
+  const activeTripIdsForHome = React.useMemo(
+    () => activeTrips.map((trip) => String(trip?.id || '')),
+    [activeTrips],
+  );
   const primaryJourneyGoal = sortedJourneyGoals.find((goal) => goal?.active !== false) || null;
   const todayWeatherIcon = weather[todayKey]?.icon;
   const weatherGreetingEmoji = (todayWeatherIcon && todayWeatherIcon !== 'FOG') ? todayWeatherIcon : homeGreetingEmoji;
@@ -28260,7 +28269,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             todayLabel={new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             showHeader={false}
             tripsPreview={homeTripsPreviewCards}
-            activeTripIds={activeTrips.map((trip) => String(trip?.id || ''))}
+            activeTripIds={activeTripIdsForHome}
             recentMemory={homeRecentMemory}
             memoryCount={memories.length}
             memoryPhotoCount={homeMemoryPhotoCount}
@@ -28316,11 +28325,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             themeAccentEllieChipButtonStyle={themeAccentEllieChipButtonStyle}
             themeAccentTextStyle={themeAccentTextStyle}
             themeAccentBorder={themeAccentBorder}
-            yearStats={{
-              ...homeYearStats,
-              streak: homeReflectionStats.streak,
-              streakHelpText: homeReflectionStats.helpText,
-            }}
+            yearStats={homeYearStatsForHome}
              profilePhotoUrl={currentUserProfilePhotoUrl}
              profileBadgeCount={unreadInAppCount + pendingTripInvites.length}
               onOpenAccountMenu={toggleAccountMenu}

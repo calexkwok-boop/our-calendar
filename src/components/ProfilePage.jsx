@@ -547,7 +547,7 @@ const ProfilePage = ({
       </div>
 
       {/* Scrollable body */}
-      <div className="flex-1 overflow-y-auto px-5 pb-10">
+      <div className="flex-1 overflow-y-auto px-5 pb-28">
 
         {/* Profile hero */}
         <div className="rounded-3xl p-5 mb-4 flex items-center gap-4" style={{ background: cardBg, border: `1px solid ${cardBorder}` }}>

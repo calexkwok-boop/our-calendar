@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Camera } from "lucide-react";
 import { supabase } from "../supabaseClient";
@@ -1606,16 +1606,23 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     if (!visibleItems.length) return undefined;
 
     let cancelled = false;
-    visibleItems.forEach(item => {
-      const originalUrl = item.image;
-      cacheDreamShelfImage(originalUrl, item.name).then(stableImageUrl => {
-        if (cancelled || !stableImageUrl || stableImageUrl === originalUrl) return;
-        const key = getDreamShelfImageKey(item);
-        setItemImages(prev => {
-          const next = { ...prev, [key]: stableImageUrl };
-          itemImagesRef.current = next;
-          return next;
-        });
+    Promise.all(
+      visibleItems.map(item =>
+        cacheDreamShelfImage(item.image, item.name).then(stableImageUrl => ({ item, stableImageUrl }))
+      )
+    ).then(results => {
+      if (cancelled) return;
+      const updates = {};
+      for (const { item, stableImageUrl } of results) {
+        if (stableImageUrl && stableImageUrl !== item.image) {
+          updates[getDreamShelfImageKey(item)] = stableImageUrl;
+        }
+      }
+      if (Object.keys(updates).length === 0) return;
+      setItemImages(prev => {
+        const next = { ...prev, ...updates };
+        itemImagesRef.current = next;
+        return next;
       });
     });
 
@@ -1741,37 +1748,43 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
     onAddToSomeday?.({ title: featured.product_name, imageUrl: stableImageUrl, emoji: "✨", type: "dreamshelf", categoryId: "buy" });
   }, [cacheDreamShelfImage, onAddToSomeday]);
 
-  const activeWorldCategories = activeWorld
+  const activeWorldCategories = useMemo(() => activeWorld
     ? CATEGORIES.filter(cat => activeWorld.categoryIds.includes(cat.id))
-    : [];
-  const subFilters = SUB_FILTERS[activeCategory?.id] || [];
+    : [],
+  [activeWorld]);
+  const subFilters = useMemo(() => SUB_FILTERS[activeCategory?.id] || [], [activeCategory?.id]);
   const featured = featuredPost;
   const featuredImage = featured
     ? (featured.product_image || itemImages[getDreamShelfImageKey(featured)] || "")
     : "";
   const featuredSaved = featured ? savedIds.has(featured.id) : false;
-  const selectedItemWithImage = selectedItem
+  const selectedItemWithImage = useMemo(() => selectedItem
     ? {
         ...selectedItem,
         image: selectedItem.preferResolvedImage
           ? (itemImages[getDreamShelfImageKey(selectedItem)] || cachedImageUrls[selectedItem.image] || (isDreamShelfWeakImageUrl(selectedItem.image) ? "" : selectedItem.image) || "")
           : (cachedImageUrls[selectedItem.image] || selectedItem.image || itemImages[getDreamShelfImageKey(selectedItem)] || "")
       }
-    : null;
-  const categoryItemsWithImages = items.map(item => ({
+    : null,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [selectedItem, itemImages, cachedImageUrls]);
+
+  const categoryItemsWithImages = useMemo(() => items.map(item => ({
     ...item,
     image: item.preferResolvedImage
       ? (itemImages[getDreamShelfImageKey(item)] || cachedImageUrls[item.image] || (isDreamShelfWeakImageUrl(item.image) ? "" : item.image) || "")
       : (cachedImageUrls[item.image] || item.image || itemImages[getDreamShelfImageKey(item)] || ""),
-  }));
-  const categoryItemPairs = Array.from(
+  })), [items, itemImages, cachedImageUrls]);
+
+  const categoryItemPairs = useMemo(() => Array.from(
     { length: Math.ceil(categoryItemsWithImages.length / 2) },
     (_, index) => categoryItemsWithImages.slice(index * 2, index * 2 + 2)
-  );
-  const communityPostPairs = Array.from(
+  ), [categoryItemsWithImages]);
+
+  const communityPostPairs = useMemo(() => Array.from(
     { length: Math.ceil(communityPosts.length / 2) },
     (_, index) => communityPosts.slice(index * 2, index * 2 + 2)
-  );
+  ), [communityPosts]);
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
