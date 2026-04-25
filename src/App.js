@@ -8360,6 +8360,18 @@ function App() {
     setAccountPaymentMessage('');
   }, [showSharePanel, currentUser, user?.email, venmoHandles, globalVenmoHandles, cashAppHandles, globalCashAppHandles]);
   useEffect(() => {
+    if (!profileViewState.open) return;
+    setAccountHandleInput(String(currentUser || '').trim());
+    setAccountHandleMessage('');
+    const accountIdentity = String(user?.email || currentUser || '').trim();
+    const accountKey = normalizeIdentityKey(accountIdentity);
+    const localVenmo = accountKey ? readLocalAccountPaymentHandles('venmo')[accountKey] || '' : '';
+    const localCash = accountKey ? readLocalAccountPaymentHandles('cashapp')[accountKey] || '' : '';
+    setAccountVenmoInput(accountKey ? (venmoHandles[accountKey] || globalVenmoHandles[accountKey] || localVenmo) : '');
+    setAccountCashAppInput(accountKey ? (cashAppHandles[accountKey] || globalCashAppHandles[accountKey] || localCash) : '');
+    setAccountPaymentMessage('');
+  }, [profileViewState.open, currentUser, user?.email, venmoHandles, globalVenmoHandles, cashAppHandles, globalCashAppHandles]);
+  useEffect(() => {
     const inExpenseFlow = showExpenseTrackerPanel || (Boolean(activeSubCalendar) && subCalTab === 'expenses');
     if (!inExpenseFlow) return;
     if (!accountPaymentIdentity || hasSavedAccountPaymentHandle || skipExpensePaymentHandlePrompt || showSharePanel) return;
