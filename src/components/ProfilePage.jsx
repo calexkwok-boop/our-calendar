@@ -161,6 +161,7 @@ const ProfilePage = ({
     sharePhotoOfDay: false,
     shareMemories: false,
     shareKomoItems: false,
+    shareChapters: false,
   });
   const [accountExpanded, setAccountExpanded] = useState(false);
   const [friendsList, setFriendsList] = useState([]);
@@ -386,6 +387,7 @@ const ProfilePage = ({
           sharePhotoOfDay: false,
           shareMemories: false,
           shareKomoItems: false,
+          shareChapters: false,
         });
 
         const allMyTripIds = Object.keys(tripNameById);
@@ -608,6 +610,13 @@ const ProfilePage = ({
                   description="Items you've added to your shelf"
                   value={sharingPrefs.shareKomoItems}
                   onChange={v => updatePref('shareKomoItems', v)}
+                  darkMode={darkMode}
+                />
+                <ToggleRow
+                  label="Chapters"
+                  description="Your dream destinations and travel plans"
+                  value={sharingPrefs.shareChapters}
+                  onChange={v => updatePref('shareChapters', v)}
                   darkMode={darkMode}
                 />
               </div>

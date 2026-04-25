@@ -868,11 +868,22 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
   const [memoryText, setMemoryText] = useState('');
   const [selectedPin, setSelectedPin] = useState(null);
   const [showInvite, setShowInvite] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showCoverPicker, setShowCoverPicker] = useState(false);
+  const [coverPinId, setCoverPinId] = useState(chapter.coverPinId || chapter.cover_pin_id || null);
+  const menuRef = useRef(null);
   // seed rotates each time the page mounts (chapter reopened)
   const [suggestionSeed] = useState(() => Math.floor(Math.random() * 997));
   // Use Supabase-loaded pins if available, fall back to filtering from dreams
   const chapterPins = chapter.pins || pins.filter(p => chapter.itemIds.includes(p.id));
-  const coverPin = chapterPins.find(p => p.imageUrl) || null;
+  const imagePins = chapterPins.filter(p => p.imageUrl);
+  const coverPin = (coverPinId ? imagePins.find(p => String(p.id) === String(coverPinId)) : null) || imagePins[0] || null;
+
+  async function pickCover(pin) {
+    setCoverPinId(pin.id);
+    setShowCoverPicker(false);
+    await supabase.from('chapters').update({ cover_pin_id: pin.id }).eq('id', chapter.id);
+  }
   const pageBg = darkMode ? '#0e1520' : '#faf8f3';
   const tp     = darkMode ? '#e8eaf0' : '#1a1a2e';
   const ts     = darkMode ? '#4a5568' : '#9ca3af';
@@ -901,20 +912,35 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
             {onInvite && (
               <button
                 onClick={() => setShowInvite(true)}
-                style={{ background: darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfb', border: `1px solid ${darkMode ? 'rgba(45,212,191,0.28)' : '#99f6e4'}`, borderRadius: 20, padding: '5px 12px', fontSize: 12, color: darkMode ? '#2dd4bf' : '#0d9488', cursor: 'pointer', flexShrink: 0, fontWeight: 700 }}
+                style={{ background: darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfb', border: `1px solid ${darkMode ? 'rgba(45,212,191,0.28)' : '#99f6e4'}`, borderRadius: 20, padding: '6px 14px', fontSize: 15, color: darkMode ? '#2dd4bf' : '#0d9488', cursor: 'pointer', flexShrink: 0, fontWeight: 700, fontFamily: CAVEAT }}
               >Invite</button>
             )}
-            {onCreateTrip && (
-              <button
-                onClick={() => onCreateTrip(chapter)}
-                style={{ background: darkMode ? 'rgba(94,173,206,0.14)' : '#eef8fd', border: `1px solid ${darkMode ? 'rgba(94,173,206,0.28)' : '#bae6fd'}`, borderRadius: 20, padding: '5px 12px', fontSize: 12, color: darkMode ? '#7dd3fc' : '#0e7490', cursor: 'pointer', flexShrink: 0, fontWeight: 700 }}
-              >Create trip</button>
-            )}
-            {onDeleteChapter && (
-              <button
-                onClick={() => { if (window.confirm(`Remove "${chapter.title}"? Pins will stay on your board.`)) onDeleteChapter(); }}
-                style={{ background: 'none', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e0d5'}`, borderRadius: 20, padding: '5px 12px', fontSize: 12, color: '#ef4444', cursor: 'pointer', flexShrink: 0 }}
-              >Remove chapter</button>
+            {(onCreateTrip || onDeleteChapter) && (
+              <div ref={menuRef} style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setShowMenu(v => !v)}
+                  style={{ background: 'none', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.12)' : '#e5e0d5'}`, borderRadius: 20, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: ts, cursor: 'pointer', flexShrink: 0 }}
+                >⋯</button>
+                {showMenu && (
+                  <>
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 49 }} onClick={() => setShowMenu(false)} />
+                    <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', zIndex: 50, background: darkMode ? '#1e2d42' : '#fff', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e0d5'}`, borderRadius: 14, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', minWidth: 160, overflow: 'hidden' }}>
+                      {onCreateTrip && (
+                        <button
+                          onClick={() => { setShowMenu(false); onCreateTrip(chapter); }}
+                          style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '13px 16px', fontSize: 17, fontWeight: 700, color: darkMode ? '#7dd3fc' : '#0e7490', cursor: 'pointer', fontFamily: CAVEAT }}
+                        >✈ Create trip</button>
+                      )}
+                      {onDeleteChapter && (
+                        <button
+                          onClick={() => { setShowMenu(false); if (window.confirm(`Remove "${chapter.title}"? Pins will stay on your board.`)) onDeleteChapter(); }}
+                          style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '13px 16px', fontSize: 17, fontWeight: 700, color: '#ef4444', cursor: 'pointer', borderTop: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : '#f0ede8'}`, fontFamily: CAVEAT }}
+                        >✕ Remove chapter</button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -928,6 +954,32 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
             <span style={{ fontFamily: CAVEAT, fontSize: 30, color: '#fff', fontWeight: 700, textShadow: '0 2px 10px rgba(0,0,0,0.6)' }}>{chapter.title}</span>
           </div>
           {chapter.createdAt && <div style={{ position: 'absolute', top: 12, right: 14, background: 'rgba(0,0,0,0.4)', color: '#fff', fontSize: 10, padding: '3px 8px', borderRadius: 20, backdropFilter: 'blur(4px)' }}>{chapter.createdAt}</div>}
+          {imagePins.length > 1 && (
+            <button
+              onClick={() => setShowCoverPicker(true)}
+              style={{ position: 'absolute', bottom: 14, right: 14, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 20, padding: '5px 11px', fontSize: 12, color: '#fff', cursor: 'pointer', fontWeight: 600 }}
+            >Change cover</button>
+          )}
+        </div>
+      )}
+
+      {showCoverPicker && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 10050, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end' }} onClick={() => setShowCoverPicker(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: darkMode ? '#131c2e' : '#fff', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 480, margin: '0 auto', padding: '20px 20px max(32px, calc(env(safe-area-inset-bottom) + 20px))' }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 auto 18px' }} />
+            <p style={{ fontSize: 16, fontWeight: 700, color: darkMode ? '#e8eaf0' : '#1a1a2e', margin: '0 0 14px' }}>Choose cover photo</p>
+            <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
+              {imagePins.map(pin => (
+                <div
+                  key={pin.id}
+                  onClick={() => pickCover(pin)}
+                  style={{ flexShrink: 0, width: 110, height: 110, borderRadius: 14, overflow: 'hidden', cursor: 'pointer', border: String(pin.id) === String(coverPinId) || (!coverPinId && pin === imagePins[0]) ? '3px solid #2dd4bf' : '3px solid transparent', boxSizing: 'border-box' }}
+                >
+                  <img src={pin.imageUrl} alt={pin.title || ''} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
@@ -1203,6 +1255,7 @@ const SomedayPage = ({
   const canvasRef       = useRef();
   const didDrag         = useRef(false);
   const draggingTypeRef = useRef(null);
+  const dreamsSyncedRef = useRef(false);
 
   const groups = useMemo(() => detectGroups(pins), [pins]);
 
@@ -1215,6 +1268,32 @@ const SomedayPage = ({
   useEffect(() => {
     try { if (heroId) localStorage.setItem('someday-hero-id', heroId); else localStorage.removeItem('someday-hero-id'); } catch {}
   }, [heroId]);
+
+  // One-time sync: if pins initialised empty (dreams was empty at mount due to async
+  // bucket-list hydration) repopulate from dreams once they arrive.
+  // Also syncs status-only changes (e.g. 'done') for already-present pins.
+  useEffect(() => {
+    if (dreamsSyncedRef.current || dreams.length === 0) return;
+    dreamsSyncedRef.current = true;
+    setPins(ps => {
+      if (ps.length === 0) {
+        // Full repopulation — async hydration arrived after mount
+        return dreams.map((d, idx) => {
+          const pos = (d.x == null || d.y == null) ? gridPosition(idx) : { x: d.x, y: d.y, rot: d.rot };
+          return { ...d, ...pos, rot: pos.rot ?? d.rot ?? (Math.random() * 6 - 3), pinColor: d.pinColor ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)], noteColor: d.noteColor ?? 'yellow', type: d.type ?? (d.imageUrl || d.emoji ? 'photo' : 'note') };
+        });
+      }
+      // Status-only sync for pins already present
+      const statusById = new Map(dreams.map(d => [String(d.id), d.status]));
+      let changed = false;
+      const next = ps.map(p => {
+        const s = statusById.get(String(p.id));
+        if (s !== undefined && s !== p.status) { changed = true; return { ...p, status: s }; }
+        return p;
+      });
+      return changed ? next : ps;
+    });
+  }, [dreams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     onChaptersChange?.(chapters);
