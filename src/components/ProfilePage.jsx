@@ -24,6 +24,26 @@ import { supabase } from '../supabaseClient';
 
 const getSharingPrefsKey = (userId) => `profile-sharing-prefs-${String(userId || 'guest')}`;
 
+// ─── Avatar gradients ─────────────────────────────────────────────────────────
+const AVATAR_GRADIENTS = [
+  'linear-gradient(135deg, #f43f5e 0%, #a855f7 100%)',
+  'linear-gradient(135deg, #f97316 0%, #ec4899 100%)',
+  'linear-gradient(135deg, #06b6d4 0%, #6366f1 100%)',
+  'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
+  'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
+  'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
+  'linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%)',
+  'linear-gradient(135deg, #84cc16 0%, #10b981 100%)',
+  'linear-gradient(135deg, #f43f5e 0%, #f97316 100%)',
+  'linear-gradient(135deg, #a855f7 0%, #3b82f6 100%)',
+];
+const avatarGradient = (seed) => {
+  let hash = 0;
+  const s = String(seed || '');
+  for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+  return AVATAR_GRADIENTS[hash % AVATAR_GRADIENTS.length];
+};
+
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 const ProfileAvatar = ({ url, name, size = 72, darkMode }) => {
   const [imgError, setImgError] = useState(false);
@@ -36,7 +56,7 @@ const ProfileAvatar = ({ url, name, size = 72, darkMode }) => {
         style={{
           width: size,
           height: size,
-          background: 'linear-gradient(135deg, #f43f5e 0%, #a855f7 50%, #6366f1 100%)',
+          background: avatarGradient(name),
           fontSize: size * 0.38,
           color: '#fff',
         }}
