@@ -31447,10 +31447,9 @@ transform: translateY(0);
             </div>
             <button
               onClick={() => setShowSubCalInviteModal(true)}
-              className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white text-sm rounded-2xl font-semibold shadow-[0_10px_30px_rgba(139,92,246,0.28)]"
-              style={{ fontFamily: "'Caveat', cursive" }}
+              style={{ background: darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfb', border: `1px solid ${darkMode ? 'rgba(45,212,191,0.28)' : '#99f6e4'}`, borderRadius: 20, padding: '6px 14px', fontSize: 15, color: darkMode ? '#2dd4bf' : '#0d9488', cursor: 'pointer', flexShrink: 0, fontWeight: 700, fontFamily: "'Caveat', cursive" }}
             >
-              <Plus className="w-4 h-4" /> Invite
+              Invite
             </button>
           </div>
 
@@ -31712,9 +31711,9 @@ transform: translateY(0);
             {/* Invite button */}
             <button
               onClick={() => setShowSubCalInviteModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white text-xs rounded-xl font-semibold shadow-sm hover:shadow-md transition-all"
+              style={{ background: darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfb', border: `1px solid ${darkMode ? 'rgba(45,212,191,0.28)' : '#99f6e4'}`, borderRadius: 20, padding: '5px 12px', fontSize: 15, color: darkMode ? '#2dd4bf' : '#0d9488', cursor: 'pointer', fontWeight: 700, fontFamily: "'Caveat', cursive" }}
             >
-              <Plus className="w-3.5 h-3.5" /> Invite
+              Invite
             </button>
           </div>
         </div>
@@ -31867,8 +31866,8 @@ transform: translateY(0);
               {canEditCurrentTrip && (
                 <button
                   onClick={() => setShowSubCalInviteModal(true)}
-                  className="px-2.5 py-1 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-xs font-medium hover:bg-purple-200 dark:hover:bg-purple-900/60 transition-colors"
-                >+ Invite</button>
+                  style={{ background: darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfb', border: `1px solid ${darkMode ? 'rgba(45,212,191,0.28)' : '#99f6e4'}`, borderRadius: 20, padding: '4px 11px', fontSize: 14, color: darkMode ? '#2dd4bf' : '#0d9488', cursor: 'pointer', fontWeight: 700, fontFamily: "'Caveat', cursive" }}
+                >Invite</button>
               )}
             </div>
           )}
