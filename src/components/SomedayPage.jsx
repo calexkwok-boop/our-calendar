@@ -1355,8 +1355,9 @@ const SomedayPage = ({
   }, [currentUser, userEmail]);
 
   async function loadChapters() {
+    const CHAPTER_SELECT = 'id, title, created_at, owner_id, chapter_pins(id)';
     const [ownedResult, memberResult] = await Promise.all([
-      supabase.from('chapters').select('id, title, created_at, owner_id').eq('owner_id', currentUser),
+      supabase.from('chapters').select(CHAPTER_SELECT).eq('owner_id', currentUser),
       userEmail
         ? supabase.from('chapter_collaborators').select('chapter_id').eq('email', userEmail)
         : Promise.resolve({ data: [] }),
@@ -1367,7 +1368,7 @@ const SomedayPage = ({
 
     let collab = [];
     if (collabIds.length > 0) {
-      const { data } = await supabase.from('chapters').select('id, title, created_at, owner_id').in('id', collabIds);
+      const { data } = await supabase.from('chapters').select(CHAPTER_SELECT).in('id', collabIds);
       collab = data || [];
     }
 
@@ -1380,8 +1381,8 @@ const SomedayPage = ({
       try { local = JSON.parse(localStorage.getItem(localKey) || '[]'); } catch {}
       if (local.length > 0) {
         await migrateLocalChapters(local);
-        const { data: afterMigrate } = await supabase.from('chapters').select('id, title, created_at, owner_id').eq('owner_id', currentUser);
-        const migrated = (afterMigrate || []).map(c => ({ ...c, itemIds: [], memories: [], collaborators: [], loaded: false }));
+        const { data: afterMigrate } = await supabase.from('chapters').select(CHAPTER_SELECT).eq('owner_id', currentUser);
+        const migrated = (afterMigrate || []).map(c => ({ ...c, itemIds: (c.chapter_pins || []).map(p => p.id), memories: [], collaborators: [], loaded: false }));
         setChapters(migrated);
         return;
       }
@@ -1393,7 +1394,11 @@ const SomedayPage = ({
       return [
         ...remote.map(c => {
           const ex = prev.find(p => p.id === c.id);
-          return { ...c, itemIds: ex?.itemIds || [], memories: ex?.memories || [], collaborators: ex?.collaborators || [], loaded: ex?.loaded || false };
+          // Merge DB pin IDs with any in-session additions so itemIds is always accurate
+          const dbItemIds = (c.chapter_pins || []).map(p => p.id);
+          const prevItemIds = ex?.itemIds || [];
+          const itemIds = [...new Set([...dbItemIds, ...prevItemIds])];
+          return { ...c, itemIds, memories: ex?.memories || [], collaborators: ex?.collaborators || [], loaded: ex?.loaded || false };
         }),
         ...localOnly,
       ];

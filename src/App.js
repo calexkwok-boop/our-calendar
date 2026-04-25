@@ -19158,7 +19158,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (ts === null) return 'Unknown date';
     return new Date(ts).toLocaleDateString('en-US', withYear ? { month: 'short', day: 'numeric', year: 'numeric' } : { month: 'short', day: 'numeric' });
   };
-  const activeTripCoverPhoto = tripCoverPhoto?.url ? tripCoverPhoto : null;
+  // Derive cover photo from linked chapter (first image pin in the chapter)
+  const activeTripLinkedChapterId = activeSubCalendar
+    ? String((tripKomoState && tripKomoState[String(activeSubCalendar.id)]?.chapterId) || '').trim()
+    : '';
+  const activeTripLinkedChapter = activeTripLinkedChapterId
+    ? (komoChapters || []).find(c => String(c?.id || '') === activeTripLinkedChapterId) || null
+    : null;
+  const activeTripChapterCoverUrl = activeTripLinkedChapter
+    ? (bucketList || []).find(d =>
+        d?.imageUrl && (activeTripLinkedChapter.itemIds || []).some(id => String(id) === String(d?.id || ''))
+      )?.imageUrl || ''
+    : '';
+  const activeTripCoverPhoto = activeTripChapterCoverUrl
+    ? { url: activeTripChapterCoverUrl }
+    : (tripCoverPhoto?.url ? tripCoverPhoto : null);
   const activeTripBackgroundStyle = activeTripCoverPhoto?.url
     ? {
         backgroundImage: darkMode
@@ -31311,65 +31325,6 @@ transform: translateY(0);
       </div>
     )}
 
-    {showTripBackgroundPhotoMenu && activeSubCalendar && (
-      <div
-        className="fixed inset-0 z-[55] bg-black/50 p-4 flex items-center justify-center"
-        onClick={() => setShowTripBackgroundPhotoMenu(false)}
-      >
-        <div
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-sm"
-              onClick={(e) => e.stopPropagation()}
-  >
-  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Trip Background Photo</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                {activeSubCalendar.name}
-              </p>
-            </div>
-            <button
-              onClick={() => setShowTripBackgroundPhotoMenu(false)}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
-          </div>
-          <div className="space-y-2">
-            <button
-              onClick={() => {
-                setPhotoEventId(null);
-                setPhotoDate(null);
-                setTripPhotoUploadTarget('background');
-                setShowTripBackgroundPhotoMenu(false);
-                photoInputRef.current?.click();
-              }}
-              className="w-full px-4 py-3 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 text-white text-sm font-semibold"
-            >
-              {activeTripCoverPhoto?.url ? 'Change Photo' : 'Upload Photo'}
-            </button>
-            {activeTripCoverPhoto?.url && (
-              <button
-                onClick={async () => {
-                  await clearTripCoverPhoto();
-                  setShowTripBackgroundPhotoMenu(false);
-                }}
-                className="w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium"
-              >
-                Remove Photo
-              </button>
-            )}
-            <button
-              onClick={() => setShowTripBackgroundPhotoMenu(false)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 text-sm font-medium"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-
     {showTripHighlightsModal && activeSubCalendar && tripHighlightTrip && (
       <TripHighlightReel
         key={`${String(activeSubCalendar?.id || 'trip')}-${tripHighlightsOpenToken}`}
@@ -31492,28 +31447,7 @@ transform: translateY(0);
               </button>
             ) : null}
 
-            <button
-              onClick={() => setShowSubCalNotesModal(true)}
-              className={`shrink-0 inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm ${tripHeaderSecondaryPillClassName}`}
-            >
-              <span>Notes</span>
-              {subCalNotes.length > 0 && (
-                <span className="rounded-full bg-yellow-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                  {subCalNotes.length}
-                </span>
-              )}
-            </button>
-
             <div className="shrink-0 flex items-center gap-2 rounded-full border border-white/10 bg-white/70 px-2 py-1.5 dark:bg-white/5" style={tripHeaderActionClusterStyle}>
-              {canEditCurrentTrip && (
-                <button
-                  onClick={() => setShowTripBackgroundPhotoMenu(true)}
-                  className="relative flex h-7 w-7 items-center justify-center rounded-full border border-gray-200/80 bg-white/85 text-gray-500 shadow-sm transition-colors hover:bg-white dark:border-white/10 dark:bg-slate-900/70 dark:text-gray-300 dark:hover:bg-slate-900/90"
-                  title={activeTripCoverPhoto?.url ? 'Change trip background photo' : 'Add trip background photo'}
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                </button>
-              )}
               {canGenerateTripHighlights && (
                 <button
                   onClick={openTripHighlights}
@@ -31680,15 +31614,6 @@ transform: translateY(0);
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {canEditCurrentTrip && (
-              <button
-                onClick={() => setShowTripBackgroundPhotoMenu(true)}
-                className="relative flex h-7 w-7 items-center justify-center rounded-full border border-gray-200/80 bg-white/90 text-gray-500 shadow-sm transition-colors hover:bg-white dark:border-white/10 dark:bg-slate-900/70 dark:text-gray-300 dark:hover:bg-slate-900/90"
-                title={activeTripCoverPhoto?.url ? 'Change trip background photo' : 'Add trip background photo'}
-              >
-                <Camera className="w-3.5 h-3.5" />
-              </button>
-            )}
             {/* Dark mode toggle */}
             <button
               onClick={cycleThemeMode}
@@ -32014,6 +31939,16 @@ transform: translateY(0);
             className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${subCalTab === 'expenses' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
             style={{ fontFamily: "'Caveat', cursive" }}
           >Expenses</button>
+          <button
+            onClick={() => setSubCalTab('notes')}
+            className={`shrink-0 rounded-xl px-3 py-2.5 text-base font-medium transition-all relative ${subCalTab === 'notes' ? 'bg-white shadow-sm dark:bg-white/10' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+            title="Notes & reminders"
+          >
+            📝
+            {subCalNotes.length > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[1rem] h-[1rem] px-1 rounded-full bg-yellow-500 text-white text-[9px] leading-none font-bold flex items-center justify-center">{subCalNotes.length}</span>
+            )}
+          </button>
           </div>
           {subCalTabsShowRightHint && (
             <div className="pointer-events-none absolute inset-y-1 right-1 w-14">
@@ -33636,6 +33571,115 @@ transform: translateY(0);
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+          {/* Notes tab */}
+        {subCalTab === 'notes' && (
+          <div className="p-4" style={{ fontFamily: "'Caveat', cursive" }}>
+            <div className="p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-xl border border-yellow-300 dark:border-yellow-700">
+              <div className="space-y-1.5 mb-2">
+                {subCalNotes.length === 0 && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 italic">No reminders yet</p>
+                )}
+                {subCalNotes.map((note, noteIdx) => (
+                  <div
+                    key={note.id}
+                    draggable
+                    onDragStart={() => setDraggedNoteId(note.id)}
+                    onDragOver={e => { e.preventDefault(); }}
+                    onDrop={() => {
+                      if (!draggedNoteId || draggedNoteId === note.id) return;
+                      const from = subCalNotes.findIndex(n => n.id === draggedNoteId);
+                      const to = noteIdx;
+                      const newNotes = [...subCalNotes];
+                      const [moved] = newNotes.splice(from, 1);
+                      newNotes.splice(to, 0, moved);
+                      setSubCalNotes(newNotes);
+                      setDraggedNoteId(null);
+                      newNotes.forEach((n, i) => {
+                        supabase.from('sub_calendar_notes').update({ created_at: new Date(Date.now() - (newNotes.length - i) * 1000).toISOString() }).eq('id', n.id);
+                      });
+                    }}
+                    onDragEnd={() => setDraggedNoteId(null)}
+                    className={`bg-yellow-50 dark:bg-gray-700 rounded-lg border border-yellow-300 dark:border-yellow-700 overflow-hidden transition-opacity ${draggedNoteId === note.id ? 'opacity-40' : 'opacity-100'}`}
+                  >
+                    <div className="flex items-center gap-2 px-2.5 py-2">
+                      <span className="text-gray-300 dark:text-gray-500 cursor-grab active:cursor-grabbing shrink-0 select-none text-sm">::</span>
+                      <button onClick={() => setExpandedNote(expandedNote === note.id ? null : note.id)} className="text-xs text-gray-400 shrink-0 w-3">
+                        {expandedNote === note.id ? '−' : '+'}
+                      </button>
+                      <span className="text-xs">📝</span>
+                      {editingNote === note.id ? (
+                        <input
+                          autoFocus
+                          defaultValue={note.text}
+                          onBlur={e => updateNoteText(note.id, e.target.value)}
+                          onKeyPress={e => e.key === 'Enter' && updateNoteText(note.id, e.target.value)}
+                          className="flex-1 text-base sm:text-xs px-1.5 py-0.5 border border-purple-300 rounded dark:bg-gray-600 dark:text-white"
+                          style={{ fontSize: '16px' }}
+                        />
+                      ) : (
+                        <span
+                          className="flex-1 text-xs text-gray-700 dark:text-gray-300 cursor-pointer hover:text-purple-600"
+                          onClick={() => setEditingNote(note.id)}
+                        >{note.text}</span>
+                      )}
+                      {(note.checklist || []).length > 0 && (
+                        <span className="text-xs text-gray-400">
+                          {(note.checklist || []).filter(i => i.done).length}/{(note.checklist || []).length}
+                        </span>
+                      )}
+                      <button onClick={() => deleteSubCalNote(note.id)} className="text-gray-300 hover:text-red-400 text-xs shrink-0">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    {expandedNote === note.id && (
+                      <div className="px-3 pb-2.5 space-y-1.5 border-t border-yellow-200 dark:border-yellow-800 pt-2">
+                        {(note.checklist || []).map(item => (
+                          <div key={item.id} className="flex items-center gap-2">
+                            <button
+                              onClick={() => toggleChecklistItem(note.id, item.id)}
+                              className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-all ${item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500'}`}
+                            >
+                              {item.done && <span className="text-xs leading-none">✓</span>}
+                            </button>
+                            <span className={`text-xs flex-1 ${item.done ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>{item.text}</span>
+                            <button onClick={() => deleteChecklistItem(note.id, item.id)} className="text-gray-300 hover:text-red-400 text-xs">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                        <div className="flex gap-1.5 mt-1">
+                          <input
+                            type="text"
+                            value={newChecklistItem}
+                            onChange={e => setNewChecklistItem(e.target.value)}
+                            onKeyPress={e => { if (e.key === 'Enter') { addChecklistItem(note.id, newChecklistItem); } }}
+                            placeholder="Add item..."
+                            className="flex-1 px-2 py-1 text-base sm:text-xs border border-gray-200 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg"
+                            style={{ fontSize: '16px' }}
+                          />
+                          <button onClick={() => addChecklistItem(note.id, newChecklistItem)} className="px-2 py-1 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-xs">+</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newNote}
+                  onChange={e => setNewNote(e.target.value)}
+                  onKeyPress={e => e.key === 'Enter' && addSubCalNote()}
+                  placeholder="Add a note..."
+                  className="flex-1 px-2.5 py-1.5 text-base sm:text-xs border border-yellow-300 dark:border-yellow-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-1 focus:ring-yellow-400"
+                  style={{ fontSize: '16px' }}
+                />
+                <button onClick={addSubCalNote} className="px-2.5 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-xs font-medium">Add</button>
+              </div>
+            </div>
           </div>
         )}
 
