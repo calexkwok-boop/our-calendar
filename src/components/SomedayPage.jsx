@@ -779,7 +779,7 @@ function DetailSheet({ pin, chapters, onClose, onConvertToEvent, onConvertToTrip
 }
 
 // ─── Chapter Pin Sheet ────────────────────────────────────────────────────────
-function ChapterPinSheet({ pin, onClose, onRemove, darkMode }) {
+function ChapterPinSheet({ pin, onClose, onRemove, darkMode, hasLinkedTrip = false }) {
   const { sheetStyle, handleProps } = useSwipeDownSheet(onClose);
   const sheetBg  = darkMode ? '#131c2e' : '#ffffff';
   const tp       = darkMode ? '#e8eaf0' : '#1a1a2e';
@@ -838,8 +838,8 @@ function ChapterPinSheet({ pin, onClose, onRemove, darkMode }) {
           {/* Status badge */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, borderTop: `1px solid ${divider}`, paddingTop: 16 }}>
             <div style={{ fontSize: 11, color: ts }}>Status:</div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: pin.status === 'done' ? '#0d9488' : pin.status === 'planning' ? '#7c3aed' : '#d97706', background: pin.status === 'done' ? (darkMode ? 'rgba(13,148,136,0.12)' : '#f0fdfb') : pin.status === 'planning' ? (darkMode ? 'rgba(124,58,237,0.12)' : '#f5f3ff') : (darkMode ? 'rgba(217,119,6,0.12)' : '#fffbeb'), padding: '2px 10px', borderRadius: 20 }}>
-              {pin.status === 'done' ? '✓ Done' : pin.status === 'planning' ? 'Planning' : 'Dreaming'}
+            <div style={{ fontSize: 12, fontWeight: 600, color: pin.status === 'done' ? '#0d9488' : (pin.status === 'planning' && hasLinkedTrip) ? '#7c3aed' : '#d97706', background: pin.status === 'done' ? (darkMode ? 'rgba(13,148,136,0.12)' : '#f0fdfb') : (pin.status === 'planning' && hasLinkedTrip) ? (darkMode ? 'rgba(124,58,237,0.12)' : '#f5f3ff') : (darkMode ? 'rgba(217,119,6,0.12)' : '#fffbeb'), padding: '2px 10px', borderRadius: 20 }}>
+              {pin.status === 'done' ? '✓ Done' : (pin.status === 'planning' && hasLinkedTrip) ? 'Planning' : 'Dreaming'}
             </div>
           </div>
 
@@ -859,7 +859,7 @@ function ChapterPinSheet({ pin, onClose, onRemove, darkMode }) {
 }
 
 // ─── Chapter Page ─────────────────────────────────────────────────────────────
-function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, darkMode }) {
+function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, darkMode, hasLinkedTrip = false }) {
   const [showAddMemory, setShowAddMemory] = useState(false);
   const [memoryText, setMemoryText] = useState('');
   const [selectedPin, setSelectedPin] = useState(null);
@@ -1018,6 +1018,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
           onClose={() => setSelectedPin(null)}
           onRemove={id => { onRemovePin?.(id); setSelectedPin(null); }}
           darkMode={darkMode}
+          hasLinkedTrip={hasLinkedTrip}
         />
       )}
     </div>
@@ -1154,6 +1155,7 @@ const SomedayPage = ({
   onChaptersChange,
   onCreateTripFromChapter,
   darkMode = false,
+  chaptersWithLinkedTrips = new Set(),
 }) => {
   const [pins, setPins] = useState(() => dreams.map((d, idx) => {
     const pos = (d.x == null || d.y == null) ? gridPosition(idx) : { x: d.x, y: d.y, rot: d.rot };
@@ -1428,7 +1430,7 @@ const SomedayPage = ({
       return (
         <>
           <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
-          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={() => deleteChapter(activeChapterId)} onCreateTrip={onCreateTripFromChapter} darkMode={darkMode} />
+          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={() => deleteChapter(activeChapterId)} onCreateTrip={onCreateTripFromChapter} darkMode={darkMode} hasLinkedTrip={chaptersWithLinkedTrips.has(String(chapter.id))} />
         </>
       );
     }

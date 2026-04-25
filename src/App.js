@@ -19993,6 +19993,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     () => activeTrips.map((trip) => String(trip?.id || '')),
     [activeTrips],
   );
+  const chaptersWithLinkedTrips = React.useMemo(() => {
+    const s = new Set();
+    for (const v of Object.values(tripKomoState || {})) {
+      if (v?.chapterId) s.add(String(v.chapterId));
+    }
+    return s;
+  }, [tripKomoState]);
   const primaryJourneyGoal = sortedJourneyGoals.find((goal) => goal?.active !== false) || null;
   const todayWeatherIcon = weather[todayKey]?.icon;
   const weatherGreetingEmoji = (todayWeatherIcon && todayWeatherIcon !== 'FOG') ? todayWeatherIcon : homeGreetingEmoji;
@@ -30310,6 +30317,7 @@ transform: translateY(0);
                 currentUser={currentUser}
                 onChaptersChange={setKomoChapters}
                 onCreateTripFromChapter={startTripFromKomoChapter}
+                chaptersWithLinkedTrips={chaptersWithLinkedTrips}
               />
             );
           })()}
