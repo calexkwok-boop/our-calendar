@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Camera,
   Clock,
@@ -205,6 +205,8 @@ const ScrapbookHomeHybrid = ({
   ) ? tripSpotlightLocation : '';
   const tripSpotlightImage = String(tripSpotlight?.chapterCoverUrl || '').trim();
 
+  const [avatarImgError, setAvatarImgError] = useState(false);
+
   const todayKey = toLocalDateKey(new Date());
   const komoShuffleSeedRef = React.useRef(`komo-home-${Date.now()}-${Math.random()}`);
   const todayMoment = momentsThisWeek.find(
@@ -276,11 +278,12 @@ const ScrapbookHomeHybrid = ({
                   onClick={onOpenAccountMenu}
                   title="Account"
                 >
-                  {profilePhotoUrl ? (
+                  {profilePhotoUrl && !avatarImgError ? (
                     <img
                       src={profilePhotoUrl}
                       alt="Profile"
                       className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-white/40 dark:border-white/10"
+                      onError={() => setAvatarImgError(true)}
                     />
                   ) : (
                     <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-white/40 dark:border-white/10 bg-gradient-to-br from-violet-400 via-purple-400 to-indigo-400 flex items-center justify-center text-white text-sm font-bold">
