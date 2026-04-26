@@ -546,7 +546,7 @@ export default function SportsEventCard({
                 <PlayerPip
                   key={p.id || i}
                   person={p}
-                  name={p.display_name || p.name}
+                  name={p.display_name || p.displayName || p.name}
                   role={p.role}
                   accent={accent}
                   size={28}
@@ -731,7 +731,7 @@ export default function SportsEventCard({
                         textAlign: 'left', fontFamily: APP_FONT_STACK,
                       }}
                     >
-                      <PlayerPip person={m} name={m.display_name || m.name} role={m.role} accent={accent} size={30} />
+                      <PlayerPip person={m} name={m.display_name || m.displayName || m.name} role={m.role} accent={accent} size={30} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: primaryText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {m.display_name || m.name}
