@@ -23815,7 +23815,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               All Off
             </button>
           </div>
-          <div className="overflow-y-auto overscroll-contain -mx-3 sm:-mx-4 px-3 sm:px-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain -mx-3 sm:-mx-4 px-3 sm:px-4" style={{ WebkitOverflowScrolling: 'touch' }}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
             {CONTROL_WIDGET_IDS.map((widgetId) => {
               const meta = getControlWidgetMeta(widgetId);
