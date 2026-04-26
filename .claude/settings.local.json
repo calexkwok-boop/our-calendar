@@ -14,7 +14,8 @@
       "Bash(npx acorn *)",
       "Bash(grep -n \"useEffect.*{$\\\\|useCallback\\\\|useMemo\" /c/Users/a_kwo/Desktop/our-calendar/src/App.js)",
       "Bash(grep -v \"^\\\\s*//\")",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(awk -F: '$2 > 14849')"
     ]
   }
 }

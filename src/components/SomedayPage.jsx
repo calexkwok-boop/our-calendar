@@ -36,26 +36,33 @@ function useSwipeDownSheet(onClose) {
   const [dragY, setDragY] = useState(0);
   const dragStartYRef = useRef(null);
   const dragDistanceRef = useRef(0);
-  const handleStart = (clientY) => { dragStartYRef.current = clientY; dragDistanceRef.current = 0; setDragY(0); };
-  const handleMove = (clientY) => {
+  // Keep onClose in a ref so the stable effect closure always calls the latest prop
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  const handleMove = React.useCallback((clientY) => {
     if (dragStartYRef.current == null) return;
     const delta = Math.max(0, clientY - dragStartYRef.current);
     dragDistanceRef.current = delta;
     setDragY(delta);
-  };
-  const handleEnd = () => {
+  }, []); // stable — only uses refs and the stable setDragY setter
+
+  const handleEnd = React.useCallback(() => {
     const shouldClose = dragDistanceRef.current > 90;
     dragStartYRef.current = null; dragDistanceRef.current = 0; setDragY(0);
-    if (shouldClose) onClose?.();
-  };
-  // attach global mouse events so drag works even if pointer leaves the handle
+    if (shouldClose) onCloseRef.current?.();
+  }, []); // stable — only uses refs
+
+  // Register global mouse listeners once per mount instead of after every setDragY
   React.useEffect(() => {
     const onMove = (e) => handleMove(e.clientY);
     const onUp = () => { if (dragStartYRef.current != null) handleEnd(); };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  });
+  }, [handleMove, handleEnd]);
+
+  const handleStart = (clientY) => { dragStartYRef.current = clientY; dragDistanceRef.current = 0; setDragY(0); };
   return {
     sheetStyle: { transform: `translateY(${dragY}px)`, transition: dragStartYRef.current ? 'none' : 'transform 180ms ease' },
     handleProps: {
@@ -341,7 +348,13 @@ function SuggestionCard({ s, onAdd, darkMode }) {
 function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode }) {
   const [addedIds, setAddedIds] = useState(new Set());
   const [refreshCount, setRefreshCount] = useState(0);
-  const suggestions = generateSuggestions(chapter, chapterPins, initialSeed + refreshCount * 97);
+  // Memoize: only recompute when chapter identity, pin labels, seed, or refresh count changes
+  const pinLabelKey = chapterPins.map(p => (p.label || p.text || '').toLowerCase()).join('\x00');
+  const suggestions = React.useMemo(
+    () => generateSuggestions(chapter, chapterPins, initialSeed + refreshCount * 97),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [chapter.id, pinLabelKey, initialSeed, refreshCount],
+  );
   const visible = suggestions.filter(s => !addedIds.has(s.id)).slice(0, 3);
   const ts = darkMode ? '#64748b' : '#9ca3af';
 

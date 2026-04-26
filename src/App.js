@@ -9655,32 +9655,40 @@ useEffect(() => {
           ...TRIP_PHOTO_BUCKETS,
           ...PROFILE_PHOTO_BUCKETS,
         ].filter((bucket, index, array) => array.indexOf(bucket) === index);
-        for (const bucket of candidateBuckets) {
-        for (const prefix of candidatePrefixes) {
-          try {
-            const { data, error } = await supabase.storage.from(bucket).list(prefix, {
+
+        // Run all bucket×prefix combinations in parallel instead of sequentially
+        const pairs = candidateBuckets.flatMap(bucket =>
+          candidatePrefixes.map(prefix => ({ bucket, prefix }))
+        );
+        const results = await Promise.allSettled(
+          pairs.map(({ bucket, prefix }) =>
+            supabase.storage.from(bucket).list(prefix, {
               limit: 20,
               sortBy: { column: 'name', order: 'desc' },
-            });
-            if (error) continue;
-            const avatarFile = (data || [])
-              .filter((entry) => /^(avatar|profile|icon_)/i.test(String(entry?.name || '')) || String(entry?.name || '').toLowerCase() === 'avatar')
-              .sort((a, b) => Number(new Date(b?.created_at || b?.updated_at || 0)) - Number(new Date(a?.created_at || a?.updated_at || 0)))[0];
-            if (!avatarFile) continue;
-            const objectPath = `${prefix}/${String(avatarFile.name || '').trim()}`;
-            const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(objectPath);
-            const recoveredUrl = normalizeProfilePhotoUrl(urlData?.publicUrl || '');
-            if (!recoveredUrl || cancelled) return;
-            preservedProfilePhotoUrlRef.current = recoveredUrl;
-            setProfilePhotoOverrideUrl(recoveredUrl);
-            writeStoredProfilePhotoOverrideUrl(recoveredUrl);
-            writeCachedProfilePhotoUrl(userId, recoveredUrl);
-            setUser((prev) => mergeAuthUserPreservingProfilePhoto(prev, prev, recoveredUrl));
-            return;
-          } catch {}
-        }
-      }
-    };
+            }).then(({ data, error }) => {
+              if (error || !data) return null;
+              const avatarFile = data
+                .filter(entry => /^(avatar|profile|icon_)/i.test(String(entry?.name || '')) || String(entry?.name || '').toLowerCase() === 'avatar')
+                .sort((a, b) => Number(new Date(b?.created_at || b?.updated_at || 0)) - Number(new Date(a?.created_at || a?.updated_at || 0)))[0];
+              if (!avatarFile) return null;
+              const objectPath = `${prefix}/${String(avatarFile.name || '').trim()}`;
+              const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(objectPath);
+              return normalizeProfilePhotoUrl(urlData?.publicUrl || '') || null;
+            })
+          )
+        );
+
+        if (cancelled) return;
+        const recoveredUrl = results
+          .find(r => r.status === 'fulfilled' && r.value)
+          ?.value || null;
+        if (!recoveredUrl) return;
+        preservedProfilePhotoUrlRef.current = recoveredUrl;
+        setProfilePhotoOverrideUrl(recoveredUrl);
+        writeStoredProfilePhotoOverrideUrl(recoveredUrl);
+        writeCachedProfilePhotoUrl(userId, recoveredUrl);
+        setUser((prev) => mergeAuthUserPreservingProfilePhoto(prev, prev, recoveredUrl));
+      };
 
     void recoverStoredAvatar();
     return () => {
@@ -14840,7 +14848,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         const userEmail = authUser?.email;
         const userPhone = authUser?.phone;
         if (!userId) return;
-        const shareRecipientFilter = buildShareRecipientFilter(userId, userEmail, userPhone);
         let loadedLayers = await loadLayersForUser(userId, userEmail, userPhone);
         if (!loadedLayers || loadedLayers.length === 0) {
           // Retry once; loadLayersForUser already contains bootstrap logic.
@@ -14868,31 +14875,47 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         if (selectedLayerId !== activeLayerId) setActiveLayerId(selectedLayerId);
         localStorage.setItem(`active-layer-${userId}`, selectedLayerId);
 
-        // Load all events visible in this layer, but don't let a stressed backend stall startup forever.
-        const layerEventsResult = await withTimeout(
-          supabase
-            .from('events')
-            .select('*')
-            .eq('layer_id', selectedLayerId),
-          4000,
-          { data: [], error: { message: 'events load timed out' } }
-        );
+        // Fetch events and all shared_access rows for this layer in parallel (was 3 sequential round trips)
+        const [layerEventsResult, allSharesResult] = await Promise.all([
+          withTimeout(
+            supabase.from('events').select('*').eq('layer_id', selectedLayerId),
+            4000,
+            { data: [], error: { message: 'events load timed out' } }
+          ),
+          withTimeout(
+            supabase.from('shared_access').select('*').eq('layer_id', selectedLayerId),
+            4000,
+            { data: [], error: null }
+          ),
+        ]);
         const layerEventsData = layerEventsResult?.data || [];
         const layerEventsError = layerEventsResult?.error || null;
 
-        // Load calendars shared WITH me (by email/id)
-        let sharedWithMeQuery = supabase
-          .from('shared_access')
-          .select('*')
-          .eq('layer_id', selectedLayerId);
-        if (shareRecipientFilter) sharedWithMeQuery = sharedWithMeQuery.or(shareRecipientFilter);
-        const sharedWithMeResult = await withTimeout(sharedWithMeQuery, 4000, { data: [] });
-        const sharedWithMeRaw = sharedWithMeResult?.data || [];
-        const sharedWithMe = (sharedWithMeRaw || [])
-          .filter((s) => String(s?.owner_id || '') !== String(userId))
-          .filter((s) => !s?.is_banned);
+        let allSharesData = allSharesResult?.data || [];
+        if (allSharesResult?.error) {
+          // Fallback: at least fetch the owner's own shares
+          const fallback = await withTimeout(
+            supabase.from('shared_access').select('*').eq('owner_id', userId).eq('layer_id', selectedLayerId),
+            4000,
+            { data: [] }
+          );
+          allSharesData = fallback?.data || [];
+        }
 
-        if (sharedWithMe && sharedWithMe.length > 0) {
+        // Derive "shared with me" from the already-fetched rows — same logic as the old filtered DB query
+        const normalizedUserEmail = normalizeEmail(userEmail);
+        const normalizedUserPhone = normalizePhoneNumber(userPhone);
+        const sharedWithMe = allSharesData.filter(s =>
+          String(s?.owner_id || '') !== String(userId) &&
+          !s?.is_banned &&
+          (
+            (userId && String(s?.shared_with_id || '') === String(userId)) ||
+            (normalizedUserEmail && normalizeEmail(s?.shared_with_email) === normalizedUserEmail) ||
+            (normalizedUserPhone && normalizePhoneNumber(s?.shared_with_phone) === normalizedUserPhone)
+          )
+        );
+
+        if (sharedWithMe.length > 0) {
           setSharedCalendars(sharedWithMe);
           void resolveSharedOwnerLabels(sharedWithMe, selectedLayerId);
         } else {
@@ -14912,30 +14935,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           if (typeof window !== 'undefined') window.events = eventsObj;
         }
 
-        // Load people I've shared with
-        let mySharesResult = await withTimeout(
-          supabase
-            .from('shared_access')
-            .select('*')
-            .eq('layer_id', selectedLayerId),
-          4000,
-          { data: [], error: null }
-        );
-        let mySharesData = mySharesResult?.data || [];
-        let mySharesError = mySharesResult?.error || null;
-        if (mySharesError) {
-          const fallback = await withTimeout(
-            supabase
-              .from('shared_access')
-              .select('*')
-              .eq('owner_id', userId)
-              .eq('layer_id', selectedLayerId),
-            4000,
-            { data: [] }
-          );
-          mySharesData = fallback?.data || [];
-        }
-        setMyShares(mySharesData || []);
+        setMyShares(allSharesData);
 
         const activeLayerRow = loadedLayers.find(layer => String(layer.id) === String(selectedLayerId));
         void loadCategoriesForLayer(selectedLayerId, userId, activeLayerRow?.owner_id || userId);
