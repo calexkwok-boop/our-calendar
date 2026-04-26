@@ -4281,6 +4281,7 @@ function App() {
     } catch {}
   };
   const PENDING_SHARE_TOKEN_STORAGE_KEY = 'pending-share-token';
+  const PENDING_POPUP_EVENT_STORAGE_KEY = 'pending-popup-event';
 
   // -- Sub-calendar functions ----------------------------------------------
 
@@ -15124,8 +15125,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (typeof window === 'undefined') return;
     try {
       const params = new URLSearchParams(window.location.search || '');
-      const popupId = String(params.get('popup') || '').trim();
+      // Fall back to localStorage so the event reopens after an auth redirect clears the URL
+      const popupId = String(params.get('popup') || '').trim()
+        || (user?.id ? String(localStorage.getItem(PENDING_POPUP_EVENT_STORAGE_KEY) || '').trim() : '');
       if (!popupId) return;
+      if (!user?.id) {
+        localStorage.setItem(PENDING_POPUP_EVENT_STORAGE_KEY, popupId);
+      } else {
+        try { localStorage.removeItem(PENDING_POPUP_EVENT_STORAGE_KEY); } catch {}
+      }
       setSelectedPopupEventPanelId(popupId);
       setBottomNavTab('events');
     } catch {}
