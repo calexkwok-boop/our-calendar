@@ -167,6 +167,7 @@ const ProfilePage = ({
   const [friendsList, setFriendsList] = useState([]);
   const [friendProfile, setFriendProfile] = useState(null);
   const [connectionContext, setConnectionContext] = useState(null);
+  const [friendSharedPhoto, setFriendSharedPhoto] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // ─── Own sharing prefs (localStorage; TODO: sync to user_profiles table)
@@ -183,7 +184,14 @@ const ProfilePage = ({
     setSharingPrefs(prev => {
       const next = { ...prev, [key]: value };
       try { localStorage.setItem(getSharingPrefsKey(currentUser.id), JSON.stringify(next)); } catch {}
-      // TODO: supabase.from('user_profiles').upsert({ user_id: currentUser.id, [key]: value, updated_at: new Date().toISOString() })
+      const dbKeyMap = { sharePhotoOfDay: 'share_photo_of_day', shareMemories: 'share_memories', shareKomoItems: 'share_komo_items' };
+      const dbKey = dbKeyMap[key];
+      if (dbKey) {
+        supabase.from('user_profiles').upsert(
+          { user_id: currentUser.id, [dbKey]: value, updated_at: new Date().toISOString() },
+          { onConflict: 'user_id' }
+        ).then(() => {});
+      }
       return next;
     });
   }, [currentUser?.id]);
@@ -396,7 +404,9 @@ const ProfilePage = ({
             userId: ctx.userId || null,
             handle,
             displayName: handle,
-            avatarUrl: '',
+            avatarUrl: ctx.userId
+              ? `${supabase.supabaseUrl}/storage/v1/object/public/avatars/${ctx.userId}/avatar`
+              : '',
             connectionSummary: parts.join(' · ') || 'Connected',
           });
         }
@@ -418,6 +428,7 @@ const ProfilePage = ({
 
     const load = async () => {
       setLoading(true);
+      setFriendSharedPhoto(null);
       try {
         // Batch 1: all queries independent of each other — run in parallel
         const [
@@ -430,6 +441,7 @@ const ProfilePage = ({
           ownedLayersRes,
           myEventMembershipsRes,
           friendEventMembershipsRes,
+          userProfilesRes,
         ] = await Promise.all([
           supabase.from('user_handles').select('handle').ilike('email', email).maybeSingle(),
           userEmail
@@ -452,6 +464,9 @@ const ProfilePage = ({
           viewedUserId
             ? supabase.from('popup_event_members').select('event_id').eq('user_id', viewedUserId)
             : Promise.resolve({ data: [] }),
+          viewedUserId
+            ? supabase.from('user_profiles').select('share_photo_of_day, share_memories, share_komo_items').eq('user_id', viewedUserId).maybeSingle()
+            : Promise.resolve({ data: null }),
         ]);
 
         const handle = handleRowRes.data?.handle || knownHandlesRef.current[email] || email.split('@')[0];
@@ -487,18 +502,41 @@ const ProfilePage = ({
         const ownedLayerIds = (ownedLayersRes.data || []).map(l => l.id).filter(Boolean);
         const allMyLayerIds = [...new Set([...receivedLayerIds, ...ownedLayerIds])];
 
-        // Batch 2: queries that depend on batch 1 results — run in parallel
-        const [tripRowsRes, friendLayerAccessRes, friendOwnedLayersRes] = await Promise.all([
-          sharedTripIds.length > 0
-            ? supabase.from('sub_calendars').select('id, name').in('id', sharedTripIds)
-            : Promise.resolve({ data: [] }),
-          allMyLayerIds.length > 0
-            ? supabase.from('shared_access').select('layer_id').in('layer_id', allMyLayerIds).ilike('shared_with_email', email)
-            : Promise.resolve({ data: [] }),
-          receivedLayerIds.length > 0 && viewedUserId
-            ? supabase.from('categories').select('id').in('id', receivedLayerIds).eq('owner_id', viewedUserId)
-            : Promise.resolve({ data: [] }),
+        const friendPrefs = userProfilesRes.data || {};
+
+        // Batch 2: trip/calendar queries + optional photo fetch all run in parallel
+        const [[tripRowsRes, friendLayerAccessRes, friendOwnedLayersRes], todayPhoto] = await Promise.all([
+          Promise.all([
+            sharedTripIds.length > 0
+              ? supabase.from('sub_calendars').select('id, name').in('id', sharedTripIds)
+              : Promise.resolve({ data: [] }),
+            allMyLayerIds.length > 0
+              ? supabase.from('shared_access').select('layer_id').in('layer_id', allMyLayerIds).ilike('shared_with_email', email)
+              : Promise.resolve({ data: [] }),
+            receivedLayerIds.length > 0 && viewedUserId
+              ? supabase.from('categories').select('id').in('id', receivedLayerIds).eq('owner_id', viewedUserId)
+              : Promise.resolve({ data: [] }),
+          ]),
+          (async () => {
+            if (!friendPrefs.share_photo_of_day || !viewedUserId) return null;
+            const today = new Date().toISOString().slice(0, 10);
+            const { data: memRow } = await supabase
+              .from('user_memories')
+              .select('memory')
+              .eq('owner_user_id', viewedUserId)
+              .eq('memory_date', today)
+              .limit(1)
+              .maybeSingle();
+            if (!memRow?.memory) return null;
+            const mem = typeof memRow.memory === 'object' ? memRow.memory : {};
+            const photoUrl = String(
+              mem.coverPhoto || mem.photos?.[0]?.url || mem.photos?.[0]?.photoUrl || mem.photoUrl || mem.photo_url || ''
+            ).trim();
+            return photoUrl ? { photoUrl, title: String(mem.title || '').trim() } : null;
+          })(),
         ]);
+
+        setFriendSharedPhoto(todayPhoto);
 
         const sharedTrips = (tripRowsRes.data || []).map(t => ({ name: t.name || 'Trip', archived: false }));
         const sharedCalendarCount = (friendLayerAccessRes.data || []).length + (friendOwnedLayersRes.data || []).length;
@@ -768,10 +806,27 @@ const ProfilePage = ({
               <p className="font-semibold text-sm mb-3" style={{ color: headingColor }}>
                 Shared by {friendName}
               </p>
-              {/* Populated once user_profiles table is created + user_memories RLS allows friend reads */}
-              <p className="text-sm text-center py-6 leading-relaxed" style={{ color: mutedColor }}>
-                {friendName} hasn't shared anything yet.
-              </p>
+              {loading ? (
+                <p className="text-sm" style={{ color: mutedColor }}>Loading…</p>
+              ) : friendSharedPhoto ? (
+                <div>
+                  <p className="text-xs font-medium mb-2" style={{ color: mutedColor }}>📷 Photo of the Day</p>
+                  <div className="rounded-2xl overflow-hidden w-full" style={{ aspectRatio: '4/3' }}>
+                    <img
+                      src={friendSharedPhoto.photoUrl}
+                      alt={friendSharedPhoto.title || 'Photo of the day'}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  {friendSharedPhoto.title && (
+                    <p className="text-sm mt-2 text-center" style={{ color: mutedColor }}>{friendSharedPhoto.title}</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-center py-6 leading-relaxed" style={{ color: mutedColor }}>
+                  {friendName} hasn't shared anything yet.
+                </p>
+              )}
             </div>
           </>
         )}
