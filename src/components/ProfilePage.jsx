@@ -372,12 +372,14 @@ const ProfilePage = ({
             .in('user_id', friendUserIds)
             .in('event_id', myEventIds);
 
-          const eventCountByUserId = {};
+          const sharedEventsByUserId = {};
           for (const m of (friendEventRows || [])) {
-            if (m.user_id) eventCountByUserId[m.user_id] = (eventCountByUserId[m.user_id] || 0) + 1;
+            if (!m.user_id || !m.event_id) continue;
+            if (!sharedEventsByUserId[m.user_id]) sharedEventsByUserId[m.user_id] = new Set();
+            sharedEventsByUserId[m.user_id].add(m.event_id);
           }
           for (const ctx of friendMap.values()) {
-            if (ctx.userId && eventCountByUserId[ctx.userId]) ctx.sharedEvents = eventCountByUserId[ctx.userId];
+            if (ctx.userId && sharedEventsByUserId[ctx.userId]) ctx.sharedEvents = sharedEventsByUserId[ctx.userId].size;
           }
         }
 
@@ -420,15 +422,22 @@ const ProfilePage = ({
         // Batch 1: all queries independent of each other — run in parallel
         const [
           handleRowRes,
-          tripNameById,
+          myMemberTripIdsRes,
+          myOwnedTripsRes,
           friendTripMembershipsRes,
           friendOwnedTripsRes,
           myLayerAccessRes,
           ownedLayersRes,
           myEventMembershipsRes,
+          friendEventMembershipsRes,
         ] = await Promise.all([
           supabase.from('user_handles').select('handle').ilike('email', email).maybeSingle(),
-          getMyTripData(),
+          userEmail
+            ? supabase.from('sub_calendar_members').select('sub_calendar_id').ilike('email', userEmail)
+            : Promise.resolve({ data: [] }),
+          currentUser?.id
+            ? supabase.from('sub_calendars').select('id').eq('owner_id', currentUser.id)
+            : Promise.resolve({ data: [] }),
           supabase.from('sub_calendar_members').select('sub_calendar_id').ilike('email', email),
           viewedUserId
             ? supabase.from('sub_calendars').select('id').eq('owner_id', viewedUserId)
@@ -437,8 +446,11 @@ const ProfilePage = ({
           currentUser?.id
             ? supabase.from('categories').select('id').eq('owner_id', currentUser.id)
             : Promise.resolve({ data: [] }),
-          currentUser?.id && viewedUserId
+          currentUser?.id
             ? supabase.from('popup_event_members').select('event_id').eq('user_id', currentUser.id)
+            : Promise.resolve({ data: [] }),
+          viewedUserId
+            ? supabase.from('popup_event_members').select('event_id').eq('user_id', viewedUserId)
             : Promise.resolve({ data: [] }),
         ]);
 
@@ -456,22 +468,27 @@ const ProfilePage = ({
           shareChapters: false,
         });
 
-        const allMyTripIds = Object.keys(tripNameById);
-        const friendMemberIds = new Set(
-          (friendTripMembershipsRes.data || []).map(m => m.sub_calendar_id).filter(Boolean)
-        );
-        for (const t of (friendOwnedTripsRes.data || [])) {
-          if (t.id) friendMemberIds.add(t.id);
-        }
-        const sharedTripIds = allMyTripIds.filter(id => friendMemberIds.has(id));
+        const allMyTripIdSet = new Set([
+          ...(myMemberTripIdsRes.data || []).map(m => m.sub_calendar_id),
+          ...(myOwnedTripsRes.data || []).map(t => t.id),
+        ].filter(Boolean));
+        const friendMemberIds = new Set([
+          ...(friendTripMembershipsRes.data || []).map(m => m.sub_calendar_id),
+          ...(friendOwnedTripsRes.data || []).map(t => t.id),
+        ].filter(Boolean));
+        const sharedTripIds = [...allMyTripIdSet].filter(id => friendMemberIds.has(id));
+
+        // Symmetric event count: intersection of both users' distinct event memberships
+        const myEventIdSet = new Set((myEventMembershipsRes.data || []).map(m => m.event_id).filter(Boolean));
+        const friendEventIdSet = new Set((friendEventMembershipsRes.data || []).map(m => m.event_id).filter(Boolean));
+        const sharedEventCount = [...myEventIdSet].filter(id => friendEventIdSet.has(id)).length;
 
         const receivedLayerIds = (myLayerAccessRes.data || []).map(a => a.layer_id).filter(Boolean);
         const ownedLayerIds = (ownedLayersRes.data || []).map(l => l.id).filter(Boolean);
         const allMyLayerIds = [...new Set([...receivedLayerIds, ...ownedLayerIds])];
-        const myEventIds = (myEventMembershipsRes.data || []).map(m => m.event_id).filter(Boolean);
 
         // Batch 2: queries that depend on batch 1 results — run in parallel
-        const [tripRowsRes, friendLayerAccessRes, friendOwnedLayersRes, friendEventMembershipsRes] = await Promise.all([
+        const [tripRowsRes, friendLayerAccessRes, friendOwnedLayersRes] = await Promise.all([
           sharedTripIds.length > 0
             ? supabase.from('sub_calendars').select('id, name').in('id', sharedTripIds)
             : Promise.resolve({ data: [] }),
@@ -481,14 +498,10 @@ const ProfilePage = ({
           receivedLayerIds.length > 0 && viewedUserId
             ? supabase.from('categories').select('id').in('id', receivedLayerIds).eq('owner_id', viewedUserId)
             : Promise.resolve({ data: [] }),
-          myEventIds.length > 0 && viewedUserId
-            ? supabase.from('popup_event_members').select('event_id').eq('user_id', viewedUserId).in('event_id', myEventIds)
-            : Promise.resolve({ data: [] }),
         ]);
 
         const sharedTrips = (tripRowsRes.data || []).map(t => ({ name: t.name || 'Trip', archived: false }));
         const sharedCalendarCount = (friendLayerAccessRes.data || []).length + (friendOwnedLayersRes.data || []).length;
-        const sharedEventCount = (friendEventMembershipsRes.data || []).length;
 
         setConnectionContext({ trips: sharedTrips, sharedCalendarCount, sharedEventCount });
       } finally {
@@ -497,7 +510,7 @@ const ProfilePage = ({
     };
 
     load();
-  }, [isOwnProfile, viewedUserEmail, viewedUserId, userEmail, getMyTripData]);
+  }, [isOwnProfile, viewedUserEmail, viewedUserId, userEmail, currentUser?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Styles
   const bg = darkMode ? '#0f1117' : '#f8f5f0';
