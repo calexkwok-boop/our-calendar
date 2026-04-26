@@ -8361,6 +8361,23 @@ function App() {
       document.body.style.touchAction = previousTouchAction;
     };
   }, [showTitleStyleModal]);
+  useEffect(() => {
+    if (!showControlWidgetAddPanel) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const previousTouchAction = document.body.style.touchAction;
+    const previousDocOverflow = document.documentElement.style.overflow;
+    const previousDocTouchAction = document.documentElement.style.touchAction;
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+    document.documentElement.style.overflow = 'hidden';
+    document.documentElement.style.touchAction = 'none';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.touchAction = previousTouchAction;
+      document.documentElement.style.overflow = previousDocOverflow;
+      document.documentElement.style.touchAction = previousDocTouchAction;
+    };
+  }, [showControlWidgetAddPanel]);
   const activeLayer = layers.find(layer => layer.id === activeLayerId) || null;
   useEffect(() => {
     if (!activeLayerId) {
@@ -21685,7 +21702,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         }
       }
       if (!raw) {
-        setControlWidgetOrder(defaultControlWidgetOrder);
+        const sharedLayerConfig = activeLayer?.widget_config;
+        if (Array.isArray(sharedLayerConfig?.order) && sharedLayerConfig.order.length > 0) {
+          const normalized = sharedLayerConfig.order
+            .map((id) => String(id || '').trim())
+            .filter((id) => CONTROL_WIDGET_IDS.includes(id));
+          const deduped = Array.from(new Set(normalized));
+          setControlWidgetOrder(deduped.length > 0 ? deduped : defaultControlWidgetOrder);
+        } else {
+          setControlWidgetOrder(defaultControlWidgetOrder);
+        }
       } else {
         const parsed = JSON.parse(raw);
         if (!Array.isArray(parsed)) {
@@ -21733,7 +21759,26 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         });
         setCoverWidgetLayout(nextLayout);
       } else {
-        setCoverWidgetLayout({});
+        const sharedLayerConfig = activeLayer?.widget_config;
+        if (sharedLayerConfig?.layout && typeof sharedLayerConfig.layout === 'object') {
+          const nextLayout = {};
+          Object.entries(sharedLayerConfig.layout || {}).forEach(([id, value]) => {
+            const wid = String(id || '').trim();
+            if (!CONTROL_WIDGET_IDS.includes(wid)) return;
+            const x = Math.max(2, Math.min(98, Number(value?.x)));
+            const y = Math.max(2, Math.min(98, Number(value?.y)));
+            const rawSize = Number(value?.size);
+            const size = Number.isFinite(rawSize)
+              ? Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, rawSize))
+              : WIDGET_DEFAULT_SIZE;
+            if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(size)) {
+              nextLayout[wid] = { x, y, size };
+            }
+          });
+          setCoverWidgetLayout(nextLayout);
+        } else {
+          setCoverWidgetLayout({});
+        }
       }
       setControlWidgetPrefsReady(true);
     } catch {
@@ -21741,7 +21786,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       setCoverWidgetLayout({});
       setControlWidgetPrefsReady(true);
     }
-  }, [user?.id, activeLayerId, activeLayer?.name, calendarTitle, getControlWidgetStorageBases, getControlWidgetStorageMapKey]);
+  }, [user?.id, activeLayerId, activeLayer?.name, activeLayer?.widget_config, calendarTitle, getControlWidgetStorageBases, getControlWidgetStorageMapKey]);
 
   useEffect(() => {
     if (!user?.id || !activeLayerId) {
@@ -21772,7 +21817,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       localStorage.setItem(`${sharedBase}-order`, JSON.stringify(controlWidgetOrder));
       localStorage.setItem(`${sharedBase}-layout`, JSON.stringify(coverWidgetLayout));
     } catch {}
-  }, [user?.id, activeLayerId, controlWidgetOrder, coverWidgetLayout, controlWidgetPrefsReady, getControlWidgetStorageBases]);
+    if (isActiveLayerOwner && activeLayerId) {
+      supabase
+        .from('calendar_layers')
+        .update({ widget_config: { order: controlWidgetOrder, layout: coverWidgetLayout } })
+        .eq('id', activeLayerId)
+        .then(() => {});
+    }
+  }, [user?.id, activeLayerId, controlWidgetOrder, coverWidgetLayout, controlWidgetPrefsReady, isActiveLayerOwner, getControlWidgetStorageBases]);
 
   useEffect(() => {
     if (!user?.id || !activeLayerId) return;
@@ -23815,7 +23867,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               All Off
             </button>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain -mx-3 sm:-mx-4 px-3 sm:px-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain -mx-3 sm:-mx-4 px-3 sm:px-4" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
             {CONTROL_WIDGET_IDS.map((widgetId) => {
               const meta = getControlWidgetMeta(widgetId);
