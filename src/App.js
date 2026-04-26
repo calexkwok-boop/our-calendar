@@ -23756,7 +23756,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         }}
       >
         <div
-          className="w-full max-w-lg rounded-2xl border border-gray-200 dark:border-gray-600 bg-white/95 dark:bg-gray-800/95 shadow-2xl p-3 sm:p-4"
+          className="w-full max-w-lg rounded-2xl border border-gray-200 dark:border-gray-600 bg-white/95 dark:bg-gray-800/95 shadow-2xl p-3 sm:p-4 flex flex-col"
+          style={{ maxHeight: 'calc(100dvh - 2rem)' }}
           onClick={(e) => e.stopPropagation()}
           onPointerDownCapture={bumpCoverControlsInteraction}
         >
@@ -23791,6 +23792,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               All Off
             </button>
           </div>
+          <div className="overflow-y-auto overscroll-contain -mx-3 sm:-mx-4 px-3 sm:px-4" style={{ WebkitOverflowScrolling: 'touch' }}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
             {CONTROL_WIDGET_IDS.map((widgetId) => {
               const meta = getControlWidgetMeta(widgetId);
@@ -23836,6 +23838,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 </div>
               );
             })}
+          </div>
           </div>
         </div>
       </div>,

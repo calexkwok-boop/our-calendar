@@ -1382,7 +1382,8 @@ export default function PopupEventPanel({
           joined_at: s.created_at,
         });
       });
-      readPopupManualPlayers(id).forEach((player) => {
+      const storedManualPlayers = Array.isArray(ev?.event_data?.manualPlayers) ? ev.event_data.manualPlayers : [];
+      storedManualPlayers.forEach((player) => {
         const manualName = String(player?.display_name || '').trim();
         if (!manualName) return;
         const duplicate = memberList.some((entry) => String(entry?.display_name || '').trim().toLowerCase() === manualName.toLowerCase());
@@ -1524,6 +1525,7 @@ export default function PopupEventPanel({
           .eq('user_id', user.id);
       }
       await loadEvent(event.id);
+      onClose?.();
     } catch (error) {
       setJoinError(error?.message || 'Could not leave the event.');
     }
@@ -1531,8 +1533,13 @@ export default function PopupEventPanel({
   const handleKick = async (member) => {
     if (!isHostOrCohost || !isUuid(event?.id)) return;
     if (member?.is_manual) {
-      const nextManualPlayers = readPopupManualPlayers(event.id).filter((player) => String(player?.id || '') !== String(member?.id || ''));
-      writePopupManualPlayers(event.id, nextManualPlayers);
+      const existingData = (event.event_data && typeof event.event_data === 'object' && !Array.isArray(event.event_data)) ? event.event_data : {};
+      const currentManualPlayers = Array.isArray(existingData.manualPlayers) ? existingData.manualPlayers : [];
+      const nextManualPlayers = currentManualPlayers.filter((p) => String(p?.id || '') !== String(member?.id || ''));
+      await supabase
+        .from('popup_event_details')
+        .update({ event_data: { ...existingData, manualPlayers: nextManualPlayers } })
+        .eq('id', event.id);
       await loadEvent(event.id);
       return;
     }
@@ -1609,13 +1616,18 @@ export default function PopupEventPanel({
     setManualAddBusy(true);
     setManualAddError('');
     try {
-      const currentManualPlayers = readPopupManualPlayers(event.id);
-      currentManualPlayers.push({
+      const existingData = (event.event_data && typeof event.event_data === 'object' && !Array.isArray(event.event_data)) ? event.event_data : {};
+      const currentManualPlayers = Array.isArray(existingData.manualPlayers) ? existingData.manualPlayers : [];
+      const nextManualPlayers = [...currentManualPlayers, {
         id: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         display_name: nextName,
         joined_at: new Date().toISOString(),
-      });
-      writePopupManualPlayers(event.id, currentManualPlayers);
+      }];
+      const { error } = await supabase
+        .from('popup_event_details')
+        .update({ event_data: { ...existingData, manualPlayers: nextManualPlayers } })
+        .eq('id', event.id);
+      if (error) throw error;
       setManualPlayerName('');
       await loadEvent(event.id);
     } catch (err) {

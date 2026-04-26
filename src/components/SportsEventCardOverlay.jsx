@@ -160,7 +160,8 @@ export default function SportsEventCardOverlay({
         });
       });
 
-      readManualPlayers(id).forEach((player) => {
+      const storedManualPlayers = Array.isArray(ev?.event_data?.manualPlayers) ? ev.event_data.manualPlayers : [];
+      storedManualPlayers.forEach((player) => {
         const manualName = String(player?.display_name || '').trim();
         if (!manualName) return;
         const duplicate = list.some((entry) => String(entry?.display_name || '').trim().toLowerCase() === manualName.toLowerCase());
@@ -400,13 +401,17 @@ export default function SportsEventCardOverlay({
     setManualAddBusy(true);
     setManualAddError('');
     try {
-      const currentManualPlayers = readManualPlayers(event.id);
-      currentManualPlayers.push({
+      const currentManualPlayers = Array.isArray(event.event_data?.manualPlayers) ? event.event_data.manualPlayers : [];
+      const nextManualPlayers = [...currentManualPlayers, {
         id: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         display_name: nextName,
         joined_at: new Date().toISOString(),
-      });
-      writeManualPlayers(event.id, currentManualPlayers);
+      }];
+      const { error } = await supabase
+        .from('popup_event_details')
+        .update({ event_data: { ...(event.event_data || {}), manualPlayers: nextManualPlayers } })
+        .eq('id', event.id);
+      if (error) throw error;
       setManualPlayerName('');
       await loadEvent(event.id);
     } catch (error) {
@@ -417,8 +422,12 @@ export default function SportsEventCardOverlay({
 
   const handleRemoveManualPlayer = async (member) => {
     if (!isHost || !isUuid(event?.id) || !member?.is_manual) return;
-    const nextManualPlayers = readManualPlayers(event.id).filter((player) => String(player?.id || '') !== String(member?.id || ''));
-    writeManualPlayers(event.id, nextManualPlayers);
+    const currentManualPlayers = Array.isArray(event.event_data?.manualPlayers) ? event.event_data.manualPlayers : [];
+    const nextManualPlayers = currentManualPlayers.filter((p) => String(p?.id || '') !== String(member?.id || ''));
+    await supabase
+      .from('popup_event_details')
+      .update({ event_data: { ...(event.event_data || {}), manualPlayers: nextManualPlayers } })
+      .eq('id', event.id);
     await loadEvent(event.id);
   };
 
