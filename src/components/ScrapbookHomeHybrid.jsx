@@ -283,7 +283,9 @@ const ScrapbookHomeHybrid = ({
                       className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-white/40 dark:border-white/10"
                     />
                   ) : (
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-white/40 dark:border-white/10 bg-white/70 dark:bg-white/10" />
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-white/40 dark:border-white/10 bg-gradient-to-br from-violet-400 via-purple-400 to-indigo-400 flex items-center justify-center text-white text-sm font-bold">
+                      {String(greetingName || '?').trim().charAt(0).toUpperCase()}
+                    </div>
                   )}
                 </button>
                 {profileBadgeCount > 0 && (
