@@ -2620,22 +2620,29 @@ const chunkIntoGauntletCourts = (participantIds, participantsById) => {
   return courts;
 };
 
-const getGauntletByeIdsForOrder = (participantOrder, byeCount, byeCursor = 0) => {
+const getGauntletByeIdsForOrder = (participantOrder, byeCount, _byeCursor = 0, existingRounds = []) => {
   const order = Array.isArray(participantOrder) ? participantOrder.map((id) => String(id || '')).filter(Boolean) : [];
   const safeByeCount = Math.max(0, Math.min(order.length, Number(byeCount) || 0));
   if (safeByeCount === 0 || order.length === 0) return [];
-  const start = ((Number(byeCursor) || 0) % order.length + order.length) % order.length;
-  const ids = [];
-  for (let offset = 0; offset < safeByeCount; offset += 1) {
-    ids.push(order[(start + offset) % order.length]);
-  }
-  return ids;
+  // Count bye history per player ID so we rotate by identity, not list position
+  const byeHistory = {};
+  order.forEach((id) => { byeHistory[id] = 0; });
+  (Array.isArray(existingRounds) ? existingRounds : []).forEach((round) => {
+    (round?.byeIds || []).forEach((pid) => {
+      const id = String(pid || '');
+      if (id in byeHistory) byeHistory[id]++;
+    });
+  });
+  // Stable sort: preserve participantOrder as tiebreaker within same bye count
+  return [...order]
+    .sort((a, b) => (byeHistory[a] || 0) - (byeHistory[b] || 0))
+    .slice(0, safeByeCount);
 };
 
 const buildGauntletRoundFromOrder = ({ participantOrder, participantsById, roundIndex = 0, byeCursor = 0, existingRounds = [] }) => {
   const order = Array.isArray(participantOrder) ? participantOrder.map((id) => String(id || '')).filter(Boolean) : [];
   const byeCount = order.length % 4;
-  const byeIds = getGauntletByeIdsForOrder(order, byeCount, byeCursor);
+  const byeIds = getGauntletByeIdsForOrder(order, byeCount, byeCursor, existingRounds);
   const activeIds = order.filter((id) => !byeIds.includes(id));
   const courtGroups = chunkIntoGauntletCourts(activeIds, participantsById);
   const partnerHistory = buildGauntletPartnerHistory(existingRounds);
@@ -3023,11 +3030,27 @@ const shuffleScrambleIds = (ids) => {
 };
 
 const buildScrambleRound = ({ participantIds, roundIndex, courtCount, existingRounds = [] }) => {
-  const shuffledIds = shuffleScrambleIds(participantIds);
   const maxCourtCount = Math.max(1, Number(courtCount || 1));
-  const activeCount = Math.min(shuffledIds.length - (shuffledIds.length % 4), maxCourtCount * 4);
-  const activeIds = shuffledIds.slice(0, activeCount);
-  const byeIds = shuffledIds.slice(activeCount);
+  const n = (participantIds || []).length;
+  const activeMax = Math.min(n - (n % 4), maxCourtCount * 4);
+  const totalByeCount = n - activeMax;
+
+  // Count bye history so we can rotate: fewest-bye players sit out first
+  const byeHistory = {};
+  (participantIds || []).forEach((id) => { byeHistory[String(id || '')] = 0; });
+  (Array.isArray(existingRounds) ? existingRounds : []).forEach((round) => {
+    (round?.byeIds || []).forEach((pid) => {
+      const id = String(pid || '');
+      if (id in byeHistory) byeHistory[id]++;
+    });
+  });
+
+  // Shuffle first (randomizes within same bye-count tier), then stable-sort ascending by byes
+  const shuffled = shuffleScrambleIds([...(participantIds || [])]);
+  shuffled.sort((a, b) => (byeHistory[String(a || '')] || 0) - (byeHistory[String(b || '')] || 0));
+
+  const byeIds = totalByeCount > 0 ? shuffled.slice(0, totalByeCount).map((id) => String(id || '')) : [];
+  const activeIds = shuffled.slice(totalByeCount);
 
   // Build partner history to reduce repeat pairings
   const makeKey = (a, b) => {

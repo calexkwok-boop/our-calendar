@@ -31,7 +31,7 @@ USING (
     SELECT 1
     FROM public.popup_events pe
     JOIN public.calendar_layers cl ON cl.id::text = pe.layer_id::text
-    WHERE pe.id::text = popup_event_members.event_id::text
+    WHERE pe.event_id::text = popup_event_members.event_id::text
       AND cl.owner_id::text = auth.uid()::text
   )
 );
@@ -55,7 +55,7 @@ USING (
     SELECT 1
     FROM public.popup_events pe
     JOIN public.calendar_layers cl ON cl.id::text = pe.layer_id::text
-    WHERE pe.id::text = popup_event_members.event_id::text
+    WHERE pe.event_id::text = popup_event_members.event_id::text
       AND cl.owner_id::text = auth.uid()::text
   )
 );

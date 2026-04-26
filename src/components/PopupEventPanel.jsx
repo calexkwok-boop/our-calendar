@@ -1434,7 +1434,7 @@ export default function PopupEventPanel({
     try {
       const { error } = await supabase
         .from('popup_event_members')
-        .insert({ event_id: event.id, user_id: user.id, display_name: effectiveDisplayName || 'Player', role: 'player' });
+        .insert({ event_id: event.id, user_id: user.id, display_name: effectiveDisplayName || 'Player', role: isEventCreator ? 'host' : 'player' });
       if (error && error.code !== '23505') throw error;
       await loadEvent(event.id);
     } catch (error) {
