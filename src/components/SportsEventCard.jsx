@@ -10,7 +10,7 @@ import React from 'react';
 import {
   MapPin, Clock, Calendar, Users, Lock, Globe,
   Copy, Check, MessageCircle, Gamepad2, UserMinus,
-  Loader, AlertCircle, Shield,
+  Loader, AlertCircle, Shield, LogOut,
 } from 'lucide-react';
 
 const APP_FONT_STACK = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -224,6 +224,7 @@ export default function SportsEventCard({
   primaryActionLabel,
   hidePrimaryAction = false,
   onLeave,
+  onHostLeave,
   isHost = false,
   isMember = false,
   isFull = false,
@@ -245,12 +246,17 @@ export default function SportsEventCard({
   // legacy guard
   isLegacyInvalidEvent = false,
 }) {
+  const [showHandoff, setShowHandoff] = React.useState(false);
+
   const invitees    = Array.isArray(event.invitees) ? event.invitees : [];
   const organizer   = invitees.find((i) => i.role === 'host');
   const cohosts     = invitees.filter((i) => i.role === 'cohost');
   const allPlayers  = invitees;
   const preview     = allPlayers.slice(0, 6);
   const overflow    = Math.max(0, allPlayers.length - 6);
+  // Other members the host can hand off to (cohosts listed first)
+  const otherMembers = [...invitees.filter(i => i.role !== 'host')]
+    .sort((a, b) => (b.role === 'cohost' ? 1 : 0) - (a.role === 'cohost' ? 1 : 0));
 
   const dateParts   = formatDateFull(event.date);
   const timePretty  = formatTimePretty(event.time);
@@ -688,6 +694,88 @@ export default function SportsEventCard({
                 </button>
               ))}
             </div>
+
+            {/* ── leave / handoff ── */}
+            {!showHandoff ? (
+              <button
+                type="button"
+                onClick={() => otherMembers.length === 0 ? onHostLeave?.(null) : setShowHandoff(true)}
+                style={{
+                  width: '100%', padding: '11px 14px',
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  cursor: 'pointer', border: 'none',
+                  borderTop: `1px solid ${border}`,
+                  background: darkMode ? 'rgba(255,255,255,0.03)' : '#fff',
+                  color: '#ef4444', fontSize: 14, fontWeight: 700,
+                  fontFamily: APP_FONT_STACK,
+                }}
+              >
+                <LogOut style={{ width: 13, height: 13 }} />
+                Leave Event
+              </button>
+            ) : (
+              <div style={{ padding: '14px', borderTop: `1px solid ${border}` }}>
+                <p style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 700, color: primaryText }}>
+                  Pick a new host before you go
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+                  {otherMembers.map((m) => (
+                    <button
+                      key={m.id || m.user_id}
+                      type="button"
+                      onClick={() => { setShowHandoff(false); onHostLeave?.(m.user_id || m.id); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '9px 12px', borderRadius: 12, cursor: 'pointer',
+                        background: surfaceBg, border: `1px solid ${border}`,
+                        textAlign: 'left', fontFamily: APP_FONT_STACK,
+                      }}
+                    >
+                      <PlayerPip person={m} name={m.display_name || m.name} role={m.role} accent={accent} size={30} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: primaryText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {m.display_name || m.name}
+                        </div>
+                        {m.role === 'cohost' && (
+                          <div style={{ fontSize: 11, color: accent, fontWeight: 600 }}>Co-host</div>
+                        )}
+                      </div>
+                      <span style={{
+                        fontSize: 12, fontWeight: 700, color: '#fff',
+                        background: accent, borderRadius: 8, padding: '4px 10px', flexShrink: 0,
+                      }}>
+                        Make host
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowHandoff(false)}
+                    style={{
+                      flex: 1, padding: '9px 0', borderRadius: 12, cursor: 'pointer',
+                      border: `1px solid ${border}`, background: 'transparent',
+                      color: secondaryText, fontSize: 13, fontWeight: 700, fontFamily: APP_FONT_STACK,
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowHandoff(false); onHostLeave?.(null); }}
+                    style={{
+                      flex: 1, padding: '9px 0', borderRadius: 12, cursor: 'pointer',
+                      border: '1px solid rgba(239,68,68,0.3)',
+                      background: 'rgba(239,68,68,0.07)', color: '#ef4444',
+                      fontSize: 13, fontWeight: 700, fontFamily: APP_FONT_STACK,
+                    }}
+                  >
+                    Leave anyway
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
           </>

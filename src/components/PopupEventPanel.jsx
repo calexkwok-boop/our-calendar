@@ -1492,6 +1492,26 @@ export default function PopupEventPanel({
       setJoinError(error?.message || 'Could not update your RSVP.');
     }
   };
+
+  const handleHostLeave = async (newHostId) => {
+    if (!myMember || !isHost || !isUuid(event?.id)) return;
+    setJoinError('');
+    try {
+      if (newHostId) {
+        const { error } = await supabase
+          .from('popup_event_members')
+          .update({ role: 'host' })
+          .eq('event_id', event.id)
+          .eq('user_id', newHostId);
+        if (error) throw error;
+      }
+      const { error: leaveError } = await supabase.from('popup_event_members').delete().eq('id', myMember.id);
+      if (leaveError) throw leaveError;
+      await loadEvent(event.id);
+    } catch (error) {
+      setJoinError(error?.message || 'Could not leave the event.');
+    }
+  };
   const handleKick = async (member) => {
     if (!isHostOrCohost || !isUuid(event?.id)) return;
     if (member?.is_manual) {
@@ -1967,6 +1987,7 @@ export default function PopupEventPanel({
         onPrimaryAction={handleJoin}
         primaryActionLabel={joining ? joiningLabel : joinLabel}
         onLeave={handleLeave}
+        onHostLeave={handleHostLeave}
         isHost={isHost}
         isMember={isMember}
         isFull={isFull}
