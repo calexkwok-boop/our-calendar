@@ -334,6 +334,41 @@ export default function SportsEventCardOverlay({
     }
   };
 
+  const handleHostLeave = async (newHostId) => {
+    if (!isHost || !isUuid(event?.id)) return;
+    setJoinError('');
+    try {
+      if (newHostId) {
+        const { error } = await supabase
+          .from('popup_event_members')
+          .update({ role: 'host' })
+          .eq('event_id', event.id)
+          .eq('user_id', newHostId);
+        if (error) throw error;
+      }
+      // Only delete the host's own row if it's a real DB record (not a synthetic creator row)
+      const hostRowId = myMember?.id;
+      if (hostRowId && isUuid(hostRowId)) {
+        const { error: leaveError } = await supabase
+          .from('popup_event_members')
+          .delete()
+          .eq('id', hostRowId);
+        if (leaveError) throw leaveError;
+      } else if (currentUserId) {
+        // Fallback: delete by user_id if row id isn't a proper UUID
+        await supabase
+          .from('popup_event_members')
+          .delete()
+          .eq('event_id', event.id)
+          .eq('user_id', currentUserId);
+      }
+      await loadEvent(event.id);
+      onClose?.();
+    } catch (error) {
+      setJoinError(error?.message || 'Could not leave the event.');
+    }
+  };
+
   const handleTogglePublic = async () => {
     if (!isHost || !isUuid(event?.id)) return;
     const next = !event.is_public;
@@ -690,6 +725,7 @@ export default function SportsEventCardOverlay({
           onPrimaryAction={handleJoin}
           primaryActionLabel={joining ? 'Joining...' : 'Join Event'}
           onLeave={handleLeave}
+          onHostLeave={handleHostLeave}
           isHost={isHost}
           isMember={isMember}
           isFull={isFull}

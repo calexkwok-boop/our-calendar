@@ -1163,12 +1163,16 @@ export default function PopupEventPanel({
   const resolvePopupMemberPhotoUrl = (memberLike = {}) => {
     const memberUserId = String(memberLike?.user_id || memberLike?.userId || '').trim();
     const isCurrentUser = memberUserId && memberUserId === String(user?.id || '').trim();
+    const storageUrl = memberUserId && supabase?.supabaseUrl
+      ? `${supabase.supabaseUrl}/storage/v1/object/public/avatars/${memberUserId}/avatar`
+      : '';
     return String(
       memberLike?.photoUrl
       || memberLike?.photo_url
       || memberLike?.avatarUrl
       || memberLike?.avatar_url
       || (isCurrentUser ? currentUserProfilePhotoUrl : '')
+      || storageUrl
       || ''
     ).trim();
   };
@@ -1494,7 +1498,7 @@ export default function PopupEventPanel({
   };
 
   const handleHostLeave = async (newHostId) => {
-    if (!myMember || !isHost || !isUuid(event?.id)) return;
+    if (!isHost || !isUuid(event?.id)) return;
     setJoinError('');
     try {
       if (newHostId) {
@@ -1505,8 +1509,20 @@ export default function PopupEventPanel({
           .eq('user_id', newHostId);
         if (error) throw error;
       }
-      const { error: leaveError } = await supabase.from('popup_event_members').delete().eq('id', myMember.id);
-      if (leaveError) throw leaveError;
+      const hostRowId = myMember?.id;
+      if (hostRowId && isUuid(hostRowId)) {
+        const { error: leaveError } = await supabase
+          .from('popup_event_members')
+          .delete()
+          .eq('id', hostRowId);
+        if (leaveError) throw leaveError;
+      } else if (user?.id) {
+        await supabase
+          .from('popup_event_members')
+          .delete()
+          .eq('event_id', event.id)
+          .eq('user_id', user.id);
+      }
       await loadEvent(event.id);
     } catch (error) {
       setJoinError(error?.message || 'Could not leave the event.');
