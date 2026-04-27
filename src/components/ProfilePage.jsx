@@ -168,6 +168,10 @@ const ProfilePage = ({
   const [friendProfile, setFriendProfile] = useState(null);
   const [connectionContext, setConnectionContext] = useState(null);
   const [friendSharedPhoto, setFriendSharedPhoto] = useState(null);
+  const [reactions, setReactions] = useState([]);
+  const [commentDraft, setCommentDraft] = useState('');
+  const [reactionsLoading, setReactionsLoading] = useState(false);
+  const [submittingReaction, setSubmittingReaction] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // ─── Own sharing prefs (localStorage; TODO: sync to user_profiles table)
@@ -195,6 +199,76 @@ const ProfilePage = ({
       return next;
     });
   }, [currentUser?.id]);
+
+  // ─── Fetch reactions for the friend's shared photo
+  useEffect(() => {
+    if (!friendSharedPhoto || isOwnProfile) { setReactions([]); return; }
+    const { memoryDate } = friendSharedPhoto;
+    const ownerId = String(viewedUserId || '').trim();
+    if (!ownerId || !memoryDate) return;
+    let cancelled = false;
+    setReactionsLoading(true);
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('memory_reactions')
+          .select('id, type, comment_text, reactor_user_id, created_at')
+          .eq('memory_owner_id', ownerId)
+          .eq('memory_date', memoryDate)
+          .order('created_at', { ascending: true });
+        if (!cancelled) setReactions(data || []);
+      } catch {} finally {
+        if (!cancelled) setReactionsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [friendSharedPhoto, isOwnProfile, viewedUserId]);
+
+  const myUserId = String(currentUser?.id || '').trim();
+
+  const myLike = reactions.find(
+    (r) => r.type === 'like' && String(r.reactor_user_id) === myUserId
+  );
+
+  const toggleLike = useCallback(async () => {
+    if (!friendSharedPhoto || !myUserId || submittingReaction) return;
+    const { memoryDate } = friendSharedPhoto;
+    const ownerId = String(viewedUserId || '').trim();
+    setSubmittingReaction(true);
+    try {
+      if (myLike) {
+        await supabase.from('memory_reactions').delete().eq('id', myLike.id);
+        setReactions((prev) => prev.filter((r) => r.id !== myLike.id));
+      } else {
+        const { data } = await supabase
+          .from('memory_reactions')
+          .insert({ memory_owner_id: ownerId, memory_date: memoryDate, reactor_user_id: myUserId, type: 'like' })
+          .select('id, type, comment_text, reactor_user_id, created_at')
+          .single();
+        if (data) setReactions((prev) => [...prev, data]);
+      }
+    } catch {} finally {
+      setSubmittingReaction(false);
+    }
+  }, [friendSharedPhoto, myUserId, viewedUserId, myLike, submittingReaction]);
+
+  const submitComment = useCallback(async () => {
+    const text = commentDraft.trim();
+    if (!text || !friendSharedPhoto || !myUserId || submittingReaction) return;
+    const { memoryDate } = friendSharedPhoto;
+    const ownerId = String(viewedUserId || '').trim();
+    setSubmittingReaction(true);
+    try {
+      const { data } = await supabase
+        .from('memory_reactions')
+        .insert({ memory_owner_id: ownerId, memory_date: memoryDate, reactor_user_id: myUserId, type: 'comment', comment_text: text })
+        .select('id, type, comment_text, reactor_user_id, created_at')
+        .single();
+      if (data) { setReactions((prev) => [...prev, data]); setCommentDraft(''); }
+    } catch {} finally {
+      setSubmittingReaction(false);
+    }
+  }, [commentDraft, friendSharedPhoto, myUserId, viewedUserId, submittingReaction]);
 
   // ─── Shared helper: get all trip IDs + name map for the current user
   const getMyTripData = useCallback(async () => {
@@ -566,7 +640,7 @@ const ProfilePage = ({
             const photoUrl = String(
               mem.coverPhoto || mem.photos?.[0]?.url || mem.photos?.[0]?.photoUrl || mem.photoUrl || mem.photo_url || ''
             ).trim();
-            return photoUrl ? { photoUrl, title: String(mem.title || '').trim() } : null;
+            return photoUrl ? { photoUrl, title: String(mem.title || '').trim(), memoryDate: today } : null;
           })(),
         ]);
 
@@ -854,6 +928,65 @@ const ProfilePage = ({
                   </div>
                   {friendSharedPhoto.title && (
                     <p className="text-sm mt-2 text-center" style={{ color: mutedColor }}>{friendSharedPhoto.title}</p>
+                  )}
+
+                  {/* Reactions */}
+                  {!isOwnProfile && (
+                    <div className="mt-3 space-y-3">
+                      {/* Like button + count */}
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={toggleLike}
+                          disabled={submittingReaction}
+                          className="flex items-center gap-1.5 text-sm transition-opacity active:opacity-60"
+                          style={{ color: myLike ? '#f43f5e' : mutedColor }}
+                        >
+                          <span className="text-base leading-none">{myLike ? '❤️' : '🤍'}</span>
+                          <span>{reactions.filter((r) => r.type === 'like').length || ''}</span>
+                        </button>
+                      </div>
+
+                      {/* Comments list */}
+                      {!reactionsLoading && reactions.filter((r) => r.type === 'comment').length > 0 && (
+                        <div className="space-y-1.5">
+                          {reactions.filter((r) => r.type === 'comment').map((c) => (
+                            <div key={c.id} className="flex gap-2 text-sm" style={{ color: mutedColor }}>
+                              <span className="font-semibold shrink-0">
+                                {String(c.reactor_user_id) === myUserId ? 'You' : '👤'}
+                              </span>
+                              <span className="break-words min-w-0">{c.comment_text}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Add comment */}
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="text"
+                          value={commentDraft}
+                          onChange={(e) => setCommentDraft(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitComment(); } }}
+                          placeholder="Add a comment…"
+                          className="flex-1 min-w-0 text-sm rounded-xl px-3 py-1.5 outline-none border"
+                          style={{
+                            background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                            borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)',
+                            color: headingColor,
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={submitComment}
+                          disabled={!commentDraft.trim() || submittingReaction}
+                          className="text-sm font-semibold transition-opacity disabled:opacity-40 active:opacity-60 shrink-0"
+                          style={{ color: '#f43f5e' }}
+                        >
+                          Post
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
               ) : (
