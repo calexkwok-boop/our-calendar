@@ -183,6 +183,10 @@ const ScrapbookHomeHybrid = ({
   themeAccentEllieChipButtonStyle,
   themeAccentTextStyle,
 
+  // Friends' daily photos strip
+  friendsDailyPhotos = [],
+  onOpenFriendProfile,
+
   // Account / avatar
   profilePhotoUrl = '',
   profileBadgeCount = 0,
@@ -465,6 +469,44 @@ const ScrapbookHomeHybrid = ({
                 Add a photo that captures your day
               </p>
             </button>
+          )}
+
+          {/* Friends' daily photos strip */}
+          {friendsDailyPhotos.length > 0 && (
+            <div className="mt-4">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500 mb-2 px-1">
+                Friends today
+              </p>
+              <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+                {friendsDailyPhotos.map((friend) => (
+                  <button
+                    key={friend.userId}
+                    type="button"
+                    onClick={() => onOpenFriendProfile?.({ userId: friend.userId })}
+                    className="flex-shrink-0 flex flex-col items-center gap-1 active:opacity-70 transition-opacity"
+                  >
+                    <div
+                      className="bg-white dark:bg-slate-100 rounded-sm shadow-md p-1.5 pb-0"
+                      style={{ transform: `rotate(${friend.userId.charCodeAt(0) % 2 === 0 ? '-1.5deg' : '1.5deg'})` }}
+                    >
+                      <div className="w-16 h-16 overflow-hidden rounded-[2px]">
+                        <img
+                          src={friend.photoUrl}
+                          alt={friend.handle}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <p
+                        className="text-[9px] text-gray-500 text-center py-1.5 px-0.5 truncate w-16"
+                        style={{ fontFamily: "'Caveat', cursive" }}
+                      >
+                        {friend.handle}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 

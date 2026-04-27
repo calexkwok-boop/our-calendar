@@ -3362,6 +3362,7 @@ function App() {
   const [tripKomoState, setTripKomoState] = useState(() => readTripKomoState('guest'));
   const [showAddDreamSheet, setShowAddDreamSheet] = useState(false);
   const [makeItHappenItem, setMakeItHappenItem] = useState(null);
+  const [friendsDailyPhotos, setFriendsDailyPhotos] = useState([]);
   const [somedayPinPositions, setSomedayPinPositions] = useState(() => {
     try { return JSON.parse(localStorage.getItem('someday-pin-positions') || '{}'); } catch { return {}; }
   });
@@ -20490,6 +20491,51 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     void persistRemoteQuickThoughtsState(user?.id, quickThoughts);
   }, [user?.id, quickThoughts, quickThoughtsHydratedUserId]);
 
+  // ─── Friends' daily photos for home screen strip
+  useEffect(() => {
+    const userId = String(currentUser?.id || '').trim();
+    if (!userId || userId === 'guest') { setFriendsDailyPhotos([]); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const { data: myEvents } = await supabase
+          .from('popup_event_members').select('event_id').eq('user_id', userId);
+        if (cancelled || !myEvents?.length) return;
+        const myEventIds = myEvents.map((m) => m.event_id).filter(Boolean);
+        const [{ data: coMembers }, { data: sharingUsers }] = await Promise.all([
+          supabase.from('popup_event_members').select('user_id').in('event_id', myEventIds).neq('user_id', userId),
+          supabase.from('user_profiles').select('user_id').eq('share_photo_of_day', true),
+        ]);
+        if (cancelled) return;
+        const sharingIdSet = new Set((sharingUsers || []).map((u) => String(u.user_id)));
+        const friendIds = [...new Set((coMembers || []).map((m) => String(m.user_id)).filter((id) => id && sharingIdSet.has(id)))];
+        if (!friendIds.length) return;
+        const [{ data: todayMemories }, { data: handles }] = await Promise.all([
+          supabase.from('user_memories').select('owner_user_id, memory').in('owner_user_id', friendIds).eq('memory_date', today),
+          supabase.from('user_handles').select('user_id, handle').in('user_id', friendIds),
+        ]);
+        if (cancelled) return;
+        const handleMap = {};
+        for (const h of (handles || [])) handleMap[String(h.user_id)] = h.handle;
+        const photos = (todayMemories || []).map((row) => {
+          const mem = typeof row.memory === 'object' ? row.memory : {};
+          const photoUrl = String(mem.coverPhoto || mem.photos?.[0]?.url || mem.photoUrl || '').trim();
+          if (!photoUrl) return null;
+          const uid = String(row.owner_user_id);
+          return {
+            userId: uid,
+            handle: handleMap[uid] || uid.slice(0, 8),
+            photoUrl,
+            avatarUrl: `${supabase.supabaseUrl}/storage/v1/object/public/avatars/${uid}/avatar`,
+          };
+        }).filter(Boolean);
+        if (!cancelled) setFriendsDailyPhotos(photos);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [currentUser?.id]);
+
   useEffect(() => {
     const currentBucketListUserId = String(user?.id || 'guest').trim() || 'guest';
     let cancelled = false;
@@ -28512,6 +28558,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             onOpenSomeday={() => setBottomNavTab('someday')}
             onCaptureQuickMoment={openQuickMemoryCapture}
             onAddMomentForDate={(dateKey) => openQuickMemoryCapture(dateKey)}
+            friendsDailyPhotos={friendsDailyPhotos}
+            onOpenFriendProfile={({ userId, email }) => setProfileViewState({ open: true, email: email || null, userId: userId || null })}
             onDeleteMoment={(moment) => {
               try { deleteMemoryRecord(moment?.id); } catch {}
             }}

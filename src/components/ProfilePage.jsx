@@ -555,15 +555,12 @@ const ProfilePage = ({
             if (!friendPrefs.share_photo_of_day || !viewedUserId) return null;
             const today = new Date().toISOString().slice(0, 10);
             const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-            // Also catch records where memory_date wasn't set (legacy bug: date saved as Date object)
-            const { data: memRow } = await supabase
-              .from('user_memories')
-              .select('memory, memory_date, created_at')
-              .eq('owner_user_id', viewedUserId)
-              .or(`memory_date.eq.${today},and(memory_date.is.null,created_at.gte.${today}T00:00:00.000Z,created_at.lt.${tomorrow}T00:00:00.000Z)`)
-              .order('updated_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
+            // Two parallel queries: one for explicit memory_date, one for legacy null memory_date records created today
+            const [{ data: memByDate }, { data: memByCreated }] = await Promise.all([
+              supabase.from('user_memories').select('memory').eq('owner_user_id', viewedUserId).eq('memory_date', today).limit(1).maybeSingle(),
+              supabase.from('user_memories').select('memory').eq('owner_user_id', viewedUserId).is('memory_date', null).gte('created_at', `${today}T00:00:00.000Z`).lt('created_at', `${tomorrow}T00:00:00.000Z`).order('updated_at', { ascending: false }).limit(1).maybeSingle(),
+            ]);
+            const memRow = memByDate || memByCreated;
             if (!memRow?.memory) return null;
             const mem = typeof memRow.memory === 'object' ? memRow.memory : {};
             const photoUrl = String(
