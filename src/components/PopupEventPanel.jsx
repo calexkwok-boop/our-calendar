@@ -1117,7 +1117,7 @@ export default function PopupEventPanel({
   initialEventId,
   eventMetaFallback,
   currentUserProfilePhotoUrl = '',
-  onClose, onEventCreated,
+  onClose, onEventCreated, onJoined,
   formatTime, formatDateKeyMMDDYYYY, resolveHandleLikeLabel,
   onLaunchRoundRobin, onLaunchGauntlet, onLaunchScramble,
 }) {
@@ -1437,6 +1437,7 @@ export default function PopupEventPanel({
         .insert({ event_id: event.id, user_id: user.id, display_name: effectiveDisplayName || 'Player', role: isEventCreator ? 'host' : 'player' });
       if (error && error.code !== '23505') throw error;
       await loadEvent(event.id);
+      if (!isEventCreator && typeof onJoined === 'function') onJoined(event);
     } catch (error) {
       setJoinError(error?.message || 'Could not RSVP right now.');
     }

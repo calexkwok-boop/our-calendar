@@ -9812,6 +9812,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     moderatedBy: event?.moderated_by || null,
     moderatedAt: event?.moderated_at || null,
     moderationReason: String(event?.moderation_reason || '').trim() || null,
+    event_data: event.event_data && typeof event.event_data === 'object' && !Array.isArray(event.event_data)
+      ? event.event_data
+      : (typeof event.event_data === 'string' ? (() => { try { return JSON.parse(event.event_data); } catch { return null; } })() : null),
   });
 
   const loadPublicCalendars = async () => {
@@ -13933,6 +13936,48 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }
     }
 
+    // Also surface events the user has directly joined via share link (not necessarily on their visible layers)
+    if (user?.id) {
+      try {
+        const alreadyFoundIds = new Set(popupEventCards.map((e) => String(e?.id || '')));
+        const { data: myMemberships } = await supabase
+          .from('popup_event_members')
+          .select('event_id')
+          .eq('user_id', user.id);
+        const missingIds = (myMemberships || [])
+          .map((r) => String(r?.event_id || '').trim())
+          .filter((id) => isUuid(id) && !alreadyFoundIds.has(id));
+        if (missingIds.length > 0) {
+          const { data: extraDetails } = await supabase
+            .from('popup_event_details')
+            .select('id,title,date,time,location,description,category')
+            .in('id', missingIds);
+          (extraDetails || []).forEach((det) => {
+            if (!det?.id || !det?.date) return;
+            const ts = toDateOnlyTs(String(det.date || ''));
+            if (ts === null || ts < todayTs) return;
+            const detId = String(det.id);
+            popupEventCards.push({
+              id: detId,
+              title: String(det.title || 'Untitled Event'),
+              date: String(det.date),
+              dateKey: String(det.date),
+              time: det.time || null,
+              location: det.location || null,
+              description: String(det.description || ''),
+              category: String(det.category || '').trim() || null,
+              layerId: '',
+              subCalendarId: null,
+            });
+            if (!Array.isArray(signupsMap[detId])) signupsMap[detId] = [];
+            if (!signupsMap[detId].some((r) => String(r?.userId || '') === String(user.id || ''))) {
+              signupsMap[detId].push({ userId: String(user.id) });
+            }
+          });
+        }
+      } catch {}
+    }
+
     setPopupFeatureAvailable(true);
     setPopupEventsByEventId(eventsMap);
     setPopupSignupsByEventId(signupsMap);
@@ -13966,6 +14011,41 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     await loadPopupEventData();
     return true;
   };
+
+  const handleJoinedPopupEvent = useCallback(async (popupEvent) => {
+    if (!popupEvent?.id || !popupEvent?.date || !activeLayerId || !user?.id) return;
+    const newEventId = generateUuid();
+    const eventRow = {
+      id: newEventId,
+      date: popupEvent.date,
+      title: String(popupEvent.title || 'Event'),
+      time: popupEvent.time || null,
+      location: popupEvent.location || null,
+      description: String(popupEvent.description || '') || null,
+      category: 'popup_event',
+      is_private: false,
+      is_urgent: false,
+      is_multi_day: false,
+      recurrence: 'once',
+      created_by: currentUser || user.email || user.phone || 'User',
+      created_at: new Date().toISOString(),
+      user_id: user.id,
+      layer_id: activeLayerId,
+      calendar_id: activeLayerId,
+      event_data: { popupEventId: popupEvent.id },
+    };
+    try {
+      const { error } = await supabase.from('events').insert(eventRow);
+      if (!error) {
+        setEvents((prev) => {
+          const dateKey = popupEvent.date;
+          const existing = Array.isArray(prev[dateKey]) ? prev[dateKey] : [];
+          if (existing.some((e) => String(e?.event_data?.popupEventId || '') === String(popupEvent.id || ''))) return prev;
+          return { ...prev, [dateKey]: [...existing, mapSupabaseEventRow(eventRow, user.id)] };
+        });
+      }
+    } catch {}
+  }, [activeLayerId, user?.id, currentUser, user?.email, user?.phone]);
 
   const focusOnPopupEventDate = (eventId, fallbackDateKey = null) => {
     let dateKey = String(fallbackDateKey || '').trim();
@@ -28179,6 +28259,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             initialEventId={selectedPopupId}
             eventMetaFallback={eventMetaFallback}
             onClose={closeSelectedPopup}
+            onJoined={handleJoinedPopupEvent}
             formatTime={formatTime}
             formatDateKeyMMDDYYYY={formatDateKeyMMDDYYYY}
             resolveHandleLikeLabel={resolveHandleLikeLabel}
@@ -29317,7 +29398,8 @@ transform: translateY(0);
                         onPointerCancel={endEventSwipeDrag}
                         onClick={() => {
                           if (effectiveCategoryKey === 'popup_event' || event.category === 'popup_event') {
-                            setSelectedPopupEventPanelId(String(event.id || ''));
+                            const linkedPopupId = event.event_data?.popupEventId;
+                            setSelectedPopupEventPanelId(String(linkedPopupId || event.id || ''));
                           }
                         }}
                       >
