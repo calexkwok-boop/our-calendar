@@ -1315,9 +1315,6 @@ function ScramblePanel({
                           <div style={{ fontSize: 13, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {row.name}
                           </div>
-                          <div style={{ fontSize: 10.5, color: T.muted }}>
-                            PF {row.pointsFor} - PA {row.pointsAgainst}
-                          </div>
                         </div>
                         <StatVal value={(Number(row.winPct || 0) * 100).toFixed(0)} />
                         <StatVal value={`${row.wins}-${row.losses}`} />
