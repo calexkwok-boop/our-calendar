@@ -37,6 +37,7 @@ export default function PartyEventCardOverlay({
   currentUserProfilePhotoUrl = '',
   resolveHandleLikeLabel,
   onClose,
+  onJoined,
 }) {
   const accent = activeLayerPageTheme?.accent || '#f59e0b';
   const [activeScreen, setActiveScreen] = useState('detail');
@@ -280,6 +281,7 @@ export default function PartyEventCardOverlay({
         .insert({ event_id: event.id, user_id: currentUserId, display_name: effectiveDisplayName || 'Guest', role: 'guest' });
       if (error && error.code !== '23505') throw error;
       await loadEvent(event.id);
+      if (typeof onJoined === 'function') onJoined(event);
     } catch (error) {
       setJoinError(error?.message || 'Could not RSVP right now.');
     }

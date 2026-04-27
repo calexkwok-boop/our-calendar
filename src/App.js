@@ -28310,6 +28310,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             onLaunchGauntlet={launchGauntletFromPopup}
             onLaunchScramble={launchScrambleFromPopup}
             onClose={closeSelectedPopup}
+            onJoined={handleJoinedPopupEvent}
           />
         ) : isSelectedPartyPopup ? (
           <PartyEventCardOverlay
@@ -28324,6 +28325,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             eventMetaFallback={eventMetaFallback}
             resolveHandleLikeLabel={resolveHandleLikeLabel}
             onClose={closeSelectedPopup}
+            onJoined={handleJoinedPopupEvent}
           />
         ) : (
           <PopupEventPanel

@@ -67,6 +67,7 @@ export default function SportsEventCardOverlay({
   onLaunchGauntlet,
   onLaunchScramble,
   onClose,
+  onJoined,
 }) {
   const accent = activeLayerPageTheme?.accent || '#16a34a';
   const [activeScreen, setActiveScreen] = useState(initialScreen === 'game' ? 'game' : 'detail');
@@ -317,6 +318,7 @@ export default function SportsEventCardOverlay({
         .insert({ event_id: event.id, user_id: currentUserId, display_name: effectiveDisplayName || 'Player', role: 'player' });
       if (error && error.code !== '23505') throw error;
       await loadEvent(event.id);
+      if (typeof onJoined === 'function') onJoined(event);
     } catch (error) {
       setJoinError(error?.message || 'Could not join right now.');
     }
