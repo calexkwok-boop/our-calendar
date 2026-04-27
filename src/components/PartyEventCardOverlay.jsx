@@ -89,7 +89,8 @@ export default function PartyEventCardOverlay({
         supabase.from('popup_event_signups').select('*').eq('event_id', id).order('created_at'),
       ]);
 
-      if (ev) setEvent(normalizeEvent(ev, fallbackRef.current || {}));
+      const normalizedEv = ev ? normalizeEvent(ev, fallbackRef.current || {}) : null;
+      if (normalizedEv) setEvent(normalizedEv);
 
       const list = [];
       const seenUserIds = new Set();
@@ -125,9 +126,11 @@ export default function PartyEventCardOverlay({
       });
 
       setMembers(list);
+      return normalizedEv;
     } catch {
       if (fallbackRef.current) setEvent(normalizeEvent(fallbackRef.current, fallbackRef.current));
     }
+    return null;
   }, [supabase, currentUserId, currentUserProfilePhotoUrl]);
 
   useEffect(() => {
@@ -280,8 +283,8 @@ export default function PartyEventCardOverlay({
         .from('popup_event_members')
         .insert({ event_id: event.id, user_id: currentUserId, display_name: effectiveDisplayName || 'Guest', role: 'guest' });
       if (error && error.code !== '23505') throw error;
-      await loadEvent(event.id);
-      if (typeof onJoined === 'function') onJoined(event);
+      const loadedEvent = await loadEvent(event.id);
+      if (typeof onJoined === 'function') onJoined(loadedEvent || event);
     } catch (error) {
       setJoinError(error?.message || 'Could not RSVP right now.');
     }

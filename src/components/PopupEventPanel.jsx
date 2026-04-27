@@ -1322,12 +1322,13 @@ export default function PopupEventPanel({
         supabase.from('popup_event_members').select('*').eq('event_id', id).order('joined_at'),
         supabase.from('popup_event_signups').select('*').eq('event_id', id).order('created_at'),
       ]);
+      let normalizedEv = null;
       if (ev) {
         const fallback = eventMetaFallbackRef.current || {};
         const eventData = ev?.event_data && typeof ev.event_data === 'object' && !Array.isArray(ev.event_data)
           ? ev.event_data
           : {};
-        setEvent({
+        normalizedEv = {
           ...fallback,
           ...ev,
           ...eventData,
@@ -1338,7 +1339,8 @@ export default function PopupEventPanel({
           description: String(ev?.description || fallback?.description || '').trim() || '',
           category: String(ev?.category || eventData?.category || eventData?.popupSubtype || fallback?.category || '').trim() || null,
           event_data: eventData,
-        });
+        };
+        setEvent(normalizedEv);
       } else if (eventMetaFallbackRef.current) setEvent(eventMetaFallbackRef.current);
       // Merge popup_event_members + popup_event_signups, dedupe by user_id
       const dedupedMembers = [];
@@ -1404,8 +1406,11 @@ export default function PopupEventPanel({
         return overrideRole ? { ...entry, role: overrideRole } : entry;
       });
       setMembers(nextMembers);
+      setLoading(false);
+      return normalizedEv;
     } catch {}
     setLoading(false);
+    return null;
   }, [supabase, memberRoleOverrides]);
 
   useEffect(() => { if (initialEventId) loadEvent(initialEventId); }, [initialEventId, loadEvent]);
@@ -1436,8 +1441,8 @@ export default function PopupEventPanel({
         .from('popup_event_members')
         .insert({ event_id: event.id, user_id: user.id, display_name: effectiveDisplayName || 'Player', role: isEventCreator ? 'host' : 'player' });
       if (error && error.code !== '23505') throw error;
-      await loadEvent(event.id);
-      if (!isEventCreator && typeof onJoined === 'function') onJoined(event);
+      const loadedEvent = await loadEvent(event.id);
+      if (!isEventCreator && typeof onJoined === 'function') onJoined(loadedEvent || event);
     } catch (error) {
       setJoinError(error?.message || 'Could not RSVP right now.');
     }

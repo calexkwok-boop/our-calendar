@@ -14948,7 +14948,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
   };
 
+  const loadDataInFlightRef = useRef(false);
   useEffect(() => {
+    if (loadDataInFlightRef.current) return;
+    loadDataInFlightRef.current = true;
     const loadData = async () => {
       try {
         const sessionResult = await withTimeout(supabase.auth.getSession(), 4000, { data: { session: null } });
@@ -15124,7 +15127,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }
     };
 
-    loadData();
+    loadData().finally(() => { loadDataInFlightRef.current = false; });
 
     return undefined;
   }, [activeLayerId, layerRefreshToken]);
@@ -15272,7 +15275,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
     setTripChatUnreadCounts((prev) => ({ ...prev, [subCalId]: 0 }));
     return undefined;
-  }, [activeSubCalendar?.id, subCalTab, user?.id]);
+  }, [activeSubCalendar?.id]);
 
   useEffect(() => {
     const shouldLoadPopupCollections = bottomNavTab === 'events' || Boolean(selectedPopupEventPanelId);
@@ -15487,21 +15490,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [activeLayerId, user?.id, bottomNavTab, selectedPopupEventPanelId]);
 
   useEffect(() => {
-    if (!showChatPanel || !activeLayerId) return;
-  }, [showChatPanel, activeLayerId]);
-
-  useEffect(() => {
     setChatLastSeenByLayer({});
     setChatUnreadCounts({});
   }, [user?.id]);
 
-  useEffect(() => {
-    return undefined;
-  }, [user?.id, chatLastSeenByLayer]);
-
-  useEffect(() => {
-    return undefined;
-  }, [activeLayerId, user?.id, showChatPanel, chatLastSeenByLayer, layerRefreshToken]);
 
   useEffect(() => {
     if (!showChatPanel || !calendarChatScrollRef.current) return;
@@ -16054,16 +16046,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     };
 
     pollMembershipChanges();
-    const timer = setInterval(pollMembershipChanges, 8000);
+    const timer = setInterval(pollMembershipChanges, 30000);
     return () => {
       canceled = true;
       clearInterval(timer);
     };
   }, [user?.id, user?.email, user?.phone]);
-
-  useEffect(() => {
-    return undefined;
-  }, [user?.id, user?.email, user?.phone, currentUser, subCalendars, layers]);
 
   // Invite notifications must work even when no active layer is selected yet.
   useEffect(() => {
