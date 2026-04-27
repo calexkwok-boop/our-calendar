@@ -14013,6 +14013,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return true;
   };
 
+  const loadPopupEventDataRef = useRef(null);
+  loadPopupEventDataRef.current = loadPopupEventData;
+
   const handleJoinedPopupEvent = useCallback((popupEvent) => {
     if (!popupEvent?.id || !popupEvent?.date) return;
     setEvents((prev) => {
@@ -14038,6 +14041,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         }],
       };
     });
+    // Refresh userTabPopupEvents so the events tab list also shows the joined event immediately.
+    loadPopupEventDataRef.current?.();
   }, []);
 
   const focusOnPopupEventDate = (eventId, fallbackDateKey = null) => {
@@ -15481,7 +15486,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         loadPopupEventData();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members' }, () => {
-        loadPopupEventData();
+        loadPopupEventDataRef.current?.();
       })
       .subscribe();
     return () => {
