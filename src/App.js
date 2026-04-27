@@ -36,6 +36,7 @@ import TripsTab from "./components/TripsTab";
 import TripRatingSystem from "./components/TripRatingSystem";
 import TripHighlightReel from "./components/TripHighlightReel";
 import ProfilePage from "./components/ProfilePage";
+import FriendPhotoModal from "./components/FriendPhotoModal";
 import JOURNEY_QUOTES from "./data/journeyQuotes";
 
 const MemoryCreator = ImportedMemoryCreator || (() => null);
@@ -3505,6 +3506,7 @@ function App() {
   const [showAddDreamSheet, setShowAddDreamSheet] = useState(false);
   const [makeItHappenItem, setMakeItHappenItem] = useState(null);
   const [friendsDailyPhotos, setFriendsDailyPhotos] = useState([]);
+  const [openFriendPhoto, setOpenFriendPhoto] = useState(null);
   const [prefetchedFriendsList, setPrefetchedFriendsList] = useState(null);
   const knownHandlesByEmailRef = useRef({});
   const [somedayPinPositions, setSomedayPinPositions] = useState(() => {
@@ -20674,6 +20676,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             userId: uid,
             handle: handleMap[uid] || uid.slice(0, 8),
             photoUrl,
+            memoryDate: today,
             avatarUrl: `${supabase.supabaseUrl}/storage/v1/object/public/avatars/${uid}/avatar`,
           };
         }).filter(Boolean);
@@ -28734,6 +28737,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             onCaptureQuickMoment={openQuickMemoryCapture}
             onAddMomentForDate={(dateKey) => openQuickMemoryCapture(dateKey)}
             friendsDailyPhotos={friendsDailyPhotos}
+            onOpenFriendPhoto={(friend) => setOpenFriendPhoto(friend)}
             onOpenFriendProfile={({ userId, email }) => setProfileViewState({ open: true, email: email || null, userId: userId || null })}
             onDeleteMoment={(moment) => {
               try { deleteMemoryRecord(moment?.id); } catch {}
@@ -36000,6 +36004,20 @@ transform: translateY(0);
       </div>
     )}
     </div>
+
+    {/* Friend photo modal (from home screen strip) */}
+    {openFriendPhoto && (
+      <FriendPhotoModal
+        friend={openFriendPhoto}
+        currentUser={user}
+        darkMode={darkMode}
+        onClose={() => setOpenFriendPhoto(null)}
+        onOpenProfile={({ userId }) => {
+          setOpenFriendPhoto(null);
+          setProfileViewState({ open: true, email: null, userId: userId || null });
+        }}
+      />
+    )}
 
     {/* Profile view overlay */}
     {profileViewState.open && (

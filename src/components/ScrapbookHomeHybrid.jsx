@@ -185,6 +185,7 @@ const ScrapbookHomeHybrid = ({
 
   // Friends' daily photos strip
   friendsDailyPhotos = [],
+  onOpenFriendPhoto,
   onOpenFriendProfile,
 
   // Account / avatar
@@ -482,7 +483,7 @@ const ScrapbookHomeHybrid = ({
                   <button
                     key={friend.userId}
                     type="button"
-                    onClick={() => onOpenFriendProfile?.({ userId: friend.userId })}
+                    onClick={() => onOpenFriendPhoto ? onOpenFriendPhoto(friend) : onOpenFriendProfile?.({ userId: friend.userId })}
                     className="flex-shrink-0 flex flex-col items-center gap-1 active:opacity-70 transition-opacity"
                   >
                     <div
