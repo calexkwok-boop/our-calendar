@@ -81,7 +81,7 @@ const FriendPhotoModal = ({ friend, currentUser, darkMode, onClose, onOpenProfil
   return (
     <div className="fixed inset-0 z-[9999] flex flex-col" style={{ background: 'rgba(0,0,0,0.97)' }}>
       {/* Top bar */}
-      <div className="flex items-center justify-between px-4 pt-safe pt-4 pb-2 shrink-0">
+      <div className="flex items-center justify-between px-4 pb-2 shrink-0" style={{ paddingTop: 'max(env(safe-area-inset-top), 48px)' }}>
         <button
           type="button"
           onClick={() => onOpenProfile?.({ userId: friend.userId })}
