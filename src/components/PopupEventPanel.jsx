@@ -1442,8 +1442,6 @@ export default function PopupEventPanel({
         .insert({ event_id: event.id, user_id: user.id, display_name: effectiveDisplayName || 'Player', role: isEventCreator ? 'host' : 'player' });
       if (error && error.code !== '23505') throw error;
       const loadedEvent = await loadEvent(event.id);
-      console.log('[JOIN] loadedEvent', { id: loadedEvent?.id, date: loadedEvent?.date, title: loadedEvent?.title });
-      console.log('[JOIN] event (closure)', { id: event?.id, date: event?.date, isEventCreator, hasOnJoined: typeof onJoined === 'function' });
       if (!isEventCreator && typeof onJoined === 'function') onJoined(loadedEvent || event);
     } catch (error) {
       setJoinError(error?.message || 'Could not RSVP right now.');
