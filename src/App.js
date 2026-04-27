@@ -13773,6 +13773,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
       const eventIds = (popupEventsRows || [])
     .map((row) => String(row?.event_id || '').trim());
+    console.log('[LOAD] visibleLayerIds', visibleLayerIds, 'eventIds from popup_events', eventIds);
     const eventsMap = {};
       (popupEventsRows || []).forEach((row) => {
     const eventId = String(row?.event_id || '').trim();
@@ -13941,18 +13942,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (user?.id) {
       try {
         const alreadyFoundIds = new Set(popupEventCards.map((e) => String(e?.id || '')));
-        const { data: myMemberships } = await supabase
+        const { data: myMemberships, error: membershipsErr } = await supabase
           .from('popup_event_members')
           .select('event_id')
           .eq('user_id', user.id);
+        console.log('[LOAD] myMemberships', myMemberships, 'err', membershipsErr);
         const missingIds = (myMemberships || [])
           .map((r) => String(r?.event_id || '').trim())
           .filter((id) => isUuid(id) && !alreadyFoundIds.has(id));
+        console.log('[LOAD] alreadyFoundIds', Array.from(alreadyFoundIds), 'missingIds', missingIds);
         if (missingIds.length > 0) {
-          const { data: extraDetails } = await supabase
+          const { data: extraDetails, error: extraDetailsErr } = await supabase
             .from('popup_event_details')
             .select('id,title,date,time,location,description,category')
             .in('id', missingIds);
+          console.log('[LOAD] extraDetails', extraDetails, 'err', extraDetailsErr);
           (extraDetails || []).forEach((det) => {
             if (!det?.id || !det?.date) return;
             const ts = toDateOnlyTs(String(det.date || ''));
@@ -13982,7 +13986,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setPopupFeatureAvailable(true);
     setPopupEventsByEventId(eventsMap);
     setPopupSignupsByEventId(signupsMap);
-    setUserTabPopupEvents(popupEventCards.filter((event) => {
+    const filtered = popupEventCards.filter((event) => {
       const eventId = String(event?.id || '').trim();
       const eventTs = toDateOnlyTs(event?.date || event?.dateKey || '');
       if (eventTs === null || eventTs < todayTs) return false;
@@ -13990,7 +13994,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const joined = (signupsMap[eventId] || []).some((row) => String(row?.userId || '').trim() === String(user?.id || '').trim());
       const createdByMe = String(popupMeta?.createdByUserId || '').trim() === String(user?.id || '').trim();
       return joined || createdByMe;
-    }));
+    });
+    console.log('[LOAD] final userTabPopupEvents count', filtered.length, filtered.map(e => ({ id: e.id, date: e.date, title: e.title })));
+    setUserTabPopupEvents(filtered);
   };
 
   const createPopupEventRows = async (rows) => {
