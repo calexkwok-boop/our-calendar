@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare, MapPin, ThumbsUp, ThumbsDown, Share2, Trophy, Home, Compass, Sparkles } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from './supabaseClient';
 import { getToken, onMessage } from "firebase/messaging";
 import { deleteObject, getDownloadURL, ref as firebaseStorageRef, uploadBytes } from "firebase/storage";
 import { v4 as uuidv4 } from 'uuid';
@@ -43,7 +43,6 @@ const MemoryCreator = ImportedMemoryCreator || (() => null);
 
 
 
-const runWithoutNavigatorAuthLock = async (_name, _acquireTimeout, fn) => fn();
 const withTimeout = async (promise, timeoutMs, fallbackValue = null) => {
   let timeoutId = null;
   try {
@@ -58,16 +57,6 @@ const withTimeout = async (promise, timeoutMs, fallbackValue = null) => {
   }
 };
 
-// Initialize Supabase
-const supabase = createClient(
-process.env.REACT_APP_SUPABASE_URL,
-process.env.REACT_APP_SUPABASE_ANON_KEY,
-{
-  auth: {
-    lock: runWithoutNavigatorAuthLock,
-  },
-}
-);
 
 const SUPABASE_URL = String(process.env.REACT_APP_SUPABASE_URL || '').trim().replace(/\/+$/, '');
 const TRIP_PHOTO_BUCKETS = ['trip-photos', 'trip_photos'];
