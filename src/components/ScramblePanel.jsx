@@ -474,23 +474,22 @@ const cardHeaderStyle = {
 
 const standingsCols = {
   display: 'grid',
-  gridTemplateColumns: '50px minmax(0,1fr) 60px 60px 50px 60px',
-  gap: 12,
-  padding: '10px 16px',
-  fontSize: 10,
-  fontWeight: 900,
-  letterSpacing: '0.14em',
+  gridTemplateColumns: '50px 1fr 44px 44px 36px 44px',
+  gap: 6,
+  padding: '7px 12px',
+  fontSize: 9,
+  fontWeight: 700,
+  letterSpacing: '0.16em',
   textTransform: 'uppercase',
   color: T.muted,
   borderBottom: `1px solid ${T.border}`,
-  background: 'rgba(0,0,0,0.2)',
 };
 
 const standingRowStyle = {
   display: 'grid',
-  gridTemplateColumns: '50px minmax(0,1fr) 60px 60px 50px 60px',
-  gap: 12,
-  padding: '12px 16px',
+  gridTemplateColumns: '50px 1fr 44px 44px 36px 44px',
+  gap: 6,
+  padding: '9px 12px',
   alignItems: 'center',
   borderBottom: `1px solid ${T.border}`,
   transition: 'all 0.2s',
