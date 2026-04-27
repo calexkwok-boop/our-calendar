@@ -172,6 +172,9 @@ const ProfilePage = ({
   const [commentDraft, setCommentDraft] = useState('');
   const [reactionsLoading, setReactionsLoading] = useState(false);
   const [submittingReaction, setSubmittingReaction] = useState(false);
+  const [photoModalOpen, setPhotoModalOpen] = useState(false);
+  const [heartBurst, setHeartBurst] = useState(false);
+  const lastTapRef = useRef(0);
   const [loading, setLoading] = useState(true);
 
   // ─── Own sharing prefs (localStorage; TODO: sync to user_profiles table)
@@ -269,6 +272,21 @@ const ProfilePage = ({
       setSubmittingReaction(false);
     }
   }, [commentDraft, friendSharedPhoto, myUserId, viewedUserId, submittingReaction]);
+
+  const handlePhotoTap = useCallback(() => {
+    const now = Date.now();
+    if (now - lastTapRef.current < 320) {
+      // double-tap → like
+      lastTapRef.current = 0;
+      if (!myLike && !submittingReaction) {
+        setHeartBurst(true);
+        setTimeout(() => setHeartBurst(false), 800);
+        toggleLike();
+      }
+    } else {
+      lastTapRef.current = now;
+    }
+  }, [myLike, submittingReaction, toggleLike]);
 
   // ─── Shared helper: get all trip IDs + name map for the current user
   const getMyTripData = useCallback(async () => {
@@ -919,74 +937,34 @@ const ProfilePage = ({
               ) : friendSharedPhoto ? (
                 <div>
                   <p className="text-xs font-medium mb-2" style={{ color: mutedColor }}>📷 Photo of the Day</p>
-                  <div className="rounded-2xl overflow-hidden w-full" style={{ aspectRatio: '4/3' }}>
+                  {/* Tappable photo — opens fullscreen modal */}
+                  <button
+                    type="button"
+                    onClick={() => setPhotoModalOpen(true)}
+                    className="block w-full rounded-2xl overflow-hidden active:opacity-90 transition-opacity"
+                    style={{ aspectRatio: '4/3' }}
+                  >
                     <img
                       src={friendSharedPhoto.photoUrl}
                       alt={friendSharedPhoto.title || 'Photo of the day'}
                       className="w-full h-full object-cover"
                     />
-                  </div>
-                  {friendSharedPhoto.title && (
-                    <p className="text-sm mt-2 text-center" style={{ color: mutedColor }}>{friendSharedPhoto.title}</p>
-                  )}
-
-                  {/* Reactions */}
+                  </button>
+                  {/* Teaser counts below the card photo */}
                   {!isOwnProfile && (
-                    <div className="mt-3 space-y-3">
-                      {/* Like button + count */}
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={toggleLike}
-                          disabled={submittingReaction}
-                          className="flex items-center gap-1.5 text-sm transition-opacity active:opacity-60"
-                          style={{ color: myLike ? '#f43f5e' : mutedColor }}
-                        >
-                          <span className="text-base leading-none">{myLike ? '❤️' : '🤍'}</span>
-                          <span>{reactions.filter((r) => r.type === 'like').length || ''}</span>
-                        </button>
-                      </div>
-
-                      {/* Comments list */}
-                      {!reactionsLoading && reactions.filter((r) => r.type === 'comment').length > 0 && (
-                        <div className="space-y-1.5">
-                          {reactions.filter((r) => r.type === 'comment').map((c) => (
-                            <div key={c.id} className="flex gap-2 text-sm" style={{ color: mutedColor }}>
-                              <span className="font-semibold shrink-0">
-                                {String(c.reactor_user_id) === myUserId ? 'You' : '👤'}
-                              </span>
-                              <span className="break-words min-w-0">{c.comment_text}</span>
-                            </div>
-                          ))}
-                        </div>
+                    <div className="flex items-center gap-3 mt-2 px-0.5">
+                      <span className="text-sm" style={{ color: myLike ? '#f43f5e' : mutedColor }}>
+                        {myLike ? '❤️' : '🤍'} {reactions.filter((r) => r.type === 'like').length || ''}
+                      </span>
+                      {reactions.filter((r) => r.type === 'comment').length > 0 && (
+                        <span className="text-sm" style={{ color: mutedColor }}>
+                          💬 {reactions.filter((r) => r.type === 'comment').length}
+                        </span>
                       )}
-
-                      {/* Add comment */}
-                      <div className="flex gap-2 items-center">
-                        <input
-                          type="text"
-                          value={commentDraft}
-                          onChange={(e) => setCommentDraft(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitComment(); } }}
-                          placeholder="Add a comment…"
-                          className="flex-1 min-w-0 text-sm rounded-xl px-3 py-1.5 outline-none border"
-                          style={{
-                            background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                            borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)',
-                            color: headingColor,
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={submitComment}
-                          disabled={!commentDraft.trim() || submittingReaction}
-                          className="text-sm font-semibold transition-opacity disabled:opacity-40 active:opacity-60 shrink-0"
-                          style={{ color: '#f43f5e' }}
-                        >
-                          Post
-                        </button>
-                      </div>
                     </div>
+                  )}
+                  {friendSharedPhoto.title && (
+                    <p className="text-sm mt-1 text-center" style={{ color: mutedColor }}>{friendSharedPhoto.title}</p>
                   )}
                 </div>
               ) : (
@@ -998,6 +976,122 @@ const ProfilePage = ({
           </>
         )}
       </div>
+
+      {/* ── Photo fullscreen modal ── */}
+      {photoModalOpen && friendSharedPhoto && (
+        <div
+          className="fixed inset-0 z-[9999] flex flex-col"
+          style={{ background: 'rgba(0,0,0,0.97)' }}
+        >
+          {/* Top bar */}
+          <div className="flex items-center justify-between px-4 pt-safe pt-4 pb-2 shrink-0">
+            <p className="text-white/60 text-sm font-medium">{friendName}</p>
+            <button
+              type="button"
+              onClick={() => setPhotoModalOpen(false)}
+              className="text-white/70 text-2xl leading-none active:opacity-50 transition-opacity p-1"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Photo with double-tap */}
+          <div
+            className="relative flex-1 flex items-center justify-center overflow-hidden cursor-pointer select-none"
+            onClick={isOwnProfile ? undefined : handlePhotoTap}
+          >
+            <img
+              src={friendSharedPhoto.photoUrl}
+              alt={friendSharedPhoto.title || 'Photo of the day'}
+              className="max-h-full max-w-full object-contain"
+              draggable={false}
+            />
+            {/* Heart burst on double-tap */}
+            {heartBurst && (
+              <div
+                className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                style={{ animation: 'heartPop 0.7s ease-out forwards' }}
+              >
+                <span style={{ fontSize: 96, filter: 'drop-shadow(0 0 24px rgba(244,63,94,0.7))' }}>❤️</span>
+              </div>
+            )}
+          </div>
+
+          {/* Bottom panel — reactions + comment input */}
+          <div
+            className="shrink-0 px-4 pb-safe pb-6 pt-3 space-y-3"
+            style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)' }}
+          >
+            {friendSharedPhoto.title && (
+              <p className="text-white/70 text-sm text-center">{friendSharedPhoto.title}</p>
+            )}
+
+            {!isOwnProfile && (
+              <>
+                {/* Like row */}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleLike}
+                    disabled={submittingReaction}
+                    className="text-2xl leading-none active:scale-125 transition-transform disabled:opacity-50"
+                  >
+                    {myLike ? '❤️' : '🤍'}
+                  </button>
+                  {reactions.filter((r) => r.type === 'like').length > 0 && (
+                    <span className="text-white/60 text-sm">
+                      {reactions.filter((r) => r.type === 'like').length}
+                    </span>
+                  )}
+                </div>
+
+                {/* Comments */}
+                {reactions.filter((r) => r.type === 'comment').length > 0 && (
+                  <div className="space-y-1 max-h-28 overflow-y-auto">
+                    {reactions.filter((r) => r.type === 'comment').map((c) => (
+                      <div key={c.id} className="flex gap-2 text-sm text-white/80">
+                        <span className="font-semibold shrink-0 text-white/50">
+                          {String(c.reactor_user_id) === myUserId ? 'You' : '👤'}
+                        </span>
+                        <span className="break-words min-w-0">{c.comment_text}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Comment input */}
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={commentDraft}
+                    onChange={(e) => setCommentDraft(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitComment(); } }}
+                    placeholder="Add a comment…"
+                    className="flex-1 min-w-0 text-sm rounded-xl px-3 py-2 outline-none border bg-white/10 border-white/20 text-white placeholder-white/30"
+                  />
+                  <button
+                    type="button"
+                    onClick={submitComment}
+                    disabled={!commentDraft.trim() || submittingReaction}
+                    className="text-sm font-semibold transition-opacity disabled:opacity-40 active:opacity-60 shrink-0 text-pink-400"
+                  >
+                    Post
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes heartPop {
+          0%   { opacity: 0; transform: scale(0.4); }
+          30%  { opacity: 1; transform: scale(1.2); }
+          60%  { opacity: 1; transform: scale(1.0); }
+          100% { opacity: 0; transform: scale(1.1); }
+        }
+      `}</style>
     </div>
   );
 };
