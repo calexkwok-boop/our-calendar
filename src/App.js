@@ -15076,7 +15076,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               if (!joinedIds.length) return;
               const { data: details } = await supabase
                 .from('popup_event_details')
-                .select('id,title,date,time,location,description,category')
+                .select('id,title,date,time,location,description,event_data')
                 .in('id', joinedIds);
               if (!details?.length) return;
               setEvents((prev) => {
