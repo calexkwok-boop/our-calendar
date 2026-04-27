@@ -3225,6 +3225,7 @@ function App() {
   const saveTimeoutRef = useRef(null);
   const saveRequestIdRef = useRef(0);
   const eventsRef = useRef(null);
+  const layerRefreshTimerRef = useRef(null);
   const holidayCleanupRunRef = useRef(new Set());
   const lastKnownTodayKeyRef = useRef('');
   const dateTapTimeoutRef = useRef(null);
@@ -3314,6 +3315,12 @@ function App() {
   const [eventsTabVisibleLayerIdsInitialized, setEventsTabVisibleLayerIdsInitialized] = useState(false);
   const [popupFeatureAvailable, setPopupFeatureAvailable] = useState(true);
   const [layerRefreshToken, setLayerRefreshToken] = useState(0);
+  // Use this instead of setLayerRefreshToken directly for background/automated callers
+  // to collapse rapid-fire increments into a single fetch cycle.
+  const bumpLayerRefreshToken = useCallback(() => {
+    if (layerRefreshTimerRef.current) clearTimeout(layerRefreshTimerRef.current);
+    layerRefreshTimerRef.current = setTimeout(() => setLayerRefreshToken((p) => p + 1), 300);
+  }, []);
   const [calendarTitle, setCalendarTitle] = useState('Our Calendar');
   const [showTitleStyleModal, setShowTitleStyleModal] = useState(false);
   const [titleNameDraft, setTitleNameDraft] = useState('');
@@ -9095,7 +9102,7 @@ useEffect(() => {
           if (!cancelled) ensureSportsEventsVisibleLocally(WARRIORS_REMAINING_2026_EVENTS_PT, 'warriors-local');
           return;
         }
-        if (!cancelled) setLayerRefreshToken((prev) => prev + 1);
+        if (!cancelled) bumpLayerRefreshToken();
       } else if ((existingRows || []).length === 0) {
         if (!cancelled) ensureSportsEventsVisibleLocally(WARRIORS_REMAINING_2026_EVENTS_PT, 'warriors-local');
       }
@@ -15653,7 +15660,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       if (!rowLayerId) return;
       const snapshot = latestSnapshot();
       if (rowLayerId === String(snapshot.activeLayerId || '').trim()) {
-        setLayerRefreshToken((prev) => prev + 1);
+        bumpLayerRefreshToken();
       }
       const activeTrip = snapshot.activeSubCalendar;
       const activeTripLayerId = String(activeTrip?.layer_id || activeTrip?.calendar_id || '').trim();
@@ -17284,7 +17291,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const now = new Date();
       const sentMap = readSentMap();
 
-      Object.entries(events).forEach(([dateKey, dateEvents]) => {
+      Object.entries(eventsRef.current || {}).forEach(([dateKey, dateEvents]) => {
         dateEvents.forEach(event => {
           if (event.isPrivate && showPrivateEvents === false) return;
           if (onlyNotifyUrgent && !event.isUrgent) return;
@@ -17336,7 +17343,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       window.removeEventListener('focus', checkNotifications);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [events, notificationsEnabled, showPrivateEvents, onlyNotifyUrgent, notifyOneWeek, notifyOneDay, notifyOneHour, notifyAtEventTime]);
+  }, [notificationsEnabled, showPrivateEvents, onlyNotifyUrgent, notifyOneWeek, notifyOneDay, notifyOneHour, notifyAtEventTime]);
 
   // Smart leave assistant: estimate travel time and prompt a few minutes before leaving.
   useEffect(() => {
@@ -17350,7 +17357,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const snoozeMap = sentMap.__snooze || {};
       const ownCandidates = [];
 
-      Object.entries(events).forEach(([dateKey, dateEvents]) => {
+      Object.entries(eventsRef.current || {}).forEach(([dateKey, dateEvents]) => {
         dateEvents.forEach(event => {
           if (!event?.time || !event?.location) return;
           if (event.isPrivate && showPrivateEvents === false) return;
@@ -17413,7 +17420,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       window.removeEventListener('focus', checkSmartLeave);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [events, notificationsEnabled, showPrivateEvents, onlyNotifyUrgent]);
+  }, [notificationsEnabled, showPrivateEvents, onlyNotifyUrgent]);
   // Load notification preference
   useEffect(() => {
     const loadNotificationPreference = async () => {
@@ -24426,7 +24433,17 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     openJourneyScreen();
   };
 
-  const addQuickThought = (thought) => {
+  const handleHomeOpenUpcoming = useCallback(() => {
+    setEventsTabView('upcoming');
+    setBottomNavTab('events');
+  }, []);
+  const handleHomeOpenTripsTab = useCallback(() => {
+    setEventsTabView('trips');
+    setBottomNavTab('events');
+  }, []);
+  const handleHomeStartTrip = useCallback(() => setShowSubCalendarModal(true), []);
+
+  const addQuickThought = useCallback((thought) => {
     const text = String(thought?.text || '').trim();
     if (!text) return;
     const colors = ['yellow', 'pink', 'blue', 'green'];
@@ -24440,14 +24457,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       },
       ...(Array.isArray(prev) ? prev : []),
     ]);
-  };
+  }, []);
 
-  const deleteQuickThought = (thought) => {
+  const deleteQuickThought = useCallback((thought) => {
     const thoughtId = String(thought?.id || '').trim();
     if (!thoughtId) return;
     addQuickThoughtTombstone(user?.id, thoughtId);
     setQuickThoughts((prev) => (Array.isArray(prev) ? prev : []).filter((item) => String(item?.id || '') !== thoughtId));
-  };
+  }, [user?.id]);
 
   const openAddDreamSheet = () => {
     setShowAddDreamSheet(true);
@@ -28302,16 +28319,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             tripSpotlight={homeTripSpotlight}
             memoryCollagePhotos={homeMemoryCollagePhotos}
             onShowCalendarView={openCalendarTab}
-            onOpenUpcoming={() => {
-              setEventsTabView('upcoming');
-              setBottomNavTab('events');
-            }}
+            onOpenUpcoming={handleHomeOpenUpcoming}
             onOpenTrip={openSubCalendar}
-            onOpenTripsTab={() => {
-              setEventsTabView('trips');
-              setBottomNavTab('events');
-            }}
-            onStartTrip={() => setShowSubCalendarModal(true)}
+            onOpenTripsTab={handleHomeOpenTripsTab}
+            onStartTrip={handleHomeStartTrip}
             onOpenMemories={openMemoriesGallery}
             onOpenMemory={openMemoryViewer}
             onCreateMemoryFromEvent={createMemoryFromEvent}
@@ -28319,9 +28330,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             onOpenExplore={() => setBottomNavTab('explore')}
             onOpenSomeday={() => setBottomNavTab('someday')}
             onCaptureQuickMoment={openQuickMemoryCapture}
-            onAddMomentForDate={(dateKey) => {
-              openQuickMemoryCapture(dateKey);
-            }}
+            onAddMomentForDate={(dateKey) => openQuickMemoryCapture(dateKey)}
             onDeleteMoment={(moment) => {
               try { deleteMemoryRecord(moment?.id); } catch {}
             }}
