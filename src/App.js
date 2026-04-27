@@ -20178,6 +20178,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     todayTs,
     todayKey,
     userTabEvents,
+    upcomingPopupEvents,
     popupEventsByEventId,
     popupSignupsByEventId,
     user,

@@ -11,6 +11,7 @@ export default function useHomeScreenData({
   todayTs,
   todayKey,
   userTabEvents,
+  upcomingPopupEvents,
   popupEventsByEventId,
   popupSignupsByEventId,
   user,
@@ -95,6 +96,11 @@ export default function useHomeScreenData({
       }
     });
 
+    // Merge in popup events (from popup_event_details) that aren't already present.
+    (upcomingPopupEvents || []).forEach((event) => {
+      addUpcomingEvent({ ...event, recurrence: 'once', isAnnual: false });
+    });
+
     return upcomingCandidates
       .filter((event) => {
         const dateKey = String(event?.date || event?.dateKey || '').trim();
@@ -144,6 +150,7 @@ export default function useHomeScreenData({
     popupSignupsByEventId,
     toDateOnlyTs,
     todayTs,
+    upcomingPopupEvents,
     user?.id,
     userTabEvents,
   ]);
@@ -153,7 +160,7 @@ export default function useHomeScreenData({
       const layerId = String(event?.layerId || event?.layer_id || '').trim();
       const eventTs = toDateOnlyTs(event?.date || event?.dateKey || '');
       const upcomingWindowEndTs = todayTs + (13 * 24 * 60 * 60 * 1000);
-      if ((eventsTabVisibleLayerIds || []).length > 0 && !eventsTabVisibleLayerIds.includes(layerId)) return false;
+      if ((eventsTabVisibleLayerIds || []).length > 0 && layerId && !eventsTabVisibleLayerIds.includes(layerId)) return false;
       if (eventTs === null || eventTs > upcomingWindowEndTs) return false;
       if (eventsTabHideRecurring && (event?.isAnnual || (event?.recurrence && event.recurrence !== 'once'))) return false;
       return true;
