@@ -3224,6 +3224,7 @@ function App() {
 
   const saveTimeoutRef = useRef(null);
   const saveRequestIdRef = useRef(0);
+  const eventsRef = useRef(null);
   const holidayCleanupRunRef = useRef(new Set());
   const lastKnownTodayKeyRef = useRef('');
   const dateTapTimeoutRef = useRef(null);
@@ -8771,7 +8772,7 @@ useEffect(() => {
   const defaultModerationStatusForNewEvent = canModerateActiveLayer
     ? 'approved'
     : (memberPostsRequireApproval ? 'pending' : 'approved');
-  const isEventOwnedByCurrentUser = (event) => {
+  const isEventOwnedByCurrentUser = useCallback((event) => {
     if (!event) return false;
     const eventUserId = String(event?.userId || event?.user_id || '').trim();
     if (eventUserId && String(user?.id || '').trim()) {
@@ -8785,26 +8786,26 @@ useEffect(() => {
       normalizePhoneNumber(user?.phone),
     ].filter(Boolean));
     return aliases.has(createdBy);
-  };
-  const getEventRelationshipKey = (event) => {
+  }, [user?.id, currentUser, user?.email, user?.phone]);
+  const getEventRelationshipKey = useCallback((event) => {
     const layerId = String(event?.layerId || event?.layer_id || '').trim();
     const eventId = String(event?.id || '').trim();
     if (!layerId || !eventId) return '';
     return `${layerId}:${eventId}`;
-  };
-  const getLayerForEvent = (event) => {
+  }, []);
+  const getLayerForEvent = useCallback((event) => {
     const eventLayerId = String(event?.layerId || event?.layer_id || '').trim();
     if (!eventLayerId) return null;
     return (layers || []).find((layer) => String(layer?.id || '') === eventLayerId) || null;
-  };
-  const getEventRelationshipStatus = (event) => {
+  }, [layers]);
+  const getEventRelationshipStatus = useCallback((event) => {
     if (!event) return 'none';
     if (isEventOwnedByCurrentUser(event)) return 'hosting';
     const key = getEventRelationshipKey(event);
     const value = String(eventRelationships?.[key] || '').trim().toLowerCase();
     if (value === 'going' || value === 'interested') return value;
     return 'none';
-  };
+  }, [isEventOwnedByCurrentUser, getEventRelationshipKey, eventRelationships]);
   const setEventRelationshipStatus = (event, status) => {
     if (!user?.id || !event) return;
     const nextStatus = String(status || 'none').trim().toLowerCase();
@@ -9105,6 +9106,14 @@ useEffect(() => {
     void seedWarriorsEventsIfNeeded();
     return () => { cancelled = true; };
   }, [activeLayerId, normalizedActiveLayerName, user?.id, user?.email, user?.phone, currentUser]);
+  const hasAnyWarriorsEventLocally = useMemo(
+    () => Object.values(events || {}).some(
+      (dayEvents) => Array.isArray(dayEvents) && dayEvents.some(
+        (e) => String(e?.title || '').toLowerCase().includes('warriors')
+      )
+    ),
+    [events]
+  );
   useEffect(() => {
     const layerId = String(activeLayerId || '').trim();
     const userId = String(user?.id || '').trim();
@@ -9115,11 +9124,8 @@ useEffect(() => {
       || normalizedActiveLayerName.includes('warriors')
       || normalizedActiveLayerName.includes('wariors');
     if (!isWarriorsLayer) return;
-    const hasAnyWarriorsEvent = Object.values(events || {}).some((dayEvents) =>
-      Array.isArray(dayEvents) && dayEvents.some((event) => String(event?.title || '').toLowerCase().includes('warriors'))
-    );
-    if (!hasAnyWarriorsEvent) ensureSportsEventsVisibleLocally(WARRIORS_REMAINING_2026_EVENTS_PT, 'warriors-local');
-  }, [activeLayerId, normalizedActiveLayerName, user?.id, events]);
+    if (!hasAnyWarriorsEventLocally) ensureSportsEventsVisibleLocally(WARRIORS_REMAINING_2026_EVENTS_PT, 'warriors-local');
+  }, [activeLayerId, normalizedActiveLayerName, user?.id, hasAnyWarriorsEventLocally]);
 
   const resolveSharedOwnerLabels = async (shares, layerId) => {
     const ownerIds = Array.from(new Set((shares || []).map(s => String(s?.owner_id || '')).filter(Boolean)));
@@ -12444,16 +12450,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     events,
     resetHomeAddEventForm,
   ]);
+  useEffect(() => { eventsRef.current = events; }, [events]);
   useEffect(() => {
     const handleUnload = () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
-        saveEvents(events, { immediate: true });
+        saveEvents(eventsRef.current, { immediate: true });
       }
     };
     window.addEventListener('beforeunload', handleUnload);
     return () => window.removeEventListener('beforeunload', handleUnload);
-  }, [events]);
+  }, []);
 
   const leaveSharedLayerCalendar = async (layerId) => {
     const normalizedLayerId = String(layerId || '');
