@@ -13791,6 +13791,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const [
         { data: signupRows, error: signupErr },
         { data: memberRows, error: memberErr },
+        { data: detailRows },
       ] = await Promise.all([
         supabase
           .from('popup_event_signups')
@@ -13803,6 +13804,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           .select('id,event_id,user_id,display_name,role,joined_at')
           .in('event_id', eventIds)
           .order('joined_at', { ascending: true }),
+        supabase
+          .from('popup_event_details')
+          .select('id,event_data')
+          .in('id', eventIds),
       ]);
 
       if (!signupErr || !memberErr) {
@@ -13886,6 +13891,30 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             avatar_url: resolvedPhotoUrl,
             manual: false,
             createdAt: String(row?.created_at || ''),
+          });
+        });
+        // Merge manually-added players from event_data into signupsMap
+        (detailRows || []).forEach((det) => {
+          const eventId = String(det?.id || '').trim();
+          if (!eventId) return;
+          const manualPlayers = Array.isArray(det?.event_data?.manualPlayers) ? det.event_data.manualPlayers : [];
+          manualPlayers.forEach((player, idx) => {
+            const manualName = String(player?.display_name || '').trim();
+            if (!manualName) return;
+            if (!Array.isArray(signupsMap[eventId])) signupsMap[eventId] = [];
+            const duplicate = signupsMap[eventId].some((entry) => String(entry?.displayName || '').trim().toLowerCase() === manualName.toLowerCase());
+            if (duplicate) return;
+            signupsMap[eventId].push({
+              memberId: String(player?.id || `manual-${idx + 1}`),
+              userId: '',
+              displayName: manualName,
+              photoUrl: '',
+              photo_url: '',
+              avatarUrl: '',
+              avatar_url: '',
+              manual: true,
+              createdAt: String(player?.joined_at || ''),
+            });
           });
         });
       }
