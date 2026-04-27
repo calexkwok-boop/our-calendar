@@ -208,7 +208,7 @@ const PlayerPip = ({ person, name, role, accent, size = 28 }) => {
           alt={name ? `${name} profile` : 'Player profile'}
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
-      ) : gInitials(name)}
+      ) : gInitials(name || 'Player')}
     </div>
   );
 };
@@ -490,7 +490,7 @@ export default function SportsEventCard({
             }}>
               {getProfileImageUrl(organizer)
                 ? <img src={getProfileImageUrl(organizer)} alt={organizer.display_name || organizer.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                : gInitials(organizer.display_name || organizer.name)}
+                : gInitials(organizer.display_name || organizer.name || 'Player')}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <span style={{ fontSize: 15, color: darkMode ? '#fbbf24' : '#92400e', fontWeight: 700 }}>
@@ -546,7 +546,7 @@ export default function SportsEventCard({
                 <PlayerPip
                   key={p.id || i}
                   person={p}
-                  name={p.display_name || p.displayName || p.name}
+                  name={p.display_name || p.displayName || p.name || 'Player'}
                   role={p.role}
                   accent={accent}
                   size={28}

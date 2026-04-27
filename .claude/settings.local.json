@@ -16,7 +16,11 @@
       "Bash(grep -v \"^\\\\s*//\")",
       "Bash(node -e ' *)",
       "Bash(awk -F: '$2 > 14849')",
-      "Bash(awk '/^function App\\\\\\(\\\\\\)/,/^  return \\\\\\(/ {print NR}' /c/Users/a_kwo/Desktop/our-calendar/src/App.js)"
+      "Bash(awk '/^function App\\\\\\(\\\\\\)/,/^  return \\\\\\(/ {print NR}' /c/Users/a_kwo/Desktop/our-calendar/src/App.js)",
+      "Bash(grep -n \"displayName\\\\|display_name\\\\|initials\\\\|gradient\\\\|\\\\\\\\.charAt\\\\|\\\\\\\\[0\\\\\\\\]\\\\|letterAvatar\\\\|fallback.*avatar\\\\|AvatarCircle\\\\|PlayerBubble\\\\|PlayerCard\\\\|renderPlayer\" \"c:/Users/a_kwo/Desktop/our-calendar/src/components/SportsEventCardOverlay.jsx\")",
+      "Bash(grep -n \"RosterRow\\\\|PlayerBubble\\\\|AvatarCircle\\\\|MemberAvatar\\\\|photo\\\\|avatar\\\\|gradient\\\\|charAt\\\\|\\\\\\\\.\\\\\\\\[0\\\\\\\\]\" \"c:/Users/a_kwo/Desktop/our-calendar/src/components/SportsEventCardOverlay.jsx\")",
+      "Bash(grep -n \"photo\\\\|avatar\\\\|img\\\\|initials\\\\|charAt\\\\|\\\\\\\\.\\\\\\\\[0\\\\\\\\]\\\\|gradient\\\\|display_name\\\\|displayName\\\\|name.*member\\\\|member.*name\" \"c:/Users/a_kwo/Desktop/our-calendar/src/components/SportsEventCard.jsx\")",
+      "Bash(grep -rn \"gradient\\\\|charAt\\\\|\\\\\\\\[0\\\\\\\\]\\\\|initials\\\\|pfp\\\\|profilePhoto\" \"c:/Users/a_kwo/Desktop/our-calendar/src/components/ScrapbookHomeHybrid.jsx\")"
     ]
   }
 }
