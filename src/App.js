@@ -20493,8 +20493,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   // ─── Friends' daily photos for home screen strip
   useEffect(() => {
-    const userId = String(currentUser?.id || '').trim();
-    if (!userId || userId === 'guest') { setFriendsDailyPhotos([]); return; }
+    const userId = String(user?.id || '').trim();
+    if (!userId) { setFriendsDailyPhotos([]); return; }
     let cancelled = false;
     (async () => {
       try {
@@ -20534,7 +20534,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       } catch {}
     })();
     return () => { cancelled = true; };
-  }, [currentUser?.id]);
+  }, [user?.id]);
 
   useEffect(() => {
     const currentBucketListUserId = String(user?.id || 'guest').trim() || 'guest';
