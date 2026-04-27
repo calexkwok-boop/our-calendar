@@ -12166,7 +12166,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           Object.entries(eventsForSave).forEach(([date, dateEvents]) => {
             dateEvents.forEach(event => {
               // Virtual recurrence rows are derived UI projections and should never be persisted as standalone DB rows.
-              if (event?.isVirtualAnnual || event?.isVirtualRecurrence) return;
+              // isJoinedPopup events are read-only calendar placeholders for events joined from other users' layers.
+              if (event?.isVirtualAnnual || event?.isVirtualRecurrence || event?.isJoinedPopup) return;
               const eventLayerId = String(event?.layerId || event?.layer_id || event?.calendar_id || saveLayerId || '').trim();
               if (event.userId && event.userId !== saveUserId) {
                 // Shared event — do a targeted update on just the fields we allow editing
@@ -14012,40 +14013,32 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return true;
   };
 
-  const handleJoinedPopupEvent = useCallback(async (popupEvent) => {
-    if (!popupEvent?.id || !popupEvent?.date || !activeLayerId || !user?.id) return;
-    const newEventId = generateUuid();
-    const eventRow = {
-      id: newEventId,
-      date: popupEvent.date,
-      title: String(popupEvent.title || 'Event'),
-      time: popupEvent.time || null,
-      location: popupEvent.location || null,
-      description: String(popupEvent.description || '') || null,
-      category: 'popup_event',
-      is_private: false,
-      is_urgent: false,
-      is_multi_day: false,
-      recurrence: 'once',
-      created_by: currentUser || user.email || user.phone || 'User',
-      created_at: new Date().toISOString(),
-      user_id: user.id,
-      layer_id: activeLayerId,
-      calendar_id: activeLayerId,
-      event_data: { popupEventId: popupEvent.id },
-    };
-    try {
-      const { error } = await supabase.from('events').insert(eventRow);
-      if (!error) {
-        setEvents((prev) => {
-          const dateKey = popupEvent.date;
-          const existing = Array.isArray(prev[dateKey]) ? prev[dateKey] : [];
-          if (existing.some((e) => String(e?.event_data?.popupEventId || '') === String(popupEvent.id || ''))) return prev;
-          return { ...prev, [dateKey]: [...existing, mapSupabaseEventRow(eventRow, user.id)] };
-        });
-      }
-    } catch {}
-  }, [activeLayerId, user?.id, currentUser, user?.email, user?.phone]);
+  const handleJoinedPopupEvent = useCallback((popupEvent) => {
+    if (!popupEvent?.id || !popupEvent?.date) return;
+    setEvents((prev) => {
+      const dateKey = popupEvent.date;
+      const existing = Array.isArray(prev[dateKey]) ? prev[dateKey] : [];
+      if (existing.some((e) => String(e?.id || '') === String(popupEvent.id || ''))) return prev;
+      return {
+        ...prev,
+        [dateKey]: [...existing, {
+          id: String(popupEvent.id),
+          title: String(popupEvent.title || 'Untitled Event'),
+          date: String(popupEvent.date),
+          time: popupEvent.time || null,
+          location: popupEvent.location || null,
+          description: String(popupEvent.description || ''),
+          category: 'popup_event',
+          layerId: '', layer_id: '', calendar_id: '', subCalendarId: null,
+          isPrivate: false, isUrgent: false, isMultiDay: false,
+          multiDayId: null, isAnnual: false, annualMonth: null, annualDay: null,
+          recurrence: 'once', exceptions: [], reactions: {},
+          createdBy: null, createdAt: null, userId: null, isShared: true,
+          isJoinedPopup: true,
+        }],
+      };
+    });
+  }, []);
 
   const focusOnPopupEventDate = (eventId, fallbackDateKey = null) => {
     let dateKey = String(fallbackDateKey || '').trim();
@@ -15051,12 +15044,61 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           console.error('Error loading events:', layerEventsError);
         } else if (layerEventsData) {
           const eventsObj = {};
+          const layerEventIdSet = new Set();
           layerEventsData.forEach(event => {
             if (!eventsObj[event.date]) eventsObj[event.date] = [];
             eventsObj[event.date].push(mapSupabaseEventRow(event, userId));
+            layerEventIdSet.add(String(event.id));
           });
           setEvents(eventsObj);
           if (typeof window !== 'undefined') window.events = eventsObj;
+
+          // Fire-and-forget: also load events joined from other users' layers so they show on the calendar
+          void (async () => {
+            try {
+              const { data: memberships } = await supabase
+                .from('popup_event_members')
+                .select('event_id')
+                .eq('user_id', userId);
+              const joinedIds = (memberships || [])
+                .map((r) => String(r?.event_id || '').trim())
+                .filter((id) => isUuid(id) && !layerEventIdSet.has(id));
+              if (!joinedIds.length) return;
+              const { data: details } = await supabase
+                .from('popup_event_details')
+                .select('id,title,date,time,location,description,category')
+                .in('id', joinedIds);
+              if (!details?.length) return;
+              setEvents((prev) => {
+                const existingIds = new Set(Object.values(prev).flat().map((e) => String(e?.id || '')));
+                let changed = false;
+                const next = { ...prev };
+                details.forEach((det) => {
+                  if (!det?.id || !det?.date || existingIds.has(String(det.id))) return;
+                  const dateKey = String(det.date);
+                  if (!next[dateKey]) next[dateKey] = [];
+                  next[dateKey] = [...next[dateKey], {
+                    id: String(det.id),
+                    title: String(det.title || 'Untitled Event'),
+                    date: dateKey,
+                    time: det.time || null,
+                    location: det.location || null,
+                    description: String(det.description || ''),
+                    category: 'popup_event',
+                    layerId: '', layer_id: '', calendar_id: '', subCalendarId: null,
+                    isPrivate: false, isUrgent: false, isMultiDay: false,
+                    multiDayId: null, isAnnual: false, annualMonth: null, annualDay: null,
+                    recurrence: 'once', exceptions: [], reactions: {},
+                    createdBy: null, createdAt: null, userId: null, isShared: true,
+                    isJoinedPopup: true,
+                  }];
+                  existingIds.add(String(det.id));
+                  changed = true;
+                });
+                return changed ? next : prev;
+              });
+            } catch {}
+          })();
         }
 
         setMyShares(allSharesData);
@@ -15243,6 +15285,42 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (!shouldLoadPopupCollections) return;
     loadPopupEventData();
   }, [activeLayerId, layerIdsKey, layerRefreshToken, bottomNavTab, selectedPopupEventPanelId]);
+
+  // Merge joined popup events (events from other users' layers) into the calendar grid state.
+  // userTabPopupEvents already contains these after loadPopupEventData; we just need to reflect them in `events`.
+  useEffect(() => {
+    if (!userTabPopupEvents?.length) return;
+    setEvents((prev) => {
+      const existingIds = new Set(
+        Object.values(prev).flat().map((e) => String(e?.id || '')).filter(Boolean)
+      );
+      let changed = false;
+      const next = { ...prev };
+      userTabPopupEvents.forEach((upe) => {
+        if (!upe?.id || !upe?.date || existingIds.has(String(upe.id))) return;
+        const dateKey = String(upe.date);
+        if (!next[dateKey]) next[dateKey] = [];
+        next[dateKey] = [...next[dateKey], {
+          id: String(upe.id),
+          title: String(upe.title || 'Untitled Event'),
+          date: dateKey,
+          time: upe.time || null,
+          location: upe.location || null,
+          description: String(upe.description || ''),
+          category: 'popup_event',
+          layerId: '', layer_id: '', calendar_id: '', subCalendarId: null,
+          isPrivate: false, isUrgent: false, isMultiDay: false,
+          multiDayId: null, isAnnual: false, annualMonth: null, annualDay: null,
+          recurrence: 'once', exceptions: [], reactions: {},
+          createdBy: null, createdAt: null, userId: null, isShared: true,
+          isJoinedPopup: true,
+        }];
+        existingIds.add(String(upe.id));
+        changed = true;
+      });
+      return changed ? next : prev;
+    });
+  }, [userTabPopupEvents]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
