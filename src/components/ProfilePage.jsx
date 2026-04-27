@@ -131,6 +131,7 @@ const ProfilePage = ({
   viewedUserEmail = null,
   viewedUserId = null,
   currentUser,
+  prefetchedFriendsList = null,
   accountHandle = '',
   profilePhotoUrl = '',
   darkMode = false,
@@ -317,13 +318,20 @@ const ProfilePage = ({
   useEffect(() => {
     if (!isOwnProfile || (!userEmail && !currentUser?.id)) { setLoading(false); return; }
 
+    // Use prefetched data from App.js if available — instant render, no fetch needed
+    if (prefetchedFriendsList !== null) {
+      setFriendsList(prefetchedFriendsList);
+      setLoading(false);
+      return;
+    }
+
     const CACHE_KEY = `komo-friends-${currentUser?.id || userEmail}`;
-    const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+    const CACHE_TTL = 10 * 60 * 1000;
 
     // Show cached data immediately (stale-while-revalidate)
     let hadCache = false;
     try {
-      const cached = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null');
+      const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
       if (cached?.friends && Array.isArray(cached.friends) && Date.now() - (cached.ts || 0) < CACHE_TTL) {
         setFriendsList(cached.friends);
         setLoading(false);
@@ -537,14 +545,14 @@ const ProfilePage = ({
         }
 
         setFriendsList(friends);
-        try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ friends, ts: Date.now() })); } catch {}
+        try { localStorage.setItem(CACHE_KEY, JSON.stringify({ friends, ts: Date.now() })); } catch {}
       } finally {
         setLoading(false);
       }
     };
 
     load();
-  }, [isOwnProfile, userEmail, currentUser?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOwnProfile, userEmail, currentUser?.id, prefetchedFriendsList]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Load friend profile + connection context
   useEffect(() => {

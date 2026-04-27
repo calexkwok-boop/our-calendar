@@ -36007,6 +36007,7 @@ transform: translateY(0);
         viewedUserEmail={profileViewState.email}
         viewedUserId={profileViewState.userId}
         currentUser={user}
+        prefetchedFriendsList={prefetchedFriendsList}
         accountHandle={currentUser}
         profilePhotoUrl={currentUserProfilePhotoUrl}
         darkMode={darkMode}
