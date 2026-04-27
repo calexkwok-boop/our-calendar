@@ -385,23 +385,42 @@ const ProfilePage = ({
           }
         }
 
-        // Step 4: shared event counts — all userIds are resolved
-        const friendUserIds = [...friendMap.values()].map(ctx => ctx.userId).filter(Boolean);
-        if (myEventIds.length > 0 && friendUserIds.length > 0) {
-          const { data: friendEventRows } = await supabase
+        // Step 4: discover event-based connections + count shared events (bidirectional)
+        if (myEventIds.length > 0) {
+          const { data: eventCoMembers } = await supabase
             .from('popup_event_members')
             .select('event_id, user_id')
-            .in('user_id', friendUserIds)
-            .in('event_id', myEventIds);
+            .in('event_id', myEventIds)
+            .neq('user_id', currentUser?.id || '');
 
           const sharedEventsByUserId = {};
-          for (const m of (friendEventRows || [])) {
+          for (const m of (eventCoMembers || [])) {
             if (!m.user_id || !m.event_id) continue;
             if (!sharedEventsByUserId[m.user_id]) sharedEventsByUserId[m.user_id] = new Set();
             sharedEventsByUserId[m.user_id].add(m.event_id);
           }
+          // Enrich existing friends with event counts
           for (const ctx of friendMap.values()) {
             if (ctx.userId && sharedEventsByUserId[ctx.userId]) ctx.sharedEvents = sharedEventsByUserId[ctx.userId].size;
+          }
+          // Discover NEW friends from shared events (people not yet in friendMap)
+          const knownUserIds = new Set([...friendMap.values()].map(ctx => ctx.userId).filter(Boolean));
+          const newCoMemberUserIds = [...new Set(
+            (eventCoMembers || []).map(r => r.user_id).filter(uid => uid && !knownUserIds.has(uid))
+          )];
+          if (newCoMemberUserIds.length > 0) {
+            const [newHandlesRes, newHandlesFbRes] = await Promise.all([
+              supabase.from('user_handles').select('email, user_id').in('user_id', newCoMemberUserIds),
+              supabase.from('handles').select('email, user_id').in('user_id', newCoMemberUserIds),
+            ]);
+            for (const h of dedupeById([...(newHandlesRes.data || []), ...(newHandlesFbRes.data || [])])) {
+              const email = String(h.email || '').toLowerCase().trim();
+              if (!email || email === userEmail) continue;
+              const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedEvents: 0, userId: h.user_id };
+              if (!entry.userId) entry.userId = h.user_id;
+              if (sharedEventsByUserId[h.user_id]) entry.sharedEvents = sharedEventsByUserId[h.user_id].size;
+              friendMap.set(email, entry);
+            }
           }
         }
 
