@@ -554,11 +554,14 @@ const ProfilePage = ({
           (async () => {
             if (!friendPrefs.share_photo_of_day || !viewedUserId) return null;
             const today = new Date().toISOString().slice(0, 10);
+            const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+            // Also catch records where memory_date wasn't set (legacy bug: date saved as Date object)
             const { data: memRow } = await supabase
               .from('user_memories')
-              .select('memory')
+              .select('memory, memory_date, created_at')
               .eq('owner_user_id', viewedUserId)
-              .eq('memory_date', today)
+              .or(`memory_date.eq.${today},and(memory_date.is.null,created_at.gte.${today}T00:00:00.000Z,created_at.lt.${tomorrow}T00:00:00.000Z)`)
+              .order('updated_at', { ascending: false })
               .limit(1)
               .maybeSingle();
             if (!memRow?.memory) return null;
