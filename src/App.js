@@ -40,6 +40,148 @@ import JOURNEY_QUOTES from "./data/journeyQuotes";
 
 const MemoryCreator = ImportedMemoryCreator || (() => null);
 
+// ─── Friends list loader ───────────────────────────────────────────────────────
+// Runs in 3 sequential round trips instead of 4 by pulling the event
+// co-members query into Step 2 alongside trip/calendar co-members.
+const _dedupeById = (rows) =>
+  [...new Map(rows.filter(h => h.user_id).map(h => [h.user_id, h])).values()];
+
+async function loadFriendsList({ userId, userEmail, knownHandlesByEmail = {} }) {
+  if (!userId && !userEmail) return [];
+  const friendMap = new Map();
+
+  // Step 1: all IDs this user is involved in (5 parallel, no inter-deps)
+  const [ownedTripsRes, memberTripIdsRes, myLayerAccessRes, ownedLayersRes, myEventMembershipsRes] = await Promise.all([
+    userId ? supabase.from('sub_calendars').select('id, name').eq('owner_id', userId) : Promise.resolve({ data: [] }),
+    userEmail ? supabase.from('sub_calendar_members').select('sub_calendar_id').eq('email', userEmail) : Promise.resolve({ data: [] }),
+    userEmail ? supabase.from('shared_access').select('layer_id, owner_id').eq('shared_with_email', userEmail) : Promise.resolve({ data: [] }),
+    userId ? supabase.from('categories').select('id').eq('owner_id', userId) : Promise.resolve({ data: [] }),
+    userId ? supabase.from('popup_event_members').select('event_id').eq('user_id', userId) : Promise.resolve({ data: [] }),
+  ]);
+
+  const ownedTripNameById = {};
+  for (const t of (ownedTripsRes.data || [])) ownedTripNameById[t.id] = t.name || 'Trip';
+  const memberTripIds = (memberTripIdsRes.data || []).map(m => m.sub_calendar_id).filter(id => id && !ownedTripNameById[id]);
+  const allTripIds = [...Object.keys(ownedTripNameById), ...memberTripIds];
+  const receivedLayerIds = (myLayerAccessRes.data || []).map(a => a.layer_id).filter(Boolean);
+  const calendarOwnerIds = [...new Set((myLayerAccessRes.data || []).map(a => a.owner_id).filter(id => id && id !== userId))];
+  const calendarOwnerIdSet = new Set(calendarOwnerIds);
+  const ownedLayerIds = (ownedLayersRes.data || []).map(l => l.id).filter(Boolean);
+  const uniqueLayerIds = [...new Set([...receivedLayerIds, ...ownedLayerIds])];
+  const myEventIds = (myEventMembershipsRes.data || []).map(m => m.event_id).filter(Boolean);
+
+  // Step 2: all co-members + event co-members in one round trip (was formerly 2 separate steps)
+  const [memberTripDataRes, coMembersRes, coCalMembersRes, calOwnerHandlesRes, calOwnerHandlesFbRes, eventCoMembersRes] = await Promise.all([
+    memberTripIds.length > 0 ? supabase.from('sub_calendars').select('id, owner_id, name').in('id', memberTripIds) : Promise.resolve({ data: [] }),
+    allTripIds.length > 0 ? supabase.from('sub_calendar_members').select('email, sub_calendar_id').in('sub_calendar_id', allTripIds).neq('email', userEmail || '') : Promise.resolve({ data: [] }),
+    uniqueLayerIds.length > 0 ? supabase.from('shared_access').select('shared_with_email, shared_with_id').in('layer_id', uniqueLayerIds).neq('shared_with_email', userEmail || '') : Promise.resolve({ data: [] }),
+    calendarOwnerIds.length > 0 ? supabase.from('user_handles').select('email, user_id').in('user_id', calendarOwnerIds) : Promise.resolve({ data: [] }),
+    calendarOwnerIds.length > 0 ? supabase.from('handles').select('email, user_id').in('user_id', calendarOwnerIds) : Promise.resolve({ data: [] }),
+    myEventIds.length > 0 ? supabase.from('popup_event_members').select('event_id, user_id').in('event_id', myEventIds).neq('user_id', userId || '') : Promise.resolve({ data: [] }),
+  ]);
+
+  const tripNameById = { ...ownedTripNameById };
+  const tripOwnerIdToName = {};
+  for (const t of (memberTripDataRes.data || [])) {
+    if (!t.id) continue;
+    tripNameById[t.id] = t.name || 'Trip';
+    if (t.owner_id && t.owner_id !== userId) tripOwnerIdToName[t.owner_id] = t.name || 'Shared trip';
+  }
+  const tripOwnerIds = Object.keys(tripOwnerIdToName);
+
+  for (const m of (coMembersRes.data || [])) {
+    const email = String(m.email || '').toLowerCase().trim();
+    if (!email) continue;
+    const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedEvents: 0, userId: null };
+    const tripName = tripNameById[m.sub_calendar_id] || 'Shared trip';
+    if (!entry.trips.includes(tripName)) entry.trips.push(tripName);
+    friendMap.set(email, entry);
+  }
+  for (const m of (coCalMembersRes.data || [])) {
+    const email = String(m.shared_with_email || '').toLowerCase().trim();
+    if (!email) continue;
+    const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedEvents: 0, userId: null };
+    entry.sharedCalendars++;
+    if (!entry.userId && m.shared_with_id) entry.userId = m.shared_with_id;
+    friendMap.set(email, entry);
+  }
+  for (const h of _dedupeById([...(calOwnerHandlesRes.data || []), ...(calOwnerHandlesFbRes.data || [])])) {
+    const email = String(h.email || '').toLowerCase().trim();
+    if (!email || email === userEmail) continue;
+    const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedEvents: 0, userId: null };
+    if (!entry.userId) entry.userId = h.user_id;
+    if (calendarOwnerIdSet.has(h.user_id)) entry.sharedCalendars++;
+    friendMap.set(email, entry);
+  }
+
+  // Tally shared events and collect event-only friend user IDs
+  const sharedEventsByUserId = {};
+  for (const m of (eventCoMembersRes.data || [])) {
+    if (!m.user_id || !m.event_id) continue;
+    if (!sharedEventsByUserId[m.user_id]) sharedEventsByUserId[m.user_id] = new Set();
+    sharedEventsByUserId[m.user_id].add(m.event_id);
+  }
+  for (const ctx of friendMap.values()) {
+    if (ctx.userId && sharedEventsByUserId[ctx.userId]) ctx.sharedEvents = sharedEventsByUserId[ctx.userId].size;
+  }
+  const knownUserIds = new Set([...friendMap.values()].map(ctx => ctx.userId).filter(Boolean));
+  const newEventFriendIds = [...new Set((eventCoMembersRes.data || []).map(r => r.user_id).filter(uid => uid && !knownUserIds.has(uid)))];
+
+  // Step 3: resolve trip owner emails + missing userIds + event-only friend handles (all parallel)
+  const emailsMissingId = [...friendMap.entries()].filter(([, ctx]) => !ctx.userId).map(([email]) => email);
+  const [tripOwnerHandlesRes, tripOwnerHandlesFbRes, handleRowsRes, handleRowsFbRes, newHandlesRes, newHandlesFbRes] = await Promise.all([
+    tripOwnerIds.length > 0 ? supabase.from('user_handles').select('email, user_id').in('user_id', tripOwnerIds) : Promise.resolve({ data: [] }),
+    tripOwnerIds.length > 0 ? supabase.from('handles').select('email, user_id').in('user_id', tripOwnerIds) : Promise.resolve({ data: [] }),
+    emailsMissingId.length > 0 ? supabase.from('user_handles').select('email, user_id').in('email', emailsMissingId) : Promise.resolve({ data: [] }),
+    emailsMissingId.length > 0 ? supabase.from('handles').select('email, user_id').in('email', emailsMissingId) : Promise.resolve({ data: [] }),
+    newEventFriendIds.length > 0 ? supabase.from('user_handles').select('email, user_id').in('user_id', newEventFriendIds) : Promise.resolve({ data: [] }),
+    newEventFriendIds.length > 0 ? supabase.from('handles').select('email, user_id').in('user_id', newEventFriendIds) : Promise.resolve({ data: [] }),
+  ]);
+
+  for (const h of _dedupeById([...(tripOwnerHandlesRes.data || []), ...(tripOwnerHandlesFbRes.data || [])])) {
+    const email = String(h.email || '').toLowerCase().trim();
+    if (!email || email === userEmail) continue;
+    const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedEvents: 0, userId: null };
+    if (!entry.userId) entry.userId = h.user_id;
+    if (h.user_id && tripOwnerIdToName[h.user_id]) {
+      const tripName = tripOwnerIdToName[h.user_id];
+      if (!entry.trips.includes(tripName)) entry.trips.push(tripName);
+    }
+    friendMap.set(email, entry);
+  }
+  for (const row of [...(handleRowsRes.data || []), ...(handleRowsFbRes.data || [])]) {
+    const email = String(row.email || '').toLowerCase().trim();
+    if (row.user_id && friendMap.has(email) && !friendMap.get(email).userId) friendMap.get(email).userId = row.user_id;
+  }
+  for (const h of _dedupeById([...(newHandlesRes.data || []), ...(newHandlesFbRes.data || [])])) {
+    const email = String(h.email || '').toLowerCase().trim();
+    if (!email || email === userEmail) continue;
+    const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedEvents: 0, userId: h.user_id };
+    if (!entry.userId) entry.userId = h.user_id;
+    if (sharedEventsByUserId[h.user_id]) entry.sharedEvents = sharedEventsByUserId[h.user_id].size;
+    friendMap.set(email, entry);
+  }
+
+  const friends = [];
+  for (const [email, ctx] of friendMap.entries()) {
+    const handle = (knownHandlesByEmail || {})[email] || email.split('@')[0];
+    const parts = [];
+    if (ctx.trips.length === 1) parts.push(ctx.trips[0]);
+    else if (ctx.trips.length > 1) parts.push(`${ctx.trips.length} trips`);
+    if (ctx.sharedCalendars > 0) parts.push('shared calendar');
+    if (ctx.sharedEvents > 0) parts.push(`${ctx.sharedEvents} event${ctx.sharedEvents === 1 ? '' : 's'}`);
+    friends.push({
+      email,
+      userId: ctx.userId || null,
+      handle,
+      displayName: handle,
+      avatarUrl: ctx.userId ? `${supabase.supabaseUrl}/storage/v1/object/public/avatars/${ctx.userId}/avatar` : '',
+      connectionSummary: parts.join(' · ') || 'Connected',
+    });
+  }
+  return friends;
+}
+
 
 
 
@@ -3363,6 +3505,8 @@ function App() {
   const [showAddDreamSheet, setShowAddDreamSheet] = useState(false);
   const [makeItHappenItem, setMakeItHappenItem] = useState(null);
   const [friendsDailyPhotos, setFriendsDailyPhotos] = useState([]);
+  const [prefetchedFriendsList, setPrefetchedFriendsList] = useState(null);
+  const knownHandlesByEmailRef = useRef({});
   const [somedayPinPositions, setSomedayPinPositions] = useState(() => {
     try { return JSON.parse(localStorage.getItem('someday-pin-positions') || '{}'); } catch { return {}; }
   });
@@ -12851,7 +12995,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return;
     }
 
-    if (Object.keys(nextByEmail).length > 0) setKnownHandlesByEmail(prev => ({ ...prev, ...nextByEmail }));
+    if (Object.keys(nextByEmail).length > 0) {
+      setKnownHandlesByEmail(prev => ({ ...prev, ...nextByEmail }));
+      Object.assign(knownHandlesByEmailRef.current, nextByEmail);
+    }
     if (Object.keys(nextByUserId).length > 0) setKnownHandlesByUserId(prev => ({ ...prev, ...nextByUserId }));
   };
 
@@ -20535,6 +20682,34 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     })();
     return () => { cancelled = true; };
   }, [user?.id]);
+
+  // ─── Eager friends list prefetch (runs in background after login)
+  useEffect(() => {
+    const userId = String(user?.id || '').trim();
+    const userEmail = String(user?.email || '').toLowerCase().trim();
+    if (!userId) { setPrefetchedFriendsList(null); return; }
+
+    const CACHE_KEY = `komo-friends-${userId}`;
+    const CACHE_TTL = 10 * 60 * 1000; // 10 min
+    // Show stale cache immediately so the tab opens with content
+    try {
+      const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+      if (cached?.friends && Array.isArray(cached.friends) && Date.now() - (cached.ts || 0) < CACHE_TTL) {
+        setPrefetchedFriendsList(cached.friends);
+      }
+    } catch {}
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const friends = await loadFriendsList({ userId, userEmail, knownHandlesByEmail: knownHandlesByEmailRef.current });
+        if (cancelled) return;
+        setPrefetchedFriendsList(friends);
+        try { localStorage.setItem(CACHE_KEY, JSON.stringify({ friends, ts: Date.now() })); } catch {}
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id, user?.email]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const currentBucketListUserId = String(user?.id || 'guest').trim() || 'guest';
