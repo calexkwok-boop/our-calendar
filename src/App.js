@@ -13727,14 +13727,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return;
     }
 
-    const popupEventsResult = await withTimeout(
+    const [popupEventsResult, { data: earlySignupRows, error: earlySignupErr }] = await Promise.all([
+      withTimeout(
+        supabase
+          .from('popup_events')
+          .select('layer_id,event_id,max_people,created_by_user_id,created_by_name,created_at')
+          .in('layer_id', visibleLayerIds),
+        4000,
+        { data: [], error: { message: 'popup events timed out' } }
+      ),
       supabase
-        .from('popup_events')
-        .select('layer_id,event_id,max_people,created_by_user_id,created_by_name,created_at')
-        .in('layer_id', visibleLayerIds),
-      4000,
-      { data: [], error: { message: 'popup events timed out' } }
-    );
+        .from('popup_event_signups')
+        .select('id,event_id,user_id,display_name,created_at')
+        .in('layer_id', visibleLayerIds)
+        .order('created_at', { ascending: true }),
+    ]);
     const popupEventsRows = popupEventsResult?.data || [];
     const popupEventsErr = popupEventsResult?.error || null;
 
@@ -13786,19 +13793,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       };
     });
 
+    const eventIdSet = new Set(eventIds);
+    const signupRows = earlySignupErr ? [] : (earlySignupRows || []).filter((r) => eventIdSet.has(String(r?.event_id || '').trim()));
+    const signupErr = earlySignupErr;
+
     let signupsMap = {};
     if (eventIds.length > 0) {
       const [
-        { data: signupRows, error: signupErr },
         { data: memberRows, error: memberErr },
         { data: detailRows },
       ] = await Promise.all([
-        supabase
-          .from('popup_event_signups')
-          .select('id,event_id,user_id,display_name,created_at')
-          .in('layer_id', visibleLayerIds)
-          .in('event_id', eventIds)
-          .order('created_at', { ascending: true }),
         supabase
           .from('popup_event_members')
           .select('id,event_id,user_id,display_name,role,joined_at')
