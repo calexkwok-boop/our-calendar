@@ -286,6 +286,36 @@ export default function PartyEventCardOverlay({
     setJoining(false);
   };
 
+  const handleKick = async (member) => {
+    if (!isHost || !isUuid(event?.id)) return;
+    const memberId = String(member?.id || '').trim();
+    if (!memberId || !isUuid(memberId)) return;
+    await supabase.from('popup_event_members').delete().eq('id', memberId);
+    await loadEvent(event.id);
+  };
+
+  const handlePromote = async (member) => {
+    if (!isHost || !isUuid(event?.id)) return;
+    const memberUserId = String(member?.user_id || '').trim();
+    if (!memberUserId) return;
+    await supabase.from('popup_event_members')
+      .update({ role: 'cohost' })
+      .eq('event_id', event.id)
+      .eq('user_id', memberUserId);
+    await loadEvent(event.id);
+  };
+
+  const handleDemote = async (member) => {
+    if (!isHost || !isUuid(event?.id)) return;
+    const memberUserId = String(member?.user_id || '').trim();
+    if (!memberUserId) return;
+    await supabase.from('popup_event_members')
+      .update({ role: 'player' })
+      .eq('event_id', event.id)
+      .eq('user_id', memberUserId);
+    await loadEvent(event.id);
+  };
+
   const handleTogglePublic = async () => {
     if (!isHost || !isUuid(event?.id)) return;
     const next = !event.is_public;
@@ -348,12 +378,12 @@ export default function PartyEventCardOverlay({
                 key={member.id || member.user_id || member.display_name}
                 member={member}
                 isMe={String(member?.user_id || '').trim() === currentUserId}
-                isHost={false}
+                isHost={isHost}
                 accent={accent}
                 darkMode={darkMode}
-                onKick={() => {}}
-                onPromote={() => {}}
-                onDemote={() => {}}
+                onKick={handleKick}
+                onPromote={handlePromote}
+                onDemote={handleDemote}
                 attendeeRoleLabel="Guest"
                 attendeeStatusLabel={
                   String(member?.source || '').trim().toLowerCase() === 'guest-list'
@@ -369,7 +399,6 @@ export default function PartyEventCardOverlay({
                     ? (String(member?.rsvp || 'pending').trim().toLowerCase() || 'pending')
                     : ''
                 }
-                canManageRoles={false}
               />
             ))}
             {sortedGuests.length === 0 && (

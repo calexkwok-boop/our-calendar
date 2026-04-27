@@ -431,6 +431,37 @@ export default function SportsEventCardOverlay({
     await loadEvent(event.id);
   };
 
+  const handleKick = async (member) => {
+    if (!isHost || !isUuid(event?.id)) return;
+    if (member?.is_manual) { await handleRemoveManualPlayer(member); return; }
+    const memberId = String(member?.id || '').trim();
+    if (!memberId || !isUuid(memberId)) return;
+    await supabase.from('popup_event_members').delete().eq('id', memberId);
+    await loadEvent(event.id);
+  };
+
+  const handlePromote = async (member) => {
+    if (!isHost || !isUuid(event?.id)) return;
+    const memberUserId = String(member?.user_id || '').trim();
+    if (!memberUserId) return;
+    await supabase.from('popup_event_members')
+      .update({ role: 'cohost' })
+      .eq('event_id', event.id)
+      .eq('user_id', memberUserId);
+    await loadEvent(event.id);
+  };
+
+  const handleDemote = async (member) => {
+    if (!isHost || !isUuid(event?.id)) return;
+    const memberUserId = String(member?.user_id || '').trim();
+    if (!memberUserId) return;
+    await supabase.from('popup_event_members')
+      .update({ role: 'player' })
+      .eq('event_id', event.id)
+      .eq('user_id', memberUserId);
+    await loadEvent(event.id);
+  };
+
   const handleCopyLink = async () => {
     if (typeof window === 'undefined') return;
     const link = `${window.location.origin}${window.location.pathname}?popup=${event?.id || initialEventId}`;
@@ -548,14 +579,14 @@ export default function SportsEventCardOverlay({
                 key={member.id || member.user_id || member.display_name}
                 member={member}
                 isMe={String(member?.user_id || '').trim() === currentUserId}
-                isHost={Boolean(isHost && member?.is_manual)}
+                isHost={isHost}
                 accent={accent}
                 darkMode={darkMode}
-                onKick={handleRemoveManualPlayer}
-                onPromote={() => {}}
-                onDemote={() => {}}
+                onKick={handleKick}
+                onPromote={handlePromote}
+                onDemote={handleDemote}
                 attendeeRoleLabel="Player"
-                canManageRoles={false}
+                canManageRoles={true}
               />
             ))}
             {sortedPlayers.length === 0 && (
