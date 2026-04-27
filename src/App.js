@@ -14017,7 +14017,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   loadPopupEventDataRef.current = loadPopupEventData;
 
   const handleJoinedPopupEvent = useCallback((popupEvent) => {
-    if (!popupEvent?.id || !popupEvent?.date) return;
+    console.log('[JOIN] handleJoinedPopupEvent called', { id: popupEvent?.id, date: popupEvent?.date, title: popupEvent?.title });
+    if (!popupEvent?.id || !popupEvent?.date) { console.log('[JOIN] bailed - missing id or date'); return; }
     setEvents((prev) => {
       const dateKey = popupEvent.date;
       const existing = Array.isArray(prev[dateKey]) ? prev[dateKey] : [];

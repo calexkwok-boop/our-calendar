@@ -321,6 +321,7 @@ export default function SportsEventCardOverlay({
         .insert({ event_id: event.id, user_id: currentUserId, display_name: effectiveDisplayName || 'Player', role: 'player' });
       if (error && error.code !== '23505') throw error;
       const loadedEvent = await loadEvent(event.id);
+      console.log('[JOIN sports] loadedEvent', { id: loadedEvent?.id, date: loadedEvent?.date }, 'hasOnJoined', typeof onJoined === 'function');
       if (typeof onJoined === 'function') onJoined(loadedEvent || event);
     } catch (error) {
       setJoinError(error?.message || 'Could not join right now.');

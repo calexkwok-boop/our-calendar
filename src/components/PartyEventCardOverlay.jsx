@@ -284,6 +284,7 @@ export default function PartyEventCardOverlay({
         .insert({ event_id: event.id, user_id: currentUserId, display_name: effectiveDisplayName || 'Guest', role: 'guest' });
       if (error && error.code !== '23505') throw error;
       const loadedEvent = await loadEvent(event.id);
+      console.log('[JOIN party] loadedEvent', { id: loadedEvent?.id, date: loadedEvent?.date }, 'hasOnJoined', typeof onJoined === 'function');
       if (typeof onJoined === 'function') onJoined(loadedEvent || event);
     } catch (error) {
       setJoinError(error?.message || 'Could not RSVP right now.');
