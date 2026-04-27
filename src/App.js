@@ -22288,6 +22288,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     };
   }, [coverWidgetLayout, controlWidgetOrder, flushControlWidgetPrefs]);
 
+  // Stable callbacks for ScrapbookHomeHybrid — defined before any early returns so
+  // the hook call count is always the same regardless of which branch renders.
+  const handleHomeOpenUpcoming = useCallback(() => {
+    setEventsTabView('upcoming');
+    setBottomNavTab('events');
+  }, []);
+  const handleHomeOpenTripsTab = useCallback(() => {
+    setEventsTabView('trips');
+    setBottomNavTab('events');
+  }, []);
+  const handleHomeStartTrip = useCallback(() => setShowSubCalendarModal(true), []);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-[#0f0a1e] dark:via-[#120d24] dark:to-[#0d1525] flex items-center justify-center">
@@ -24422,17 +24434,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     openJourneyScreen();
   };
 
-  const handleHomeOpenUpcoming = useCallback(() => {
-    setEventsTabView('upcoming');
-    setBottomNavTab('events');
-  }, []);
-  const handleHomeOpenTripsTab = useCallback(() => {
-    setEventsTabView('trips');
-    setBottomNavTab('events');
-  }, []);
-  const handleHomeStartTrip = useCallback(() => setShowSubCalendarModal(true), []);
-
-  const addQuickThought = useCallback((thought) => {
+  const addQuickThought = (thought) => {
     const text = String(thought?.text || '').trim();
     if (!text) return;
     const colors = ['yellow', 'pink', 'blue', 'green'];
@@ -24446,14 +24448,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       },
       ...(Array.isArray(prev) ? prev : []),
     ]);
-  }, []);
+  };
 
-  const deleteQuickThought = useCallback((thought) => {
+  const deleteQuickThought = (thought) => {
     const thoughtId = String(thought?.id || '').trim();
     if (!thoughtId) return;
     addQuickThoughtTombstone(user?.id, thoughtId);
     setQuickThoughts((prev) => (Array.isArray(prev) ? prev : []).filter((item) => String(item?.id || '') !== thoughtId));
-  }, [user?.id]);
+  };
 
   const openAddDreamSheet = () => {
     setShowAddDreamSheet(true);
