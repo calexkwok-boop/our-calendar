@@ -215,6 +215,8 @@ export default function DateDetailsCardEnhanced({
   PlacesAutocomplete,
   handleLocationLinkClick = () => {},
   calendarPartner = DEFAULT_PARTNER,
+  leavePopupEvent,
+  joinPopupEvent,
 }) {
   const [eventTitle, setEventTitle] = useState('');
   const [location, setLocation] = useState('');

@@ -22,7 +22,15 @@
       "Bash(grep -n \"photo\\\\|avatar\\\\|img\\\\|initials\\\\|charAt\\\\|\\\\\\\\.\\\\\\\\[0\\\\\\\\]\\\\|gradient\\\\|display_name\\\\|displayName\\\\|name.*member\\\\|member.*name\" \"c:/Users/a_kwo/Desktop/our-calendar/src/components/SportsEventCard.jsx\")",
       "Bash(grep -rn \"gradient\\\\|charAt\\\\|\\\\\\\\[0\\\\\\\\]\\\\|initials\\\\|pfp\\\\|profilePhoto\" \"c:/Users/a_kwo/Desktop/our-calendar/src/components/ScrapbookHomeHybrid.jsx\")",
       "Bash(npx supabase *)",
-      "Bash(xargs wc *)"
+      "Bash(xargs wc *)",
+      "Bash(grep -n \"{\\\\.\\\\.\\\\..*}\" /c/Users/a_kwo/Desktop/our-calendar/src/App.js)",
+      "Bash(grep -n \"\\\\.select\\('\\\\\\\\*'\\)\\\\|select\\(\\\\\"\\\\\\\\*\\\\\"\\)\" /c/Users/a_kwo/Desktop/our-calendar/src/App.js)",
+      "Bash(grep -n \"style={{\\\\|style={\\\\s*$\" /c/Users/a_kwo/Desktop/our-calendar/src/App.js)",
+      "Bash(awk '/^function App\\\\\\(\\\\\\) {/,/^}/ { if \\(/return \\\\\\(/\\) { print NR; exit } }' \"c:/Users/a_kwo/Desktop/our-calendar/src/App.js\")",
+      "Bash(awk '/^function App\\\\\\(\\\\\\) {/,/^}$/ { if \\(/return \\\\\\(/\\) { found=NR } if \\(found && /^  \\\\\\);$/ && NR > found + 10\\) { print NR; exit } }' \"c:/Users/a_kwo/Desktop/our-calendar/src/App.js\")",
+      "Bash(awk '/^function App\\\\\\(\\\\\\) {/,/^}$/ { if \\(/return \\\\\\(/\\) { start=NR } if \\(start && NR > start && /^    </\\) { print NR\": \"$0; exit } }' \"c:/Users/a_kwo/Desktop/our-calendar/src/App.js\")",
+      "Bash(awk '/^function App\\\\\\(\\\\\\) {/,/^}$/ { print NR\": \"$0 }' \"c:/Users/a_kwo/Desktop/our-calendar/src/App.js\")",
+      "Bash(git stash *)"
     ]
   }
 }

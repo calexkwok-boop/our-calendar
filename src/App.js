@@ -8579,11 +8579,9 @@ function App() {
     setSkipExpensePaymentHandlePrompt(false);
   }, [hasSavedAccountPaymentHandle]);
   const bumpCoverControlsInteraction = React.useCallback(() => {
-    if (!coverHeaderControlsVisible) {
-      setCoverHeaderControlsVisible(true);
-    }
+    setCoverHeaderControlsVisible((prev) => prev || true);
     setCoverHeaderControlsInteractionAt(Date.now());
-  }, [coverHeaderControlsVisible]);
+  }, []);
   const closeHomeWidgetWindows = React.useCallback(() => {
     setShowControlWidgetAddPanel(false);
     setShowNotificationSettings(false);
@@ -9670,56 +9668,69 @@ useEffect(() => {
   const effectiveCoverOpacity = coverOpacityPreview == null
     ? activeLayerPageTheme.coverOpacity
     : Math.max(0, Math.min(1, Number(coverOpacityPreview)));
-  const themeAccentSoftBg = mixHexColors(activeLayerPageTheme.accent, '#ffffff', darkMode ? 0.78 : 0.82);
-  const themeAccentSofterBg = mixHexColors(activeLayerPageTheme.accent, '#ffffff', darkMode ? 0.88 : 0.9);
-  const themeAccentBorder = mixHexColors(activeLayerPageTheme.accent, '#ffffff', darkMode ? 0.5 : 0.62);
-  const coverFadeSurfaceColor = darkMode ? '#1f2937' : '#ffffff';
-  const themeAccentGradient = activeLayerTitleStyle.mode === 'solid'
-    ? `linear-gradient(135deg, ${mixHexColors(activeLayerPageTheme.accent, '#ffffff', 0.05)} 0%, ${activeLayerPageTheme.accent} 100%)`
-    : `linear-gradient(135deg, ${activeLayerTitleStyle.gradientFrom} 0%, ${activeLayerTitleStyle.gradientVia} 55%, ${activeLayerTitleStyle.gradientTo} 100%)`;
-  const themedPageBackgroundStyle = darkMode
-    ? {
-      backgroundImage: `linear-gradient(135deg, ${mixHexColors(activeLayerPageTheme.backgroundFrom, '#111827', 0.85)} 0%, ${mixHexColors(activeLayerPageTheme.backgroundVia, '#111827', 0.9)} 55%, ${mixHexColors(activeLayerPageTheme.backgroundTo, '#111827', 0.93)} 100%)`,
-      paddingTop: 'max(0.5rem, env(safe-area-inset-top))',
-      paddingLeft: 'env(safe-area-inset-left)',
-      paddingRight: 'env(safe-area-inset-right)',
-      paddingBottom: 'max(5rem, calc(4.75rem + env(safe-area-inset-bottom)))',
-    }
-    : {
-      backgroundImage: `linear-gradient(135deg, ${activeLayerPageTheme.backgroundFrom} 0%, ${activeLayerPageTheme.backgroundVia} 50%, ${activeLayerPageTheme.backgroundTo} 100%)`,
-      paddingTop: 'max(0.5rem, env(safe-area-inset-top))',
-      paddingLeft: 'env(safe-area-inset-left)',
-      paddingRight: 'env(safe-area-inset-right)',
-      paddingBottom: 'max(5rem, calc(4.75rem + env(safe-area-inset-bottom)))',
+  const {
+    themeAccentSoftBg, themeAccentSofterBg, themeAccentBorder, coverFadeSurfaceColor,
+    themeAccentGradient, themedPageBackgroundStyle, themeAccentButtonStyle,
+    calendarViewTogglePillStyle, themeAccentTextStyle, themeAccentSoftButtonStyle,
+    themeAccentEllieChipButtonStyle, themeAccentSoftActiveButtonStyle,
+  } = useMemo(() => {
+    const softBg = mixHexColors(activeLayerPageTheme.accent, '#ffffff', darkMode ? 0.78 : 0.82);
+    const softerBg = mixHexColors(activeLayerPageTheme.accent, '#ffffff', darkMode ? 0.88 : 0.9);
+    const border = mixHexColors(activeLayerPageTheme.accent, '#ffffff', darkMode ? 0.5 : 0.62);
+    const gradient = activeLayerTitleStyle.mode === 'solid'
+      ? `linear-gradient(135deg, ${mixHexColors(activeLayerPageTheme.accent, '#ffffff', 0.05)} 0%, ${activeLayerPageTheme.accent} 100%)`
+      : `linear-gradient(135deg, ${activeLayerTitleStyle.gradientFrom} 0%, ${activeLayerTitleStyle.gradientVia} 55%, ${activeLayerTitleStyle.gradientTo} 100%)`;
+    return {
+      themeAccentSoftBg: softBg,
+      themeAccentSofterBg: softerBg,
+      themeAccentBorder: border,
+      coverFadeSurfaceColor: darkMode ? '#1f2937' : '#ffffff',
+      themeAccentGradient: gradient,
+      themedPageBackgroundStyle: darkMode
+        ? {
+          backgroundImage: `linear-gradient(135deg, ${mixHexColors(activeLayerPageTheme.backgroundFrom, '#111827', 0.85)} 0%, ${mixHexColors(activeLayerPageTheme.backgroundVia, '#111827', 0.9)} 55%, ${mixHexColors(activeLayerPageTheme.backgroundTo, '#111827', 0.93)} 100%)`,
+          paddingTop: 'max(0.5rem, env(safe-area-inset-top))',
+          paddingLeft: 'env(safe-area-inset-left)',
+          paddingRight: 'env(safe-area-inset-right)',
+          paddingBottom: 'max(5rem, calc(4.75rem + env(safe-area-inset-bottom)))',
+        }
+        : {
+          backgroundImage: `linear-gradient(135deg, ${activeLayerPageTheme.backgroundFrom} 0%, ${activeLayerPageTheme.backgroundVia} 50%, ${activeLayerPageTheme.backgroundTo} 100%)`,
+          paddingTop: 'max(0.5rem, env(safe-area-inset-top))',
+          paddingLeft: 'env(safe-area-inset-left)',
+          paddingRight: 'env(safe-area-inset-right)',
+          paddingBottom: 'max(5rem, calc(4.75rem + env(safe-area-inset-bottom)))',
+        },
+      themeAccentButtonStyle: {
+        backgroundColor: activeLayerPageTheme.accent,
+        color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : '#ffffff',
+        boxShadow: `0 4px 14px ${hexToRgba(activeLayerPageTheme.accent, 0.35)}`,
+      },
+      calendarViewTogglePillStyle: {
+        backgroundColor: darkMode ? 'rgba(17,24,39,0.82)' : 'rgba(255,255,255,0.88)',
+        borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.7)',
+        backdropFilter: 'blur(14px)',
+        boxShadow: darkMode ? '0 10px 24px rgba(0,0,0,0.28)' : '0 10px 24px rgba(15,23,42,0.12)',
+      },
+      themeAccentTextStyle: { color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : activeLayerPageTheme.accent },
+      themeAccentSoftButtonStyle: {
+        backgroundColor: softBg,
+        color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : activeLayerPageTheme.accent,
+        borderColor: border,
+      },
+      themeAccentEllieChipButtonStyle: {
+        backgroundColor: mixHexColors(activeLayerPageTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.64 : 0.78),
+        color: darkMode
+          ? mixHexColors(activeLayerPageTheme.accent, '#ffffff', 0.4)
+          : mixHexColors(activeLayerPageTheme.accent, '#111827', 0.18),
+      },
+      themeAccentSoftActiveButtonStyle: {
+        backgroundColor: softBg,
+        color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : activeLayerPageTheme.accent,
+        borderColor: 'transparent',
+      },
     };
-  const themeAccentButtonStyle = {
-    backgroundColor: activeLayerPageTheme.accent,
-    color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : '#ffffff',
-    boxShadow: `0 4px 14px ${hexToRgba(activeLayerPageTheme.accent, 0.35)}`,
-  };
-  const calendarViewTogglePillStyle = {
-    backgroundColor: darkMode ? 'rgba(17,24,39,0.82)' : 'rgba(255,255,255,0.88)',
-    borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.7)',
-    backdropFilter: 'blur(14px)',
-    boxShadow: darkMode ? '0 10px 24px rgba(0,0,0,0.28)' : '0 10px 24px rgba(15,23,42,0.12)',
-  };
-  const themeAccentTextStyle = { color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : activeLayerPageTheme.accent };
-  const themeAccentSoftButtonStyle = {
-    backgroundColor: themeAccentSoftBg,
-    color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : activeLayerPageTheme.accent,
-    borderColor: themeAccentBorder,
-  };
-  const themeAccentEllieChipButtonStyle = {
-    backgroundColor: mixHexColors(activeLayerPageTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.64 : 0.78),
-    color: darkMode
-      ? mixHexColors(activeLayerPageTheme.accent, '#ffffff', 0.4)
-      : mixHexColors(activeLayerPageTheme.accent, '#111827', 0.18),
-  };
-  const themeAccentSoftActiveButtonStyle = {
-    backgroundColor: themeAccentSoftBg,
-    color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : activeLayerPageTheme.accent,
-    borderColor: 'transparent',
-  };
+  }, [activeLayerPageTheme, darkMode, activeLayerTitleStyle]);
   const cycleThemeMode = () => {
     setThemeMode((prev) => {
       const currentIndex = THEME_MODE_OPTIONS.indexOf(prev);
@@ -9732,28 +9743,31 @@ useEffect(() => {
     : darkMode
       ? <Sun className="w-4 h-4" />
       : <Moon className="w-4 h-4" />;
-  const themeAccentSoftSurfaceStyle = {
-    backgroundImage: `linear-gradient(135deg, ${themeAccentSofterBg} 0%, ${themeAccentSoftBg} 100%)`,
-    borderColor: themeAccentBorder,
-  };
-  const themeAccentHeadingStyle = {
-    color: activeLayerPageTheme.accent,
-  };
-  const themeSelectedSurfaceStyle = {
-    backgroundImage: themeAccentGradient,
-    color: '#ffffff',
-    boxShadow: `0 10px 24px ${mixHexColors(activeLayerPageTheme.accent, '#000000', 0.72)}22`,
-  };
-  const bottomNavActiveTabStyle = {
-    backgroundImage: themeAccentGradient,
-    color: '#ffffff',
-    boxShadow: '0 2px 10px rgba(124,58,237,.4)',
-  };
-  const themeTodaySurfaceStyle = {
-    backgroundImage: `linear-gradient(135deg, ${themeAccentSofterBg} 0%, ${themeAccentSoftBg} 100%)`,
-    color: darkMode ? '#f3f4f6' : '#111827',
-    borderColor: themeAccentBorder,
-  };
+  const {
+    themeAccentSoftSurfaceStyle, themeAccentHeadingStyle, themeSelectedSurfaceStyle,
+    bottomNavActiveTabStyle, themeTodaySurfaceStyle,
+  } = useMemo(() => ({
+    themeAccentSoftSurfaceStyle: {
+      backgroundImage: `linear-gradient(135deg, ${themeAccentSofterBg} 0%, ${themeAccentSoftBg} 100%)`,
+      borderColor: themeAccentBorder,
+    },
+    themeAccentHeadingStyle: { color: activeLayerPageTheme.accent },
+    themeSelectedSurfaceStyle: {
+      backgroundImage: themeAccentGradient,
+      color: '#ffffff',
+      boxShadow: `0 10px 24px ${mixHexColors(activeLayerPageTheme.accent, '#000000', 0.72)}22`,
+    },
+    bottomNavActiveTabStyle: {
+      backgroundImage: themeAccentGradient,
+      color: '#ffffff',
+      boxShadow: '0 2px 10px rgba(124,58,237,.4)',
+    },
+    themeTodaySurfaceStyle: {
+      backgroundImage: `linear-gradient(135deg, ${themeAccentSofterBg} 0%, ${themeAccentSoftBg} 100%)`,
+      color: darkMode ? '#f3f4f6' : '#111827',
+      borderColor: themeAccentBorder,
+    },
+  }), [themeAccentSoftBg, themeAccentSofterBg, themeAccentBorder, themeAccentGradient, activeLayerPageTheme.accent, darkMode]);
   const currentUserProfilePhotoUrl = String(
     getUserProfilePhotoUrl(user)
     || getStableAvatarPublicUrl(user?.id)
@@ -15589,10 +15603,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   useEffect(() => {
     if (!activeLayerId || !user?.id) return;
-    const ownerIdForLayer = String(
-      (layers || []).find((layer) => String(layer?.id || '') === String(activeLayerId || ''))?.owner_id
-      || user.id
-    ).trim();
+    const ownerIdForLayer = String(activeLayerOwnerId || user.id).trim();
     const categoriesChannel = supabase
       .channel(`categories-${activeLayerId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'categories', filter: `layer_id=eq.${activeLayerId}` }, async () => {
@@ -15603,7 +15614,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return () => {
       categoriesChannel.unsubscribe();
     };
-  }, [activeLayerId, user?.id, layers]);
+  }, [activeLayerId, user?.id, activeLayerOwnerId]);
 
   useEffect(() => {
     setChatMembers([]);
@@ -20586,37 +20597,46 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     : primaryJourneyLoggedToday
       ? 'Add a quick update'
       : 'Log today';
-  const primaryJourneyJournalGoalIds = sortedJourneyGoals
-    .filter((goal) => getJourneyGoalType(goal) === 'journal')
-    .map((goal) => String(goal?.id || ''))
-    .filter(Boolean);
-  const filteredJourneyJournalEntries = (journeyState?.entries || []).filter((entry) => primaryJourneyJournalGoalIds.includes(String(entry?.goalId || ''))).filter((entry) => {
+  const filteredJourneyJournalEntries = useMemo(() => {
+    const journalGoalIds = new Set(
+      sortedJourneyGoals
+        .filter((goal) => getJourneyGoalType(goal) === 'journal')
+        .map((goal) => String(goal?.id || ''))
+        .filter(Boolean)
+    );
     const search = String(journeyJournalSearch || '').trim().toLowerCase();
-    const moodMatches = !journeyJournalMoodFilter || String(entry?.mood || '') === String(journeyJournalMoodFilter || '');
-    const tagMatches = !journeyJournalTagFilter || (Array.isArray(entry?.tags) && entry.tags.includes(journeyJournalTagFilter));
-    if (!search) return moodMatches && tagMatches;
-    const haystack = [
-      String(entry?.note || ''),
-      String(entry?.prompt || ''),
-      String((entry?.tags || []).join(' ')),
-      String(entry?.mood || ''),
-    ].join(' ').toLowerCase();
-    return moodMatches && tagMatches && haystack.includes(search);
-  });
+    return (journeyState?.entries || []).filter((entry) => {
+      if (!journalGoalIds.has(String(entry?.goalId || ''))) return false;
+      const moodMatches = !journeyJournalMoodFilter || String(entry?.mood || '') === String(journeyJournalMoodFilter || '');
+      const tagMatches = !journeyJournalTagFilter || (Array.isArray(entry?.tags) && entry.tags.includes(journeyJournalTagFilter));
+      if (!search) return moodMatches && tagMatches;
+      const haystack = [
+        String(entry?.note || ''),
+        String(entry?.prompt || ''),
+        String((entry?.tags || []).join(' ')),
+        String(entry?.mood || ''),
+      ].join(' ').toLowerCase();
+      return moodMatches && tagMatches && haystack.includes(search);
+    });
+  }, [sortedJourneyGoals, journeyState?.entries, journeyJournalSearch, journeyJournalMoodFilter, journeyJournalTagFilter]);
   const journeyTrophyCase = useMemo(
     () => deriveJourneyTrophyCase({ goals: journeyState?.goals || [], entries: journeyState?.entries || [] }),
     [journeyState?.goals, journeyState?.entries]
   );
-  const ownedLayerCalendars = layers.filter(layer => String(layer.owner_id) === String(user?.id));
-  const uniqueVisibleLayers = Array.from(
-    new Map((layers || []).map(layer => [String(layer?.id || ''), layer])).values()
-  ).filter(layer => String(layer?.id || '').trim() !== '');
-  const visibleLayerCalendars = [...uniqueVisibleLayers].sort((a, b) => {
-    const aOwned = String(a?.owner_id) === String(user?.id) ? 0 : 1;
-    const bOwned = String(b?.owner_id) === String(user?.id) ? 0 : 1;
-    if (aOwned !== bOwned) return aOwned - bOwned;
-    return String(a?.name || '').localeCompare(String(b?.name || ''));
-  });
+  const { ownedLayerCalendars, visibleLayerCalendars } = useMemo(() => {
+    const myId = String(user?.id || '');
+    const owned = layers.filter((layer) => String(layer.owner_id) === myId);
+    const unique = Array.from(
+      new Map((layers || []).map((layer) => [String(layer?.id || ''), layer])).values()
+    ).filter((layer) => String(layer?.id || '').trim() !== '');
+    const visible = [...unique].sort((a, b) => {
+      const aOwned = String(a?.owner_id) === myId ? 0 : 1;
+      const bOwned = String(b?.owner_id) === myId ? 0 : 1;
+      if (aOwned !== bOwned) return aOwned - bOwned;
+      return String(a?.name || '').localeCompare(String(b?.name || ''));
+    });
+    return { ownedLayerCalendars: owned, visibleLayerCalendars: visible };
+  }, [layers, user?.id]);
   useEffect(() => {
     setJourneyState(readJourneyState(user?.id));
   }, [user?.id]);
@@ -24212,9 +24232,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     if (aOnline !== bOnline) return aOnline ? -1 : 1;
     return String(a?.label || '').localeCompare(String(b?.label || ''));
   });
-  const selectedSharedListGroup = sharedListGroups.find(group => group.id === selectedSharedListId) || null;
-  const incompleteSharedListItems = sharedListItems.filter(item => !item.done);
-  const completedSharedListItems = sharedListItems.filter(item => item.done);
+  const selectedSharedListGroup = sharedListGroups.find((group) => group.id === selectedSharedListId) || null;
+  const incompleteSharedListItems = sharedListItems.filter((item) => !item.done);
+  const completedSharedListItems = sharedListItems.filter((item) => item.done);
   const totalSharedListItems = sharedListItems.length;
   const completedSharedListCount = completedSharedListItems.length;
   const renderSharedListRow = (item, { completed = false } = {}) => {
@@ -28332,7 +28352,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             >+ New</button>
           </div>
           <div className="space-y-1 max-h-48 overflow-y-auto">
-            {uniqueVisibleLayers.map(layer => {
+            {visibleLayerCalendars.map(layer => {
               const isActive = String(layer.id) === String(activeLayerId);
               const rowTheme = normalizeLayerPageTheme(layer?.page_theme, layer?.title_style);
                       const isLayerOwner = String(layer?.owner_id || '') === String(user?.id || '');
