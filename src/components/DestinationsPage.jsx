@@ -83,6 +83,7 @@ const CURATED_DESTINATIONS = {
     { id: 'kf-6',  name: 'Washington D.C.',       location: 'USA',              vibe: 'kid_friendly', description: 'Every Smithsonian museum is free. A week of history, science, and space exploration that never gets boring.', emoji: '🚀', website: '' },
     { id: 'kf-7',  name: 'Vancouver',             location: 'Canada',           vibe: 'kid_friendly', description: 'Stanley Park, the aquarium, whale watching, and mountains with ski hills. The great outdoors, city-style.', emoji: '🐋', website: '' },
     { id: 'kf-8',  name: 'Reykjavik',             location: 'Iceland',          vibe: 'kid_friendly', description: 'Northern lights, whale watching, geysers, and geothermal pools. Kids find Iceland genuinely magical.', emoji: '🐳', website: '' },
+    { id: 'kf-9',  name: 'Kowloon Bay',           location: 'Hong Kong',        vibe: 'kid_friendly', description: 'A unique city where East meets West and Old meets New.', emoji: '🌆', website: '' },
   ],
   views: [
     { id: 'v-1',  name: 'Trolltunga',             location: 'Norway',           vibe: 'views', description: 'A rock ledge jutting over a glacier lake 700 meters below. The hike is long. The view is forever.', emoji: '🌬️', website: '' },
@@ -208,6 +209,12 @@ const DestinationDetailSheet = ({ destination, photoUrl, photoAttribution, onAdd
   const ts  = darkMode ? '#6b7280' : '#9ca3af';
   const bw  = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
   const { sheetStyle, handleProps } = useSwipeDownSheet(onClose);
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
 
   const vibeConfig = VIBES.find(v => v.id === destination.vibe) || VIBES[0];
   const photoBg = darkMode
@@ -671,6 +678,7 @@ const DestinationsPage = ({
   const communityFeedRef = useRef(null);
   const fetchedRef       = useRef(false);
   const photoFetchedRef  = useRef(new Set());
+  const lastSheetCloseAtRef = useRef(0);
   const travelToday = new Date();
   const travelDailyQuoteSeed = (
     travelToday.getFullYear() * 10000 + (travelToday.getMonth() + 1) * 100 + travelToday.getDate()
@@ -827,9 +835,15 @@ const DestinationsPage = ({
   }, []);
 
   const handleDestinationTap = useCallback((destination) => {
+    if (Date.now() - lastSheetCloseAtRef.current < 350) return;
     recordDestinationInteraction(destination, 'click');
     setSelected(destination);
   }, [recordDestinationInteraction]);
+
+  const handleDestinationSheetClose = useCallback(() => {
+    lastSheetCloseAtRef.current = Date.now();
+    setSelected(null);
+  }, []);
 
   const handleSaveToSomeday = (destination) => {
     const imageUrl = destination.photo
@@ -1014,7 +1028,7 @@ const DestinationsPage = ({
           </p>
           <FeaturedDestinationPost
             post={featuredPost}
-            photoUrl={placePhotos[featuredPost.id] || ''}
+            photoUrl={getDestinationResolvedImage(featuredPost, placePhotos[featuredPost.id] || '')}
             currentUserId={currentUserId}
             onSomeday={handleSomedayFromPost}
             onRemoveFromSomeday={onRemoveFromSomeday}
@@ -1091,7 +1105,7 @@ const DestinationsPage = ({
           photoAttribution={photoAttributions[selected.id] || ''}
           onAddEvent={onAddEvent}
           onSaveToSomeday={handleSaveToSomeday}
-          onClose={() => setSelected(null)}
+          onClose={handleDestinationSheetClose}
           savedIds={savedIds}
           darkMode={darkMode}
         />

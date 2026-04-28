@@ -8,6 +8,7 @@ export const DESTINATION_IMAGE_OVERRIDES = {
   'the-amazon': 'https://onetreeplanted.org/cdn/shop/files/Amazon-Rainforests-Amazonia-South-America.jpg?v=1739422746',
   'costa-rica': 'https://www.thesmoothescape.com/wp-content/uploads/2020/11/Costa-Rica-featured-2a.jpg',
   'san-diego': 'https://cms.inspirato.com/ImageGen.ashx?image=%2fmedia%2f5684439%2fSanDiego_Dest_Calita_Beach.jpg&width=1052.9999256134033',
+  'kowloon-bay': 'https://miro.medium.com/v2/resize:fit:4800/format:webp/0*CeLENn-Ie0--Sdwh',
 };
 
 export const getDestinationImageOverride = (destination = {}) => {
