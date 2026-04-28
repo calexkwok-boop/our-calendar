@@ -102,7 +102,7 @@ const FriendPhotoModal = ({ friend, currentUser, darkMode, onClose, onOpenProfil
       <div
         className="relative flex-1 flex items-center justify-center overflow-hidden select-none"
         onClick={handlePhotoTap}
-        style={{ cursor: 'pointer' }}
+        style={{ cursor: 'pointer', touchAction: 'manipulation' }}
       >
         <img
           src={friend.photoUrl}

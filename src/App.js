@@ -16158,6 +16158,29 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           createdAt,
         });
       })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'memory_reactions', filter: `memory_owner_id=eq.${me}` }, async ({ new: row }) => {
+        if (!row) return;
+        if (String(row.reactor_user_id) === me) return;
+        let who = 'A friend';
+        try {
+          const { data: handleRow } = await supabase
+            .from('user_handles')
+            .select('handle, display_name')
+            .eq('user_id', row.reactor_user_id)
+            .maybeSingle();
+          if (handleRow?.handle) who = `@${handleRow.handle}`;
+          else if (handleRow?.display_name) who = handleRow.display_name;
+        } catch {}
+        const isLike = row.type === 'like';
+        addInAppNotification({
+          key: `memory_reaction:${row.id}`,
+          type: 'photo',
+          message: isLike
+            ? `${who} liked your photo of the day ❤️`
+            : `${who} commented: "${String(row.comment_text || '').slice(0, 60)}"`,
+          createdAt: row.created_at,
+        });
+      })
       .subscribe();
 
     return () => {

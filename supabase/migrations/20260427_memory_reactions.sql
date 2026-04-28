@@ -26,3 +26,6 @@ CREATE POLICY memory_reactions_insert
 CREATE POLICY memory_reactions_delete
   ON public.memory_reactions FOR DELETE
   TO authenticated USING (reactor_user_id = auth.uid());
+
+-- Enable realtime so the photo owner receives live like/comment notifications.
+ALTER PUBLICATION supabase_realtime ADD TABLE public.memory_reactions;
