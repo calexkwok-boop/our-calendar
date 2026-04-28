@@ -61,9 +61,10 @@ const FriendPhotoModal = ({ friend, currentUser, darkMode, onClose, onOpenProfil
     } catch {} finally { setSubmitting(false); }
   }, [commentDraft, myUserId, ownerId, memoryDate, submitting]);
 
-  const handlePhotoTap = useCallback(() => {
+  const handlePhotoTap = useCallback((e) => {
+    e.preventDefault();
     const now = Date.now();
-    if (now - lastTapRef.current < 320) {
+    if (now - lastTapRef.current < 350) {
       lastTapRef.current = 0;
       if (!myLike && !submitting) {
         setHeartBurst(true);
@@ -101,7 +102,7 @@ const FriendPhotoModal = ({ friend, currentUser, darkMode, onClose, onOpenProfil
       {/* Photo */}
       <div
         className="relative flex-1 flex items-center justify-center overflow-hidden select-none"
-        onClick={handlePhotoTap}
+        onPointerUp={handlePhotoTap}
         style={{ cursor: 'pointer', touchAction: 'manipulation' }}
       >
         <img
@@ -122,8 +123,8 @@ const FriendPhotoModal = ({ friend, currentUser, darkMode, onClose, onOpenProfil
 
       {/* Bottom panel */}
       <div
-        className="shrink-0 px-4 pb-safe pb-6 pt-3 space-y-3"
-        style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)' }}
+        className="shrink-0 px-4 pt-3 space-y-3"
+        style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)', paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}
       >
         {/* Like row */}
         <div className="flex items-center gap-2">
