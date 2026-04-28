@@ -1454,6 +1454,7 @@ const SomedayPage = ({
   const [showCreateChapter, setShowCreateChapter] = useState(false);
   const [chapterPromptGroup, setChapterPromptGroup] = useState(null);
   const [dismissedGroups, setDismissedGroups] = useState(new Set());
+  const [pendingInvites, setPendingInvites] = useState([]);
 
   const dragOffset      = useRef({ x: 0, y: 0 });
   const dragStartPoint  = useRef({ x: 0, y: 0 });
@@ -1559,15 +1560,30 @@ const SomedayPage = ({
   useEffect(() => {
     if (!currentUser || currentUser === 'guest') return;
     loadChapters();
+    loadPendingInvites();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, userEmail]);
+
+  async function loadPendingInvites() {
+    if (!userEmail) return;
+    const { data: rows } = await supabase
+      .from('chapter_collaborators')
+      .select('chapter_id, invited_by, created_at')
+      .eq('email', userEmail)
+      .eq('status', 'pending');
+    if (!rows || rows.length === 0) { setPendingInvites([]); return; }
+    const chapterIds = rows.map(r => r.chapter_id);
+    const { data: chapterRows } = await supabase.from('chapters').select('id, title').in('id', chapterIds);
+    const chapterMap = new Map((chapterRows || []).map(c => [c.id, c]));
+    setPendingInvites(rows.map(r => ({ ...r, chapterTitle: chapterMap.get(r.chapter_id)?.title || 'A Chapter' })));
+  }
 
   async function loadChapters() {
     const CHAPTER_SELECT = 'id, title, created_at, owner_id, cover_pin_id, chapter_pins(id)';
     const [ownedResult, memberResult] = await Promise.all([
       supabase.from('chapters').select(CHAPTER_SELECT).eq('owner_id', currentUser),
       userEmail
-        ? supabase.from('chapter_collaborators').select('chapter_id').eq('email', userEmail)
+        ? supabase.from('chapter_collaborators').select('chapter_id').eq('email', userEmail).eq('status', 'accepted')
         : Promise.resolve({ data: [] }),
     ]);
 
@@ -1664,14 +1680,43 @@ const SomedayPage = ({
   async function inviteToChapter(chapterId, email) {
     if (!email.trim()) return;
     const normalized = email.trim().toLowerCase();
-    await supabase.from('chapter_collaborators').upsert(
-      { chapter_id: chapterId, email: normalized, invited_by: currentUser },
-      { onConflict: 'chapter_id,email' }
-    );
+    const { error: insertErr } = await supabase
+      .from('chapter_collaborators')
+      .insert({ chapter_id: chapterId, email: normalized, invited_by: currentUser, status: 'pending' });
+    if (insertErr) {
+      // Row exists — only re-invite if they haven't already accepted
+      await supabase
+        .from('chapter_collaborators')
+        .update({ invited_by: currentUser, status: 'pending' })
+        .eq('chapter_id', chapterId)
+        .eq('email', normalized)
+        .neq('status', 'accepted');
+    }
     setChapters(prev => prev.map(c => c.id === chapterId ? {
       ...c,
       collaborators: [...(c.collaborators || []).filter(x => x.email !== normalized), { email: normalized, invited_by: currentUser }],
     } : c));
+  }
+
+  async function acceptInvite(chapterId) {
+    if (!userEmail) return;
+    await supabase
+      .from('chapter_collaborators')
+      .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+      .eq('chapter_id', chapterId)
+      .eq('email', userEmail);
+    setPendingInvites(prev => prev.filter(i => i.chapter_id !== chapterId));
+    loadChapters();
+  }
+
+  async function declineInvite(chapterId) {
+    if (!userEmail) return;
+    await supabase
+      .from('chapter_collaborators')
+      .delete()
+      .eq('chapter_id', chapterId)
+      .eq('email', userEmail);
+    setPendingInvites(prev => prev.filter(i => i.chapter_id !== chapterId));
   }
 
   useEffect(() => {
@@ -2012,6 +2057,39 @@ const SomedayPage = ({
           </div>
         </div>
       </div>
+
+      {/* Pending chapter invitations */}
+      {pendingInvites.length > 0 && (
+        <div style={{ padding: '16px 16px 0' }}>
+          <p style={{ fontSize: 10, color: darkMode ? '#fbbf24' : '#92400e', textTransform: 'uppercase', letterSpacing: '0.2em', margin: '0 0 10px', fontWeight: 700 }}>
+            📬 Chapter Invitations
+          </p>
+          {pendingInvites.map(invite => (
+            <div key={invite.chapter_id} style={{ background: darkMode ? 'rgba(255,255,255,0.05)' : '#fff', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e0d5'}`, borderRadius: 16, padding: '12px 14px', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ margin: 0, fontFamily: CAVEAT, fontSize: 18, fontWeight: 700, color: tp, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  📖 {invite.chapterTitle}
+                </p>
+                <p style={{ margin: '3px 0 0', fontSize: 12, color: ts }}>You were invited to join this chapter</p>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                <button
+                  onClick={() => declineInvite(invite.chapter_id)}
+                  style={{ padding: '6px 12px', borderRadius: 20, background: 'transparent', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.15)' : '#e5e0d5'}`, color: ts, fontSize: 13, cursor: 'pointer', fontFamily: CAVEAT, fontSize: 14 }}
+                >
+                  Decline
+                </button>
+                <button
+                  onClick={() => acceptInvite(invite.chapter_id)}
+                  style={{ padding: '6px 16px', borderRadius: 20, background: '#2dd4bf', border: 'none', color: '#0a1020', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: CAVEAT }}
+                >
+                  Accept
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Focus pins */}
       {(() => {
