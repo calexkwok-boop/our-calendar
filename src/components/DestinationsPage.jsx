@@ -165,6 +165,14 @@ const destinationTrackingKey = (destination = {}) => (
   || `${destination.name || destination.destination_name || ''}-${destination.location || ''}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 );
 
+const normalizeDestinationMatchKey = (destination = {}) => (
+  `${destination.name || destination.destination_name || ''} ${destination.location || ''}`
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+);
+
 // ─── Swipe-down sheet hook ────────────────────────────────────────────────────
 function useSwipeDownSheet(onClose) {
   const [dragY, setDragY] = useState(0);
@@ -673,6 +681,8 @@ const DestinationsPage = ({
   const [featuredPost, setFeaturedPost]           = useState(null);
   const [highlightedPostId, setHighlightedPostId] = useState(null);
   const [isShareOpen, setIsShareOpen]     = useState(false);
+  const [googleSearchResults, setGoogleSearchResults] = useState([]);
+  const [googleSearchLoading, setGoogleSearchLoading] = useState(false);
   const [placePhotos, setPlacePhotos]     = useState({});
   const [photoAttributions, setPhotoAttributions] = useState({});
   const communityFeedRef = useRef(null);
@@ -757,6 +767,68 @@ const DestinationsPage = ({
       (d.description || '').toLowerCase().includes(q)
     );
   }, [destinations, search, vibe]);
+
+  useEffect(() => {
+    const query = search.trim();
+    if (!query) {
+      setGoogleSearchResults([]);
+      setGoogleSearchLoading(false);
+      return undefined;
+    }
+
+    let isActive = true;
+    const timer = window.setTimeout(async () => {
+      setGoogleSearchLoading(true);
+      try {
+        const q = encodeURIComponent(`${query} travel destination`);
+        const res = await fetch(`/api/places?action=textsearch&query=${q}&type=tourist_attraction`);
+        const data = await res.json();
+        if (!isActive) return;
+
+        const curatedKeys = new Set(filtered.map(normalizeDestinationMatchKey));
+        const nextResults = (data.results || [])
+          .slice(0, 6)
+          .map((result, index) => {
+            const photo = result?.photos?.[0];
+            const photoRef = photo?.photo_reference;
+            const id = `google-${result.place_id || index}-${query.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+            const location = result.formatted_address || result.vicinity || '';
+            const mapped = {
+              id,
+              place_id: result.place_id || null,
+              destination_key: result.place_id || id,
+              name: result.name || query,
+              location,
+              vibe: vibe && vibe !== 'all' ? vibe : 'bucket_list',
+              description: result.editorial_summary?.overview || `Found on Google for "${query}".`,
+              emoji: '📍',
+              website: '',
+              photo: photoRef ? `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800` : '',
+            };
+
+            if (photo?.html_attributions?.[0]) {
+              setPhotoAttributions((prev) => (
+                prev[id] ? prev : { ...prev, [id]: photo.html_attributions[0] }
+              ));
+            }
+
+            return mapped;
+          })
+          .filter((destination) => !curatedKeys.has(normalizeDestinationMatchKey(destination)));
+
+        setGoogleSearchResults(nextResults.slice(0, 3));
+      } catch {
+        if (isActive) setGoogleSearchResults([]);
+      } finally {
+        if (isActive) setGoogleSearchLoading(false);
+      }
+    }, 260);
+
+    return () => {
+      isActive = false;
+      window.clearTimeout(timer);
+    };
+  }, [filtered, search, vibe]);
 
   const fetchDestinationPhoto = useCallback(async (destination) => {
     const destinationId = String(destination?.id || '');
@@ -930,6 +1002,12 @@ const DestinationsPage = ({
     : 'linear-gradient(135deg, #eef2ff 0%, #f0fdfa 55%, #faf8f3 100%)';
 
   const activeVibeLabel = VIBES.find(v => v.id === vibe)?.label || '';
+  const displayedDestinations = useMemo(() => (
+    search.trim()
+      ? [...filtered, ...googleSearchResults]
+      : filtered
+  ), [filtered, googleSearchResults, search]);
+  const showGoogleSearchState = Boolean(search.trim());
   const resultHeading = search.trim()
     ? `Results for "${search}"`
     : activeVibeLabel && vibe !== 'all'
@@ -1060,12 +1138,17 @@ const DestinationsPage = ({
       <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: ts, padding: '0 18px 10px', margin: 0 }}>
         {resultHeading}
       </p>
+      {showGoogleSearchState && (
+        <p style={{ fontSize: 12, color: ts, padding: '0 18px 12px', margin: 0 }}>
+          {googleSearchLoading ? 'Searching Google places...' : googleSearchResults.length ? `Including up to ${googleSearchResults.length} Google matches` : 'No extra Google matches found'}
+        </p>
+      )}
 
       {/* ── Destination grid ── */}
       <div style={{ padding: '0 14px 100px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
-        {loading
+        {loading && !showGoogleSearchState
           ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} darkMode={darkMode} />)
-          : filtered.length === 0
+          : displayedDestinations.length === 0
             ? (
               (search || vibe) ? (
                 <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '64px 24px' }}>
@@ -1081,7 +1164,7 @@ const DestinationsPage = ({
                 </div>
               ) : null
             )
-            : filtered.map((d, i) => (
+            : displayedDestinations.map((d, i) => (
               <DestinationCard
                 key={d.id}
                 destination={d}
