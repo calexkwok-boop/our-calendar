@@ -557,7 +557,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                   {invitees.length > 0 && (
                     <div style={{ display: 'flex', paddingLeft: 5, flexShrink: 0 }}>
                       {preview.map((inv, i) => (
-                        <GuestPip key={inv.id || i} person={inv} name={inv.display_name || inv.name}
+                        <GuestPip key={inv.id || i} person={inv} name={inv.display_name || inv.name || 'Guest'}
                           role={inv.role} accent={accent} darkMode={darkMode} size={32} />
                       ))}
                       {overflow > 0 && (

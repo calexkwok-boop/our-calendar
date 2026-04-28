@@ -98,9 +98,9 @@ const getPersonAvatarUrl = (person) => String(
   || ''
 ).trim();
 
-const PersonAvatar = ({ person, className = 'w-10 h-10', textClassName = 'text-white font-bold', fallbackClassName = 'bg-rose-500' }) => {
+const PersonAvatar = ({ person, className = 'w-10 h-10', textClassName = 'text-white font-bold', fallbackClassName = 'bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400' }) => {
   const avatarUrl = getPersonAvatarUrl(person);
-  const initial = String(person?.name || '?').trim().charAt(0).toUpperCase() || '?';
+  const initial = String(person?.name || person?.handle || person?.username || 'U').trim().charAt(0).toUpperCase() || 'U';
   if (avatarUrl) {
     return (
       <img

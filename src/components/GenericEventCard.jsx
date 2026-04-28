@@ -196,7 +196,7 @@ export default function GenericEventCard({
     || event.created_by_name
     || event.createdBy
     || currentUserName
-    || '?'
+    || 'Host'
   ).trim();
   const sealLetter = gInitials(creatorName);
 
@@ -448,7 +448,7 @@ export default function GenericEventCard({
               <GuestPip
                 key={inv.id || idx}
                 person={inv}
-                name={inv.display_name || inv.name}
+                name={inv.display_name || inv.name || 'Guest'}
                 role={inv.role}
                 ink={ink}
                 darkMode={darkMode}
