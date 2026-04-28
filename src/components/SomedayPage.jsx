@@ -1775,7 +1775,7 @@ const SomedayPage = ({
 
   const lowestPinBottom = pins.filter(p => !isPinInChapter(p)).reduce((max, pin) => Math.max(max, (Number(pin.y) || 0) + estimatedPinHeight(pin)), 0);
   const BOARD_HEIGHT = Math.max(600, chapterTotalHeight + Math.ceil(pins.length / 2) * 240 + 240, chapterTotalHeight + lowestPinBottom + 120);
-  const focusPins = pins.filter((pin) => pin.type !== 'label' && pin.type !== 'sticker' && pin.status === 'planning').slice(0, 3);
+  const focusPins = pins.filter((pin) => pin.type !== 'label' && pin.type !== 'sticker' && pin.status === 'planning' && !isPinInChapter(pin)).slice(0, 3);
 
   // ─── Drag ──────────────────────────────────────────────────────────────────
   function startDrag(e, id) {
