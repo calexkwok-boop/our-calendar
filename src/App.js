@@ -5428,7 +5428,13 @@ function App() {
   const handleEventSwipeEnd = () => {
     const eventKey = swipingEventKeyRef.current;
     if (!eventKey) return;
-    const open = eventSwipeDrag.id === eventKey && eventSwipeDrag.offset <= -36;
+    const hasDrag = eventSwipeDrag.id === eventKey;
+    const open = hasDrag && eventSwipeDrag.offset <= -36;
+    if (!hasDrag && swipedEventKey === eventKey) {
+      swipingEventKeyRef.current = null;
+      eventSwipeAxisLockRef.current = null;
+      return;
+    }
     setSwipedEventKey(open ? eventKey : null);
     setEventSwipeDrag({ id: null, offset: 0 });
     swipingEventKeyRef.current = null;
@@ -5467,7 +5473,13 @@ function App() {
   const endEventSwipeDrag = () => {
     const eventKey = swipingEventKeyRef.current;
     if (!eventKey) return;
-    const open = eventSwipeDrag.id === eventKey && eventSwipeDrag.offset <= -36;
+    const hasDrag = eventSwipeDrag.id === eventKey;
+    const open = hasDrag && eventSwipeDrag.offset <= -36;
+    if (!hasDrag && swipedEventKey === eventKey) {
+      swipingEventKeyRef.current = null;
+      eventSwipeAxisLockRef.current = null;
+      return;
+    }
     setSwipedEventKey(open ? eventKey : null);
     setEventSwipeDrag({ id: null, offset: 0 });
     swipingEventKeyRef.current = null;
@@ -17167,9 +17179,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   const openUserTabEvent = async (event, popupMetaOverride = null) => {
     if (!event) return;
-    const popupMeta = popupMetaOverride || popupEventsByEventId[String(event?.id || '')] || null;
-    const popupCard = (userTabPopupEvents || []).find((row) => String(row?.id || '') === String(event?.id || '')) || null;
-    const isPopupEvent = Boolean(popupMeta || popupCard);
+    const eventId = String(event?.id || '');
+    const popupMeta = popupMetaOverride || popupEventsByEventId[eventId] || null;
+    const popupCard = (userTabPopupEvents || []).find((row) => String(row?.id || '') === eventId) || null;
+    // event.isPopup is set for popup events even when popupEventsByEventId hasn't loaded yet
+    const isPopupEvent = Boolean(popupMeta || popupCard || event?.isPopup);
     const targetLayerId = String(
       popupMeta?.layerId
       || popupCard?.layerId
@@ -17200,10 +17214,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }
     }
     if (isPopupEvent) {
-      setSelectedPopupEventPanelId(String(event?.id || ''));
+      // Open the event card directly — setting this also triggers popup data to load
+      setSelectedPopupEventPanelId(eventId);
       return;
     }
+    // Regular calendar event: open the day view pre-expanded to this event
     openAgendaItem(event);
+    setEditingEvent(eventId);
   };
 
   const handleInAppNotificationClick = async (item) => {

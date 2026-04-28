@@ -98,7 +98,7 @@ export default function useHomeScreenData({
 
     // Merge in popup events (from popup_event_details) that aren't already present.
     (upcomingPopupEvents || []).forEach((event) => {
-      addUpcomingEvent({ ...event, recurrence: 'once', isAnnual: false });
+      addUpcomingEvent({ ...event, recurrence: 'once', isAnnual: false, isPopup: true });
     });
 
     return upcomingCandidates
