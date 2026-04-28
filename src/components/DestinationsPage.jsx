@@ -683,9 +683,11 @@ const DestinationsPage = ({
   const [isShareOpen, setIsShareOpen]     = useState(false);
   const [googleSearchResults, setGoogleSearchResults] = useState([]);
   const [googleSearchLoading, setGoogleSearchLoading] = useState(false);
+  const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
   const [placePhotos, setPlacePhotos]     = useState({});
   const [photoAttributions, setPhotoAttributions] = useState({});
   const communityFeedRef = useRef(null);
+  const searchBoxRef     = useRef(null);
   const fetchedRef       = useRef(false);
   const photoFetchedRef  = useRef(new Set());
   const lastSheetCloseAtRef = useRef(0);
@@ -871,6 +873,21 @@ const DestinationsPage = ({
     fetchDestinationPhoto(featuredPost);
   }, [featuredPost, fetchDestinationPhoto]);
 
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(event.target)) {
+        setShowSearchSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, []);
+
   // ── Handlers ─────────────────────────────────────────────────────────────────
   const handleVibeChange = (vibeId) => {
     if (vibe === vibeId) {
@@ -1007,6 +1024,17 @@ const DestinationsPage = ({
       ? [...filtered, ...googleSearchResults]
       : filtered
   ), [filtered, googleSearchResults, search]);
+  const searchSuggestions = useMemo(() => {
+    const seen = new Set();
+    return displayedDestinations
+      .filter((destination) => {
+        const key = normalizeDestinationMatchKey(destination);
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 6);
+  }, [displayedDestinations]);
   const showGoogleSearchState = Boolean(search.trim());
   const resultHeading = search.trim()
     ? `Results for "${search}"`
@@ -1045,20 +1073,44 @@ const DestinationsPage = ({
       </div>
 
       {/* ── Search bar ── */}
-      <div style={{ margin: '0 16px 14px', display: 'flex', gap: 8 }}>
+      <div ref={searchBoxRef} style={{ margin: '0 16px 14px', display: 'flex', gap: 8, position: 'relative' }}>
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: darkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6', border: `1px solid ${bw}`, borderRadius: 14, padding: '10px 14px' }}>
           <Search style={{ width: 14, height: 14, color: ts, flexShrink: 0, opacity: .6 }} />
           <input
             type="text"
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => {
+              setSearch(e.target.value);
+              setShowSearchSuggestions(Boolean(e.target.value.trim()));
+            }}
+            onFocus={() => {
+              if (search.trim() && searchSuggestions.length > 0) setShowSearchSuggestions(true);
+            }}
             placeholder="Search a destination or country…"
             style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 14, color: tp }}
           />
           {search && (
-            <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: ts, padding: 0 }}>✕</button>
+            <button onClick={() => { setSearch(''); setShowSearchSuggestions(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: ts, padding: 0 }}>✕</button>
           )}
         </div>
+        {showSearchSuggestions && searchSuggestions.length > 0 && (
+          <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 30, background: darkMode ? '#131c2e' : '#fff', border: `1px solid ${bw}`, borderRadius: 16, overflow: 'hidden', boxShadow: darkMode ? '0 18px 40px rgba(0,0,0,0.42)' : '0 18px 40px rgba(15,23,42,0.14)' }}>
+            {searchSuggestions.map((destination) => (
+              <button
+                key={`suggestion-${destination.id}`}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setSearch(destination.name || destination.destination_name || '');
+                  setShowSearchSuggestions(false);
+                }}
+                style={{ width: '100%', textAlign: 'left', padding: '12px 14px', border: 'none', borderBottom: `1px solid ${bw}`, background: 'transparent', cursor: 'pointer', color: tp }}
+              >
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{destination.name || destination.destination_name}</div>
+                <div style={{ fontSize: 12, color: ts, marginTop: 2 }}>{destination.location || 'Google result'}</div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Vibe strip ── */}
