@@ -741,7 +741,7 @@ const ScrapbookHomeHybrid = ({
             {(memoryCollagePhotos.length > 0 ? memoryCollagePhotos : ['', '', '', '']).slice(0, 4).map((url, index) => (
               <div
                 key={`memory-collage-${index}`}
-                className="h-20 sm:h-24 rounded-[14px] border border-white/40 dark:border-white/10 bg-gradient-to-br from-violet-100 via-rose-50 to-amber-100 dark:from-violet-900/30 dark:via-slate-900 dark:to-amber-900/20 bg-cover bg-center"
+                className="h-36 sm:h-44 rounded-[14px] border border-white/40 dark:border-white/10 bg-gradient-to-br from-violet-100 via-rose-50 to-amber-100 dark:from-violet-900/30 dark:via-slate-900 dark:to-amber-900/20 bg-cover bg-center"
                 style={url ? { backgroundImage: `url(${url})` } : undefined}
               />
             ))}
