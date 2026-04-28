@@ -20667,63 +20667,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   // ─── Friends' daily photos for home screen strip
   useEffect(() => {
     const userId = String(user?.id || '').trim();
-    const userEmail = String(user?.email || '').toLowerCase().trim();
     if (!userId) { setFriendsDailyPhotos([]); return; }
     let cancelled = false;
     (async () => {
       try {
         const today = new Date().toISOString().slice(0, 10);
-
-        // Discover friends from popup events AND shared trips in parallel
-        const [
-          { data: myEvents },
-          { data: myMemberTrips },
-          { data: myOwnedTrips },
-        ] = await Promise.all([
-          supabase.from('popup_event_members').select('event_id').eq('user_id', userId),
-          userEmail
-            ? supabase.from('sub_calendar_members').select('sub_calendar_id').ilike('email', userEmail)
-            : Promise.resolve({ data: [] }),
-          supabase.from('sub_calendars').select('id').eq('owner_id', userId),
+        const { data: myEvents } = await supabase
+          .from('popup_event_members').select('event_id').eq('user_id', userId);
+        if (cancelled || !myEvents?.length) return;
+        const myEventIds = myEvents.map((m) => m.event_id).filter(Boolean);
+        const [{ data: coMembers }, { data: sharingUsers }] = await Promise.all([
+          supabase.from('popup_event_members').select('user_id').in('event_id', myEventIds).neq('user_id', userId),
+          supabase.from('user_profiles').select('user_id').eq('share_photo_of_day', true),
         ]);
         if (cancelled) return;
-
-        const friendIdSet = new Set();
-
-        // From popup events
-        if (myEvents?.length) {
-          const myEventIds = myEvents.map((m) => m.event_id).filter(Boolean);
-          const { data: eventCoMembers } = await supabase
-            .from('popup_event_members').select('user_id').in('event_id', myEventIds).neq('user_id', userId);
-          (eventCoMembers || []).forEach((m) => { if (m.user_id) friendIdSet.add(String(m.user_id)); });
-        }
-
-        // From shared trips (sub_calendar_members stores emails; resolve to user_ids via user_handles)
-        const myTripIds = [
-          ...(myMemberTrips || []).map((m) => m.sub_calendar_id),
-          ...(myOwnedTrips || []).map((t) => t.id),
-        ].filter(Boolean);
-        if (myTripIds.length) {
-          const { data: tripCoMembers } = await supabase
-            .from('sub_calendar_members').select('user_id, email').in('sub_calendar_id', myTripIds);
-          const tripEmails = (tripCoMembers || [])
-            .filter((m) => !m.user_id && m.email && m.email.toLowerCase() !== userEmail)
-            .map((m) => m.email.toLowerCase());
-          (tripCoMembers || []).forEach((m) => {
-            if (m.user_id && String(m.user_id) !== userId) friendIdSet.add(String(m.user_id));
-          });
-          // Resolve emails → user_ids via user_handles
-          if (tripEmails.length) {
-            const { data: handleRows } = await supabase
-              .from('user_handles').select('user_id, email').in('email', tripEmails);
-            (handleRows || []).forEach((h) => { if (h.user_id) friendIdSet.add(String(h.user_id)); });
-          }
-        }
-
-        if (cancelled) return;
-        const friendIds = [...friendIdSet].filter((id) => id !== userId);
+        const sharingIdSet = new Set((sharingUsers || []).map((u) => String(u.user_id)));
+        const friendIds = [...new Set((coMembers || []).map((m) => String(m.user_id)).filter((id) => id && sharingIdSet.has(id)))];
         if (!friendIds.length) return;
-
         const [{ data: todayMemories }, { data: handles }] = await Promise.all([
           supabase.from('user_memories').select('owner_user_id, memory').in('owner_user_id', friendIds).eq('memory_date', today),
           supabase.from('user_handles').select('user_id, handle').in('user_id', friendIds),
@@ -20733,7 +20693,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         for (const h of (handles || [])) handleMap[String(h.user_id)] = h.handle;
         const photos = (todayMemories || []).map((row) => {
           const mem = typeof row.memory === 'object' ? row.memory : {};
-          const photoUrl = String(mem.coverPhoto || mem.photos?.[0]?.url || mem.photos?.[0]?.photoUrl || mem.photoUrl || '').trim();
+          const photoUrl = String(mem.coverPhoto || mem.photos?.[0]?.url || mem.photoUrl || '').trim();
           if (!photoUrl) return null;
           const uid = String(row.owner_user_id);
           return {
@@ -20748,7 +20708,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       } catch {}
     })();
     return () => { cancelled = true; };
-  }, [user?.id, user?.email]);
+  }, [user?.id]);
 
   // ─── Eager friends list prefetch (runs in background after login)
   useEffect(() => {

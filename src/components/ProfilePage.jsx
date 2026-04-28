@@ -558,24 +558,21 @@ const ProfilePage = ({
 
   // ─── Load friend profile + connection context
   useEffect(() => {
-    if (isOwnProfile || (!viewedUserEmail && !viewedUserId)) { setLoading(false); return; }
+    if (isOwnProfile || !viewedUserId) { setLoading(false); return; }
 
     const load = async () => {
       setLoading(true);
       setFriendSharedPhoto(null);
       try {
-        // Resolve email — try prop first, then user_handles by user_id, then proceed without it
+        // If opened by userId only, resolve email from user_handles so email-based queries still work
         let email = viewedUserEmail ? viewedUserEmail.toLowerCase().trim() : null;
         if (!email && viewedUserId) {
-          try {
-            const { data: ehRow } = await supabase
-              .from('user_handles').select('email').eq('user_id', viewedUserId).maybeSingle();
-            email = ehRow?.email?.toLowerCase().trim() || null;
-          } catch {}
+          const { data: ehRow } = await supabase
+            .from('user_handles').select('email').eq('user_id', viewedUserId).maybeSingle();
+          email = ehRow?.email?.toLowerCase().trim() || null;
         }
 
         // Batch 1: all queries independent of each other — run in parallel
-        // Email-dependent queries fall back to empty results when email is unavailable
         const [
           handleRowRes,
           myMemberTripIdsRes,
@@ -590,9 +587,7 @@ const ProfilePage = ({
         ] = await Promise.all([
           email
             ? supabase.from('user_handles').select('handle').ilike('email', email).maybeSingle()
-            : viewedUserId
-              ? supabase.from('user_handles').select('handle').eq('user_id', viewedUserId).maybeSingle()
-              : Promise.resolve({ data: null }),
+            : supabase.from('user_handles').select('handle').eq('user_id', viewedUserId).maybeSingle(),
           userEmail
             ? supabase.from('sub_calendar_members').select('sub_calendar_id').ilike('email', userEmail)
             : Promise.resolve({ data: [] }),
@@ -620,7 +615,7 @@ const ProfilePage = ({
             : Promise.resolve({ data: null }),
         ]);
 
-        const handle = handleRowRes.data?.handle || (email ? knownHandlesRef.current[email] : null) || (email ? email.split('@')[0] : viewedUserId?.slice(0, 8) || '?');
+        const handle = handleRowRes.data?.handle || knownHandlesRef.current[email] || email?.split('@')[0] || viewedUserId?.slice(0, 8) || '?';
         setFriendProfile({
           email,
           handle,
