@@ -564,18 +564,18 @@ const ProfilePage = ({
       setLoading(true);
       setFriendSharedPhoto(null);
       try {
-        // When opened by userId only (e.g. from home strip), resolve email first
+        // Resolve email — try prop first, then user_handles by user_id, then proceed without it
         let email = viewedUserEmail ? viewedUserEmail.toLowerCase().trim() : null;
         if (!email && viewedUserId) {
-          const { data: ehRow } = await supabase
-            .from('user_handles')
-            .select('email')
-            .eq('user_id', viewedUserId)
-            .maybeSingle();
-          email = ehRow?.email?.toLowerCase().trim() || null;
+          try {
+            const { data: ehRow } = await supabase
+              .from('user_handles').select('email').eq('user_id', viewedUserId).maybeSingle();
+            email = ehRow?.email?.toLowerCase().trim() || null;
+          } catch {}
         }
-        if (!email) { setLoading(false); return; }
+
         // Batch 1: all queries independent of each other — run in parallel
+        // Email-dependent queries fall back to empty results when email is unavailable
         const [
           handleRowRes,
           myMemberTripIdsRes,
@@ -588,14 +588,20 @@ const ProfilePage = ({
           friendEventMembershipsRes,
           userProfilesRes,
         ] = await Promise.all([
-          supabase.from('user_handles').select('handle').ilike('email', email).maybeSingle(),
+          email
+            ? supabase.from('user_handles').select('handle').ilike('email', email).maybeSingle()
+            : viewedUserId
+              ? supabase.from('user_handles').select('handle').eq('user_id', viewedUserId).maybeSingle()
+              : Promise.resolve({ data: null }),
           userEmail
             ? supabase.from('sub_calendar_members').select('sub_calendar_id').ilike('email', userEmail)
             : Promise.resolve({ data: [] }),
           currentUser?.id
             ? supabase.from('sub_calendars').select('id').eq('owner_id', currentUser.id)
             : Promise.resolve({ data: [] }),
-          supabase.from('sub_calendar_members').select('sub_calendar_id').ilike('email', email),
+          email
+            ? supabase.from('sub_calendar_members').select('sub_calendar_id').ilike('email', email)
+            : Promise.resolve({ data: [] }),
           viewedUserId
             ? supabase.from('sub_calendars').select('id').eq('owner_id', viewedUserId)
             : Promise.resolve({ data: [] }),
@@ -614,7 +620,7 @@ const ProfilePage = ({
             : Promise.resolve({ data: null }),
         ]);
 
-        const handle = handleRowRes.data?.handle || knownHandlesRef.current[email] || email.split('@')[0];
+        const handle = handleRowRes.data?.handle || (email ? knownHandlesRef.current[email] : null) || (email ? email.split('@')[0] : viewedUserId?.slice(0, 8) || '?');
         setFriendProfile({
           email,
           handle,
@@ -655,7 +661,7 @@ const ProfilePage = ({
             sharedTripIds.length > 0
               ? supabase.from('sub_calendars').select('id, name').in('id', sharedTripIds)
               : Promise.resolve({ data: [] }),
-            allMyLayerIds.length > 0
+            allMyLayerIds.length > 0 && email
               ? supabase.from('shared_access').select('layer_id').in('layer_id', allMyLayerIds).ilike('shared_with_email', email)
               : Promise.resolve({ data: [] }),
             receivedLayerIds.length > 0 && viewedUserId
@@ -663,7 +669,7 @@ const ProfilePage = ({
               : Promise.resolve({ data: [] }),
           ]),
           (async () => {
-            if (!friendPrefs.share_photo_of_day || !viewedUserId) return null;
+            if (friendPrefs.share_photo_of_day === false || !viewedUserId) return null;
             const today = new Date().toISOString().slice(0, 10);
             const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
             // Two parallel queries: one for explicit memory_date, one for legacy null memory_date records created today
