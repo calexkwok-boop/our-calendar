@@ -1703,6 +1703,7 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, onM
 
   const handleMilestone = useCallback((item) => {
     onMakeItHappen?.({
+      id: item.id,
       label: item.name,
       text: item.name,
       emoji: item.emoji || "✨",

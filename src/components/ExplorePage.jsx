@@ -394,6 +394,7 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
                   });
                 } else if (post.type === "products") {
                   onMakeItHappen?.({
+                    id: post.id,
                     label: post.cardTitle,
                     text: post.cardTitle,
                     emoji: TYPE_EMOJI[post.type] || "✨",
@@ -474,6 +475,7 @@ function PostDetailSheet({ post, onClose, onAddToSomeday, onRemoveFromSomeday, o
       onPlanEvent?.({ title: `Trip to ${post.cardTitle}`, notes: post.location || '', category: 'trip', location: post.location || post.cardTitle });
     } else if (post.type === 'products') {
       onMakeItHappen?.({
+        id: post.id,
         label: post.cardTitle,
         text: post.cardTitle,
         emoji: TYPE_EMOJI[post.type] || '✨',

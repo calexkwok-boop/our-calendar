@@ -357,10 +357,18 @@ export default function useHomeScreenData({
           imageUrl: item?.imageUrl,
         })),
       ];
+      const coverPinId = String(linkedChapter?.cover_pin_id || '').trim();
       const chapterCoverUrl = linkedChapter
-        ? String(komoBookItems.find((item) => chapterItemIds.has(String(item?.id || '').trim()) && (item?.photoUrl || item?.imageUrl))?.photoUrl
-          || komoBookItems.find((item) => chapterItemIds.has(String(item?.id || '').trim()) && (item?.photoUrl || item?.imageUrl))?.imageUrl
-          || '').trim()
+        ? (() => {
+            if (coverPinId) {
+              const coverItem = komoBookItems.find((item) => String(item?.id || '').trim() === coverPinId);
+              const url = String(coverItem?.photoUrl || coverItem?.imageUrl || '').trim();
+              if (url) return url;
+            }
+            return String(komoBookItems.find((item) => chapterItemIds.has(String(item?.id || '').trim()) && (item?.photoUrl || item?.imageUrl))?.photoUrl
+              || komoBookItems.find((item) => chapterItemIds.has(String(item?.id || '').trim()) && (item?.photoUrl || item?.imageUrl))?.imageUrl
+              || '').trim();
+          })()
         : '';
       return {
         ...trip,

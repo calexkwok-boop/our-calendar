@@ -236,6 +236,7 @@ export default function MakeItHappenSheet({ item, onClose, onAddEvent, darkMode 
       category: 'milestone',
       emoji: item?.emoji || '🎯',
       sourceId: item?.id || null,
+      sourceItem: item || null,
     });
     setCalAdded(true);
     setTimeout(() => setShowSuccess(true), 200);

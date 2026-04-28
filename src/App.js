@@ -19728,11 +19728,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const activeTripLinkedChapter = activeTripLinkedChapterId
     ? (komoChapters || []).find(c => String(c?.id || '') === activeTripLinkedChapterId) || null
     : null;
-  const activeTripChapterCoverUrl = activeTripLinkedChapter
-    ? (bucketList || []).find(d =>
-        d?.imageUrl && (activeTripLinkedChapter.itemIds || []).some(id => String(id) === String(d?.id || ''))
-      )?.imageUrl || ''
-    : '';
+  const activeTripChapterCoverUrl = (() => {
+    if (!activeTripLinkedChapter) return '';
+    const coverPinId = String(activeTripLinkedChapter.cover_pin_id || '').trim();
+    if (coverPinId) {
+      const coverItem = (bucketList || []).find(d => String(d?.id || '') === coverPinId);
+      if (coverItem?.imageUrl) return coverItem.imageUrl;
+    }
+    return (bucketList || []).find(d =>
+      d?.imageUrl && (activeTripLinkedChapter.itemIds || []).some(id => String(id) === String(d?.id || ''))
+    )?.imageUrl || '';
+  })();
   const activeTripCoverPhoto = activeTripChapterCoverUrl
     ? { url: activeTripChapterCoverUrl }
     : (tripCoverPhoto?.url ? tripCoverPhoto : null);
@@ -25212,16 +25218,61 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   const addMakeItHappenMilestone = async (eventData = {}) => {
     if (!assertCanEditActiveLayer('add events to this calendar')) return;
     const sourceId = String(eventData.sourceId || '').trim();
+    const sourceItem = eventData?.sourceItem && typeof eventData.sourceItem === 'object' ? eventData.sourceItem : null;
+    const sourceText = String(
+      sourceItem?.label
+      || sourceItem?.text
+      || sourceItem?.name
+      || sourceItem?.dream
+      || ''
+    ).trim();
+    const sourceEmoji = String(sourceItem?.emoji || '✨').trim() || '✨';
+    const sourceType = String(sourceItem?.type || sourceItem?.sourceType || '').trim();
+    const sourcePhotoUrl = String(sourceItem?.imageUrl || sourceItem?.photoUrl || '').trim();
+    const sourceNotes = String(sourceItem?.notes || '').trim();
+    const sourceBrand = String(sourceItem?.brand || sourceItem?.product_brand || '').trim();
+    const sourcePriceRange = String(sourceItem?.priceRange || sourceItem?.price || sourceItem?.product_price || '').trim();
+    const sourceCategory = sourceItem?.categoryId === 'buy' || sourceType === 'products' || sourceType === 'dreamshelf'
+      ? 'buy'
+      : sourceItem?.categoryId === 'travel' || sourceType === 'destinations'
+        ? 'travel'
+        : sourceItem?.categoryId === 'food' || sourceType === 'restaurants'
+          ? 'food'
+          : sourceType === 'hiking'
+            ? 'adventure'
+            : sourceType === 'movies' || sourceType === 'games'
+              ? 'fun'
+              : String(sourceItem?.category || '').trim() || 'buy';
     if (sourceId) {
-      setBucketList((prev) => (
-        Array.isArray(prev)
-          ? prev.map((item) => (
-              String(item?.id || '') === sourceId
-                ? { ...item, status: 'planning' }
-                : item
-            ))
-          : prev
-      ));
+      setBucketList((prev) => {
+        const list = Array.isArray(prev) ? prev : [];
+        const existingIndex = list.findIndex((item) => String(item?.id || '') === sourceId);
+        if (existingIndex >= 0) {
+          return list.map((item, index) => (
+            index === existingIndex
+              ? { ...item, status: 'planning' }
+              : item
+          ));
+        }
+        if (!sourceText) return list;
+        return [
+          {
+            id: sourceId,
+            text: sourceText,
+            category: sourceCategory,
+            sources: [],
+            emoji: sourceEmoji,
+            photoUrl: sourcePhotoUrl,
+            createdAt: new Date().toISOString(),
+            notes: sourceNotes,
+            brand: sourceBrand,
+            priceRange: sourcePriceRange,
+            type: sourceType,
+            status: 'planning',
+          },
+          ...list,
+        ];
+      });
       setQuickThoughts((prev) => (
         Array.isArray(prev)
           ? prev.map((item) => (
