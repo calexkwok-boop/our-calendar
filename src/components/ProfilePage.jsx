@@ -838,13 +838,6 @@ const ProfilePage = ({
                     </div>
                   </div>
 
-                  {/* Logout */}
-                  <button
-                    onClick={() => onLogout?.()}
-                    className={`w-full py-2.5 rounded-2xl text-sm font-medium ${darkMode ? 'bg-white/8 text-white/70 hover:bg-white/12' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'} transition-colors`}
-                  >
-                    Sign out
-                  </button>
                 </div>
               )}
             </div>
@@ -911,6 +904,14 @@ const ProfilePage = ({
                 </div>
               )}
             </div>
+
+            {/* Sign out */}
+            <button
+              onClick={() => onLogout?.()}
+              className={`w-full mt-4 py-3 rounded-2xl text-sm font-medium ${darkMode ? 'bg-white/8 text-white/70 hover:bg-white/12' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'} transition-colors`}
+            >
+              Sign out
+            </button>
           </>
         )}
 
