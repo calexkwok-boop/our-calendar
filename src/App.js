@@ -8998,6 +8998,13 @@ useEffect(() => {
     const canModerateEventLayer = shareRole === 'admin' || shareRole === 'moderator';
     if (!eventLayer?.is_public) return Boolean(isEventLayerOwner || canModerateEventLayer || !shareRowForEventLayer || shareRowForEventLayer?.can_edit !== false);
     if (canModerateEventLayer) return true;
+    // Old events may have no ownership info (userId/createdBy were not always stored).
+    // If the event is on the active layer and the user can edit it, allow deletion.
+    if (eventLayerId === String(activeLayerId || '').trim()) {
+      const hasNoOwnerInfo = !String(event?.userId || event?.user_id || '').trim()
+        && !String(event?.createdBy || event?.created_by || '').trim();
+      if (hasNoOwnerInfo) return canEditActiveLayer;
+    }
     return isEventOwnedByCurrentUser(event);
   };
   const isShareRowForCurrentAccount = (share) => {
@@ -19297,8 +19304,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     // Invalidate any in-flight save that may write stale pre-delete state.
     saveRequestIdRef.current += 1;
 
-    const actualDateKey = Object.keys(events).find(k => events[k]?.some(e => e.id === eventId)) || dateKey;
-    const eventToDelete = events[actualDateKey]?.find(e => e.id === eventId)
+    const actualDateKey = Object.keys(events).find(k => events[k]?.some(e => String(e.id) === String(eventId))) || dateKey;
+    const eventToDelete = events[actualDateKey]?.find(e => String(e.id) === String(eventId))
       || sourceEvent
       || (userTabPopupEvents || []).find((e) => String(e?.id || '') === String(eventId || ''))
       || null;
@@ -19313,7 +19320,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         let originalDateKey = null;
         let originalEvent = null;
         Object.entries(events).forEach(([key, evts]) => {
-          const found = evts.find(e => e.id === eventId);
+          const found = evts.find(e => String(e.id) === String(eventId));
           if (found) { originalDateKey = key; originalEvent = found; }
         });
         if (!originalEvent && sourceEvent) {
@@ -19342,14 +19349,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         setEvents(prev => ({
           ...prev,
           [originalDateKey]: (prev[originalDateKey] || []).map(e =>
-            e.id === eventId ? { ...e, exceptions: updatedExceptions } : e
+            String(e.id) === String(eventId) ? { ...e, exceptions: updatedExceptions } : e
           )
         }));
       } else {
         // Delete the whole recurring event
         const ok = await deleteEventsByIds([eventId], { layerId: targetLayerId });
         if (!ok) return;
-        const updatedEvents = { ...events, [originalDateKey]: (events[originalDateKey] || []).filter(e => e.id !== eventId) };
+        const updatedEvents = { ...events, [originalDateKey]: (events[originalDateKey] || []).filter(e => String(e.id) !== String(eventId)) };
         if (updatedEvents[originalDateKey].length === 0) delete updatedEvents[originalDateKey];
         setEvents(updatedEvents);
       }
