@@ -25210,6 +25210,27 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
   const addMakeItHappenMilestone = async (eventData = {}) => {
     if (!assertCanEditActiveLayer('add events to this calendar')) return;
+    const sourceId = String(eventData.sourceId || '').trim();
+    if (sourceId) {
+      setBucketList((prev) => (
+        Array.isArray(prev)
+          ? prev.map((item) => (
+              String(item?.id || '') === sourceId
+                ? { ...item, status: 'planning' }
+                : item
+            ))
+          : prev
+      ));
+      setQuickThoughts((prev) => (
+        Array.isArray(prev)
+          ? prev.map((item) => (
+              String(item?.id || '') === sourceId
+                ? { ...item, status: 'planning' }
+                : item
+            ))
+          : prev
+      ));
+    }
     const dateKey = String(eventData.date || getDateKey(new Date())).trim();
     const title = String(eventData.title || 'Make it happen').trim();
     const eventId = generateUuid();
@@ -31025,7 +31046,7 @@ transform: translateY(0);
                 priceRange: d.priceRange || '',
                 sourceType: d.type || '',
                 noteColor: 'yellow',
-                pinColor: 'teal',
+                pinColor: d.status === 'planning' ? 'purple' : 'teal',
                 categoryId: catMap[d.category] || 'experiences',
                 status: d.status || 'dreaming',
                 chapterId: d.chapterId,

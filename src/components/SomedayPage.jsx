@@ -864,7 +864,7 @@ function AddSheet({ onClose, onAdd, darkMode }) {
 }
 
 // ─── Detail Sheet ─────────────────────────────────────────────────────────────
-function DetailSheet({ pin, chapters, onClose, onConvertToEvent, onConvertToTrip, onMarkDone, onSetHero, heroId, onAddToChapter, onRemoveFromChapter, darkMode }) {
+function DetailSheet({ pin, chapters, onClose, onConvertToEvent, onConvertToTrip, onMarkDone, onSetHero, onSetFocusStatus, heroId, onAddToChapter, onRemoveFromChapter, darkMode }) {
   const [showChapterPicker, setShowChapterPicker] = useState(false);
   const sheetBg = darkMode ? '#131c2e' : '#ffffff';
   const tp      = darkMode ? '#e8eaf0' : '#1a1a2e';
@@ -942,6 +942,11 @@ function DetailSheet({ pin, chapters, onClose, onConvertToEvent, onConvertToTrip
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {pin.status !== 'done' && (
             <button onClick={handleTurnIntoPlan} style={{ flex: '1 1 100%', minWidth: 120, padding: '12px', borderRadius: 14, background: darkMode ? 'rgba(139,92,246,0.12)' : '#f5f3ff', color: darkMode ? '#c4b5fd' : '#6d28d9', border: `1px solid ${darkMode ? 'rgba(139,92,246,0.25)' : 'rgba(139,92,246,0.28)'}`, fontFamily: CAVEAT, fontSize: 18, fontWeight: 700, cursor: 'pointer' }}>Make it happen</button>
+          )}
+          {pin.status === 'planning' && (
+            <button onClick={() => { onSetFocusStatus?.(pin, 'dreaming'); onClose(); }} style={{ flex: 1, minWidth: 120, padding: '11px', borderRadius: 14, background: darkMode ? 'rgba(139,92,246,0.08)' : '#faf5ff', color: darkMode ? '#d8b4fe' : '#7c3aed', border: `1px solid ${darkMode ? 'rgba(139,92,246,0.22)' : 'rgba(139,92,246,0.24)'}`, fontFamily: CAVEAT, fontSize: 16, cursor: 'pointer' }}>
+              Remove focus
+            </button>
           )}
           <button onClick={() => { onMarkDone?.(pin); onClose(); }} style={{ flex: 1, minWidth: 120, padding: '11px', borderRadius: 14, background: pin.status === 'done' ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : secBg, color: pin.status === 'done' ? (darkMode ? '#2dd4bf' : '#0d9488') : (darkMode ? '#cbd5e1' : ts), border: `1px solid ${inputBdr}`, fontFamily: CAVEAT, fontSize: 16, cursor: 'pointer' }}>
             {pin.status === 'done' ? '✓ Done!' : 'Mark done'}
@@ -1436,7 +1441,7 @@ const SomedayPage = ({
 }) => {
   const [pins, setPins] = useState(() => dreams.map((d, idx) => {
     const pos = (d.x == null || d.y == null) ? gridPosition(idx) : { x: d.x, y: d.y, rot: d.rot };
-    return { ...d, ...pos, rot: pos.rot ?? d.rot ?? (Math.random() * 6 - 3), pinColor: d.pinColor ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)], noteColor: d.noteColor ?? 'yellow', type: d.type ?? (d.imageUrl || d.emoji ? 'photo' : 'note') };
+    return { ...d, ...pos, rot: pos.rot ?? d.rot ?? (Math.random() * 6 - 3), pinColor: d.status === 'planning' ? 'purple' : (d.pinColor ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)]), noteColor: d.noteColor ?? 'yellow', type: d.type ?? (d.imageUrl || d.emoji ? 'photo' : 'note') };
   }));
   const [filter, setFilter]               = useState('all');
   const [showAdd, setShowAdd]             = useState(false);
@@ -1488,7 +1493,10 @@ const SomedayPage = ({
       let changed = false;
       const next = ps.map(p => {
         const s = statusById.get(String(p.id));
-        if (s !== undefined && s !== p.status) { changed = true; return { ...p, status: s }; }
+        if (s !== undefined && (s !== p.status || (s === 'planning' && p.pinColor !== 'purple') || (s !== 'planning' && p.pinColor === 'purple' && !p.chapterId))) {
+          changed = true;
+          return { ...p, status: s, pinColor: s === 'planning' ? 'purple' : (p.chapterId ? 'purple' : (p.pinColor === 'purple' ? 'teal' : p.pinColor)) };
+        }
         return p;
       });
       return changed ? next : ps;
@@ -1721,6 +1729,7 @@ const SomedayPage = ({
 
   const lowestPinBottom = pins.filter(p => !isPinInChapter(p)).reduce((max, pin) => Math.max(max, (Number(pin.y) || 0) + estimatedPinHeight(pin)), 0);
   const BOARD_HEIGHT = Math.max(600, chapterTotalHeight + Math.ceil(pins.length / 2) * 240 + 240, chapterTotalHeight + lowestPinBottom + 120);
+  const focusPins = pins.filter((pin) => pin.type !== 'label' && pin.type !== 'sticker' && pin.status === 'planning').slice(0, 3);
 
   // ─── Drag ──────────────────────────────────────────────────────────────────
   function startDrag(e, id) {
@@ -1926,6 +1935,16 @@ const SomedayPage = ({
     onUpdateDream?.(updated);
   }
 
+  function setPinFocusStatus(pin, status) {
+    const nextStatus = status || 'dreaming';
+    const updated = { ...pin, status: nextStatus, pinColor: nextStatus === 'planning' ? 'purple' : (pin.chapterId ? 'purple' : 'teal') };
+    setPins((prev) => prev.map((entry) => (entry.id === pin.id ? updated : entry)));
+    if (nextStatus !== 'planning' && String(heroId || '') === String(pin.id || '')) {
+      setHeroId(null);
+    }
+    onUpdateDream?.(updated);
+  }
+
   // ─── Chapter page view ────────────────────────────────────────────────────
   if (activeChapterId) {
     const chapter = chapters.find(c => c.id === activeChapterId);
@@ -1993,33 +2012,41 @@ const SomedayPage = ({
         </div>
       </div>
 
-      {/* Hero pin */}
+      {/* Focus pins */}
       {(() => {
         const heroPin = heroId ? pins.find(p => p.id === heroId) : null;
-        if (!heroPin) return null;
-        const isNote = heroPin.type === 'note';
-        const noteScheme = isNote ? (NOTE_COLORS[heroPin.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'] : null;
+        if (focusPins.length === 0 && !heroPin) return null;
+        const visibleFocusPins = focusPins.length > 0 ? focusPins : [heroPin];
         return (
-          <div style={{ padding: '20px 16px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <p style={{ fontSize: 10, color: darkMode ? '#fbbf24' : '#92400e', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: 12, fontWeight: 700 }}>★ Focus</p>
-            <div onClick={() => setDetailPin(heroPin)} style={{ cursor: 'pointer', transform: `rotate(${(heroPin.rot ?? 0) * 0.3}deg)`, transition: 'transform 0.2s' }}>
-              {isNote ? (
-                <div style={{ background: noteScheme.bg, padding: '18px 18px 20px', boxShadow: '0 10px 36px rgba(0,0,0,0.18)', width: 240, minHeight: 120, position: 'relative', borderRadius: 2 }}>
-                  <div style={{ position: 'absolute', top: 0, right: 0, borderWidth: '0 26px 26px 0', borderStyle: 'solid', borderColor: `transparent ${noteScheme.fold} transparent transparent` }} />
-                  <Pushpin colorKey={heroPin.pinColor} darkMode={darkMode} />
-                  <p style={{ fontFamily: CAVEAT, fontSize: 19, color: noteScheme.text, lineHeight: 1.45, margin: 0, wordBreak: 'break-word' }}>{heroPin.text}</p>
-                </div>
-              ) : (
-                <div style={{ background: darkMode ? '#e2e8f0' : '#ffffff', padding: '8px 8px 0', borderRadius: 3, boxShadow: '0 10px 36px rgba(0,0,0,0.18)', width: 220, position: 'relative' }}>
-                  <Pushpin colorKey={heroPin.pinColor} darkMode={darkMode} />
-                  <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 2 }}>
-                    {heroPin.imageUrl ? <img src={heroPin.imageUrl} alt={heroPin.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : <div style={{ width: '100%', height: '100%', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64 }}>{heroPin.emoji || '📌'}</div>}
+          <div style={{ padding: '20px 16px 12px' }}>
+            <p style={{ fontSize: 10, color: darkMode ? '#fbbf24' : '#92400e', textTransform: 'uppercase', letterSpacing: '0.2em', margin: '0 0 12px', fontWeight: 700, textAlign: visibleFocusPins.length === 1 ? 'center' : 'left' }}>★ Focus</p>
+            <div style={{ display: 'flex', gap: 14, overflowX: 'auto', scrollbarWidth: 'none', justifyContent: visibleFocusPins.length === 1 ? 'center' : 'flex-start', paddingBottom: 4 }}>
+              {visibleFocusPins.map((focusPin) => {
+                if (!focusPin) return null;
+                const isNote = focusPin.type === 'note';
+                const noteScheme = isNote ? (NOTE_COLORS[focusPin.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'] : null;
+                return (
+                  <div key={`focus-${focusPin.id}`} onClick={() => setDetailPin(focusPin)} style={{ cursor: 'pointer', transform: `rotate(${(focusPin.rot ?? 0) * 0.3}deg)`, transition: 'transform 0.2s', flexShrink: 0 }}>
+                    {isNote ? (
+                      <div style={{ background: noteScheme.bg, padding: '18px 18px 20px', boxShadow: '0 10px 36px rgba(0,0,0,0.18)', width: 220, minHeight: 120, position: 'relative', borderRadius: 2 }}>
+                        <div style={{ position: 'absolute', top: 0, right: 0, borderWidth: '0 26px 26px 0', borderStyle: 'solid', borderColor: `transparent ${noteScheme.fold} transparent transparent` }} />
+                        <Pushpin colorKey="purple" darkMode={darkMode} />
+                        <p style={{ fontFamily: CAVEAT, fontSize: 19, color: noteScheme.text, lineHeight: 1.45, margin: 0, wordBreak: 'break-word' }}>{focusPin.text}</p>
+                      </div>
+                    ) : (
+                      <div style={{ background: darkMode ? '#e2e8f0' : '#ffffff', padding: '8px 8px 0', borderRadius: 3, boxShadow: '0 10px 36px rgba(0,0,0,0.18)', width: 180, position: 'relative' }}>
+                        <Pushpin colorKey="purple" darkMode={darkMode} />
+                        <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 2 }}>
+                          {focusPin.imageUrl ? <img src={focusPin.imageUrl} alt={focusPin.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : <div style={{ width: '100%', height: '100%', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 56 }}>{focusPin.emoji || '📌'}</div>}
+                        </div>
+                        <div style={{ padding: '8px 4px 10px', textAlign: 'center' }}>
+                          <div style={{ fontFamily: CAVEAT, fontSize: 16, color: '#374151', lineHeight: 1.3 }}>{focusPin.emoji ? `${focusPin.emoji} ${focusPin.label || focusPin.text}` : (focusPin.label || focusPin.text)}</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div style={{ padding: '8px 4px 10px', textAlign: 'center' }}>
-                    <div style={{ fontFamily: CAVEAT, fontSize: 16, color: '#374151', lineHeight: 1.3 }}>{heroPin.emoji ? `${heroPin.emoji} ${heroPin.label || heroPin.text}` : (heroPin.label || heroPin.text)}</div>
-                  </div>
-                </div>
-              )}
+                );
+              })}
             </div>
           </div>
         );
@@ -2085,6 +2112,7 @@ const SomedayPage = ({
           onMarkDone={markDone}
           heroId={heroId}
           onSetHero={setHeroId}
+          onSetFocusStatus={setPinFocusStatus}
           onAddToChapter={addPinToChapter}
           onRemoveFromChapter={removePinFromChapter}
           darkMode={darkMode}

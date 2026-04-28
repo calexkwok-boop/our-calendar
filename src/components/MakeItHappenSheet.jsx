@@ -235,6 +235,7 @@ export default function MakeItHappenSheet({ item, onClose, onAddEvent, darkMode 
       date: calc.goalDate.toISOString().split('T')[0],
       category: 'milestone',
       emoji: item?.emoji || '🎯',
+      sourceId: item?.id || null,
     });
     setCalAdded(true);
     setTimeout(() => setShowSuccess(true), 200);
