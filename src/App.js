@@ -19314,6 +19314,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const storedLayerId = String(eventToDelete?.layerId || eventToDelete?.layer_id || '').trim();
     const useNullLayerId = !storedLayerId;
     const targetLayerId = storedLayerId || String(activeLayerId || '').trim();
+    console.log('[handleDelete] eventId:', eventId, 'found:', !!eventToDelete, 'storedLayerId:', storedLayerId, 'useNullLayerId:', useNullLayerId, 'targetLayerId:', targetLayerId, 'isVirtual:', isVirtualAnnual||isVirtualRecurrence, 'isJoinedPopup:', eventToDelete?.isJoinedPopup);
     if (!canDeleteEventInActiveLayer(eventToDelete)) {
       alert('In public calendars, members can only delete events they created.');
       return;
