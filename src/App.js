@@ -7983,6 +7983,7 @@ function App() {
   const [selectedRoundRobinEventId, setSelectedRoundRobinEventId] = useState('');
   const [layerRoundRobins, setLayerRoundRobins] = useState({});
   const [roundRobinTeamsOf, setRoundRobinTeamsOf] = useState(2);
+  const [sportsPanelDateFilter, setSportsPanelDateFilter] = useState('');
   const [showScramblePanel, setShowScramblePanel] = useState(false);
   const [selectedScrambleEventId, setSelectedScrambleEventId] = useState('');
   const [scrambleRoundsCount, setScrambleRoundsCount] = useState(4);
@@ -24077,14 +24078,17 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
       return;
     }
     if (id === 'gauntlet') {
+      setSportsPanelDateFilter(selectedDateKey);
       setShowGauntletPanel((prev) => !prev);
       return;
     }
     if (id === 'roundrobin') {
+      setSportsPanelDateFilter(selectedDateKey);
       setShowRoundRobinPanel((prev) => !prev);
       return;
     }
     if (id === 'scramble') {
+      setSportsPanelDateFilter(selectedDateKey);
       setShowScramblePanel((prev) => !prev);
       return;
     }
@@ -28110,7 +28114,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 activeLayerPageTheme={activeLayerPageTheme}
                 darkMode={darkMode}
                 deriveGauntletStandings={deriveGauntletStandings}
-                eligibleGauntletPopupEvents={eligibleGauntletPopupEvents}
+                eligibleGauntletPopupEvents={sportsPanelDateFilter ? eligibleGauntletPopupEvents.filter((e) => e.dateKey === sportsPanelDateFilter) : eligibleGauntletPopupEvents}
                 finalizeGauntletRound={finalizeGauntletRound}
                 formatDateKeyMMDDYYYY={formatDateKeyMMDDYYYY}
                 formatTime={formatTime}
@@ -28183,7 +28187,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           setShowRoundRobinPanel(false);
         }}
         participants={activeRoundRobinTournament?.participants?.length ? activeRoundRobinTournament.participants : selectedRoundRobinParticipants}
-        eligibleRoundRobinEvents={eligibleRoundRobinEvents}
+        eligibleRoundRobinEvents={sportsPanelDateFilter ? eligibleRoundRobinEvents.filter((e) => e.dateKey === sportsPanelDateFilter) : eligibleRoundRobinEvents}
         selectedRoundRobinEventId={selectedRoundRobinEventId}
         setSelectedRoundRobinEventId={setSelectedRoundRobinEventId}
         useManualRoundRobinRoster={useManualRoundRobinRoster}
@@ -28242,7 +28246,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           if (restorePopupSportsModePicker()) return;
           setShowScramblePanel(false);
         }}
-        eligibleScramblePopupEvents={eligibleScramblePopupEvents}
+        eligibleScramblePopupEvents={sportsPanelDateFilter ? eligibleScramblePopupEvents.filter((e) => e.dateKey === sportsPanelDateFilter) : eligibleScramblePopupEvents}
         selectedEvent={selectedScrambleEvent}
         setSelectedEvent={(event) => setSelectedScrambleEventId(String(event?.id || event?.eventId || ''))}
         formatDateKeyMMDDYYYY={formatDateKeyMMDDYYYY}
@@ -28513,6 +28517,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     clearPopupQueryParam();
   };
   const launchRoundRobinFromPopup = (ev, mems) => {
+    setSportsPanelDateFilter(String(ev?.dateKey || ev?.date || ''));
     setManualRoundRobinRosterInput(mems.map((m) => m.display_name).join('\n'));
     setSelectedRoundRobinEventId(String(ev?.id || ''));
     setUseManualRoundRobinRoster(false);
@@ -28523,6 +28528,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     clearPopupQueryParam();
   };
   const launchGauntletFromPopup = (ev, mems) => {
+    setSportsPanelDateFilter(String(ev?.dateKey || ev?.date || ''));
     setManualGauntletRosterInput(mems.map((m) => m.display_name).join('\n'));
     setUseManualGauntletRoster(true);
     setPopupSportsModeReturnTarget({ eventId: selectedPopupId, screen: 'game' });
@@ -28531,6 +28537,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     clearPopupQueryParam();
   };
   const launchScrambleFromPopup = (ev, mems) => {
+    setSportsPanelDateFilter(String(ev?.dateKey || ev?.date || ''));
     setManualScramblePlayerNames(mems.map((m) => m.display_name).join(', '));
     setSelectedScrambleEventId(String(ev?.id || ''));
     setUseManualScrambleRoster(false);
