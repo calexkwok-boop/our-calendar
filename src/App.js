@@ -8985,6 +8985,7 @@ useEffect(() => {
     const eventLayer = (layers || []).find((layer) => String(layer?.id || '') === eventLayerId) || null;
     const eventLayerOwnerId = String(eventLayer?.owner_id || '').trim();
     const isEventLayerOwner = eventLayerOwnerId && eventLayerOwnerId === String(user?.id || '');
+    console.log('[canDelete] id:', event?.id, 'userId:', event?.userId, 'layerId:', event?.layerId || event?.layer_id, 'eventLayerId:', eventLayerId, 'activeLayerId:', activeLayerId, 'layerFound:', !!eventLayer, 'is_public:', eventLayer?.is_public, 'owner_id:', eventLayer?.owner_id, 'user_id:', user?.id, 'isEventLayerOwner:', isEventLayerOwner);
     if (isEventLayerOwner) return true;
     const shareRowForEventLayer = (sharedCalendars || []).find((row) => {
       const layerId = String(row?.layer_id || row?.calendar_id || '');
@@ -8996,6 +8997,7 @@ useEffect(() => {
     }) || null;
     const shareRole = String(shareRowForEventLayer?.role || '').trim().toLowerCase() || 'member';
     const canModerateEventLayer = shareRole === 'admin' || shareRole === 'moderator';
+    console.log('[canDelete] shareRow:', !!shareRowForEventLayer, 'canMod:', canModerateEventLayer, 'is_public:', eventLayer?.is_public, 'isOwnedByUser:', isEventOwnedByCurrentUser(event));
     if (!eventLayer?.is_public) return Boolean(isEventLayerOwner || canModerateEventLayer || !shareRowForEventLayer || shareRowForEventLayer?.can_edit !== false);
     if (canModerateEventLayer) return true;
     // Old events may have no ownership info (userId/createdBy were not always stored).
@@ -9003,6 +9005,7 @@ useEffect(() => {
     if (eventLayerId === String(activeLayerId || '').trim()) {
       const hasNoOwnerInfo = !String(event?.userId || event?.user_id || '').trim()
         && !String(event?.createdBy || event?.created_by || '').trim();
+      console.log('[canDelete] public layer orphan check: eventLayerId===activeLayerId:', eventLayerId === String(activeLayerId || '').trim(), 'hasNoOwnerInfo:', hasNoOwnerInfo, 'canEditActiveLayer:', canEditActiveLayer);
       if (hasNoOwnerInfo) return canEditActiveLayer;
     }
     return isEventOwnedByCurrentUser(event);
