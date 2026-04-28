@@ -7,6 +7,7 @@ import RestaurantPage from "./RestaurantPage";
 import HikingPage from "./HikingPage";
 import DreamShelfPage from "./DreamShelfPage";
 import DestinationsPage from "./DestinationsPage";
+import { getDestinationImageOverride } from "../data/destinationImageOverrides";
 
 const TMDB_KEY = "b66752afda91b8258d32f4388f049a22";
 const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
@@ -82,6 +83,10 @@ const EXPLORE_IMAGE_FALLBACKS = {
 };
 
 function getExploreImageUrl(post = {}) {
+  if (post.type === "destinations") {
+    const overrideUrl = getDestinationImageOverride(post);
+    if (overrideUrl) return overrideUrl;
+  }
   if (post.imageUrl) return post.imageUrl;
   if (!["destinations", "hiking", "products", "restaurants"].includes(post.type)) return "";
 
@@ -105,6 +110,13 @@ function getExploreImageUrl(post = {}) {
     return "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80";
   }
   return EXPLORE_IMAGE_FALLBACKS.products;
+}
+
+function getExploreCardImageUrl(post = {}, googleImgUrl = "") {
+  if (post.type === "destinations") {
+    return getDestinationImageOverride(post) || googleImgUrl || getExploreImageUrl(post);
+  }
+  return googleImgUrl || getExploreImageUrl(post);
 }
 
 const SOURCE_CONFIG = {
@@ -299,7 +311,7 @@ const TYPE_EMOJI = { hiking: "🥾", games: "🎲", restaurants: "🍜", product
 function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveFromSomeday, onCardTap }) {
   const [inSomeday, setInSomeday] = useState(false);
   const googleImgUrl = useGoogleImage(post.imageQuery || (post.type === 'games' ? `${post.cardTitle} board game box` : null));
-  const imageUrl = googleImgUrl || getExploreImageUrl(post);
+  const imageUrl = getExploreCardImageUrl(post, googleImgUrl);
 
   return (
     <div className="rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent shadow-sm dark:shadow-none overflow-hidden">
@@ -574,7 +586,7 @@ function WeekendCard({ post, onAddToSomeday, onRemoveFromSomeday, onPlanEvent, o
   const googleImgUrl = useGoogleImage(!isMovie ? (post.imageQuery || (isGame ? `${post.cardTitle} board game box` : null)) : null);
   const imageUrl = isMovie
     ? (post.poster_path ? `${TMDB_IMG}${post.poster_path}` : null)
-    : googleImgUrl || getExploreImageUrl(post);
+    : getExploreCardImageUrl(post, googleImgUrl);
   const title = isMovie ? post.title : post.cardTitle;
 
   function handleSomeday(e) {
