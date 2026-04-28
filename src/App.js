@@ -5420,7 +5420,6 @@ function App() {
       eventSwipeAxisLockRef.current = absDeltaX > absDeltaY ? 'x' : 'y';
     }
     if (eventSwipeAxisLockRef.current === 'y') return;
-    if (typeof e.preventDefault === 'function') e.preventDefault();
     const clamped = Math.max(-88, Math.min(0, deltaX));
     setEventSwipeDrag({ id: eventKey, offset: clamped });
   };
