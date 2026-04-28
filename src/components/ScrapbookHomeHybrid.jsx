@@ -289,6 +289,7 @@ const ScrapbookHomeHybrid = ({
                       alt="Profile"
                       className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-white/40 dark:border-white/10"
                       onError={() => setAvatarImgError(true)}
+                      fetchpriority="high"
                     />
                   ) : (
                     <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-white/40 dark:border-white/10 bg-gradient-to-br from-violet-400 via-purple-400 to-indigo-400 flex items-center justify-center text-white text-sm font-bold">
@@ -422,6 +423,7 @@ const ScrapbookHomeHybrid = ({
                         src={todayMoment.photoUrl}
                         alt="Today's moment"
                         className="h-full w-full object-cover"
+                        fetchpriority="high"
                       />
                     ) : (
                       <div className="h-full w-full bg-gradient-to-br from-violet-100 via-rose-50 to-amber-100 dark:from-violet-900/30 dark:via-slate-900 dark:to-amber-900/20 flex items-center justify-center">
@@ -495,6 +497,7 @@ const ScrapbookHomeHybrid = ({
                           src={friend.photoUrl}
                           alt={friend.handle}
                           className="w-full h-full object-cover"
+                          decoding="async"
                         />
                       </div>
                       <p
@@ -574,6 +577,7 @@ const ScrapbookHomeHybrid = ({
                     alt=""
                     className="absolute inset-0 h-full w-full object-cover"
                     draggable={false}
+                    loading="lazy"
                   />
                 )}
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.45),transparent_38%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.22),transparent_32%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_38%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.08),transparent_32%)]" />
@@ -650,6 +654,7 @@ const ScrapbookHomeHybrid = ({
                           src={dream.photoUrl}
                           alt={dream.text}
                           className="h-full w-full object-cover"
+                          loading="lazy"
                         />
                       </div>
                       <div className="px-1 py-3 text-center">

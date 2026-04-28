@@ -20668,11 +20668,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     const userId = String(user?.id || '').trim();
     if (!userId) { setFriendsDailyPhotos([]); return; }
+
+    const _d = new Date();
+    const today = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`;
+    const DAILY_PHOTO_CACHE_KEY = `komo-daily-photos-${userId}-${today}`;
+    const DAILY_PHOTO_TTL = 5 * 60 * 1000; // 5 min
+
+    // Show stale cache immediately so the strip renders before the fetch completes
+    try {
+      const cached = JSON.parse(localStorage.getItem(DAILY_PHOTO_CACHE_KEY) || 'null');
+      if (cached?.photos && Array.isArray(cached.photos) && Date.now() - (cached.ts || 0) < DAILY_PHOTO_TTL) {
+        setFriendsDailyPhotos(cached.photos);
+      }
+    } catch {}
+
     let cancelled = false;
     (async () => {
       try {
-        const _d = new Date();
-        const today = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`;
         const { data: myEvents } = await supabase
           .from('popup_event_members').select('event_id').eq('user_id', userId);
         if (cancelled || !myEvents?.length) return;
@@ -20684,7 +20696,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         if (cancelled) return;
         const sharingIdSet = new Set((sharingUsers || []).map((u) => String(u.user_id)));
         const friendIds = [...new Set((coMembers || []).map((m) => String(m.user_id)).filter((id) => id && sharingIdSet.has(id)))];
-        if (!friendIds.length) return;
+        if (!friendIds.length) { if (!cancelled) setFriendsDailyPhotos([]); return; }
         const [{ data: todayMemories }, { data: handles }] = await Promise.all([
           supabase.from('user_memories').select('owner_user_id, memory').in('owner_user_id', friendIds).eq('memory_date', today),
           supabase.from('user_handles').select('user_id, handle').in('user_id', friendIds),
@@ -20705,7 +20717,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             avatarUrl: `${supabase.supabaseUrl}/storage/v1/object/public/avatars/${uid}/avatar`,
           };
         }).filter(Boolean);
-        if (!cancelled) setFriendsDailyPhotos(photos);
+        if (!cancelled) {
+          setFriendsDailyPhotos(photos);
+          try { localStorage.setItem(DAILY_PHOTO_CACHE_KEY, JSON.stringify({ photos, ts: Date.now() })); } catch {}
+        }
       } catch {}
     })();
     return () => { cancelled = true; };
