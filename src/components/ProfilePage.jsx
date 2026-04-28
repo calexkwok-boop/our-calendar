@@ -665,8 +665,10 @@ const ProfilePage = ({
           ]),
           (async () => {
             if (friendPrefs.share_photo_of_day === false || !viewedUserId) return null;
-            const today = new Date().toISOString().slice(0, 10);
-            const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+            const _d = new Date();
+            const today = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`;
+            const _t = new Date(_d.getFullYear(), _d.getMonth(), _d.getDate() + 1);
+            const tomorrow = `${_t.getFullYear()}-${String(_t.getMonth() + 1).padStart(2, '0')}-${String(_t.getDate()).padStart(2, '0')}`;
             // Two parallel queries: one for explicit memory_date, one for legacy null memory_date records created today
             const [{ data: memByDate }, { data: memByCreated }] = await Promise.all([
               supabase.from('user_memories').select('memory').eq('owner_user_id', viewedUserId).eq('memory_date', today).limit(1).maybeSingle(),

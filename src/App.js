@@ -20671,7 +20671,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     let cancelled = false;
     (async () => {
       try {
-        const today = new Date().toISOString().slice(0, 10);
+        const _d = new Date();
+        const today = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`;
         const { data: myEvents } = await supabase
           .from('popup_event_members').select('event_id').eq('user_id', userId);
         if (cancelled || !myEvents?.length) return;
