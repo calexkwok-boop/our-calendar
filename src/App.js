@@ -16237,6 +16237,36 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           createdAt: row.created_at,
         });
       })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chapter_collaborators' }, async ({ new: row }) => {
+        if (!row) return;
+        const invitedEmail = String(row.email || '').trim().toLowerCase();
+        if (!myEmail || invitedEmail !== myEmail) return;
+        if (String(row.invited_by || '') === me) return;
+        const chapterId = String(row.chapter_id || '');
+        let chapterTitle = 'a chapter';
+        if (chapterId) {
+          try {
+            const { data: chRow } = await supabase.from('chapters').select('title').eq('id', chapterId).maybeSingle();
+            if (chRow?.title) chapterTitle = `"${chRow.title}"`;
+          } catch {}
+        }
+        addInAppNotification({
+          key: `chapter_invite:${chapterId}:${myEmail}:${String(row.created_at || Date.now())}`,
+          type: 'invite',
+          message: `You were invited to ${chapterTitle}.`,
+          createdAt: row.created_at || new Date().toISOString(),
+          target: { panel: 'someday', chapterId },
+        });
+        if (Notification.permission === 'granted') {
+          navigator.serviceWorker?.getRegistration('/firebase-messaging-sw.js').then(reg => {
+            reg?.showNotification('Chapter Invite', {
+              body: `You were invited to ${chapterTitle}.`,
+              icon: '/logo192.png',
+              tag: `chapter_invite_${chapterId}`,
+            });
+          }).catch(() => {});
+        }
+      })
       .subscribe();
 
     return () => {
