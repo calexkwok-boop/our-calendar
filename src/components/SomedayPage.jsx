@@ -227,12 +227,100 @@ const SUGGESTION_THEME_KEYS = {
   food:     ['omakase', 'restaurant', 'dining', 'foodie', 'michelin', 'tasting', 'brunch'],
 };
 
+const LIVE_SUGGESTION_CATEGORIES = {
+  generic: [
+    { key: 'coffee', label: 'Coffee nearby', query: 'best coffee', type: 'cafe', emoji: '☕', categoryId: 'food' },
+    { key: 'breakfast', label: 'Breakfast nearby', query: 'best breakfast', type: 'restaurant', emoji: '🥐', categoryId: 'food' },
+    { key: 'dessert', label: 'Dessert nearby', query: 'best dessert', type: 'restaurant', emoji: '🍨', categoryId: 'food' },
+    { key: 'photo', label: 'Photo spot nearby', query: 'best scenic viewpoint', type: 'tourist_attraction', emoji: '📸', categoryId: 'places' },
+    { key: 'walk', label: 'Easy walk nearby', query: 'best easy walk', type: 'tourist_attraction', emoji: '🌿', categoryId: 'experiences' },
+  ],
+  japan: [
+    { key: 'coffee', label: 'Coffee nearby', query: 'best coffee', type: 'cafe', emoji: '☕', categoryId: 'food' },
+    { key: 'ramen', label: 'Ramen nearby', query: 'best ramen', type: 'restaurant', emoji: '🍜', categoryId: 'food' },
+    { key: 'dessert', label: 'Dessert nearby', query: 'best matcha dessert', type: 'restaurant', emoji: '🍡', categoryId: 'food' },
+    { key: 'temple', label: 'Temple stop nearby', query: 'best temple', type: 'tourist_attraction', emoji: '⛩️', categoryId: 'places' },
+    { key: 'view', label: 'Viewpoint nearby', query: 'best viewpoint', type: 'tourist_attraction', emoji: '🌆', categoryId: 'places' },
+  ],
+  beach: [
+    { key: 'coffee', label: 'Coffee nearby', query: 'best coffee', type: 'cafe', emoji: '☕', categoryId: 'food' },
+    { key: 'fish', label: 'Seafood nearby', query: 'best seafood', type: 'restaurant', emoji: '🐟', categoryId: 'food' },
+    { key: 'dessert', label: 'Sweet stop nearby', query: 'best ice cream', type: 'restaurant', emoji: '🍦', categoryId: 'food' },
+    { key: 'view', label: 'Sunset spot nearby', query: 'best sunset viewpoint', type: 'tourist_attraction', emoji: '🌅', categoryId: 'places' },
+    { key: 'walk', label: 'Beach walk nearby', query: 'best beach walk', type: 'tourist_attraction', emoji: '🏖️', categoryId: 'experiences' },
+  ],
+  road: [
+    { key: 'coffee', label: 'Coffee nearby', query: 'best coffee', type: 'cafe', emoji: '☕', categoryId: 'food' },
+    { key: 'diner', label: 'Classic stop nearby', query: 'best diner', type: 'restaurant', emoji: '🥞', categoryId: 'food' },
+    { key: 'view', label: 'Scenic stop nearby', query: 'best scenic overlook', type: 'tourist_attraction', emoji: '🏞️', categoryId: 'places' },
+    { key: 'dessert', label: 'Treat nearby', query: 'best bakery', type: 'bakery', emoji: '🍪', categoryId: 'food' },
+    { key: 'walk', label: 'Stretch-your-legs stop', query: 'best park', type: 'park', emoji: '🌲', categoryId: 'experiences' },
+  ],
+  outdoors: [
+    { key: 'coffee', label: 'Trail coffee nearby', query: 'best coffee', type: 'cafe', emoji: '☕', categoryId: 'food' },
+    { key: 'breakfast', label: 'Breakfast nearby', query: 'best breakfast', type: 'restaurant', emoji: '🥯', categoryId: 'food' },
+    { key: 'view', label: 'Viewpoint nearby', query: 'best viewpoint', type: 'tourist_attraction', emoji: '🏔️', categoryId: 'places' },
+    { key: 'walk', label: 'Short hike nearby', query: 'best short hike', type: 'tourist_attraction', emoji: '🥾', categoryId: 'experiences' },
+    { key: 'water', label: 'Waterfall nearby', query: 'best waterfall', type: 'tourist_attraction', emoji: '💦', categoryId: 'places' },
+  ],
+  food: [
+    { key: 'coffee', label: 'Coffee nearby', query: 'best coffee', type: 'cafe', emoji: '☕', categoryId: 'food' },
+    { key: 'bakery', label: 'Bakery nearby', query: 'best bakery', type: 'bakery', emoji: '🥐', categoryId: 'food' },
+    { key: 'cocktail', label: 'Cocktail nearby', query: 'best cocktail bar', type: 'bar', emoji: '🍸', categoryId: 'food' },
+    { key: 'dessert', label: 'Dessert nearby', query: 'best dessert', type: 'restaurant', emoji: '🍰', categoryId: 'food' },
+    { key: 'market', label: 'Market nearby', query: 'best food market', type: 'tourist_attraction', emoji: '🛍️', categoryId: 'places' },
+  ],
+};
+
 function detectSuggestionTheme(chapter, chapterPins) {
   const haystack = [chapter.title, ...chapterPins.map(p => `${p.label || ''} ${p.text || ''}`)].join(' ').toLowerCase();
   for (const [theme, kws] of Object.entries(SUGGESTION_THEME_KEYS)) {
     if (kws.some(kw => haystack.includes(kw))) return theme;
   }
   return 'generic';
+}
+
+function normalizeSuggestionText(value = '') {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function getLiveSuggestionCategories(chapter, chapterPins, refreshCount = 0) {
+  const theme = detectSuggestionTheme(chapter, chapterPins);
+  const pool = LIVE_SUGGESTION_CATEGORIES[theme] || LIVE_SUGGESTION_CATEGORIES.generic;
+  const offset = refreshCount % pool.length;
+  return [...pool.slice(offset), ...pool.slice(0, offset)];
+}
+
+function inferChapterAnchorCandidates(chapter, chapterPins) {
+  const values = [
+    chapter?.title,
+    ...chapterPins.flatMap((pin) => [
+      pin?.mapQuery,
+      pin?.label,
+      pin?.text,
+      pin?.description,
+    ]),
+  ]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean);
+
+  const seen = new Set();
+  return values.filter((value) => {
+    const normalized = normalizeSuggestionText(value);
+    if (!normalized || normalized.length < 4) return false;
+    if (seen.has(normalized)) return false;
+    seen.add(normalized);
+    return true;
+  }).slice(0, 6);
+}
+
+function buildPlaceSuggestionTip(result, anchor, category) {
+  const rating = Number(result?.rating || 0);
+  const reviewCount = Number(result?.user_ratings_total || 0);
+  if (rating > 0 && reviewCount > 0) {
+    return `Google-rated ${rating.toFixed(1)} with ${reviewCount.toLocaleString()} reviews near ${anchor}.`;
+  }
+  return `${category.label} near ${anchor}.`;
 }
 
 function generateSuggestions(chapter, chapterPins, seed = 0) {
@@ -348,15 +436,87 @@ function SuggestionCard({ s, onAdd, darkMode }) {
 function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode }) {
   const [addedIds, setAddedIds] = useState(new Set());
   const [refreshCount, setRefreshCount] = useState(0);
+  const [liveSuggestions, setLiveSuggestions] = useState([]);
+  const [loadingLiveSuggestions, setLoadingLiveSuggestions] = useState(false);
   // Memoize: only recompute when chapter identity, pin labels, seed, or refresh count changes
   const pinLabelKey = chapterPins.map(p => (p.label || p.text || '').toLowerCase()).join('\x00');
-  const suggestions = React.useMemo(
+  const fallbackSuggestions = React.useMemo(
     () => generateSuggestions(chapter, chapterPins, initialSeed + refreshCount * 97),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [chapter.id, pinLabelKey, initialSeed, refreshCount],
   );
+  const suggestions = liveSuggestions.length > 0 ? liveSuggestions : fallbackSuggestions;
   const visible = suggestions.filter(s => !addedIds.has(s.id)).slice(0, 3);
   const ts = darkMode ? '#64748b' : '#9ca3af';
+
+  useEffect(() => {
+    let cancelled = false;
+    const existingLabels = new Set(chapterPins.map((pin) => normalizeSuggestionText(pin.label || pin.text || '')));
+    const anchorCandidates = inferChapterAnchorCandidates(chapter, chapterPins);
+
+    if (anchorCandidates.length === 0) {
+      setLiveSuggestions([]);
+      setLoadingLiveSuggestions(false);
+      return undefined;
+    }
+
+    const loadNearbySuggestions = async () => {
+      setLoadingLiveSuggestions(true);
+      try {
+        const categories = getLiveSuggestionCategories(chapter, chapterPins, refreshCount);
+        const found = [];
+        const seenPlaces = new Set();
+
+        for (const category of categories) {
+          if (found.length >= 3) break;
+          let matched = null;
+
+          for (const anchor of anchorCandidates) {
+            try {
+              const q = encodeURIComponent(`${category.query} near ${anchor}`);
+              const res = await fetch(`/api/places?action=textsearch&query=${q}&type=${encodeURIComponent(category.type)}`);
+              const data = await res.json();
+              const result = (data.results || []).find((item) => {
+                const placeName = normalizeSuggestionText(item?.name || '');
+                const placeKey = String(item?.place_id || placeName);
+                return placeName && !existingLabels.has(placeName) && !seenPlaces.has(placeKey);
+              });
+
+              if (!result) continue;
+
+              const placeName = normalizeSuggestionText(result?.name || '');
+              const placeKey = String(result?.place_id || placeName);
+              seenPlaces.add(placeKey);
+              const photoRef = result?.photos?.[0]?.photo_reference;
+              matched = {
+                id: `live-${category.key}-${placeKey}`,
+                label: result.name,
+                emoji: category.emoji,
+                categoryId: category.categoryId,
+                imageUrl: photoRef ? `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800` : '',
+                description: `${result.formatted_address || result.vicinity || ''}`.trim() || `${category.label} near ${anchor}.`,
+                tip: buildPlaceSuggestionTip(result, anchor, category),
+                mapQuery: `${result.name} ${result.formatted_address || result.vicinity || anchor}`.trim(),
+                rot: (((initialSeed + found.length * 7 + refreshCount) % 11) - 5) * 0.55,
+              };
+              break;
+            } catch {
+              // Try the next anchor or category.
+            }
+          }
+
+          if (matched) found.push(matched);
+        }
+
+        if (!cancelled) setLiveSuggestions(found);
+      } finally {
+        if (!cancelled) setLoadingLiveSuggestions(false);
+      }
+    };
+
+    loadNearbySuggestions();
+    return () => { cancelled = true; };
+  }, [chapter.id, chapter.title, chapterPins, initialSeed, pinLabelKey, refreshCount]);
 
   function handleAdd(s) {
     setAddedIds(prev => new Set([...prev, s.id]));
@@ -373,7 +533,9 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
         >↻ refresh</button>
       </div>
       {visible.length === 0 ? (
-        <p style={{ fontFamily: CAVEAT, fontSize: 14, color: ts, fontStyle: 'italic', margin: '0 0 8px' }}>No more suggestions — try refreshing!</p>
+        <p style={{ fontFamily: CAVEAT, fontSize: 14, color: ts, fontStyle: 'italic', margin: '0 0 8px' }}>
+          {loadingLiveSuggestions ? 'Finding real nearby spots...' : 'No more suggestions. Try refreshing!'}
+        </p>
       ) : (
         <div style={{ display: 'flex', gap: 14, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 18, paddingTop: 14 }}>
           {visible.map((s) => (
@@ -887,8 +1049,34 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
   const menuRef = useRef(null);
   // seed rotates each time the page mounts (chapter reopened)
   const [suggestionSeed] = useState(() => Math.floor(Math.random() * 997));
-  // Use Supabase-loaded pins if available, fall back to filtering from dreams
-  const chapterPins = chapter.pins || pins.filter(p => chapter.itemIds.includes(p.id));
+  // Prefer the live pins state so newly added suggestions appear in Pinned immediately.
+  const chapterPins = useMemo(() => {
+    const chapterItemIds = Array.isArray(chapter.itemIds) ? chapter.itemIds.map((id) => String(id || '')) : [];
+    const livePins = Array.isArray(pins)
+      ? pins.filter((pin) => (
+          String(pin?.chapterId || '') === String(chapter.id || '')
+          || chapterItemIds.includes(String(pin?.id || ''))
+        ))
+      : [];
+
+    if (!Array.isArray(chapter.pins) || chapter.pins.length === 0) return livePins;
+
+    const mergedById = new Map();
+    chapter.pins.forEach((pin) => {
+      mergedById.set(String(pin?.id || ''), pin);
+    });
+    livePins.forEach((pin) => {
+      const key = String(pin?.id || '');
+      mergedById.set(key, { ...(mergedById.get(key) || {}), ...pin });
+    });
+
+    const ordered = chapterItemIds
+      .map((id) => mergedById.get(id))
+      .filter(Boolean);
+
+    const extras = Array.from(mergedById.values()).filter((pin) => !chapterItemIds.includes(String(pin?.id || '')));
+    return [...ordered, ...extras];
+  }, [chapter.id, chapter.itemIds, chapter.pins, pins]);
   const imagePins = chapterPins.filter(p => p.imageUrl);
   const coverPin = (coverPinId ? imagePins.find(p => String(p.id) === String(coverPinId)) : null) || imagePins[0] || null;
 
