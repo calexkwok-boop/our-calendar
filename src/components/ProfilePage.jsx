@@ -153,7 +153,9 @@ const ProfilePage = ({
   onLogout,
 }) => {
   const userEmail = currentUser?.email?.toLowerCase().trim() || '';
-  const isOwnProfile = !viewedUserEmail || viewedUserEmail === userEmail;
+  const isOwnProfile = viewedUserId
+    ? String(viewedUserId) === String(currentUser?.id || '')
+    : (!viewedUserEmail || viewedUserEmail === userEmail);
 
   const knownHandlesRef = useRef(knownHandlesByEmail);
   useEffect(() => { knownHandlesRef.current = knownHandlesByEmail; }, [knownHandlesByEmail]);
@@ -556,14 +558,23 @@ const ProfilePage = ({
 
   // ─── Load friend profile + connection context
   useEffect(() => {
-    if (isOwnProfile || !viewedUserEmail) { setLoading(false); return; }
-
-    const email = viewedUserEmail.toLowerCase().trim();
+    if (isOwnProfile || (!viewedUserEmail && !viewedUserId)) { setLoading(false); return; }
 
     const load = async () => {
       setLoading(true);
       setFriendSharedPhoto(null);
       try {
+        // When opened by userId only (e.g. from home strip), resolve email first
+        let email = viewedUserEmail ? viewedUserEmail.toLowerCase().trim() : null;
+        if (!email && viewedUserId) {
+          const { data: ehRow } = await supabase
+            .from('user_handles')
+            .select('email')
+            .eq('user_id', viewedUserId)
+            .maybeSingle();
+          email = ehRow?.email?.toLowerCase().trim() || null;
+        }
+        if (!email) { setLoading(false); return; }
         // Batch 1: all queries independent of each other — run in parallel
         const [
           handleRowRes,
