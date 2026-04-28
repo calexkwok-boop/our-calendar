@@ -1097,7 +1097,7 @@ const SelectedDateDetails = ({
         <span>Add Event</span>
       </button>
       
-      <style jsx>{`
+      <style>{`
         @keyframes fadeInUp {
           from {
             opacity: 0;

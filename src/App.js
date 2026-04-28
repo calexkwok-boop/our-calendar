@@ -4070,16 +4070,16 @@ function App() {
     const normalizedEmail = normalizeEmail(email);
     const normalizedPhone = normalizePhoneNumber(phone);
     if (uid) clauses.push(`shared_with_id.eq.${uid}`);
-    if (normalizedEmail) clauses.push(`shared_with_email.eq."${normalizedEmail}"`);
-    if (normalizedPhone) clauses.push(`shared_with_phone.eq."${normalizedPhone}"`);
+    if (normalizedEmail) clauses.push(`shared_with_email.eq.${normalizedEmail}`);
+    if (normalizedPhone) clauses.push(`shared_with_phone.eq.${normalizedPhone}`);
     return clauses.join(',');
   };
   const buildMemberRecipientFilter = (email, phone) => {
     const clauses = [];
     const normalizedEmail = normalizeEmail(email);
     const normalizedPhone = normalizePhoneNumber(phone);
-    if (normalizedEmail) clauses.push(`email.eq."${normalizedEmail}"`);
-    if (normalizedPhone) clauses.push(`phone.eq."${normalizedPhone}"`);
+    if (normalizedEmail) clauses.push(`email.eq.${normalizedEmail}`);
+    if (normalizedPhone) clauses.push(`phone.eq.${normalizedPhone}`);
     return clauses.join(',');
   };
   const arePendingTripInvitesEqual = (a, b) => {
@@ -8927,7 +8927,13 @@ useEffect(() => {
     : (memberPostsRequireApproval ? 'pending' : 'approved');
   const isEventOwnedByCurrentUser = useCallback((event) => {
     if (!event) return false;
-    const eventUserId = String(event?.userId || event?.user_id || '').trim();
+    const eventUserId = String(
+      event?.userId
+      || event?.user_id
+      || event?.createdByUserId
+      || event?.created_by_user_id
+      || ''
+    ).trim();
     if (eventUserId && String(user?.id || '').trim()) {
       return eventUserId === String(user?.id || '').trim();
     }
@@ -8980,8 +8986,26 @@ useEffect(() => {
   }, [getEventRelationshipStatus, getLayerForEvent]);
   const canDeleteEventInActiveLayer = (event) => {
     if (!event) return false;
-    const eventLayerId = String(event?.layerId || event?.layer_id || activeLayerId || '').trim();
+    const popupMeta = popupEventsByEventId[String(event?.id || '').trim()] || null;
+    const eventLayerId = String(
+      event?.layerId
+      || event?.layer_id
+      || popupMeta?.layerId
+      || activeLayerId
+      || ''
+    ).trim();
+    const eventOwnerUserId = String(
+      event?.userId
+      || event?.user_id
+      || event?.createdByUserId
+      || event?.created_by_user_id
+      || popupMeta?.createdByUserId
+      || ''
+    ).trim();
     const eventLayer = (layers || []).find((layer) => String(layer?.id || '') === eventLayerId) || null;
+    if (!eventLayerId && popupMeta) {
+      return eventOwnerUserId && eventOwnerUserId === String(user?.id || '').trim();
+    }
     const eventLayerOwnerId = String(eventLayer?.owner_id || '').trim();
     const isEventLayerOwner = eventLayerOwnerId && eventLayerOwnerId === String(user?.id || '');
     if (isEventLayerOwner) return true;
@@ -8997,6 +9021,7 @@ useEffect(() => {
     const canModerateEventLayer = shareRole === 'admin' || shareRole === 'moderator';
     if (!eventLayer?.is_public) return Boolean(isEventLayerOwner || canModerateEventLayer || !shareRowForEventLayer || shareRowForEventLayer?.can_edit !== false);
     if (canModerateEventLayer) return true;
+    if (eventOwnerUserId && eventOwnerUserId === String(user?.id || '').trim()) return true;
     // Old events may have no ownership info (userId/createdBy were not always stored).
     // If the event is on the active layer and the user can edit it, allow deletion.
     if (eventLayerId === String(activeLayerId || '').trim()) {
@@ -19277,19 +19302,106 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const useNullLayerId = Boolean(options?.useNullLayerId);
     const targetLayerId = String(options?.layerId || activeLayerId || '').trim();
     if (!useNullLayerId && !targetLayerId) return true;
-    let deleteQuery = supabase.from('events').delete().in('id', ids);
-    deleteQuery = useNullLayerId ? deleteQuery.is('layer_id', null) : deleteQuery.eq('layer_id', targetLayerId);
-    const { error } = await deleteQuery;
+    const runDelete = async (skipLayerFilterForAttempt = false) => {
+      let deleteQuery = supabase.from('events').delete().in('id', ids);
+      if (!skipLayerFilterForAttempt && !options?.skipLayerFilter) {
+        deleteQuery = useNullLayerId ? deleteQuery.is('layer_id', null) : deleteQuery.eq('layer_id', targetLayerId);
+      }
+      return deleteQuery.select('id');
+    };
+    let { data: deletedRows, error } = await runDelete(false);
     if (error) {
       console.error('Error deleting events:', error);
       if (!silent) alert(`Could not delete event(s): ${error.message}`);
       return false;
     }
+    let deletedIds = Array.from(new Set((deletedRows || []).map((row) => String(row?.id || '')).filter(Boolean)));
+    if (deletedIds.length === 0 && !options?.skipLayerFilter) {
+      const retry = await runDelete(true);
+      if (retry.error) {
+        console.error('Error deleting events on unscoped retry:', retry.error);
+      } else {
+        deletedIds = Array.from(new Set(((retry.data || []).map((row) => String(row?.id || '')).filter(Boolean))));
+      }
+    }
+    if (deletedIds.length === 0 && ids.length === 1 && user?.id) {
+      try {
+        const targetId = String(ids[0] || '').trim();
+        const [
+          { data: eventRows },
+          { data: popupRows },
+          { data: detailRows },
+          { data: memberRows },
+          { data: signupRows },
+        ] = await Promise.all([
+          supabase.from('events').select('id').eq('id', targetId),
+          supabase.from('popup_events').select('event_id,layer_id').eq('event_id', targetId),
+          supabase.from('popup_event_details').select('id,calendar_id').eq('id', targetId),
+          supabase.from('popup_event_members').select('event_id,user_id,role').eq('event_id', targetId).eq('user_id', String(user.id)),
+          supabase.from('popup_event_signups').select('event_id,user_id').eq('event_id', targetId).eq('user_id', String(user.id)),
+        ]);
+        const hasEventsRow = Array.isArray(eventRows) && eventRows.length > 0;
+        const popupRow = Array.isArray(popupRows) ? popupRows[0] : null;
+        const detailRow = Array.isArray(detailRows) ? detailRows[0] : null;
+        const myMemberRow = Array.isArray(memberRows) ? memberRows[0] : null;
+        const mySignupRow = Array.isArray(signupRows) ? signupRows[0] : null;
+        const myRole = String(myMemberRow?.role || '').trim().toLowerCase();
+        const orphanPopupJoin = !hasEventsRow && !popupRow && detailRow && (
+          myMemberRow
+          || mySignupRow
+          || (!myMemberRow && !mySignupRow)
+        );
+        if (orphanPopupJoin) {
+          const leaveOperations = [];
+          if (myRole === 'host') {
+            leaveOperations.push(
+              supabase.from('popup_event_details').delete().eq('id', targetId)
+            );
+          }
+          if (myMemberRow) {
+            leaveOperations.push(
+              supabase.from('popup_event_members').delete().eq('event_id', targetId).eq('user_id', String(user.id))
+            );
+          }
+          if (mySignupRow) {
+            leaveOperations.push(
+              supabase.from('popup_event_signups').delete().eq('event_id', targetId).eq('user_id', String(user.id))
+            );
+          }
+          const leaveResults = leaveOperations.length > 0 ? await Promise.all(leaveOperations) : [];
+          const leaveErrors = leaveResults.map((result) => result?.error).filter(Boolean);
+          const [{ data: remainingMembers }, { data: remainingSignups }] = await Promise.all([
+            supabase.from('popup_event_members').select('event_id').eq('event_id', targetId).eq('user_id', String(user.id)),
+            supabase.from('popup_event_signups').select('event_id').eq('event_id', targetId).eq('user_id', String(user.id)),
+          ]);
+          const stillLinkedToUser = (remainingMembers || []).length > 0 || (remainingSignups || []).length > 0;
+          if (leaveErrors.length === 0 || !stillLinkedToUser) {
+            try { await loadPopupEventData(); } catch {}
+            return true;
+          }
+          console.error('Error leaving orphan popup event:', leaveErrors);
+        }
+      } catch (fallbackError) {
+        console.error('Error during orphan popup leave fallback:', fallbackError);
+      }
+    }
+    if (deletedIds.length === 0) {
+      if (!silent) alert('This event could not be deleted with your current permissions.');
+      return false;
+    }
     try {
-      const layerIdForCleanup = useNullLayerId ? null : targetLayerId;
-      if (layerIdForCleanup) {
-        await supabase.from('popup_event_signups').delete().eq('layer_id', layerIdForCleanup).in('event_id', ids);
-        await supabase.from('popup_events').delete().eq('layer_id', layerIdForCleanup).in('event_id', ids);
+      if (options?.skipLayerFilter) {
+        // Joined popup events: clean up all popup tables by event_id regardless of layer
+        await supabase.from('popup_event_signups').delete().in('event_id', deletedIds);
+        await supabase.from('popup_events').delete().in('event_id', deletedIds);
+        await supabase.from('popup_event_details').delete().in('id', deletedIds);
+        await supabase.from('popup_event_members').delete().in('event_id', deletedIds);
+      } else {
+        const layerIdForCleanup = useNullLayerId ? null : targetLayerId;
+        if (layerIdForCleanup) {
+          await supabase.from('popup_event_signups').delete().eq('layer_id', layerIdForCleanup).in('event_id', deletedIds);
+          await supabase.from('popup_events').delete().eq('layer_id', layerIdForCleanup).in('event_id', deletedIds);
+        }
       }
       await loadPopupEventData();
     } catch {}
@@ -19312,7 +19424,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       || (userTabPopupEvents || []).find((e) => String(e?.id || '') === String(eventId || ''))
       || null;
     const storedLayerId = String(eventToDelete?.layerId || eventToDelete?.layer_id || '').trim();
-    const useNullLayerId = !storedLayerId && !eventToDelete?.isJoinedPopup;
+    const isJoinedPopup = Boolean(eventToDelete?.isJoinedPopup);
+    const useNullLayerId = !storedLayerId && !isJoinedPopup;
+    const skipLayerFilter = isJoinedPopup;
     const targetLayerId = storedLayerId || String(activeLayerId || '').trim();
     if (!canDeleteEventInActiveLayer(eventToDelete)) {
       alert('In public calendars, members can only delete events they created.');
@@ -19356,7 +19470,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         }));
       } else {
         // Delete the whole recurring event
-        const ok = await deleteEventsByIds([eventId], { layerId: targetLayerId, useNullLayerId });
+        const ok = await deleteEventsByIds([eventId], { layerId: targetLayerId, useNullLayerId, skipLayerFilter });
         if (!ok) return;
         const updatedEvents = { ...events, [originalDateKey]: (events[originalDateKey] || []).filter(e => String(e.id) !== String(eventId)) };
         if (updatedEvents[originalDateKey].length === 0) delete updatedEvents[originalDateKey];
@@ -19373,13 +19487,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         updatedEvents[key] = updatedEvents[key].filter(e => e.multiDayId !== eventToDelete.multiDayId);
         if (updatedEvents[key].length === 0) delete updatedEvents[key];
       });
-      const ok = await deleteEventsByIds(idsToDelete, { layerId: targetLayerId, useNullLayerId });
+      const ok = await deleteEventsByIds(idsToDelete, { layerId: targetLayerId, useNullLayerId, skipLayerFilter });
       if (!ok) return;
       setEvents(updatedEvents);
     } else {
       const updatedEvents = { ...events, [actualDateKey]: (events[actualDateKey] || []).filter(e => e.id !== eventId) };
       if (updatedEvents[actualDateKey].length === 0) delete updatedEvents[actualDateKey];
-      const ok = await deleteEventsByIds([eventId], { layerId: targetLayerId, useNullLayerId });
+      const ok = await deleteEventsByIds([eventId], { layerId: targetLayerId, useNullLayerId, skipLayerFilter });
       if (!ok) return;
       setEvents(updatedEvents);
     }
@@ -29007,7 +29121,7 @@ See {overviewTodayEvents.length - 3} more {'\u00BB'}
 )}
 </div>
 </div>
-<style jsx>{`
+<style>{`
 @keyframes fadeInUp {
 from {
 opacity: 0;

@@ -587,7 +587,7 @@ export default function TripHighlightReel({
       </div>
 
       {/* Global animations */}
-      <style jsx global>{`
+      <style>{`
         @keyframes fade-in {
           from { opacity: 0; }
           to { opacity: 1; }
