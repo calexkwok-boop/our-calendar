@@ -308,7 +308,7 @@ function MovieCard({ movie, onAddToSomeday, onRemoveFromSomeday, onPageTap, onPl
 
 const TYPE_EMOJI = { hiking: "🥾", games: "🎲", restaurants: "🍜", products: "✨", destinations: "✈️" };
 
-function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveFromSomeday, onCardTap }) {
+function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveFromSomeday, onCardTap, onMakeItHappen }) {
   const [inSomeday, setInSomeday] = useState(false);
   const googleImgUrl = useGoogleImage(post.imageQuery || (post.type === 'games' ? `${post.cardTitle} board game box` : null));
   const imageUrl = getExploreCardImageUrl(post, googleImgUrl);
@@ -393,7 +393,17 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
                     location: post.location || post.cardTitle,
                   });
                 } else if (post.type === "products") {
-                  onPageTap?.("products");
+                  onMakeItHappen?.({
+                    label: post.cardTitle,
+                    text: post.cardTitle,
+                    emoji: TYPE_EMOJI[post.type] || "✨",
+                    type: post.type,
+                    imageUrl,
+                    categoryId: "buy",
+                    notes: post?.desc || '',
+                    brand: post?.brand || post?.product_brand || '',
+                    priceRange: post?.priceRange || post?.price || post?.product_price || '',
+                  });
                 } else if (post.type === "destinations") {
                   onPlanEvent?.({
                     title: `Trip to ${post.cardTitle}`,
@@ -408,7 +418,7 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
             >
               {i === 0
                 ? (inSomeday ? "✓ Someday" : "+ Someday")
-                : (post.type === "products" ? a : "+ Plan")}
+                : (post.type === "products" ? "✨ Make it happen" : "+ Plan")}
             </button>
           );
         })}
@@ -418,7 +428,7 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
 }
 
 
-function PostDetailSheet({ post, onClose, onAddToSomeday, onRemoveFromSomeday, onPlanEvent, darkMode }) {
+function PostDetailSheet({ post, onClose, onAddToSomeday, onRemoveFromSomeday, onPlanEvent, onMakeItHappen, darkMode }) {
   const dm = darkMode;
   const [inSomeday, setInSomeday] = useState(false);
   const isMovie = post.type === 'movies';
@@ -462,6 +472,18 @@ function PostDetailSheet({ post, onClose, onAddToSomeday, onRemoveFromSomeday, o
       onPlanEvent?.({ title: `Dinner at ${post.cardTitle}`, notes: post.location || '', category: 'dinner', location: post.location || post.cardTitle });
     } else if (post.type === 'destinations') {
       onPlanEvent?.({ title: `Trip to ${post.cardTitle}`, notes: post.location || '', category: 'trip', location: post.location || post.cardTitle });
+    } else if (post.type === 'products') {
+      onMakeItHappen?.({
+        label: post.cardTitle,
+        text: post.cardTitle,
+        emoji: TYPE_EMOJI[post.type] || '✨',
+        type: post.type,
+        imageUrl,
+        categoryId: 'buy',
+        notes: post?.desc || '',
+        brand: post?.brand || post?.product_brand || '',
+        priceRange: post?.priceRange || post?.price || post?.product_price || '',
+      });
     }
     onClose();
   };
@@ -512,7 +534,7 @@ function PostDetailSheet({ post, onClose, onAddToSomeday, onRemoveFromSomeday, o
             className="flex-1 py-3 rounded-2xl text-base border transition-colors"
             style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, background: dm ? 'rgba(139,92,246,0.1)' : '#f5f3ff', border: '1px solid rgba(139,92,246,0.25)', color: dm ? '#c4b5fd' : '#6d28d9' }}
           >
-            + Plan
+            {post.type === 'products' ? '✨ Make it happen' : '+ Plan'}
           </button>
         </div>
       </div>
@@ -725,7 +747,7 @@ function CategoryGrid({ onPageTap }) {
   );
 }
 
-export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPlanEvent = () => {}, darkMode = false }) {
+export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPlanEvent = () => {}, onMakeItHappen, darkMode = false }) {
   const [sources, setSources]             = useState({ friends: true, movies: true, hiking: true, games: true, restaurants: true, products: true, destinations: true });
   const [communityPosts]                  = useState(pickCommunityPosts);
   const [drawerOpen, setDrawerOpen]       = useState(false);
@@ -759,7 +781,7 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
     return <HikingPage onBack={() => setActivePage(null)} onPlanEvent={onPlanEvent} darkMode={darkMode} />;
   }
   if (activePage === "products") {
-    return <DreamShelfPage onBack={() => setActivePage(null)} onAddToSomeday={onAddToSomeday} onAddEvent={onPlanEvent} darkMode={darkMode} />;
+    return <DreamShelfPage onBack={() => setActivePage(null)} onAddToSomeday={onAddToSomeday} onAddEvent={onPlanEvent} onMakeItHappen={onMakeItHappen} darkMode={darkMode} />;
   }
   if (activePage === "games") {
     return <BoardGamePage onBack={() => setActivePage(null)} onAddEvent={onPlanEvent} onAddToSomeday={onAddToSomeday} darkMode={darkMode} />;
@@ -807,7 +829,7 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
   function renderCard(post) {
     if (post.type === 'movies') return <MovieCard key={`movie-${post.id}`} movie={post} onAddToSomeday={onAddToSomeday} onRemoveFromSomeday={onRemoveFromSomeday} onPageTap={setActivePage} onPlanEvent={onPlanEvent} onCardTap={setSelectedPost} />;
     if (post.type === 'friends') return <FriendCard key={post.id} post={post} />;
-    return <CommunityCard key={post.id} post={post} onPageTap={setActivePage} onPlanEvent={onPlanEvent} onAddToSomeday={onAddToSomeday} onRemoveFromSomeday={onRemoveFromSomeday} onCardTap={setSelectedPost} />;
+    return <CommunityCard key={post.id} post={post} onPageTap={setActivePage} onPlanEvent={onPlanEvent} onAddToSomeday={onAddToSomeday} onRemoveFromSomeday={onRemoveFromSomeday} onCardTap={setSelectedPost} onMakeItHappen={onMakeItHappen} />;
   }
 
   function toggleSource(key) { setSources(prev => ({ ...prev, [key]: !prev[key] })); }
@@ -930,6 +952,7 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
           onAddToSomeday={onAddToSomeday}
           onRemoveFromSomeday={onRemoveFromSomeday}
           onPlanEvent={onPlanEvent}
+          onMakeItHappen={onMakeItHappen}
           darkMode={darkMode}
         />
       )}

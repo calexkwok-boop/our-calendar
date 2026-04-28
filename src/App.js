@@ -30788,6 +30788,7 @@ transform: translateY(0);
                   setBucketList((prev) => (Array.isArray(prev) ? prev : []).filter(d => !(d.text === text && d.emoji === emoji)));
                 }}
                 onPlanEvent={(hint) => openHomeAddEventModal(hint)}
+                onMakeItHappen={(item) => planFromDream(item)}
               />
 
 

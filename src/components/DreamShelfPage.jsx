@@ -1306,7 +1306,7 @@ function ShareItemModal({ item, onClose, onSubmit, darkMode }) {
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, darkMode = false } = {}) {
+export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, onMakeItHappen, darkMode = false } = {}) {
   const dm = darkMode;
   const communityFeedRef = useRef(null);
 
@@ -1702,8 +1702,18 @@ export default function DreamShelfPage({ onBack, onAddToSomeday, onAddEvent, dar
   }, [cacheDreamShelfImage, onAddToSomeday]);
 
   const handleMilestone = useCallback((item) => {
-    onAddEvent?.({ title: `🎯 Get my ${item.name}`, notes: `${item.brand} · ${item.priceRange || ""} · Someday milestone`, category: "milestone" });
-  }, [onAddEvent]);
+    onMakeItHappen?.({
+      label: item.name,
+      text: item.name,
+      emoji: item.emoji || "✨",
+      type: "dreamshelf",
+      imageUrl: itemImages[getDreamShelfImageKey(item)] || cachedImageUrls[item.image] || (isDreamShelfWeakImageUrl(item.image) ? "" : item.image) || "",
+      categoryId: "buy",
+      notes: `${item.brand} · ${item.priceRange || ""}`,
+      brand: item.brand || "",
+      priceRange: item.priceRange || item.price || "",
+    });
+  }, [cachedImageUrls, itemImages, onMakeItHappen]);
 
   const handleShareSubmit = async (draft) => {
     const stableImageUrl = await cacheDreamShelfImage(draft.image || "", draft.name || "dream-item");

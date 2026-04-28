@@ -414,7 +414,7 @@ export default function MakeItHappenSheet({ item, onClose, onAddEvent, darkMode 
                   value={targetDate}
                   onChange={e => setTargetDate(e.target.value)}
                   min={new Date().toISOString().split('T')[0]}
-                  style={{ ...inputStyle, colorScheme: dm ? 'dark' : 'light', display: 'block', maxWidth: '100%' }}
+                  style={{ ...inputStyle, colorScheme: dm ? 'dark' : 'light', display: 'block', width: '100%', maxWidth: '100%', minWidth: 0, WebkitAppearance: 'none' }}
                 />
               </div>
               {/* Occasion presets */}
