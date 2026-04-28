@@ -62,12 +62,17 @@ export default function InvitePicker({
     clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(async () => {
       setSearching(true);
-      const { data } = await supabase
-        .from('handles')
-        .select('handle, email, user_id, phone')
-        .or(`handle.ilike.%${q}%,email.ilike.%${q}%`)
-        .limit(6);
-      setResults(data || []);
+      const [{ data: d1 }, { data: d2 }] = await Promise.all([
+        supabase.from('handles').select('handle, email, user_id, phone').or(`handle.ilike.%${q}%,email.ilike.%${q}%`).limit(6),
+        supabase.from('user_handles').select('handle, email, user_id').or(`handle.ilike.%${q}%,email.ilike.%${q}%`).limit(6),
+      ]);
+      const seen = new Set();
+      const merged = [];
+      for (const row of [...(d1 || []), ...(d2 || [])]) {
+        const key = String(row.user_id || row.email || '');
+        if (key && !seen.has(key)) { seen.add(key); merged.push(row); }
+      }
+      setResults(merged.slice(0, 6));
       setSearching(false);
     }, 300);
     return () => clearTimeout(searchTimer.current);
