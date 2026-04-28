@@ -1116,7 +1116,13 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                 style={{ background: darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfb', border: `1px solid ${darkMode ? 'rgba(45,212,191,0.28)' : '#99f6e4'}`, borderRadius: 20, padding: '6px 14px', fontSize: 15, color: darkMode ? '#2dd4bf' : '#0d9488', cursor: 'pointer', flexShrink: 0, fontWeight: 700, fontFamily: CAVEAT }}
               >Invite</button>
             )}
-            {(onCreateTrip || onDeleteChapter) && (
+            {onCreateTrip && (
+              <button
+                onClick={() => onCreateTrip(chapter)}
+                style={{ background: darkMode ? 'rgba(125,211,252,0.14)' : '#ecfeff', border: `1px solid ${darkMode ? 'rgba(125,211,252,0.28)' : '#a5f3fc'}`, borderRadius: 20, padding: '6px 14px', fontSize: 15, color: darkMode ? '#7dd3fc' : '#0e7490', cursor: 'pointer', flexShrink: 0, fontWeight: 700, fontFamily: CAVEAT }}
+              >Create trip</button>
+            )}
+            {onDeleteChapter && (
               <div ref={menuRef} style={{ position: 'relative' }}>
                 <button
                   onClick={() => setShowMenu(v => !v)}
@@ -1126,18 +1132,10 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                   <>
                     <div style={{ position: 'fixed', inset: 0, zIndex: 49 }} onClick={() => setShowMenu(false)} />
                     <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', zIndex: 50, background: darkMode ? '#1e2d42' : '#fff', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e0d5'}`, borderRadius: 14, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', minWidth: 160, overflow: 'hidden' }}>
-                      {onCreateTrip && (
-                        <button
-                          onClick={() => { setShowMenu(false); onCreateTrip(chapter); }}
-                          style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '13px 16px', fontSize: 17, fontWeight: 700, color: darkMode ? '#7dd3fc' : '#0e7490', cursor: 'pointer', fontFamily: CAVEAT }}
-                        >✈ Create trip</button>
-                      )}
-                      {onDeleteChapter && (
-                        <button
-                          onClick={() => { setShowMenu(false); if (window.confirm(`Remove "${chapter.title}"? Pins will stay on your board.`)) onDeleteChapter(); }}
-                          style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '13px 16px', fontSize: 17, fontWeight: 700, color: '#ef4444', cursor: 'pointer', borderTop: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : '#f0ede8'}`, fontFamily: CAVEAT }}
-                        >✕ Remove chapter</button>
-                      )}
+                      <button
+                        onClick={() => { setShowMenu(false); if (window.confirm(`Remove "${chapter.title}"? Pins will stay on your board.`)) onDeleteChapter(); }}
+                        style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '13px 16px', fontSize: 17, fontWeight: 700, color: '#ef4444', cursor: 'pointer', fontFamily: CAVEAT }}
+                      >✕ Remove chapter</button>
                     </div>
                   </>
                 )}
