@@ -81,10 +81,6 @@ const hashHomeShuffleKey = (value) => {
   return Math.abs(hash);
 };
 
-const getMemoryCover = (memory) => String(
-  memory?.coverPhoto || memory?.photos?.[0]?.url || ''
-).trim();
-
 const getVisualPreviewUrl = (item) => String(
   item?.coverPhoto || item?.photoUrl || item?.photos?.[0]?.url || ''
 ).trim();
@@ -154,7 +150,7 @@ const ScrapbookHomeHybrid = ({
   onAddThought,
   onDeleteThought,
 
-  // Latest Memories (current)
+  // Memories
   recentMemory = null,
   memoryCollagePhotos = [],
   memoryReadyCount = 0,
@@ -196,7 +192,6 @@ const ScrapbookHomeHybrid = ({
 }) => {
   const momentTapRef = React.useRef(null);
   const todaySpotlightPhoto = getVisualPreviewUrl(todaySpotlightEvent);
-  const memoryCover = getMemoryCover(recentMemory);
   const tripSpotlightTitle = String(
     tripSpotlight?.name || tripSpotlight?.title || tripSpotlight?.tripName || ''
   ).trim();
@@ -728,11 +723,11 @@ const ScrapbookHomeHybrid = ({
           ) : null}
         </div>
 
-        {/* LATEST MEMORIES - Collage 2x2 */}
+        {/* MEMORIES - Daily rotating collage 2x2 */}
         <div className="rounded-[28px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-purple-50/60 via-white/90 to-pink-50/60 dark:from-purple-950/30 dark:via-slate-900/80 dark:to-pink-950/20 p-5 shadow-lg">
           <div className="flex items-center justify-between mb-3">
             <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">
-              💭 LATEST MEMORIES
+              Memories
             </div>
             <button
               onClick={onOpenMemories}

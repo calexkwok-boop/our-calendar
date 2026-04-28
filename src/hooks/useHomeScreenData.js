@@ -6,6 +6,16 @@ const HOME_DAY_SECTIONS = [
   { key: 'evening', label: 'Evening', emptyTitle: 'Save space for later', emptyCopy: 'Dinner, downtime, or a night plan can live here.' },
 ];
 
+const hashHomeMemoryRotationKey = (value) => {
+  const text = String(value || '');
+  let hash = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    hash = ((hash << 5) - hash) + text.charCodeAt(index);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+};
+
 export default function useHomeScreenData({
   tabTrips,
   todayTs,
@@ -404,8 +414,12 @@ export default function useHomeScreenData({
 
   const homeRecentMemory = useMemo(() => (
     [...homeResolvedMemories]
-      .sort((a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0)))[0] || null
-  ), [homeResolvedMemories]);
+      .sort((left, right) => {
+        const leftKey = `${todayKey}:${String(user?.id || 'guest').trim() || 'guest'}:${String(left?.id || left?.date || left?.createdAt || '')}`;
+        const rightKey = `${todayKey}:${String(user?.id || 'guest').trim() || 'guest'}:${String(right?.id || right?.date || right?.createdAt || '')}`;
+        return hashHomeMemoryRotationKey(leftKey) - hashHomeMemoryRotationKey(rightKey);
+      })[0] || null
+  ), [homeResolvedMemories, todayKey, user?.id]);
 
   const homeMemoryPhotoCount = useMemo(() => (
     homeResolvedMemories.reduce((total, memory) => total + (memory?.photos?.length || 0), 0)
@@ -413,7 +427,6 @@ export default function useHomeScreenData({
 
   const homeMemoryCollagePhotos = useMemo(() => (
     [...homeResolvedMemories]
-      .sort((a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0)))
       .flatMap((memory) => {
         const urls = [];
         const cover = getMemoryPrimaryPhotoUrl(memory);
@@ -425,8 +438,13 @@ export default function useHomeScreenData({
         return urls;
       })
       .filter((url, index, arr) => url && arr.indexOf(url) === index)
+      .sort((left, right) => {
+        const leftKey = `${todayKey}:${String(user?.id || 'guest').trim() || 'guest'}:${left}`;
+        const rightKey = `${todayKey}:${String(user?.id || 'guest').trim() || 'guest'}:${right}`;
+        return hashHomeMemoryRotationKey(leftKey) - hashHomeMemoryRotationKey(rightKey);
+      })
       .slice(0, 4)
-  ), [getMemoryPrimaryPhotoUrl, homeResolvedMemories]);
+  ), [getMemoryPrimaryPhotoUrl, homeResolvedMemories, todayKey, user?.id]);
 
   const homeYearStats = useMemo(() => {
     const currentYear = new Date().getFullYear();
