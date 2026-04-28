@@ -935,11 +935,7 @@ const DestinationsPage = ({
   }, []);
 
   const handleSaveToSomeday = (destination) => {
-    const imageUrl = destination.photo
-      || destination.imageUrl
-      || destination.destination_image
-      || placePhotos[destination.id]
-      || '';
+    const imageUrl = getDestinationResolvedImage(destination, placePhotos[destination.id] || '');
 
     setSavedIds(prev => new Set([...prev, destination.id]));
     recordDestinationInteraction({ ...destination, photo: imageUrl }, 'save');
@@ -1004,7 +1000,7 @@ const DestinationsPage = ({
   }, [communityPosts]);
 
   const handleSomedayFromPost = useCallback((post) => {
-    const imageUrl = post.destination_image || placePhotos[post.id] || '';
+    const imageUrl = getDestinationResolvedImage(post, placePhotos[post.id] || '');
     recordDestinationInteraction({ ...post, destination_image: imageUrl }, 'save');
     onSaveToSomeday?.({ ...destinationSomedayPayload(post, imageUrl), location: post.location || '', review: post.review || '', best_for: post.best_for || '' });
   }, [onSaveToSomeday, placePhotos, recordDestinationInteraction]);

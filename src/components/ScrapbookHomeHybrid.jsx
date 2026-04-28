@@ -642,11 +642,11 @@ const ScrapbookHomeHybrid = ({
                   style={{ rotate: `${idx % 2 === 0 ? '-1.4deg' : '1.1deg'}` }}
                   onClick={onOpenSomeday}
                 >
-                  {dream.photoUrl ? (
+                  {(dream.photoUrl || dream.imageUrl) ? (
                     <div className="bg-white dark:bg-slate-100 rounded-sm shadow-lg p-2 pb-0 transition-all group-hover:shadow-xl group-hover:-translate-y-0.5">
                       <div className="aspect-square w-full overflow-hidden rounded-[3px]">
                         <img
-                          src={dream.photoUrl}
+                          src={dream.photoUrl || dream.imageUrl}
                           alt={dream.text}
                           className="h-full w-full object-cover"
                           loading="lazy"
