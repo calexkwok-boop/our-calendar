@@ -38,6 +38,7 @@ import TripHighlightReel from "./components/TripHighlightReel";
 import ProfilePage from "./components/ProfilePage";
 import FriendPhotoModal from "./components/FriendPhotoModal";
 import JOURNEY_QUOTES from "./data/journeyQuotes";
+import { getDestinationImageOverride } from "./data/destinationImageOverrides";
 
 const MemoryCreator = ImportedMemoryCreator || (() => null);
 
@@ -31033,6 +31034,19 @@ transform: translateY(0);
 
           {bottomNavTab === 'someday' && (() => {
             const catMap = { travel: 'places', food: 'food', adventure: 'experiences', culture: 'experiences', home: 'home', wellness: 'experiences', fun: 'experiences', buy: 'buy', dreamshelf: 'buy', products: 'buy', shopping: 'buy' };
+            const resolveSomedayDreamImage = (dream) => {
+              const sourceType = String(dream?.type || '').trim().toLowerCase();
+              const category = String(dream?.category || '').trim().toLowerCase();
+              const isDestinationDream = sourceType === 'destinations' || category === 'travel';
+              if (!isDestinationDream) return String(dream?.photoUrl || '').trim();
+              return getDestinationImageOverride({
+                id: dream?.id,
+                name: dream?.text,
+                destination_name: dream?.text,
+                title: dream?.text,
+                cardTitle: dream?.text,
+              }) || String(dream?.photoUrl || '').trim();
+            };
             const somedayDreams = [
               ...(Array.isArray(bucketList) ? bucketList : []).map(d => ({
                 id: d.id,
@@ -31040,7 +31054,7 @@ transform: translateY(0);
                 label: d.text,
                 text: d.text,
                 emoji: d.emoji || '✨',
-                imageUrl: d.photoUrl || '',
+                imageUrl: resolveSomedayDreamImage(d),
                 notes: d.notes || '',
                 brand: d.brand || '',
                 priceRange: d.priceRange || '',
