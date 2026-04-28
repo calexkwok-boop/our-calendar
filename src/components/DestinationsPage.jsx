@@ -142,6 +142,32 @@ const truncateText = (text, max = 120) => {
   return clean.length > max ? `${clean.slice(0, max).trimEnd()}…` : clean;
 };
 
+const DESTINATION_IMAGE_OVERRIDES = {
+  // Paste manual overrides here.
+  // Example:
+  // 'bl-2': 'https://example.com/santorini.jpg',
+  // 'santorini': 'https://example.com/santorini.jpg',
+  santorini: 'https://www.wendyperrin.com/wp-content/uploads/2018/03/Santorini-Greece-view-shutterstock_387166810.jpg',
+};
+
+const getDestinationManualImageOverride = (destination = {}) => {
+  const id = String(destination?.id || '').trim();
+  if (id && DESTINATION_IMAGE_OVERRIDES[id]) return String(DESTINATION_IMAGE_OVERRIDES[id]).trim();
+  const nameKey = String(destination?.name || destination?.destination_name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  if (nameKey && DESTINATION_IMAGE_OVERRIDES[nameKey]) return String(DESTINATION_IMAGE_OVERRIDES[nameKey]).trim();
+  return '';
+};
+
+const getDestinationResolvedImage = (destination = {}, fetchedPhotoUrl = '') => (
+  getDestinationManualImageOverride(destination)
+  || String(destination?.photo || destination?.imageUrl || destination?.destination_image || '').trim()
+  || String(fetchedPhotoUrl || '').trim()
+);
+
 const destinationSomedayPayload = (post, photoUrl = '') => ({
   title: post.destination_name,
   imageUrl: photoUrl || post.destination_image || '',
@@ -746,7 +772,7 @@ const DestinationsPage = ({
   const fetchDestinationPhoto = useCallback(async (destination) => {
     const destinationId = String(destination?.id || '');
     const destinationName = destination?.name || destination?.destination_name || '';
-    const destinationPhoto = destination?.photo || destination?.destination_image || '';
+    const destinationPhoto = getDestinationResolvedImage(destination, '');
     if (!destinationId || !destinationName || destinationPhoto || photoFetchedRef.current.has(destinationId)) return;
     photoFetchedRef.current.add(destinationId);
 
@@ -1064,9 +1090,9 @@ const DestinationsPage = ({
               <DestinationCard
                 key={d.id}
                 destination={d}
-                photoUrl={placePhotos[d.id] || ''}
+                photoUrl={getDestinationResolvedImage(d, placePhotos[d.id] || '')}
                 photoAttribution={photoAttributions[d.id] || ''}
-                onTap={(destination) => handleDestinationTap({ ...destination, photo: destination.photo || placePhotos[d.id] || '' })}
+                onTap={(destination) => handleDestinationTap({ ...destination, photo: getDestinationResolvedImage(destination, placePhotos[d.id] || '') })}
                 savedIds={savedIds}
                 darkMode={darkMode}
                 stagger={i}
@@ -1080,7 +1106,7 @@ const DestinationsPage = ({
       {selected && (
         <DestinationDetailSheet
           destination={selected}
-          photoUrl={placePhotos[selected.id] || selected.photo || ''}
+          photoUrl={getDestinationResolvedImage(selected, placePhotos[selected.id] || '')}
           photoAttribution={photoAttributions[selected.id] || ''}
           onAddEvent={onAddEvent}
           onSaveToSomeday={handleSaveToSomeday}

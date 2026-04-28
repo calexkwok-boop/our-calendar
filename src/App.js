@@ -31091,7 +31091,7 @@ transform: translateY(0);
       </div>
     </div>
     {/* -- Create Sub-Calendar Modal -- */}
-    {!activeSubCalendar && !showMemorySystem && !hideBottomNavForTournament && (
+    {!activeSubCalendar && !showMemorySystem && !hideBottomNavForTournament && typeof document !== 'undefined' && createPortal((
       <div
         className="fixed inset-x-0 bottom-0 z-[10001]"
         style={{
@@ -31182,7 +31182,7 @@ transform: translateY(0);
           </div>
         </div>
       </div>
-    )}
+    ), document.body)}
 
     {showLayerMediaCropModal && (
       <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
