@@ -392,7 +392,7 @@ const ChatRoom = ({ eventId, supabase, user, displayName, accent, darkMode, bord
         (payload) => setMessages((prev) => prev.filter((msg) => String(msg?.id || '') !== String(payload?.old?.id || ''))))
       .subscribe();
     return () => supabase.removeChannel(channel);
-  }, [eventId, supabase]);
+  }, [eventId]);
 
   // Auto-scroll
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
@@ -775,7 +775,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
     if (!event?.id || !supabase) return;
     const { data } = await supabase.from('popup_event_locations').select('*').eq('event_id', event.id);
     if (data) setLocations(data);
-  }, [event?.id, supabase]);
+  }, [event?.id]);
 
   useEffect(() => { loadLocations(); }, [loadLocations]);
 
@@ -786,7 +786,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
         () => loadLocations())
       .subscribe();
     return () => supabase.removeChannel(channel);
-  }, [event?.id, supabase, loadLocations]);
+  }, [event?.id, loadLocations]);
 
   // Update map markers when locations change
   useEffect(() => {

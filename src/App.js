@@ -15766,9 +15766,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `layer_id=eq.${activeLayerId}` }, () => {
         loadPopupEventData();
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members' }, () => {
-        loadPopupEventDataRef.current?.();
-      })
       .subscribe();
     return () => {
       channel.unsubscribe();
@@ -16499,7 +16496,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       document.removeEventListener('visibilitychange', onVisible);
       inviteChannel.unsubscribe();
     };
-  }, [user?.id, user?.email, user?.phone, layers]);
+  }, [user?.id, user?.email, user?.phone]);
 
   const loadPendingTripInvites = React.useCallback(async () => {
     const myEmail = normalizeEmail(user?.email);
