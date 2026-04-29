@@ -3513,6 +3513,7 @@ function App() {
   const [openFriendPhoto, setOpenFriendPhoto] = useState(null);
   const [prefetchedFriendsList, setPrefetchedFriendsList] = useState(null);
   const knownHandlesByEmailRef = useRef({});
+  const knownHandlesByUserIdRef = useRef({});
   const [somedayPinPositions, setSomedayPinPositions] = useState(() => {
     try { return JSON.parse(localStorage.getItem('someday-pin-positions') || '{}'); } catch { return {}; }
   });
@@ -13054,16 +13055,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       addEmail(msg?.email);
     });
 
+    const unknownEmailList = Array.from(emails).filter((email) => !knownHandlesByEmailRef.current[email]);
+    const unknownUserIdList = Array.from(userIds).filter((uid) => !knownHandlesByUserIdRef.current[uid]);
+    if (unknownEmailList.length === 0 && unknownUserIdList.length === 0) return;
+
     const nextByEmail = {};
     const nextByUserId = {};
 
     try {
-      const emailList = Array.from(emails);
-      if (emailList.length > 0) {
+      if (unknownEmailList.length > 0) {
         const { data, error } = await supabase
           .from(ACCOUNT_HANDLE_TABLE)
           .select('email,handle,user_id')
-          .in('email', emailList);
+          .in('email', unknownEmailList);
         if (!error) {
           (data || []).forEach((row) => {
             const email = normalizeEmail(row?.email);
@@ -13075,12 +13079,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         }
       }
 
-      const userIdList = Array.from(userIds);
-      if (userIdList.length > 0) {
+      if (unknownUserIdList.length > 0) {
         const { data, error } = await supabase
           .from(ACCOUNT_HANDLE_TABLE)
           .select('email,handle,user_id')
-          .in('user_id', userIdList);
+          .in('user_id', unknownUserIdList);
         if (!error) {
           (data || []).forEach((row) => {
             const email = normalizeEmail(row?.email);
@@ -13100,7 +13103,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       setKnownHandlesByEmail(prev => ({ ...prev, ...nextByEmail }));
       Object.assign(knownHandlesByEmailRef.current, nextByEmail);
     }
-    if (Object.keys(nextByUserId).length > 0) setKnownHandlesByUserId(prev => ({ ...prev, ...nextByUserId }));
+    if (Object.keys(nextByUserId).length > 0) {
+      setKnownHandlesByUserId(prev => ({ ...prev, ...nextByUserId }));
+      Object.assign(knownHandlesByUserIdRef.current, nextByUserId);
+    }
   };
 
   const saveUser = async (userName) => {
@@ -16345,6 +16351,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     };
 
     const pollMembershipChanges = async () => {
+      if (document.visibilityState !== 'visible') return;
       let data = [];
       try {
         const { data: rows, error } = await supabase
@@ -16387,9 +16394,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     pollMembershipChanges();
     const timer = setInterval(pollMembershipChanges, 30000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') pollMembershipChanges();
+    };
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
       canceled = true;
       clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [user?.id, user?.email, user?.phone]);
 
@@ -16441,6 +16453,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       };
 
     const pollInviteRows = async () => {
+      if (document.visibilityState !== 'visible') return;
       try {
         const cursor = inAppSyncCursorRef.current.tripInvites || new Date(Date.now() - (5 * 60 * 1000)).toISOString();
         const { data: datedRows } = await supabase
@@ -16842,12 +16855,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return;
     }
     loadPendingTripInvites();
-    const interval = setInterval(loadPendingTripInvites, 60 * 1000);
-    const onFocus = () => loadPendingTripInvites();
+    const pollPendingTripInvites = () => {
+      if (document.visibilityState !== 'visible') return;
+      loadPendingTripInvites();
+    };
+    const interval = setInterval(pollPendingTripInvites, 60 * 1000);
+    const onFocus = () => pollPendingTripInvites();
     window.addEventListener('focus', onFocus);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') loadPendingTripInvites();
+    };
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
       clearInterval(interval);
       window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [user?.email, user?.phone, user?.id, layerRefreshToken, loadPendingTripInvites]);
 
@@ -16857,12 +16879,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return;
     }
     loadPendingCalendarInvites();
-    const interval = setInterval(loadPendingCalendarInvites, 60 * 1000);
-    const onFocus = () => loadPendingCalendarInvites();
+    const pollPendingCalendarInvites = () => {
+      if (document.visibilityState !== 'visible') return;
+      loadPendingCalendarInvites();
+    };
+    const interval = setInterval(pollPendingCalendarInvites, 60 * 1000);
+    const onFocus = () => pollPendingCalendarInvites();
     window.addEventListener('focus', onFocus);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') loadPendingCalendarInvites();
+    };
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
       clearInterval(interval);
       window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [user?.id, user?.email, user?.phone, layerRefreshToken, loadPendingCalendarInvites]);
 
@@ -16872,12 +16903,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return;
     }
     loadPendingChapterInvites();
-    const interval = setInterval(loadPendingChapterInvites, 60 * 1000);
-    const onFocus = () => loadPendingChapterInvites();
+    const pollPendingChapterInvites = () => {
+      if (document.visibilityState !== 'visible') return;
+      loadPendingChapterInvites();
+    };
+    const interval = setInterval(pollPendingChapterInvites, 60 * 1000);
+    const onFocus = () => pollPendingChapterInvites();
     window.addEventListener('focus', onFocus);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') loadPendingChapterInvites();
+    };
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
       clearInterval(interval);
       window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [user?.email, layerRefreshToken, chapterInviteRefreshToken, loadPendingChapterInvites]);
 
