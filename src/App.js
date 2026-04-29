@@ -16101,11 +16101,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       await loadSubCalendarMembers(activeTrip.id);
     };
 
+    const filteredLayerIds = Array.from(new Set(
+      (latestSnapshot().layers || [])
+        .map((layer) => String(layer?.id || '').trim())
+        .filter(Boolean)
+    ));
+    const filteredSubCalIds = Array.from(new Set(
+      (latestSnapshot().subCalendars || [])
+        .map((subCal) => String(subCal?.id || '').trim())
+        .filter(Boolean)
+    ));
+
     let updatesChannel = supabase
-      .channel(`in-app-updates-${me}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'events' }, async ({ new: row }) => {
+      .channel(`in-app-updates-${me}`);
+    const handleEventInsert = async ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
-        if (!(await canAccessLayerId(row.layer_id || row.calendar_id))) return;
         const who = String(row.created_by || 'Someone');
         addInAppNotification({
           key: `events:${row.id}`,
@@ -16113,11 +16123,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           message: `${who} added "${row.title || 'an event'}" to the calendar.`,
           createdAt: row.created_at,
         });
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sub_calendar_events' }, async ({ new: row }) => {
+      };
+    const handleSubCalendarEventInsert = async ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
         const subCalId = String(row.sub_calendar_id || '');
-        if (!(await canAccessSubCalId(subCalId))) return;
         const who = String(row.created_by || 'Someone');
         const tripName = getSubCalName(subCalId);
         addInAppNotification({
@@ -16126,8 +16135,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           message: `${who} added "${row.title || 'an event'}" in ${tripName}.`,
           createdAt: row.created_at,
         });
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trip_photos' }, async ({ new: row }) => {
+      };
+    const handleTripPhotoInsert = async ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
         const subCalId = String(row.sub_calendar_id || '');
         const who = String(row.uploaded_by || 'Someone');
@@ -16138,7 +16147,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           message: `${who} added a photo in ${tripName}.`,
           createdAt: row.created_at,
         });
-      })
+      };
+    const attachFilteredRealtime = (table, field, ids, handler) => {
+      (Array.isArray(ids) ? ids : []).forEach((id) => {
+        if (!id) return;
+        updatesChannel = updatesChannel.on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table,
+          filter: `${field}=eq.${id}`,
+        }, handler);
+      });
+    };
+    attachFilteredRealtime('events', 'layer_id', filteredLayerIds, handleEventInsert);
+    attachFilteredRealtime('events', 'calendar_id', filteredLayerIds, handleEventInsert);
+    attachFilteredRealtime('sub_calendar_events', 'sub_calendar_id', filteredSubCalIds, handleSubCalendarEventInsert);
+    attachFilteredRealtime('trip_photos', 'sub_calendar_id', filteredSubCalIds, handleTripPhotoInsert);
+    updatesChannel = updatesChannel
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shared_lists' }, async ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
         if (!(await canAccessLayerId(row.layer_id || row.calendar_id))) return;
@@ -16345,7 +16370,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return () => {
       updatesChannel.unsubscribe();
     };
-  }, [user?.id, user?.email, user?.phone]);
+  }, [user?.id, user?.email, user?.phone, layers, subCalendars]);
 
   useEffect(() => {
     if (!user?.id) {
