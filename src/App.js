@@ -3593,7 +3593,7 @@ function App() {
   const swipingLayerIdRef = useRef(null);
   const [layerOrder, setLayerOrder] = useState([]);
   const dragLayerIdRef = useRef(null);
-  const [hoveredLayerDragId, setHoveredLayerDragId] = useState(null);
+  const hoveredLayerDragIdRef = useRef(null);
   const [activeCalendarSortOrder, setActiveCalendarSortOrder] = useState([]);
   const [upcomingTripSortOrder, setUpcomingTripSortOrder] = useState([]);
   const [upcomingPopupSortOrder, setUpcomingPopupSortOrder] = useState([]);
@@ -29232,19 +29232,19 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     <div
                       draggable
                       onDragStart={(e) => { dragLayerIdRef.current = String(layer.id); e.dataTransfer.effectAllowed = 'move'; e.stopPropagation(); }}
-                      onTouchStart={(e) => { e.stopPropagation(); dragLayerIdRef.current = String(layer.id); }}
+                      onTouchStart={(e) => { e.stopPropagation(); dragLayerIdRef.current = String(layer.id); hoveredLayerDragIdRef.current = null; }}
                       onTouchMove={(e) => {
                         if (!dragLayerIdRef.current) return;
                         const touch = e.touches[0];
                         const el = document.elementFromPoint(touch.clientX, touch.clientY);
                         const row = el?.closest('[data-layer-row]');
-                        if (row) setHoveredLayerDragId(row.getAttribute('data-layer-row'));
+                        if (row) hoveredLayerDragIdRef.current = row.getAttribute('data-layer-row');
                       }}
                       onTouchEnd={() => {
                         const fromId = dragLayerIdRef.current;
-                        const toId = hoveredLayerDragId;
+                        const toId = hoveredLayerDragIdRef.current;
                         dragLayerIdRef.current = null;
-                        setHoveredLayerDragId(null);
+                        hoveredLayerDragIdRef.current = null;
                         if (!fromId || !toId || fromId === toId) return;
                         setLayerOrder(prev => {
                           const base = prev.length > 0 ? [...prev] : visibleLayerCalendars.map(l => String(l.id));
