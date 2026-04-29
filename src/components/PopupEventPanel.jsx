@@ -1201,6 +1201,9 @@ export default function PopupEventPanel({
   const [capacityBusy, setCapacityBusy] = useState(false);
   const [capacityError, setCapacityError] = useState('');
   const eventMetaFallbackRef = useRef(eventMetaFallback);
+  const eventRef = useRef(event);
+  const memberRoleOverridesRef = useRef(memberRoleOverrides);
+  const inFlightLoadRef = useRef(new Map());
 
   useEffect(() => {
     if (typeof document === 'undefined' || typeof window === 'undefined') return undefined;
@@ -1259,6 +1262,14 @@ export default function PopupEventPanel({
     eventMetaFallbackRef.current = eventMetaFallback;
   }, [eventMetaFallback]);
 
+  useEffect(() => {
+    eventRef.current = event;
+  }, [event]);
+
+  useEffect(() => {
+    memberRoleOverridesRef.current = memberRoleOverrides;
+  }, [memberRoleOverrides]);
+
   const myMember = members.find((m) => String(m?.user_id || '').trim() === String(user?.id || '').trim());
   const creatorUserId = String(event?.created_by || event?.created_by_user_id || '').trim();
   const isEventCreator = Boolean(creatorUserId) && creatorUserId === String(user?.id || '').trim();
@@ -1309,16 +1320,23 @@ export default function PopupEventPanel({
     });
   }, [event?.id]);
 
-  const loadEvent = useCallback(async (id) => {
+  const loadEvent = useCallback(async (id, options = {}) => {
     if (!id || !supabase) return;
-    setLoading(true);
+    const normalizedId = String(id || '').trim();
+    if (!normalizedId) return null;
+    const silent = options?.silent === true;
+    if (inFlightLoadRef.current.has(normalizedId)) {
+      return inFlightLoadRef.current.get(normalizedId);
+    }
+    if (!silent || !eventRef.current) setLoading(true);
     if (!isUuid(id)) {
       if (eventMetaFallbackRef.current) setEvent(eventMetaFallbackRef.current);
       setMembers([]);
       setLoading(false);
       return;
     }
-    try {
+    const request = (async () => {
+      try {
       const [{ data: ev }, { data: mems }, { data: signups, error: signupsErr }] = await Promise.all([
         supabase.from('popup_event_details').select('*').eq('id', id).single(),
         supabase.from('popup_event_members').select('*').eq('event_id', id).order('joined_at'),
@@ -1404,24 +1422,32 @@ export default function PopupEventPanel({
       });
       const nextMembers = memberList.map((entry) => {
         const overrideKey = String(entry?.user_id || '').trim();
-        const overrideRole = String(memberRoleOverrides?.[overrideKey] || '').trim();
+        const overrideRole = String(memberRoleOverridesRef.current?.[overrideKey] || '').trim();
         return overrideRole ? { ...entry, role: overrideRole } : entry;
       });
       setMembers(nextMembers);
-      setLoading(false);
       return normalizedEv;
-    } catch {}
-    setLoading(false);
-    return null;
-  }, [supabase, memberRoleOverrides]);
+      } catch {}
+      return null;
+    })();
+    inFlightLoadRef.current.set(normalizedId, request);
+    try {
+      return await request;
+    } finally {
+      inFlightLoadRef.current.delete(normalizedId);
+      if (!silent || !eventRef.current || String(eventRef.current?.id || '').trim() === normalizedId) {
+        setLoading(false);
+      }
+    }
+  }, [supabase]);
 
   useEffect(() => { if (initialEventId) loadEvent(initialEventId); }, [initialEventId, loadEvent]);
 
   useEffect(() => {
     if (!event?.id || !supabase || !isUuid(event.id)) return;
     const channel = supabase.channel(`popup-members-${event.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { silent: true }))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { silent: true }))
       .subscribe();
     return () => supabase.removeChannel(channel);
   }, [event?.id, supabase, loadEvent]);
