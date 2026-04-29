@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare, MapPin, ThumbsUp, ThumbsDown, Share2, Trophy, Home, Compass, Sparkles } from 'lucide-react';
+import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare, MapPin, ThumbsUp, ThumbsDown, Share2, Trophy, Home, Compass, Sparkles, GripVertical } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { supabase } from './supabaseClient';
 import { getToken, onMessage } from "firebase/messaging";
@@ -3591,6 +3591,8 @@ function App() {
   const [layerSwipeDrag, setLayerSwipeDrag] = useState({ id: null, offset: 0 });
   const layerSwipeStartXRef = useRef(0);
   const swipingLayerIdRef = useRef(null);
+  const [layerOrder, setLayerOrder] = useState([]);
+  const dragLayerIdRef = useRef(null);
   const [activeCalendarSortOrder, setActiveCalendarSortOrder] = useState([]);
   const [upcomingTripSortOrder, setUpcomingTripSortOrder] = useState([]);
   const [upcomingPopupSortOrder, setUpcomingPopupSortOrder] = useState([]);
@@ -14405,6 +14407,27 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       ),
       created_at: new Date().toISOString(),
     };
+    try {
+      const [{ data: existingSignup }, { data: existingMember }] = await Promise.all([
+        supabase
+          .from('popup_event_signups')
+          .select('event_id')
+          .eq('event_id', normalizedEventId)
+          .eq('user_id', user.id)
+          .maybeSingle(),
+        supabase
+          .from('popup_event_members')
+          .select('event_id')
+          .eq('event_id', normalizedEventId)
+          .eq('user_id', user.id)
+          .maybeSingle(),
+      ]);
+      if (existingSignup || existingMember) {
+        await loadPopupEventData();
+        focusOnPopupEventDate(normalizedEventId, fallbackMeta?.dateKey || null);
+        return;
+      }
+    } catch {}
     const { error } = await supabase.from('popup_event_signups').insert(payload);
     if (error) {
       if (String(error?.code || '') === '23505') {
@@ -21177,13 +21200,20 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       new Map((layers || []).map((layer) => [String(layer?.id || ''), layer])).values()
     ).filter((layer) => String(layer?.id || '').trim() !== '');
     const visible = [...unique].sort((a, b) => {
+      if (layerOrder.length > 0) {
+        const aIdx = layerOrder.indexOf(String(a.id));
+        const bIdx = layerOrder.indexOf(String(b.id));
+        if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+        if (aIdx !== -1) return -1;
+        if (bIdx !== -1) return 1;
+      }
       const aOwned = String(a?.owner_id) === myId ? 0 : 1;
       const bOwned = String(b?.owner_id) === myId ? 0 : 1;
       if (aOwned !== bOwned) return aOwned - bOwned;
       return String(a?.name || '').localeCompare(String(b?.name || ''));
     });
     return { ownedLayerCalendars: owned, visibleLayerCalendars: visible };
-  }, [layers, user?.id]);
+  }, [layers, user?.id, layerOrder]);
   useEffect(() => {
     setJourneyState(readJourneyState(user?.id));
   }, [user?.id]);
@@ -21418,6 +21448,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     try { localStorage.setItem('someday-decor-pins', JSON.stringify(somedayDecorPins)); } catch {}
   }, [somedayDecorPins]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    try {
+      const stored = JSON.parse(localStorage.getItem(`layer-order-${user.id}`) || '[]');
+      if (Array.isArray(stored) && stored.length > 0) setLayerOrder(stored);
+    } catch {}
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || layerOrder.length === 0) return;
+    try { localStorage.setItem(`layer-order-${user.id}`, JSON.stringify(layerOrder)); } catch {}
+  }, [user?.id, layerOrder]);
 
   useEffect(() => {
     const komoOwnerKey = String(currentUser || 'guest').trim() || 'guest';
@@ -29116,7 +29159,27 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       const rowOffset = layerSwipeDrag.id === layer.id ? layerSwipeDrag.offset : (swipedLayerId === layer.id ? -88 : 0);
                       const isDeleteRevealed = rowOffset < 0;
                       return (
-                        <div key={layer.id} className="relative rounded-xl overflow-hidden">
+                        <div
+                          key={layer.id}
+                          className="relative rounded-xl overflow-hidden"
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={() => {
+                            const fromId = dragLayerIdRef.current;
+                            const toId = String(layer.id);
+                            dragLayerIdRef.current = null;
+                            if (!fromId || fromId === toId) return;
+                            setLayerOrder(prev => {
+                              const base = prev.length > 0 ? [...prev] : visibleLayerCalendars.map(l => String(l.id));
+                              const fromIdx = base.indexOf(fromId);
+                              const toIdx = base.indexOf(toId);
+                              if (fromIdx === -1 || toIdx === -1) return prev;
+                              const next = [...base];
+                              next.splice(fromIdx, 1);
+                              next.splice(toIdx, 0, fromId);
+                              return next;
+                            });
+                          }}
+                        >
                   {canSwipeLayerAction && (
                     <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
                       <button
@@ -29150,6 +29213,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       transition: layerSwipeDrag.id === layer.id ? 'none' : 'transform 180ms ease',
                     }}
                   >
+                    <div
+                      draggable
+                      onDragStart={(e) => { dragLayerIdRef.current = String(layer.id); e.dataTransfer.effectAllowed = 'move'; e.stopPropagation(); }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="shrink-0 cursor-grab active:cursor-grabbing touch-none"
+                    >
+                      <GripVertical className="w-3.5 h-3.5 text-gray-300 dark:text-gray-600" />
+                    </div>
                     <div className="w-3 h-3 rounded-full shrink-0" style={{ background: rowTheme.accent }} />
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-semibold truncate text-gray-900 dark:text-gray-100">{layer.name || 'Untitled'}</div>
@@ -30221,6 +30292,16 @@ transform: translateY(0);
             setSelectedCategory={setSelectedCategory}
             quickEntry={quickEntry}
             setQuickEntry={setQuickEntry}
+            onEventClick={(event) => {
+              setShowDateDetailModal(false);
+              const eventId = String(event?.id || '');
+              const isPopup = Boolean(popupEventsByEventId && popupEventsByEventId[eventId]);
+              if (isPopup) {
+                setSelectedPopupEventPanelId(eventId);
+              } else {
+                openUserTabEvent?.(event);
+              }
+            }}
             handleQuickAdd={handleQuickAdd}
             popupEventMaxPeopleDraft={popupEventMaxPeopleDraft}
             setPopupEventMaxPeopleDraft={setPopupEventMaxPeopleDraft}

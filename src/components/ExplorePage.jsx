@@ -729,9 +729,7 @@ function PublishedChapterCard({ chapter, onOpen, darkMode }) {
           <div className="w-full h-full flex items-center justify-center text-5xl">📖</div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
-        <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-white/85 text-[10px] font-semibold tracking-wide text-violet-700">
-          Published chapter
-        </div>
+
         <div className="absolute bottom-3 left-3 right-3">
           <div className="text-white font-handwritten text-[28px] font-bold leading-tight line-clamp-2">
             {chapter.public_title || chapter.title}

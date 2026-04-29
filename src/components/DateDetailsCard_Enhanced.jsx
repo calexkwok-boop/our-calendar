@@ -171,6 +171,7 @@ export default function DateDetailsCardEnhanced({
   onClose,
   onSaveEvent,
   onAddEvent,
+  onEventClick,
   handleQuickAdd,
   handleDeleteEvent,
   handleUpdateEventField,
@@ -766,6 +767,7 @@ export default function DateDetailsCardEnhanced({
                 </div>
               ) : (
                 selectedEvents.map((event) => {
+                  const isEditingThisEvent = String(editingEvent || '') === String(event?.id || '');
                   const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
                   const weEventBadge = getWeEventDisplayBadge(event, popupMeta);
                   const effectiveCategoryKey = weEventBadge ? 'popup_event' : (event.category || 'other');
@@ -928,6 +930,20 @@ export default function DateDetailsCardEnhanced({
                       <div
                         className={`relative z-10 overflow-hidden rounded-2xl border border-white/50 shadow-lg transition-all hover:-translate-y-0.5 ${event.isVirtualAnnual ? 'border-dashed' : ''}`}
                         style={{ ...eventCardStyle, transform: `translateX(${rowOffset}px)`, transition: eventSwipeDrag.id === eventSwipeKey ? 'none' : 'transform 180ms ease', touchAction: 'pan-y' }}
+                        onClick={() => {
+                          if (isEditingThisEvent) return;
+                          const isPopupLike = Boolean(
+                            popupMeta
+                            || weEventBadge
+                            || event?.isPopup
+                            || event?.category === 'popup_event'
+                          );
+                          if (isPopupLike) {
+                            setSelectedPopupEventPanelId?.(String(event?.id || ''));
+                            return;
+                          }
+                          setEditingEvent?.(String(event?.id || ''));
+                        }}
                         onTouchStart={(touchEvent) => handleEventSwipeStart?.(touchEvent, eventSwipeKey, canDeleteThisEvent)}
                         onTouchMove={handleEventSwipeMove}
                         onTouchEnd={handleEventSwipeEnd}
@@ -945,7 +961,7 @@ export default function DateDetailsCardEnhanced({
                             </div>
                           ) : null}
 
-                          {editingEvent === event.id ? (
+                          {isEditingThisEvent ? (
                             <div
                               className="space-y-3 rounded-[22px] border p-3.5 shadow-[0_18px_40px_rgba(15,23,42,0.12)]"
                               style={{
