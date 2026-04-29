@@ -3,7 +3,7 @@ import {
   X, Plus, Users, Lock, Globe, Edit3, Crown, Send,
   Shield, UserMinus, ChevronRight, MapPin, Clock,
   Calendar, CheckCircle, AlertCircle, Loader, Copy, Check, Trash2,
-  Navigation, Radio, Gamepad2, MessageCircle, Map,
+  Navigation, Radio, Gamepad2, MessageCircle, Map as MapIcon,
 } from 'lucide-react';
 import EventCardRouter, { resolveEventCardCategory } from './EventCardRouter';
 import SportsEventCard from './SportsEventCard';
@@ -352,7 +352,7 @@ const RosterRow = ({
 // ChatRoom
 // ─────────────────────────────────────────────────────────────────────────────
 
-const ChatRoom = ({ eventId, supabase, user, displayName, accent, darkMode, border, softBg, members }) => {
+const ChatRoom = ({ eventId, supabase, user, displayName, accent, darkMode, border, softBg, members, embedded = false }) => {
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
@@ -360,6 +360,7 @@ const ChatRoom = ({ eventId, supabase, user, displayName, accent, darkMode, bord
   const [deletingMessageId, setDeletingMessageId] = useState('');
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  const messagesRef = useRef(null);
   const primaryText = darkMode ? '#f8fafc' : 'var(--color-text-primary)';
   const secondaryText = darkMode ? '#cbd5e1' : 'var(--color-text-secondary)';
   const effectiveChatDisplayName = String(displayName || user?.email || user?.phone || 'Player').trim() || 'Player';
@@ -394,8 +395,12 @@ const ChatRoom = ({ eventId, supabase, user, displayName, accent, darkMode, bord
     return () => supabase.removeChannel(channel);
   }, [eventId]);
 
-  // Auto-scroll
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  // Auto-scroll only the chat scroller, not the whole parent sheet/card.
+  useEffect(() => {
+    const scroller = messagesRef.current;
+    if (!scroller) return;
+    scroller.scrollTo({ top: scroller.scrollHeight, behavior: 'smooth' });
+  }, [messages]);
 
   const sendMessage = async () => {
     const content = draft.trim();
@@ -475,9 +480,24 @@ const ChatRoom = ({ eventId, supabase, user, displayName, accent, darkMode, bord
   const msgRole = (msg) => members.find((m) => m.user_id === msg.user_id)?.role || 'player';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 420 }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: embedded ? 360 : 420,
+        minHeight: 0,
+        borderRadius: embedded ? 18 : 0,
+        overflow: 'hidden',
+        background: embedded ? (darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.88)') : 'transparent',
+        border: embedded ? `1px solid ${border}` : 'none',
+        boxShadow: embedded ? (darkMode ? 'none' : '0 10px 30px rgba(15,23,42,0.06)') : 'none',
+      }}
+    >
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div
+        ref={messagesRef}
+        style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 2 }}
+      >
         {chatError && (
           <div style={{ marginBottom: 8, padding: '8px 10px', borderRadius: 12, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', fontSize: 12, color: '#ef4444' }}>
             {chatError}
@@ -1338,7 +1358,7 @@ export default function PopupEventPanel({
     const request = (async () => {
       try {
         const [{ data: ev }, { data: mems }, { data: signups }] = await Promise.all([
-          supabase.from('popup_event_details').select('*').eq('id', id).single(),
+          supabase.from('popup_event_details').select('*').eq('id', id).maybeSingle(),
           supabase.from('popup_event_members').select('*').eq('event_id', id).order('joined_at'),
           supabase.from('popup_event_signups').select('*').eq('event_id', id).order('created_at'),
         ]);
@@ -1467,16 +1487,57 @@ export default function PopupEventPanel({
     setJoinError('');
     setJoining(true);
     try {
-      const { error } = await supabase
-        .from('popup_event_members')
-        .insert({ event_id: event.id, user_id: user.id, display_name: effectiveDisplayName || 'Player', role: isEventCreator ? 'host' : 'player' });
-      if (error && error.code !== '23505') throw error;
-      const loadedEvent = await loadEvent(event.id);
-      if (!isEventCreator && typeof onJoined === 'function') onJoined(loadedEvent || event);
+      const targetLayerId = String(event?.layer_id || event?.calendar_id || calendarId || '').trim();
+      if (!targetLayerId) {
+        throw new Error('This event is missing its calendar link, so RSVP cannot be saved yet.');
+      }
+      const { data: existingSignup, error: existingError } = await supabase
+        .from('popup_event_signups')
+        .select('id')
+        .eq('event_id', event.id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (existingError) throw existingError;
+      if (!existingSignup?.id) {
+        const { error } = await supabase
+          .from('popup_event_signups')
+          .insert({
+            layer_id: targetLayerId,
+            event_id: event.id,
+            user_id: user.id,
+            display_name: effectiveDisplayName || 'Player',
+            created_at: new Date().toISOString(),
+          });
+        const errorCode = String(error?.code || '').trim();
+        const errorStatus = Number(error?.status || 0);
+        if (error && errorCode !== '23505' && errorStatus !== 409) throw error;
+      }
+      setMembers((prev) => {
+        const alreadyPresent = (prev || []).some((entry) => String(entry?.user_id || '').trim() === String(user?.id || '').trim());
+        if (alreadyPresent) return prev;
+        return [
+          ...(Array.isArray(prev) ? prev : []),
+          {
+            id: `self-${String(user?.id || '').trim()}`,
+            event_id: event.id,
+            user_id: user.id,
+            display_name: effectiveDisplayName || 'Player',
+            role: isEventCreator ? 'host' : 'player',
+            joined_at: new Date().toISOString(),
+            photoUrl: currentUserProfilePhotoUrl || '',
+            photo_url: currentUserProfilePhotoUrl || '',
+            avatarUrl: currentUserProfilePhotoUrl || '',
+            avatar_url: currentUserProfilePhotoUrl || '',
+          },
+        ];
+      });
+      if (!isEventCreator && typeof onJoined === 'function') onJoined(event);
+      void loadEvent(event.id, { silent: true });
     } catch (error) {
       setJoinError(error?.message || 'Could not RSVP right now.');
+    } finally {
+      setJoining(false);
     }
-    setJoining(false);
   };
   const ensurePopupMemberRecord = async (member, fallbackRole = 'player') => {
     if (!isUuid(event?.id)) return null;
@@ -1989,7 +2050,17 @@ export default function PopupEventPanel({
     </div>
   );
 
-  if (!event) return null;
+  if (!event || typeof event !== 'object') {
+    return (
+      <div style={{ ...panelStyle, padding: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+        <AlertCircle style={{ width: 20, height: 20, color: accent }} />
+        <div style={{ fontSize: 15, fontWeight: 700, color: primaryText }}>This event could not be loaded.</div>
+        <button onClick={() => onClose?.()} style={{ ...btnStyle, borderRadius: 14, padding: '10px 14px', fontSize: 13, fontWeight: 700 }}>
+          Close
+        </button>
+      </div>
+    );
+  }
 
   const memberCount = members.length;
   const sortedMembers = [...members].sort((a, b) => {
@@ -2000,7 +2071,8 @@ export default function PopupEventPanel({
   });
   const hostMember = members.find((m) => m.role === 'host');
   const cohostMembers = sortedMembers.filter((m) => m.role === 'cohost');
-  const isLegacyInvalidEvent = !isUuid(event.id);
+  const eventId = String(event?.id || '').trim();
+  const isLegacyInvalidEvent = !isUuid(eventId);
   const attendeeLabel = isSportsPopupEvent ? 'players' : 'guests';
   const joinLabel = isSportsPopupEvent ? 'Join Event' : 'RSVP';
   const joiningLabel = isSportsPopupEvent ? 'Joining...' : 'Saving RSVP...';
@@ -2032,6 +2104,83 @@ export default function PopupEventPanel({
   ];
   const visibleTabs = isSportsPopupEvent ? tabs : tabs.filter((tab) => tab.id !== 'game');
   const activeScreen = !isSportsPopupEvent && screen === 'game' ? 'detail' : screen;
+  const nonSportsActiveTab = activeScreen === 'roster' ? 'people' : activeScreen;
+  const renderNonSportsBodyContent = () => {
+    if (nonSportsActiveTab === 'people') {
+      return (
+        <div style={{ paddingBottom: 4 }}>
+          <div style={{ padding: '12px 16px 8px', fontSize: 11, fontWeight: 900, color: accent, fontFamily: APP_FONT_STACK }}>
+            {`${members.filter((member) => String(member?.rsvp || 'yes').trim().toLowerCase() === 'yes').length}/${memberCount} going`}
+          </div>
+          {sortedMembers.map((member) => (
+            <RosterRow
+              key={member.id || member.user_id || member.display_name}
+              member={member}
+              isMe={String(member?.user_id || '').trim() === String(user?.id || '').trim()}
+              isHost={isHostOrCohost}
+              accent={accent}
+              darkMode={darkMode}
+              onKick={handleKick}
+              onPromote={handlePromote}
+              onDemote={handleDemote}
+              attendeeRoleLabel="Guest"
+              attendeeStatusLabel={
+                String(member?.source || '').trim().toLowerCase() === 'guest-list'
+                  ? (String(member?.rsvp || 'pending').trim().toLowerCase() === 'yes'
+                    ? 'Yes'
+                    : String(member?.rsvp || '').trim().toLowerCase() === 'no'
+                      ? 'No'
+                      : 'Pending')
+                  : ''
+              }
+              attendeeStatusTone={
+                String(member?.source || '').trim().toLowerCase() === 'guest-list'
+                  ? (String(member?.rsvp || 'pending').trim().toLowerCase() || 'pending')
+                  : ''
+              }
+            />
+          ))}
+          {sortedMembers.length === 0 && (
+            <div style={{ padding: 32, textAlign: 'center', fontFamily: APP_FONT_STACK, color: secondaryText, fontWeight: 800 }}>
+              No guests yet
+            </div>
+          )}
+        </div>
+      );
+    }
+    if (nonSportsActiveTab === 'chat') {
+      return (
+        <ChatRoom
+          eventId={eventId}
+          supabase={supabase}
+          user={user}
+          displayName={effectiveDisplayName}
+          accent={accent}
+          darkMode={darkMode}
+          border={border}
+          softBg={softBg}
+          members={members}
+          embedded
+        />
+      );
+    }
+    if (nonSportsActiveTab === 'map') {
+      return (
+        <LiveMap
+          event={{ ...event, id: eventId }}
+          supabase={supabase}
+          user={user}
+          displayName={effectiveDisplayName}
+          accent={accent}
+          darkMode={darkMode}
+          border={border}
+          softBg={softBg}
+          members={members}
+        />
+      );
+    }
+    return null;
+  };
   const nonSportsPrimaryAction = !isSportsPopupEvent && !isLegacyInvalidEvent
     ? (
       !isMember && event.status === 'open' && !isFull
@@ -2059,9 +2208,12 @@ export default function PopupEventPanel({
         joinError={joinError}
         copied={copied}
         onCopyLink={handleCopyLink}
+        onGoToInfo={() => setScreen('detail')}
         onViewRoster={() => setScreen('roster')}
         onOpenChat={() => setScreen('chat')}
+        onOpenMap={() => setScreen('map')}
         onStartPlay={() => setScreen('game')}
+        activeTab={activeScreen === 'detail' ? 'info' : activeScreen}
         onEditCapacity={() => {
           setCapacityDraft(currentNoMax ? String(POPUP_NO_MAX_SENTINEL) : String(Math.max(memberCount || 1, Number(event?.max_players || 10))));
           setCapacityError('');
@@ -2077,6 +2229,8 @@ export default function PopupEventPanel({
     <DragToCloseSheet onClose={onClose} darkMode={darkMode} panelStyle={panelStyle}>
       <EventCardRouter
         event={routedEvent}
+        activeTab={nonSportsActiveTab === 'detail' ? 'info' : nonSportsActiveTab}
+        bodyContent={nonSportsActiveTab === 'detail' ? null : renderNonSportsBodyContent()}
         darkMode={darkMode}
         accent={accent}
         onEditBasics={isHostOrCohost ? handleEditEventBasics : undefined}
@@ -2085,6 +2239,10 @@ export default function PopupEventPanel({
         canClaimPotluck={Boolean(user?.id) && (isMember || isHostOrCohost)}
         currentUserId={String(user?.id || '').trim()}
         currentUserName={effectiveDisplayName || 'Guest'}
+        onGoToInfo={() => setScreen('detail')}
+        onViewPeople={() => setScreen('roster')}
+        onOpenChat={() => setScreen('chat')}
+        onOpenMap={() => setScreen('map')}
         onPrimaryAction={nonSportsPrimaryAction?.action}
         primaryActionLabel={joining && nonSportsPrimaryAction?.action === handleJoin ? joiningLabel : nonSportsPrimaryAction?.label}
         hidePrimaryAction={!nonSportsPrimaryAction}
@@ -2151,6 +2309,7 @@ export default function PopupEventPanel({
           position: 'sticky',
           top: 0,
           zIndex: 4,
+          pointerEvents: 'auto',
           backdropFilter: 'blur(14px)',
           WebkitBackdropFilter: 'blur(14px)',
           scrollbarWidth: 'none',
@@ -2158,8 +2317,13 @@ export default function PopupEventPanel({
       >
         {visibleTabs.map(({ id, label, emoji }) => (
           <button
+            type="button"
             key={id}
-            onClick={() => setScreen(id)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setScreen(id);
+            }}
             style={{
               flexShrink: 0,
               padding: '6px 14px',
@@ -2359,7 +2523,16 @@ export default function PopupEventPanel({
                   { label: 'Open Chat', icon: MessageCircle, action: () => setScreen('chat') },
                   ...(isSportsPopupEvent ? [{ label: 'Start Play', icon: Gamepad2, action: () => setScreen('game'), color: accent }] : []),
                 ].map(({ label, icon: Icon, action, color }) => (
-                  <button key={label} onClick={action} style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: darkMode ? 'rgba(255,255,255,0.04)' : '#fff', color: color || primaryText, fontSize: 12, fontWeight: 700 }}>
+                  <button
+                    type="button"
+                    key={label}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      action?.();
+                    }}
+                    style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: darkMode ? 'rgba(255,255,255,0.04)' : '#fff', color: color || primaryText, fontSize: 12, fontWeight: 700 }}
+                  >
                     <Icon style={{ width: 13, height: 13, flexShrink: 0 }} />{label}
                   </button>
                 ))}
@@ -2418,13 +2591,13 @@ export default function PopupEventPanel({
 
       {/* ── CHAT TAB ── */}
       {activeScreen === 'chat' && (
-        <ChatRoom eventId={event.id} supabase={supabase} user={user} displayName={effectiveDisplayName}
+        <ChatRoom eventId={eventId} supabase={supabase} user={user} displayName={effectiveDisplayName}
           accent={accent} darkMode={darkMode} border={border} softBg={softBg} members={members} />
       )}
 
       {/* ── MAP TAB ── */}
       {activeScreen === 'map' && (
-        <LiveMap event={event} supabase={supabase} user={user} displayName={displayName}
+        <LiveMap event={{ ...event, id: eventId }} supabase={supabase} user={user} displayName={displayName}
           accent={accent} darkMode={darkMode} border={border} softBg={softBg} members={members} />
       )}
 

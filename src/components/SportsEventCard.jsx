@@ -405,7 +405,11 @@ export default function SportsEventCard({
               <button
                 key={tab.id}
                 type="button"
-                onClick={tab.action || undefined}
+                onClick={tab.action ? (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  tab.action?.();
+                } : undefined}
                 style={{
                 flex: 1, padding: '11px 0',
                 fontSize: 13, fontWeight: active ? 700 : 500,

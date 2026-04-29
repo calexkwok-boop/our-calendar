@@ -29274,22 +29274,22 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   const eventData = evObj?.event_data && typeof evObj.event_data === 'object' && !Array.isArray(evObj.event_data)
     ? evObj.event_data
     : {};
-  const eventMetaFallback = meta && evObj
+  const eventMetaFallback = evObj
     ? {
       id: selectedPopupId,
-      calendar_id: meta.layerId || activeLayerId,
-      created_by: meta.createdByUserId,
-      created_by_user_id: meta.createdByUserId,
-      created_by_name: meta.createdByName,
+      calendar_id: meta?.layerId || evObj?.layer_id || evObj?.calendar_id || activeLayerId,
+      created_by: meta?.createdByUserId || evObj?.user_id || evObj?.created_by || '',
+      created_by_user_id: meta?.createdByUserId || evObj?.user_id || evObj?.created_by || '',
+      created_by_name: meta?.createdByName || evObj?.created_by || '',
       title: evObj.title,
       date: evObj.date,
       time: evObj.time,
       location: evObj.location || null,
       description: evObj.description || '',
       category: evObj.category || eventData.category || eventData.popupSubtype || null,
-      max_players: meta.maxPeople,
+      max_players: meta?.maxPeople || evObj?.max_players || eventData?.maxPlayers || null,
       is_public: true,
-      status: 'open',
+      status: evObj?.status || 'open',
       event_data: eventData,
     }
     : null;

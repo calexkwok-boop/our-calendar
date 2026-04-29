@@ -487,7 +487,18 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
         padding: '18px 18px 24px',
         display: 'flex', flexDirection: 'column', gap: 0,
       }}>
-        {bodyContent || (
+        {bodyContent ? (
+          <div
+            style={{
+              minHeight: 360,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            {bodyContent}
+          </div>
+        ) : (
           <>
             {/* ── RSVP button ── */}
             {!props.hidePrimaryAction && props.onPrimaryAction && props.primaryActionLabel && (
