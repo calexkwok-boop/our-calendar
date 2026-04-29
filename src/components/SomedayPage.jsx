@@ -1677,22 +1677,36 @@ const SomedayPage = ({
     setPendingInvites(rows.map(r => ({ ...r, chapterTitle: chapterMap.get(r.chapter_id)?.title || 'A Chapter' })));
   }
 
+  async function fetchChaptersWithFallback(matchMode, value) {
+    const selectAttempts = [
+      'id, title, created_at, owner_id, cover_pin_id, is_public, public_title, public_description, public_tags, public_cover_pin_id, published_at, copy_count, chapter_pins(*)',
+      'id, title, created_at, owner_id, cover_pin_id, is_public, public_title, public_description, public_tags, published_at, chapter_pins(*)',
+      'id, title, created_at, owner_id, cover_pin_id, chapter_pins(*)',
+    ];
+    for (const selectClause of selectAttempts) {
+      let query = supabase.from('chapters').select(selectClause);
+      if (matchMode === 'eq') query = query.eq('owner_id', value);
+      if (matchMode === 'in') query = query.in('id', value);
+      const { data, error } = await query;
+      if (!error) return data || [];
+    }
+    return [];
+  }
+
   async function loadChapters() {
-    const CHAPTER_SELECT = 'id, title, created_at, owner_id, cover_pin_id, is_public, public_title, public_description, public_tags, public_cover_pin_id, published_at, copy_count';
     const [ownedResult, memberResult] = await Promise.all([
-      supabase.from('chapters').select(CHAPTER_SELECT).eq('owner_id', currentUser),
+      fetchChaptersWithFallback('eq', currentUser),
       userEmail
         ? supabase.from('chapter_collaborators').select('chapter_id').eq('email', userEmail).eq('status', 'accepted')
         : Promise.resolve({ data: [] }),
     ]);
 
-    const owned = ownedResult.data || [];
+    const owned = Array.isArray(ownedResult) ? ownedResult : (ownedResult?.data || []);
     const collabIds = (memberResult.data || []).map(r => r.chapter_id).filter(id => !owned.some(c => c.id === id));
 
     let collab = [];
     if (collabIds.length > 0) {
-      const { data } = await supabase.from('chapters').select(CHAPTER_SELECT).in('id', collabIds);
-      collab = data || [];
+      collab = await fetchChaptersWithFallback('in', collabIds);
     }
 
     const remote = [...owned, ...collab];
@@ -1704,20 +1718,8 @@ const SomedayPage = ({
       try { local = JSON.parse(localStorage.getItem(localKey) || '[]'); } catch {}
       if (local.length > 0) {
         await migrateLocalChapters(local);
-        const { data: afterMigrate } = await supabase.from('chapters').select(CHAPTER_SELECT).eq('owner_id', currentUser);
-        const migratedChapterIds = (afterMigrate || []).map((chapter) => chapter.id).filter(Boolean);
-        const migratedPinRows = await fetchChapterPinRows(migratedChapterIds);
-        const pinsByChapterId = new Map();
-        (migratedPinRows || []).forEach((row) => {
-          const chapterId = String(row.chapter_id || '');
-          const nextPin = { ...rowToPin(row), chapterId, position: row.position || 0 };
-          if (!pinsByChapterId.has(chapterId)) pinsByChapterId.set(chapterId, []);
-          pinsByChapterId.get(chapterId).push(nextPin);
-        });
-        const migrated = (afterMigrate || []).map((chapter) => {
-          const chapterPins = (pinsByChapterId.get(String(chapter.id || '')) || []).sort((a, b) => (a.position || 0) - (b.position || 0));
-          return { ...chapter, itemIds: chapterPins.map((pin) => pin.id), pins: chapterPins, memories: [], collaborators: [], loaded: false };
-        });
+        const afterMigrate = await fetchChaptersWithFallback('eq', currentUser);
+        const migrated = (afterMigrate || []).map(c => ({ ...c, itemIds: (c.chapter_pins || []).map(p => p.id), pins: (c.chapter_pins || []).map(rowToPin), memories: [], collaborators: [], loaded: false }));
         setChapters(migrated);
         setPins((prev) => {
           const byId = new Map((Array.isArray(prev) ? prev : []).map((pin) => [String(pin?.id || ''), pin]));
@@ -1734,20 +1736,9 @@ const SomedayPage = ({
       }
     }
 
-    const remoteChapterIds = remote.map((chapter) => chapter.id).filter(Boolean);
-    const remotePinRows = await fetchChapterPinRows(remoteChapterIds);
-
-    const pinsByChapterId = new Map();
-    (remotePinRows || []).forEach((row) => {
-      const chapterId = String(row.chapter_id || '');
-      const nextPin = { ...rowToPin(row), chapterId, position: row.position || 0 };
-      if (!pinsByChapterId.has(chapterId)) pinsByChapterId.set(chapterId, []);
-      pinsByChapterId.get(chapterId).push(nextPin);
-    });
-
     const hydratedChapters = remote.map((chapter) => {
-      const chapterPins = (pinsByChapterId.get(String(chapter.id || '')) || []).sort((a, b) => (a.position || 0) - (b.position || 0));
-      return { ...chapter, pins: chapterPins, itemIds: chapterPins.map((pin) => pin.id) };
+      const loadedPins = (chapter.chapter_pins || []).map(rowToPin);
+      return { ...chapter, pins: loadedPins };
     });
 
     setChapters(prev => {
@@ -1756,7 +1747,7 @@ const SomedayPage = ({
       return [
         ...hydratedChapters.map(c => {
           const ex = prev.find(p => p.id === c.id);
-          const dbItemIds = c.itemIds || [];
+          const dbItemIds = (c.chapter_pins || []).map(p => p.id);
           const prevItemIds = ex?.itemIds || [];
           const itemIds = [...new Set([...dbItemIds, ...prevItemIds])];
           return { ...c, itemIds, pins: (c.pins || []).length > 0 ? c.pins : (ex?.pins || []), memories: ex?.memories || [], collaborators: ex?.collaborators || [], loaded: ex?.loaded || false };
@@ -1776,22 +1767,6 @@ const SomedayPage = ({
       });
       return Array.from(byId.values()).filter((pin) => String(pin?.id || '').trim());
     });
-  }
-
-  async function fetchChapterPinRows(chapterIds = []) {
-    if (!Array.isArray(chapterIds) || chapterIds.length === 0) return [];
-    const attempts = [
-      'id, chapter_id, label, description, image_url, emoji, category_id, status, tip, map_query, pin_color, note_color, type, x, y, rot, position',
-      'id, chapter_id, label, description, image_url, emoji, category_id, status, tip, map_query, pin_color, note_color, type, x, y, rot',
-    ];
-    for (const selectClause of attempts) {
-      const { data, error } = await supabase
-        .from('chapter_pins')
-        .select(selectClause)
-        .in('chapter_id', chapterIds);
-      if (!error) return data || [];
-    }
-    return [];
   }
 
   async function migrateLocalChapters(localChapters) {
