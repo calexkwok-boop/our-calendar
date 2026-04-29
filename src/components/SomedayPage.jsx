@@ -1531,6 +1531,7 @@ const SomedayPage = ({
   onConvertToTrip,
   onBack,
   currentUser,
+  authUserId = '',
   ownerName,
   onChaptersChange,
   onCreateTripFromChapter,
@@ -1554,6 +1555,9 @@ const SomedayPage = ({
   const [chapterPromptGroup, setChapterPromptGroup] = useState(null);
   const [dismissedGroups, setDismissedGroups] = useState(new Set());
   const [pendingInvites, setPendingInvites] = useState([]);
+  const normalizedAuthUserId = String(authUserId || '').trim();
+  const normalizedCurrentUser = String(currentUser || '').trim();
+  const chapterOwnerIdentity = normalizedAuthUserId || normalizedCurrentUser;
 
   const dragOffset      = useRef({ x: 0, y: 0 });
   const dragStartPoint  = useRef({ x: 0, y: 0 });
@@ -1661,7 +1665,7 @@ const SomedayPage = ({
     loadChapters();
     loadPendingInvites();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, userEmail, inviteRefreshToken]);
+  }, [currentUser, authUserId, userEmail, inviteRefreshToken]);
 
   async function loadPendingInvites() {
     if (!userEmail) return;
@@ -1694,14 +1698,21 @@ const SomedayPage = ({
   }
 
   async function loadChapters() {
-    const [ownedResult, memberResult] = await Promise.all([
-      fetchChaptersWithFallback('eq', currentUser),
+    const ownerIdsToLoad = [...new Set([normalizedCurrentUser, normalizedAuthUserId].filter(Boolean))];
+    const [ownedResults, memberResult] = await Promise.all([
+      Promise.all(ownerIdsToLoad.map((ownerId) => fetchChaptersWithFallback('eq', ownerId))),
       userEmail
         ? supabase.from('chapter_collaborators').select('chapter_id').eq('email', userEmail).eq('status', 'accepted')
         : Promise.resolve({ data: [] }),
     ]);
 
-    const owned = Array.isArray(ownedResult) ? ownedResult : (ownedResult?.data || []);
+    const owned = Array.from(
+      new Map(
+        (ownedResults || [])
+          .flat()
+          .map((chapter) => [String(chapter?.id || ''), chapter])
+      ).values()
+    ).filter((chapter) => String(chapter?.id || '').trim());
     const collabIds = (memberResult.data || []).map(r => r.chapter_id).filter(id => !owned.some(c => c.id === id));
 
     let collab = [];
@@ -1718,7 +1729,14 @@ const SomedayPage = ({
       try { local = JSON.parse(localStorage.getItem(localKey) || '[]'); } catch {}
       if (local.length > 0) {
         await migrateLocalChapters(local);
-        const afterMigrate = await fetchChaptersWithFallback('eq', currentUser);
+        const afterMigrateResults = await Promise.all(ownerIdsToLoad.map((ownerId) => fetchChaptersWithFallback('eq', ownerId)));
+        const afterMigrate = Array.from(
+          new Map(
+            (afterMigrateResults || [])
+              .flat()
+              .map((chapter) => [String(chapter?.id || ''), chapter])
+          ).values()
+        ).filter((chapter) => String(chapter?.id || '').trim());
         const migrated = (afterMigrate || []).map(c => ({ ...c, itemIds: (c.chapter_pins || []).map(p => p.id), pins: (c.chapter_pins || []).map(rowToPin), memories: [], collaborators: [], loaded: false }));
         setChapters(migrated);
         setPins((prev) => {
@@ -1773,7 +1791,7 @@ const SomedayPage = ({
     for (const ch of localChapters) {
       const { data: inserted } = await supabase
         .from('chapters')
-        .insert({ owner_id: currentUser, title: ch.title })
+        .insert({ owner_id: chapterOwnerIdentity || currentUser, title: ch.title })
         .select('id')
         .single();
       if (!inserted) continue;
@@ -1989,7 +2007,7 @@ const SomedayPage = ({
   async function createChapter(title, itemIds = []) {
     const { data: inserted } = await supabase
       .from('chapters')
-      .insert({ owner_id: currentUser, title })
+      .insert({ owner_id: chapterOwnerIdentity || currentUser, title })
       .select('id, title, created_at, owner_id')
       .single();
 

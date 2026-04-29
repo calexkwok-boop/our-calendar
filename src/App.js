@@ -31530,6 +31530,7 @@ transform: translateY(0);
                 onConvertToEvent={planFromDream}
                 onConvertToTrip={planFromDream}
                 currentUser={currentUser}
+                authUserId={user?.id || ''}
                 userEmail={user?.email || ''}
                 inviteRefreshToken={chapterInviteRefreshToken}
                 onChaptersChange={setKomoChapters}
