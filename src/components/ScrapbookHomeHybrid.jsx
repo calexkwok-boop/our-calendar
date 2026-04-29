@@ -9,6 +9,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import QuickThoughtsSection from './QuickThoughtsSection';
+import { getDestinationImageOverride } from '../data/destinationImageOverrides';
 
 const areShallowArraysEqual = (a, b) => {
   if (a === b) return true;
@@ -84,6 +85,20 @@ const hashHomeShuffleKey = (value) => {
 const getVisualPreviewUrl = (item) => String(
   item?.coverPhoto || item?.photoUrl || item?.photos?.[0]?.url || ''
 ).trim();
+
+const getOnYourMindImageUrl = (dream) => {
+  const sourceType = String(dream?.type || dream?.sourceType || '').trim().toLowerCase();
+  const category = String(dream?.category || dream?.categoryId || '').trim().toLowerCase();
+  const isDestinationDream = sourceType === 'destinations' || category === 'travel';
+  if (!isDestinationDream) return String(dream?.photoUrl || dream?.imageUrl || '').trim();
+  return getDestinationImageOverride({
+    id: dream?.id,
+    name: dream?.text,
+    destination_name: dream?.text,
+    title: dream?.text,
+    cardTitle: dream?.text,
+  }) || String(dream?.photoUrl || dream?.imageUrl || '').trim();
+};
 
 const toLocalDateKey = (date) => {
   if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
@@ -636,17 +651,20 @@ const ScrapbookHomeHybrid = ({
           {shuffledBucketList.length > 0 ? (
             <div className="flex gap-4 overflow-x-auto overflow-y-hidden pb-2 pl-0.5 pr-5 scrollbar-hide snap-x snap-mandatory [touch-action:pan-x]">
               {shuffledBucketList.slice(0, 4).map((dream, idx) => (
+                (() => {
+                  const dreamImageUrl = getOnYourMindImageUrl(dream);
+                  return (
                 <div
                   key={dream.id || idx}
                   className="group flex-shrink-0 snap-start w-40 sm:w-48 cursor-pointer"
                   style={{ rotate: `${idx % 2 === 0 ? '-1.4deg' : '1.1deg'}` }}
                   onClick={onOpenSomeday}
                 >
-                  {(dream.photoUrl || dream.imageUrl) ? (
+                  {dreamImageUrl ? (
                     <div className="bg-white dark:bg-slate-100 rounded-sm shadow-lg p-2 pb-0 transition-all group-hover:shadow-xl group-hover:-translate-y-0.5">
                       <div className="aspect-square w-full overflow-hidden rounded-[3px]">
                         <img
-                          src={dream.photoUrl || dream.imageUrl}
+                          src={dreamImageUrl}
                           alt={dream.text}
                           className="h-full w-full object-cover"
                           loading="lazy"
@@ -675,9 +693,11 @@ const ScrapbookHomeHybrid = ({
                       className="mx-auto mt-2 flex rounded-full bg-white/80 p-1 opacity-0 transition-all hover:bg-red-50 group-hover:opacity-100 dark:bg-black/40 dark:hover:bg-red-900/50"
                     >
                       <Trash2 className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
-                    </button>
-                  )}
+                      </button>
+                    )}
                 </div>
+                  );
+                })()
               ))}
               {/* Discover more polaroid */}
               <div
