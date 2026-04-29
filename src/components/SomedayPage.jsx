@@ -1101,7 +1101,12 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
   async function pickCover(pin) {
     setCoverPinId(pin.id);
     setShowCoverPicker(false);
-    await supabase.from('chapters').update({ cover_pin_id: pin.id }).eq('id', chapter.id);
+    const { error } = await supabase.from('chapters').update({ cover_pin_id: pin.id }).eq('id', chapter.id);
+    if (error) {
+      console.error('Cover save failed:', error);
+      setCoverPinId(chapter.cover_pin_id || chapter.coverPinId || null);
+      return;
+    }
     onCoverChange?.({ chapterId: chapter.id, coverPinId: pin.id });
   }
 
