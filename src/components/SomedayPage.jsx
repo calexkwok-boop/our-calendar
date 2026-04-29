@@ -1678,7 +1678,7 @@ const SomedayPage = ({
   }
 
   async function loadChapters() {
-    const CHAPTER_SELECT = 'id, title, created_at, owner_id, cover_pin_id, is_public, public_title, public_description, public_tags, public_cover_pin_id, published_at, copy_count, chapter_pins(*)';
+    const CHAPTER_SELECT = 'id, title, created_at, owner_id, cover_pin_id, is_public, public_title, public_description, public_tags, public_cover_pin_id, published_at, copy_count';
     const [ownedResult, memberResult] = await Promise.all([
       supabase.from('chapters').select(CHAPTER_SELECT).eq('owner_id', currentUser),
       userEmail
@@ -1705,7 +1705,19 @@ const SomedayPage = ({
       if (local.length > 0) {
         await migrateLocalChapters(local);
         const { data: afterMigrate } = await supabase.from('chapters').select(CHAPTER_SELECT).eq('owner_id', currentUser);
-        const migrated = (afterMigrate || []).map(c => ({ ...c, itemIds: (c.chapter_pins || []).map(p => p.id), pins: (c.chapter_pins || []).map(rowToPin), memories: [], collaborators: [], loaded: false }));
+        const migratedChapterIds = (afterMigrate || []).map((chapter) => chapter.id).filter(Boolean);
+        const migratedPinRows = await fetchChapterPinRows(migratedChapterIds);
+        const pinsByChapterId = new Map();
+        (migratedPinRows || []).forEach((row) => {
+          const chapterId = String(row.chapter_id || '');
+          const nextPin = { ...rowToPin(row), chapterId, position: row.position || 0 };
+          if (!pinsByChapterId.has(chapterId)) pinsByChapterId.set(chapterId, []);
+          pinsByChapterId.get(chapterId).push(nextPin);
+        });
+        const migrated = (afterMigrate || []).map((chapter) => {
+          const chapterPins = (pinsByChapterId.get(String(chapter.id || '')) || []).sort((a, b) => (a.position || 0) - (b.position || 0));
+          return { ...chapter, itemIds: chapterPins.map((pin) => pin.id), pins: chapterPins, memories: [], collaborators: [], loaded: false };
+        });
         setChapters(migrated);
         setPins((prev) => {
           const byId = new Map((Array.isArray(prev) ? prev : []).map((pin) => [String(pin?.id || ''), pin]));
@@ -1722,9 +1734,20 @@ const SomedayPage = ({
       }
     }
 
+    const remoteChapterIds = remote.map((chapter) => chapter.id).filter(Boolean);
+    const remotePinRows = await fetchChapterPinRows(remoteChapterIds);
+
+    const pinsByChapterId = new Map();
+    (remotePinRows || []).forEach((row) => {
+      const chapterId = String(row.chapter_id || '');
+      const nextPin = { ...rowToPin(row), chapterId, position: row.position || 0 };
+      if (!pinsByChapterId.has(chapterId)) pinsByChapterId.set(chapterId, []);
+      pinsByChapterId.get(chapterId).push(nextPin);
+    });
+
     const hydratedChapters = remote.map((chapter) => {
-      const loadedPins = (chapter.chapter_pins || []).map(rowToPin);
-      return { ...chapter, pins: loadedPins };
+      const chapterPins = (pinsByChapterId.get(String(chapter.id || '')) || []).sort((a, b) => (a.position || 0) - (b.position || 0));
+      return { ...chapter, pins: chapterPins, itemIds: chapterPins.map((pin) => pin.id) };
     });
 
     setChapters(prev => {
@@ -1733,8 +1756,7 @@ const SomedayPage = ({
       return [
         ...hydratedChapters.map(c => {
           const ex = prev.find(p => p.id === c.id);
-          // Merge DB pin IDs with any in-session additions so itemIds is always accurate
-          const dbItemIds = (c.chapter_pins || []).map(p => p.id);
+          const dbItemIds = c.itemIds || [];
           const prevItemIds = ex?.itemIds || [];
           const itemIds = [...new Set([...dbItemIds, ...prevItemIds])];
           return { ...c, itemIds, pins: (c.pins || []).length > 0 ? c.pins : (ex?.pins || []), memories: ex?.memories || [], collaborators: ex?.collaborators || [], loaded: ex?.loaded || false };
@@ -1754,6 +1776,22 @@ const SomedayPage = ({
       });
       return Array.from(byId.values()).filter((pin) => String(pin?.id || '').trim());
     });
+  }
+
+  async function fetchChapterPinRows(chapterIds = []) {
+    if (!Array.isArray(chapterIds) || chapterIds.length === 0) return [];
+    const attempts = [
+      'id, chapter_id, label, description, image_url, emoji, category_id, status, tip, map_query, pin_color, note_color, type, x, y, rot, position',
+      'id, chapter_id, label, description, image_url, emoji, category_id, status, tip, map_query, pin_color, note_color, type, x, y, rot',
+    ];
+    for (const selectClause of attempts) {
+      const { data, error } = await supabase
+        .from('chapter_pins')
+        .select(selectClause)
+        .in('chapter_id', chapterIds);
+      if (!error) return data || [];
+    }
+    return [];
   }
 
   async function migrateLocalChapters(localChapters) {
