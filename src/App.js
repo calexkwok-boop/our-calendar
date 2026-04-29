@@ -25520,6 +25520,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       }
       if (pin.x != null) {
         setSomedayPinPositions(prev => ({ ...prev, [pin.id]: { x: pin.x, y: pin.y, rot: pin.rot } }));
+        const chapterId = String(pin.chapterId || '').trim();
+        if (chapterId) {
+          supabase
+            .from('chapter_pins')
+            .update({ x: pin.x, y: pin.y, rot: pin.rot ?? 0 })
+            .eq('id', pin.id)
+            .eq('chapter_id', chapterId)
+            .then(() => {})
+            .catch(() => {});
+        }
       }
       if (pin.status != null || pin.chapterId !== undefined) {
         setBucketList(prev =>
@@ -25542,13 +25552,39 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
   const handleSomedayPersistPinLayout = (pins = []) => {
     const nextPositionPatch = {};
+    const chapterPinUpdates = [];
+    const chapterPositionById = new Map();
     (Array.isArray(pins) ? pins : []).forEach((pin) => {
       if (!pin || pin.type === 'label' || pin.type === 'sticker') return;
       if (pin.x == null || pin.y == null) return;
       nextPositionPatch[pin.id] = { x: pin.x, y: pin.y, rot: pin.rot };
+      const chapterId = String(pin.chapterId || '').trim();
+      if (chapterId) {
+        const nextPosition = chapterPositionById.get(chapterId) || 0;
+        chapterPositionById.set(chapterId, nextPosition + 1);
+        chapterPinUpdates.push({
+          id: pin.id,
+          chapterId,
+          x: pin.x,
+          y: pin.y,
+          rot: pin.rot ?? 0,
+          position: nextPosition,
+        });
+      }
     });
     if (Object.keys(nextPositionPatch).length === 0) return;
     setSomedayPinPositions((prev) => ({ ...prev, ...nextPositionPatch }));
+    if (chapterPinUpdates.length > 0) {
+      Promise.all(
+        chapterPinUpdates.map((pin) => (
+          supabase
+            .from('chapter_pins')
+            .update({ x: pin.x, y: pin.y, rot: pin.rot, position: pin.position })
+            .eq('id', pin.id)
+            .eq('chapter_id', pin.chapterId)
+        ))
+      ).catch(() => {});
+    }
   };
 
   // Called when a pin is deleted from SomedayPage — remove from whichever list owns it
