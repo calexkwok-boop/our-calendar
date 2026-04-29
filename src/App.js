@@ -16101,7 +16101,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       await loadSubCalendarMembers(activeTrip.id);
     };
 
-    const updatesChannel = supabase
+    let updatesChannel = supabase
       .channel(`in-app-updates-${me}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'events' }, async ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
@@ -16151,8 +16151,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           message: `${who} added "${preview || 'a list item'}" to the list.`,
           createdAt: row.created_at,
         });
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sub_calendar_members' }, async ({ new: row }) => {
+      });
+
+    const handleTripInviteInsert = async ({ new: row }) => {
         if (!row) return;
         const inviteIdentity = getInviteIdentityFromRow(row);
         if (!inviteIdentity || (inviteIdentity !== myEmail && inviteIdentity !== myPhone)) return;
@@ -16170,7 +16171,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           message: `You were invited to ${tripName}.`,
           createdAt: row.created_at || new Date().toISOString(),
         });
-      })
+      };
+    if (myEmail) {
+      updatesChannel = updatesChannel.on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'sub_calendar_members', filter: `email=eq.${myEmail}`,
+      }, handleTripInviteInsert);
+    }
+    if (myPhone) {
+      updatesChannel = updatesChannel.on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'sub_calendar_members', filter: `phone=eq.${myPhone}`,
+      }, handleTripInviteInsert);
+    }
+    updatesChannel = updatesChannel
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shared_access' }, async ({ new: row }) => {
         if (!row) return;
         await refreshTripCrewForSharedAccessRow(row);
@@ -16283,8 +16295,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             : `${who} commented: "${String(row.comment_text || '').slice(0, 60)}"`,
           createdAt: row.created_at,
         });
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chapter_collaborators' }, async ({ new: row }) => {
+      });
+    if (myEmail) {
+      updatesChannel = updatesChannel.on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'chapter_collaborators', filter: `email=eq.${myEmail}`,
+      }, async ({ new: row }) => {
         if (!row) return;
         const invitedEmail = String(row.email || '').trim().toLowerCase();
         if (!myEmail || invitedEmail !== myEmail) return;
@@ -16313,8 +16328,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             });
           }).catch(() => {});
         }
-      })
-      .subscribe();
+      });
+    }
+    updatesChannel.subscribe();
 
     return () => {
       updatesChannel.unsubscribe();
@@ -16487,13 +16503,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }
     };
 
-    const inviteChannel = supabase
-      .channel(`invite-updates-${me}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sub_calendar_members' }, async ({ new: row }) => {
-        if (!row) return;
-        await notifyInvites([row]);
-      })
-      .subscribe();
+    let inviteChannel = supabase
+      .channel(`invite-updates-${me}`);
+    const handleInviteRealtime = async ({ new: row }) => {
+      if (!row) return;
+      await notifyInvites([row]);
+    };
+    if (myEmail) {
+      inviteChannel = inviteChannel.on('postgres_changes', {
+        event: '*', schema: 'public', table: 'sub_calendar_members', filter: `email=eq.${myEmail}`,
+      }, handleInviteRealtime);
+    }
+    if (myPhone) {
+      inviteChannel = inviteChannel.on('postgres_changes', {
+        event: '*', schema: 'public', table: 'sub_calendar_members', filter: `phone=eq.${myPhone}`,
+      }, handleInviteRealtime);
+    }
+    inviteChannel.subscribe();
 
     pollInviteRows();
     const interval = setInterval(pollInviteRows, 60 * 1000);
