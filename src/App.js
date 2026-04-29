@@ -8518,6 +8518,17 @@ function App() {
   useEffect(() => {
     activeLayerIdRef.current = activeLayerId;
   }, [activeLayerId]);
+  const realtimeLayerIdsSignature = ((layers || [])
+    .map((layer) => String(layer?.id || '').trim())
+    .filter(Boolean)
+    .sort()
+    .join('|'));
+  const realtimeSubCalendarIdsSignature = ((subCalendars || [])
+    .map((subCal) => String(subCal?.id || '').trim())
+    .filter(Boolean)
+    .sort()
+    .join('|'));
+
   useEffect(() => {
     inAppRealtimeSnapshotRef.current = {
       activeLayerId,
@@ -16163,8 +16174,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     attachFilteredRealtime('events', 'calendar_id', filteredLayerIds, handleEventInsert);
     attachFilteredRealtime('sub_calendar_events', 'sub_calendar_id', filteredSubCalIds, handleSubCalendarEventInsert);
     attachFilteredRealtime('trip_photos', 'sub_calendar_id', filteredSubCalIds, handleTripPhotoInsert);
-    updatesChannel = updatesChannel
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shared_lists' }, async ({ new: row }) => {
+    const handleSharedListInsert = async ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
         if (!(await canAccessLayerId(row.layer_id || row.calendar_id))) return;
         const who = String(row.created_by || 'Someone');
@@ -16176,7 +16186,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           message: `${who} added "${preview || 'a list item'}" to the list.`,
           createdAt: row.created_at,
         });
-      });
+      };
+    attachFilteredRealtime('shared_lists', 'layer_id', filteredLayerIds, handleSharedListInsert);
+    attachFilteredRealtime('shared_lists', 'calendar_id', filteredLayerIds, handleSharedListInsert);
 
     const handleTripInviteInsert = async ({ new: row }) => {
         if (!row) return;
@@ -16370,7 +16382,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return () => {
       updatesChannel.unsubscribe();
     };
-  }, [user?.id, user?.email, user?.phone, layers, subCalendars]);
+  }, [user?.id, user?.email, user?.phone, realtimeLayerIdsSignature, realtimeSubCalendarIdsSignature]);
 
   useEffect(() => {
     if (!user?.id) {

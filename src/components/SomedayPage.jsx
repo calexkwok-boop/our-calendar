@@ -1105,6 +1105,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
     if (error) {
       console.error('Cover save failed:', error);
       setCoverPinId(chapter.cover_pin_id || chapter.coverPinId || null);
+      window.alert(`Could not save chapter cover right now: ${error.message || 'permission denied'}`);
       return;
     }
     onCoverChange?.({ chapterId: chapter.id, coverPinId: pin.id });
