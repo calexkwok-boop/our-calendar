@@ -16182,8 +16182,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         event: 'INSERT', schema: 'public', table: 'sub_calendar_members', filter: `phone=eq.${myPhone}`,
       }, handleTripInviteInsert);
     }
-    updatesChannel = updatesChannel
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shared_access' }, async ({ new: row }) => {
+    const handleSharedAccessInsert = async ({ new: row }) => {
         if (!row) return;
         await refreshTripCrewForSharedAccessRow(row);
         const rowId = String(row.id || '').trim();
@@ -16213,8 +16212,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           message: `You were invited to ${calendarName}.`,
           createdAt: row.created_at || new Date().toISOString(),
         });
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'shared_access' }, async (payload) => {
+      };
+    const handleSharedAccessUpdate = async (payload) => {
         const row = payload?.new || null;
         const oldRow = payload?.old || null;
         if (row) await refreshTripCrewForSharedAccessRow(row);
@@ -16257,8 +16256,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             createdAt,
           });
         }
-      })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'shared_access' }, async (payload) => {
+      };
+    const handleSharedAccessDelete = async (payload) => {
         const row = payload?.old || null;
         if (row) await refreshTripCrewForSharedAccessRow(row);
         if (!row || !shareRowTargetsMe(row)) return;
@@ -16272,7 +16271,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           message: `You were removed from ${layerName}.`,
           createdAt,
         });
-      })
+      };
+    const attachSharedAccessRealtime = (filter) => {
+      if (!filter) return;
+      updatesChannel = updatesChannel
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shared_access', filter }, handleSharedAccessInsert)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'shared_access', filter }, handleSharedAccessUpdate)
+        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'shared_access', filter }, handleSharedAccessDelete);
+    };
+    attachSharedAccessRealtime(me ? `shared_with_id=eq.${me}` : '');
+    attachSharedAccessRealtime(myEmail ? `shared_with_email=eq.${myEmail}` : '');
+    attachSharedAccessRealtime(myPhone ? `shared_with_phone=eq.${myPhone}` : '');
+    updatesChannel = updatesChannel
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'memory_reactions', filter: `memory_owner_id=eq.${me}` }, async ({ new: row }) => {
         if (!row) return;
         if (String(row.reactor_user_id) === me) return;
