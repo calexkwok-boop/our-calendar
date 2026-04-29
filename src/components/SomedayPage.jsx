@@ -1580,7 +1580,7 @@ const SomedayPage = ({
   }
 
   async function loadChapters() {
-    const CHAPTER_SELECT = 'id, title, created_at, owner_id, cover_pin_id, chapter_pins(id)';
+    const CHAPTER_SELECT = 'id, title, created_at, owner_id, cover_pin_id, chapter_pins(*)';
     const [ownedResult, memberResult] = await Promise.all([
       supabase.from('chapters').select(CHAPTER_SELECT).eq('owner_id', currentUser),
       userEmail
@@ -1607,26 +1607,54 @@ const SomedayPage = ({
       if (local.length > 0) {
         await migrateLocalChapters(local);
         const { data: afterMigrate } = await supabase.from('chapters').select(CHAPTER_SELECT).eq('owner_id', currentUser);
-        const migrated = (afterMigrate || []).map(c => ({ ...c, itemIds: (c.chapter_pins || []).map(p => p.id), memories: [], collaborators: [], loaded: false }));
+        const migrated = (afterMigrate || []).map(c => ({ ...c, itemIds: (c.chapter_pins || []).map(p => p.id), pins: (c.chapter_pins || []).map(rowToPin), memories: [], collaborators: [], loaded: false }));
         setChapters(migrated);
+        setPins((prev) => {
+          const byId = new Map((Array.isArray(prev) ? prev : []).map((pin) => [String(pin?.id || ''), pin]));
+          migrated.forEach((chapter) => {
+            (chapter.pins || []).forEach((pin) => {
+              const pinId = String(pin?.id || '').trim();
+              if (!pinId) return;
+              byId.set(pinId, { ...byId.get(pinId), ...pin, chapterId: String(pin?.chapterId || '').trim() || String(chapter?.id || '').trim() });
+            });
+          });
+          return Array.from(byId.values()).filter((pin) => String(pin?.id || '').trim());
+        });
         return;
       }
     }
+
+    const hydratedChapters = remote.map((chapter) => {
+      const loadedPins = (chapter.chapter_pins || []).map(rowToPin);
+      return { ...chapter, pins: loadedPins };
+    });
 
     setChapters(prev => {
       const remoteIds = new Set(remote.map(c => c.id));
       const localOnly = prev.filter(c => !remoteIds.has(c.id));
       return [
-        ...remote.map(c => {
+        ...hydratedChapters.map(c => {
           const ex = prev.find(p => p.id === c.id);
           // Merge DB pin IDs with any in-session additions so itemIds is always accurate
           const dbItemIds = (c.chapter_pins || []).map(p => p.id);
           const prevItemIds = ex?.itemIds || [];
           const itemIds = [...new Set([...dbItemIds, ...prevItemIds])];
-          return { ...c, itemIds, memories: ex?.memories || [], collaborators: ex?.collaborators || [], loaded: ex?.loaded || false };
+          return { ...c, itemIds, pins: (c.pins || []).length > 0 ? c.pins : (ex?.pins || []), memories: ex?.memories || [], collaborators: ex?.collaborators || [], loaded: ex?.loaded || false };
         }),
         ...localOnly,
       ];
+    });
+
+    setPins((prev) => {
+      const byId = new Map((Array.isArray(prev) ? prev : []).map((pin) => [String(pin?.id || ''), pin]));
+      hydratedChapters.forEach((chapter) => {
+        (chapter.pins || []).forEach((pin) => {
+          const pinId = String(pin?.id || '').trim();
+          if (!pinId) return;
+          byId.set(pinId, { ...byId.get(pinId), ...pin, chapterId: String(pin?.chapterId || '').trim() || String(chapter?.id || '').trim() });
+        });
+      });
+      return Array.from(byId.values()).filter((pin) => String(pin?.id || '').trim());
     });
   }
 
