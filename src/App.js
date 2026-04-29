@@ -31645,6 +31645,7 @@ transform: translateY(0);
                 inviteRefreshToken={chapterInviteRefreshToken}
                 onChaptersChange={setKomoChapters}
                 onPersistPinLayout={handleSomedayPersistPinLayout}
+                pinPositionOverrides={somedayPinPositions}
                 onCreateTripFromChapter={startTripFromKomoChapter}
                 chaptersWithLinkedTrips={chaptersWithLinkedTrips}
               />

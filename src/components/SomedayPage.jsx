@@ -1535,6 +1535,7 @@ const SomedayPage = ({
   ownerName,
   onChaptersChange,
   onPersistPinLayout,
+  pinPositionOverrides = {},
   onCreateTripFromChapter,
   darkMode = false,
   chaptersWithLinkedTrips = new Set(),
@@ -1649,23 +1650,26 @@ const SomedayPage = ({
     position,
   });
 
-  const rowToPin = (row) => ({
-    id: row.id,
-    label: row.label || '',
-    description: row.description || '',
-    imageUrl: row.image_url || '',
-    emoji: row.emoji || '',
-    categoryId: row.category_id || '',
-    status: row.status || 'dreaming',
-    tip: row.tip || '',
-    mapQuery: row.map_query || '',
-    pinColor: row.pin_color || 'teal',
-    noteColor: row.note_color || 'yellow',
-    type: row.type || 'note',
-    x: row.x || 0,
-    y: row.y || 0,
-    rot: row.rot || 0,
-  });
+  const rowToPin = (row) => {
+    const override = pinPositionOverrides?.[row?.id] || {};
+    return ({
+      id: row.id,
+      label: row.label || '',
+      description: row.description || '',
+      imageUrl: row.image_url || '',
+      emoji: row.emoji || '',
+      categoryId: row.category_id || '',
+      status: row.status || 'dreaming',
+      tip: row.tip || '',
+      mapQuery: row.map_query || '',
+      pinColor: row.pin_color || 'teal',
+      noteColor: row.note_color || 'yellow',
+      type: row.type || 'note',
+      x: override.x ?? row.x ?? 0,
+      y: override.y ?? row.y ?? 0,
+      rot: override.rot ?? row.rot ?? 0,
+    });
+  };
 
   useEffect(() => {
     if (!currentUser || currentUser === 'guest') return;
