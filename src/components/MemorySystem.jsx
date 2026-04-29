@@ -90,6 +90,34 @@ const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
   reader.readAsDataURL(file);
 });
 
+const MEMORY_PHOTO_CROP_FRAME = { width: 240, height: 240, targetW: 900, targetH: 900 };
+
+const getMemoryPhotoCropMetrics = (natural, zoom) => {
+  const srcW = Number(natural?.width || 0);
+  const srcH = Number(natural?.height || 0);
+  if (!srcW || !srcH) {
+    return { ...MEMORY_PHOTO_CROP_FRAME, scale: 1, renderedW: MEMORY_PHOTO_CROP_FRAME.width, renderedH: MEMORY_PHOTO_CROP_FRAME.height };
+  }
+  const baseScale = Math.max(MEMORY_PHOTO_CROP_FRAME.width / srcW, MEMORY_PHOTO_CROP_FRAME.height / srcH);
+  const scale = baseScale * Math.max(1, Number(zoom || 1));
+  return {
+    ...MEMORY_PHOTO_CROP_FRAME,
+    scale,
+    renderedW: srcW * scale,
+    renderedH: srcH * scale,
+  };
+};
+
+const clampMemoryPhotoCropOffset = (natural, zoom, offset) => {
+  const metrics = getMemoryPhotoCropMetrics(natural, zoom);
+  const maxX = Math.max(0, (metrics.renderedW - metrics.width) / 2);
+  const maxY = Math.max(0, (metrics.renderedH - metrics.height) / 2);
+  return {
+    x: Math.max(-maxX, Math.min(maxX, Number(offset?.x || 0))),
+    y: Math.max(-maxY, Math.min(maxY, Number(offset?.y || 0))),
+  };
+};
+
 const getPersonAvatarUrl = (person) => String(
   person?.avatarUrl
   || person?.avatar_url
@@ -1052,6 +1080,62 @@ const MemoryPhotosStep = ({
   onTogglePhotoOnlyMode,
 }) => {
   const fileInputRef = useRef(null);
+  const cropDragRef = useRef({ active: false, startX: 0, startY: 0, baseX: 0, baseY: 0 });
+  const [cropTargetPhotoId, setCropTargetPhotoId] = useState(null);
+  const [cropImageUrl, setCropImageUrl] = useState('');
+  const [cropNatural, setCropNatural] = useState({ width: 0, height: 0 });
+  const [cropZoom, setCropZoom] = useState(1);
+  const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
+
+  const closeCropModal = () => {
+    setCropTargetPhotoId(null);
+    setCropImageUrl('');
+    setCropNatural({ width: 0, height: 0 });
+    setCropZoom(1);
+    setCropOffset({ x: 0, y: 0 });
+    cropDragRef.current = { active: false, startX: 0, startY: 0, baseX: 0, baseY: 0 };
+  };
+
+  const openCropModalForPhoto = (photoOrId) => {
+    const targetPhoto = typeof photoOrId === 'object' && photoOrId
+      ? photoOrId
+      : (Array.isArray(data.photos) ? data.photos : []).find((photo) => photo.id === photoOrId);
+    if (!targetPhoto?.url) return;
+    setCropTargetPhotoId(targetPhoto.id);
+    setCropImageUrl(String(targetPhoto.url || '').trim());
+    setCropNatural({ width: 0, height: 0 });
+    setCropZoom(1);
+    setCropOffset({ x: 0, y: 0 });
+    cropDragRef.current = { active: false, startX: 0, startY: 0, baseX: 0, baseY: 0 };
+  };
+
+  const startCropDragAt = (clientX, clientY) => {
+    const base = clampMemoryPhotoCropOffset(cropNatural, cropZoom, cropOffset);
+    cropDragRef.current = {
+      active: true,
+      startX: clientX,
+      startY: clientY,
+      baseX: base.x,
+      baseY: base.y,
+    };
+  };
+
+  const moveCropDragAt = (clientX, clientY) => {
+    const drag = cropDragRef.current;
+    if (!drag.active) return;
+    const nextOffset = clampMemoryPhotoCropOffset(cropNatural, cropZoom, {
+      x: drag.baseX + (clientX - drag.startX),
+      y: drag.baseY + (clientY - drag.startY),
+    });
+    setCropOffset(nextOffset);
+  };
+
+  const endCropDrag = () => {
+    cropDragRef.current = {
+      ...cropDragRef.current,
+      active: false,
+    };
+  };
   
   const handleAddPhotos = async (e) => {
     const files = Array.from(e.target.files);
@@ -1073,6 +1157,10 @@ const MemoryPhotosStep = ({
     if (quickSaveOnPhotoAdd && typeof onAddPhoto === 'function') {
       try { onAddPhoto(newPhotos, updated); } catch {}
     }
+    if (newPhotos.length === 1) {
+      openCropModalForPhoto(newPhotos[0]);
+    }
+    e.target.value = '';
   };
   
   const removePhoto = (photoId) => {
@@ -1089,6 +1177,60 @@ const MemoryPhotosStep = ({
   const setCoverPhoto = (photoId) => {
     const photo = data.photos.find(p => p.id === photoId);
     onChange({ ...data, coverPhoto: photo.url });
+  };
+
+  const applyPhotoCrop = async () => {
+    if (!cropTargetPhotoId || !cropImageUrl) return;
+    const img = await new Promise((resolve) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => resolve(null);
+      el.src = cropImageUrl;
+    });
+    if (!img) {
+      alert('Could not process image crop.');
+      return;
+    }
+
+    const natural = {
+      width: Number(img?.naturalWidth || cropNatural.width || 0),
+      height: Number(img?.naturalHeight || cropNatural.height || 0),
+    };
+    if (!natural.width || !natural.height) {
+      alert('Could not read image dimensions.');
+      return;
+    }
+
+    const metrics = getMemoryPhotoCropMetrics(natural, cropZoom);
+    const safeOffset = clampMemoryPhotoCropOffset(natural, cropZoom, cropOffset);
+    const srcCropW = metrics.width / metrics.scale;
+    const srcCropH = metrics.height / metrics.scale;
+    const srcX = Math.max(0, Math.min(natural.width - srcCropW, ((natural.width - srcCropW) / 2) - (safeOffset.x / metrics.scale)));
+    const srcY = Math.max(0, Math.min(natural.height - srcCropH, ((natural.height - srcCropH) / 2) - (safeOffset.y / metrics.scale)));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = metrics.targetW;
+    canvas.height = metrics.targetH;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      alert('Could not process image crop.');
+      return;
+    }
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, srcX, srcY, srcCropW, srcCropH, 0, 0, metrics.targetW, metrics.targetH);
+    const croppedUrl = canvas.toDataURL('image/jpeg', 0.86);
+
+    onChange({
+      ...data,
+      coverPhoto: String(data.coverPhoto || '').trim() === String(cropImageUrl || '').trim() ? croppedUrl : data.coverPhoto,
+      photos: data.photos.map((photo) => (
+        photo.id === cropTargetPhotoId
+          ? { ...photo, url: croppedUrl }
+          : photo
+      )),
+    });
+    closeCropModal();
   };
   
   return (
@@ -1192,6 +1334,12 @@ const MemoryPhotosStep = ({
                 {/* Actions */}
                 <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
+                    onClick={() => openCropModalForPhoto(photo.id)}
+                    className="p-2 bg-white rounded-full hover:bg-rose-50 transition-all"
+                    title="Adjust crop">
+                    <Edit2 className="w-4 h-4 text-[#C4848A]" />
+                  </button>
+                  <button
                     onClick={() => setCoverPhoto(photo.id)}
                     className="p-2 bg-white rounded-full hover:bg-rose-50 transition-all"
                     title="Set as cover">
@@ -1226,6 +1374,110 @@ const MemoryPhotosStep = ({
                 />
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {cropTargetPhotoId && cropImageUrl && (
+        <div className="fixed inset-0 z-[140] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm rounded-[28px] bg-white dark:bg-slate-950 border border-white/10 shadow-2xl p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-lg font-semibold text-gray-900 dark:text-white">Crop for polaroid</div>
+                <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Drag to choose what shows in the photo of the day window.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeCropModal}
+                className="rounded-xl p-2 text-gray-500 hover:bg-black/5 dark:text-gray-400 dark:hover:bg-white/5"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div
+              className="relative mx-auto mt-5 overflow-hidden rounded-[22px] border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 touch-none select-none"
+              style={{ width: `${MEMORY_PHOTO_CROP_FRAME.width}px`, height: `${MEMORY_PHOTO_CROP_FRAME.height}px` }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                startCropDragAt(e.clientX, e.clientY);
+              }}
+              onMouseMove={(e) => moveCropDragAt(e.clientX, e.clientY)}
+              onMouseUp={endCropDrag}
+              onMouseLeave={endCropDrag}
+              onTouchStart={(e) => {
+                const touch = e.touches?.[0];
+                if (!touch) return;
+                startCropDragAt(touch.clientX, touch.clientY);
+              }}
+              onTouchMove={(e) => {
+                const touch = e.touches?.[0];
+                if (!touch) return;
+                moveCropDragAt(touch.clientX, touch.clientY);
+              }}
+              onTouchEnd={endCropDrag}
+              onTouchCancel={endCropDrag}
+            >
+              <img
+                src={cropImageUrl}
+                alt="Crop preview"
+                className="absolute max-w-none pointer-events-none"
+                onLoad={(e) => {
+                  const natural = {
+                    width: Number(e.currentTarget.naturalWidth || 0),
+                    height: Number(e.currentTarget.naturalHeight || 0),
+                  };
+                  setCropNatural(natural);
+                  setCropOffset({ x: 0, y: 0 });
+                }}
+                style={{
+                  width: `${getMemoryPhotoCropMetrics(cropNatural, cropZoom).renderedW}px`,
+                  height: `${getMemoryPhotoCropMetrics(cropNatural, cropZoom).renderedH}px`,
+                  left: `calc(50% + ${clampMemoryPhotoCropOffset(cropNatural, cropZoom, cropOffset).x}px)`,
+                  top: `calc(50% + ${clampMemoryPhotoCropOffset(cropNatural, cropZoom, cropOffset).y}px)`,
+                  transform: 'translate(-50%, -50%)',
+                }}
+              />
+            </div>
+
+            <div className="mt-5">
+              <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
+                <span>Zoom</span>
+                <span>{cropZoom.toFixed(1)}x</span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="3"
+                step="0.01"
+                value={cropZoom}
+                onChange={(e) => {
+                  const nextZoom = Number(e.target.value || 1);
+                  setCropZoom(nextZoom);
+                  setCropOffset((prev) => clampMemoryPhotoCropOffset(cropNatural, nextZoom, prev));
+                }}
+                className="mt-3 w-full accent-rose-400"
+              />
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={closeCropModal}
+                className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200"
+              >
+                Keep original
+              </button>
+              <button
+                type="button"
+                onClick={applyPhotoCrop}
+                className="flex-1 rounded-2xl bg-[#D4A5A5] px-4 py-3 text-sm font-semibold text-rose-50 hover:bg-[#C4848A] transition-colors"
+              >
+                Save crop
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1854,4 +2106,3 @@ export {
   CreateMemoryPrompt,
   MemoryThumbnail,
 };
-
