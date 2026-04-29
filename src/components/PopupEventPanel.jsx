@@ -1333,100 +1333,102 @@ export default function PopupEventPanel({
       if (eventMetaFallbackRef.current) setEvent(eventMetaFallbackRef.current);
       setMembers([]);
       setLoading(false);
-      return;
+      return eventMetaFallbackRef.current || null;
     }
     const request = (async () => {
       try {
-      const [{ data: ev }, { data: mems }, { data: signups, error: signupsErr }] = await Promise.all([
-        supabase.from('popup_event_details').select('*').eq('id', id).single(),
-        supabase.from('popup_event_members').select('*').eq('event_id', id).order('joined_at'),
-        supabase.from('popup_event_signups').select('*').eq('event_id', id).order('created_at'),
-      ]);
-      let normalizedEv = null;
-      if (ev) {
-        const fallback = eventMetaFallbackRef.current || {};
-        const eventData = ev?.event_data && typeof ev.event_data === 'object' && !Array.isArray(ev.event_data)
-          ? ev.event_data
-          : {};
-        normalizedEv = {
-          ...fallback,
-          ...ev,
-          ...eventData,
-          title: String(ev?.title || fallback?.title || '').trim() || 'Untitled Event',
-          date: String(ev?.date || fallback?.date || '').trim() || '',
-          time: ev?.time || fallback?.time || null,
-          location: String(ev?.location || fallback?.location || '').trim() || null,
-          description: String(ev?.description || fallback?.description || '').trim() || '',
-          category: String(ev?.category || eventData?.category || eventData?.popupSubtype || fallback?.category || '').trim() || null,
-          event_data: eventData,
-        };
-        setEvent(normalizedEv);
-      } else if (eventMetaFallbackRef.current) setEvent(eventMetaFallbackRef.current);
-      // Merge popup_event_members + popup_event_signups, dedupe by user_id
-      const dedupedMembers = [];
-      const seenSelfAliasByRole = new Set();
-      (mems || []).forEach((member) => {
-        const memberUserId = String(member?.user_id || '').trim();
-        const memberRole = String(member?.role || 'player').trim() || 'player';
-        const memberName = String(member?.display_name || '').trim();
-        const memberKey = memberUserId === String(user?.id || '').trim() && selfAliasSet.has(memberName.toLowerCase())
-          ? `self:${memberRole}`
-          : null;
-        if (memberKey) {
-          if (seenSelfAliasByRole.has(memberKey)) return;
-          seenSelfAliasByRole.add(memberKey);
+        const [{ data: ev }, { data: mems }, { data: signups }] = await Promise.all([
+          supabase.from('popup_event_details').select('*').eq('id', id).single(),
+          supabase.from('popup_event_members').select('*').eq('event_id', id).order('joined_at'),
+          supabase.from('popup_event_signups').select('*').eq('event_id', id).order('created_at'),
+        ]);
+        let normalizedEv = null;
+        if (ev) {
+          const fallback = eventMetaFallbackRef.current || {};
+          const eventData = ev?.event_data && typeof ev.event_data === 'object' && !Array.isArray(ev.event_data)
+            ? ev.event_data
+            : {};
+          normalizedEv = {
+            ...fallback,
+            ...ev,
+            ...eventData,
+            title: String(ev?.title || fallback?.title || '').trim() || 'Untitled Event',
+            date: String(ev?.date || fallback?.date || '').trim() || '',
+            time: ev?.time || fallback?.time || null,
+            location: String(ev?.location || fallback?.location || '').trim() || null,
+            description: String(ev?.description || fallback?.description || '').trim() || '',
+            category: String(ev?.category || eventData?.category || eventData?.popupSubtype || fallback?.category || '').trim() || null,
+            event_data: eventData,
+          };
+          setEvent(normalizedEv);
+        } else if (eventMetaFallbackRef.current) {
+          normalizedEv = eventMetaFallbackRef.current;
+          setEvent(eventMetaFallbackRef.current);
         }
-        dedupedMembers.push({
-          ...member,
-          display_name: normalizeOwnPopupLabel(memberName, memberUserId),
-          photoUrl: resolvePopupMemberPhotoUrl(member),
-          photo_url: resolvePopupMemberPhotoUrl(member),
-          avatarUrl: resolvePopupMemberPhotoUrl(member),
-          avatar_url: resolvePopupMemberPhotoUrl(member),
+        const dedupedMembers = [];
+        const seenSelfAliasByRole = new Set();
+        (mems || []).forEach((member) => {
+          const memberUserId = String(member?.user_id || '').trim();
+          const memberRole = String(member?.role || 'player').trim() || 'player';
+          const memberName = String(member?.display_name || '').trim();
+          const memberKey = memberUserId === String(user?.id || '').trim() && selfAliasSet.has(memberName.toLowerCase())
+            ? `self:${memberRole}`
+            : null;
+          if (memberKey) {
+            if (seenSelfAliasByRole.has(memberKey)) return;
+            seenSelfAliasByRole.add(memberKey);
+          }
+          dedupedMembers.push({
+            ...member,
+            display_name: normalizeOwnPopupLabel(memberName, memberUserId),
+            photoUrl: resolvePopupMemberPhotoUrl(member),
+            photo_url: resolvePopupMemberPhotoUrl(member),
+            avatarUrl: resolvePopupMemberPhotoUrl(member),
+            avatar_url: resolvePopupMemberPhotoUrl(member),
+          });
         });
-      });
-      const memberList = [...dedupedMembers];
-      const memberUserIds = new Set(memberList.map(m => String(m.user_id || '')));
-      (signups || []).forEach(s => {
-        const uid = String(s.user_id || '');
-        if (!uid || memberUserIds.has(uid)) return;
-        memberUserIds.add(uid);
-        memberList.push({
-          id: `signup-${s.user_id}`,
-          event_id: id,
-          user_id: s.user_id,
-          display_name: normalizeOwnPopupLabel(s.display_name, s.user_id),
-          photoUrl: resolvePopupMemberPhotoUrl(s),
-          photo_url: resolvePopupMemberPhotoUrl(s),
-          avatarUrl: resolvePopupMemberPhotoUrl(s),
-          avatar_url: resolvePopupMemberPhotoUrl(s),
-          role: 'player',
-          joined_at: s.created_at,
+        const memberList = [...dedupedMembers];
+        const memberUserIds = new Set(memberList.map((m) => String(m.user_id || '')));
+        (signups || []).forEach((s) => {
+          const uid = String(s.user_id || '');
+          if (!uid || memberUserIds.has(uid)) return;
+          memberUserIds.add(uid);
+          memberList.push({
+            id: `signup-${s.user_id}`,
+            event_id: id,
+            user_id: s.user_id,
+            display_name: normalizeOwnPopupLabel(s.display_name, s.user_id),
+            photoUrl: resolvePopupMemberPhotoUrl(s),
+            photo_url: resolvePopupMemberPhotoUrl(s),
+            avatarUrl: resolvePopupMemberPhotoUrl(s),
+            avatar_url: resolvePopupMemberPhotoUrl(s),
+            role: 'player',
+            joined_at: s.created_at,
+          });
         });
-      });
-      const storedManualPlayers = Array.isArray(ev?.event_data?.manualPlayers) ? ev.event_data.manualPlayers : [];
-      storedManualPlayers.forEach((player) => {
-        const manualName = String(player?.display_name || '').trim();
-        if (!manualName) return;
-        const duplicate = memberList.some((entry) => String(entry?.display_name || '').trim().toLowerCase() === manualName.toLowerCase());
-        if (duplicate) return;
-        memberList.push({
-          id: String(player?.id || `manual-${manualName.toLowerCase()}`),
-          event_id: id,
-          user_id: '',
-          display_name: manualName,
-          role: 'player',
-          joined_at: player?.joined_at || new Date().toISOString(),
-          is_manual: true,
+        const storedManualPlayers = Array.isArray(ev?.event_data?.manualPlayers) ? ev.event_data.manualPlayers : [];
+        storedManualPlayers.forEach((player) => {
+          const manualName = String(player?.display_name || '').trim();
+          if (!manualName) return;
+          const duplicate = memberList.some((entry) => String(entry?.display_name || '').trim().toLowerCase() === manualName.toLowerCase());
+          if (duplicate) return;
+          memberList.push({
+            id: String(player?.id || `manual-${manualName.toLowerCase()}`),
+            event_id: id,
+            user_id: '',
+            display_name: manualName,
+            role: 'player',
+            joined_at: player?.joined_at || new Date().toISOString(),
+            is_manual: true,
+          });
         });
-      });
-      const nextMembers = memberList.map((entry) => {
-        const overrideKey = String(entry?.user_id || '').trim();
-        const overrideRole = String(memberRoleOverridesRef.current?.[overrideKey] || '').trim();
-        return overrideRole ? { ...entry, role: overrideRole } : entry;
-      });
-      setMembers(nextMembers);
-      return normalizedEv;
+        const nextMembers = memberList.map((entry) => {
+          const overrideKey = String(entry?.user_id || '').trim();
+          const overrideRole = String(memberRoleOverridesRef.current?.[overrideKey] || '').trim();
+          return overrideRole ? { ...entry, role: overrideRole } : entry;
+        });
+        setMembers(nextMembers);
+        return normalizedEv;
       } catch {}
       return null;
     })();
