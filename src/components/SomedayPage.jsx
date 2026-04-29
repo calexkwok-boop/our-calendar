@@ -1683,15 +1683,31 @@ const SomedayPage = ({
 
   async function fetchChaptersWithFallback(matchMode, value) {
     const selectAttempts = [
-      'id, title, created_at, owner_id, cover_pin_id, is_public, public_title, public_description, public_tags, public_cover_pin_id, published_at, copy_count, chapter_pins(*)',
-      'id, title, created_at, owner_id, cover_pin_id, is_public, public_title, public_description, public_tags, published_at, chapter_pins(*)',
-      'id, title, created_at, owner_id, cover_pin_id, chapter_pins(*)',
+      'id, title, created_at, owner_id, cover_pin_id, is_public, public_title, public_description, public_tags, public_cover_pin_id, published_at, copy_count',
+      'id, title, created_at, owner_id, cover_pin_id, is_public, public_title, public_description, public_tags, published_at',
+      'id, title, created_at, owner_id, cover_pin_id',
     ];
     for (const selectClause of selectAttempts) {
       let query = supabase.from('chapters').select(selectClause);
       if (matchMode === 'eq') query = query.eq('owner_id', value);
       if (matchMode === 'in') query = query.in('id', value);
       const { data, error } = await query;
+      if (!error) return data || [];
+    }
+    return [];
+  }
+
+  async function fetchChapterPinRows(chapterIds = []) {
+    if (!Array.isArray(chapterIds) || chapterIds.length === 0) return [];
+    const selectAttempts = [
+      'id, chapter_id, label, description, image_url, emoji, category_id, status, tip, map_query, pin_color, note_color, type, x, y, rot, position',
+      'id, chapter_id, label, description, image_url, emoji, category_id, status, tip, map_query, pin_color, note_color, type, x, y, rot',
+    ];
+    for (const selectClause of selectAttempts) {
+      const { data, error } = await supabase
+        .from('chapter_pins')
+        .select(selectClause)
+        .in('chapter_id', chapterIds);
       if (!error) return data || [];
     }
     return [];
@@ -1721,6 +1737,16 @@ const SomedayPage = ({
     }
 
     const remote = [...owned, ...collab];
+    const remoteChapterIds = remote.map((chapter) => chapter.id).filter(Boolean);
+    const remotePinRows = await fetchChapterPinRows(remoteChapterIds);
+    const remotePinsByChapterId = new Map();
+    (remotePinRows || []).forEach((row) => {
+      const chapterId = String(row.chapter_id || '').trim();
+      if (!chapterId) return;
+      const mappedPin = { ...rowToPin(row), chapterId, position: Number(row.position || 0) };
+      if (!remotePinsByChapterId.has(chapterId)) remotePinsByChapterId.set(chapterId, []);
+      remotePinsByChapterId.get(chapterId).push(mappedPin);
+    });
 
     // One-time migration from localStorage
     if (remote.length === 0) {
@@ -1737,7 +1763,19 @@ const SomedayPage = ({
               .map((chapter) => [String(chapter?.id || ''), chapter])
           ).values()
         ).filter((chapter) => String(chapter?.id || '').trim());
-        const migrated = (afterMigrate || []).map(c => ({ ...c, itemIds: (c.chapter_pins || []).map(p => p.id), pins: (c.chapter_pins || []).map(rowToPin), memories: [], collaborators: [], loaded: false }));
+        const migratedPinRows = await fetchChapterPinRows(afterMigrate.map((chapter) => chapter.id).filter(Boolean));
+        const migratedPinsByChapterId = new Map();
+        (migratedPinRows || []).forEach((row) => {
+          const chapterId = String(row.chapter_id || '').trim();
+          if (!chapterId) return;
+          const mappedPin = { ...rowToPin(row), chapterId, position: Number(row.position || 0) };
+          if (!migratedPinsByChapterId.has(chapterId)) migratedPinsByChapterId.set(chapterId, []);
+          migratedPinsByChapterId.get(chapterId).push(mappedPin);
+        });
+        const migrated = (afterMigrate || []).map((chapter) => {
+          const chapterPins = (migratedPinsByChapterId.get(String(chapter.id || '').trim()) || []).sort((a, b) => (a.position || 0) - (b.position || 0));
+          return { ...chapter, itemIds: chapterPins.map((pin) => pin.id), pins: chapterPins, memories: [], collaborators: [], loaded: false };
+        });
         setChapters(migrated);
         setPins((prev) => {
           const byId = new Map((Array.isArray(prev) ? prev : []).map((pin) => [String(pin?.id || ''), pin]));
@@ -1755,8 +1793,8 @@ const SomedayPage = ({
     }
 
     const hydratedChapters = remote.map((chapter) => {
-      const loadedPins = (chapter.chapter_pins || []).map(rowToPin);
-      return { ...chapter, pins: loadedPins };
+      const chapterPins = (remotePinsByChapterId.get(String(chapter.id || '').trim()) || []).sort((a, b) => (a.position || 0) - (b.position || 0));
+      return { ...chapter, pins: chapterPins, itemIds: chapterPins.map((pin) => pin.id) };
     });
 
     setChapters(prev => {
@@ -1765,7 +1803,7 @@ const SomedayPage = ({
       return [
         ...hydratedChapters.map(c => {
           const ex = prev.find(p => p.id === c.id);
-          const dbItemIds = (c.chapter_pins || []).map(p => p.id);
+          const dbItemIds = c.itemIds || [];
           const prevItemIds = ex?.itemIds || [];
           const itemIds = [...new Set([...dbItemIds, ...prevItemIds])];
           return { ...c, itemIds, pins: (c.pins || []).length > 0 ? c.pins : (ex?.pins || []), memories: ex?.memories || [], collaborators: ex?.collaborators || [], loaded: ex?.loaded || false };
