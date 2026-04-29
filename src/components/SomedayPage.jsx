@@ -1367,20 +1367,20 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
         <div style={{ position: 'fixed', inset: 0, zIndex: 10060, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end' }} onClick={() => { if (!publishSaving) setShowPublishSheet(false); }}>
           <div onClick={e => e.stopPropagation()} style={{ background: darkMode ? '#131c2e' : '#fff', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 480, margin: '0 auto', padding: '20px 20px max(32px, calc(env(safe-area-inset-bottom) + 20px))' }}>
             <div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 auto 18px' }} />
-            <p style={{ fontSize: 18, fontWeight: 700, color: tp, margin: 0 }}>Publish chapter</p>
+            <p style={{ fontSize: 18, fontWeight: 700, color: tp, margin: 0, fontFamily: CAVEAT }}>Publish chapter</p>
             <p style={{ fontSize: 13, lineHeight: 1.5, color: ts, margin: '6px 0 18px' }}>This makes your chapter discoverable as a read-only template that other people can copy.</p>
-            <div style={{ display: 'grid', gap: 12 }}>
+            <div style={{ display: 'grid', gap: 12, fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif' }}>
               <label style={{ display: 'grid', gap: 6 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: tp }}>Public title</span>
-                <input value={publishTitle} onChange={e => setPublishTitle(e.target.value)} placeholder={chapter.title || 'Chapter title'} style={{ width: '100%', boxSizing: 'border-box', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e0d5'}`, background: cardBg, color: tp, padding: '11px 13px', fontSize: 14, outline: 'none' }} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: ts, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif' }}>Public title</span>
+                <input value={publishTitle} onChange={e => setPublishTitle(e.target.value)} placeholder={chapter.title || 'Chapter title'} style={{ width: '100%', boxSizing: 'border-box', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e0d5'}`, background: cardBg, color: tp, padding: '11px 13px', fontSize: 15, outline: 'none', fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif' }} />
               </label>
               <label style={{ display: 'grid', gap: 6 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: tp }}>Description</span>
-                <textarea value={publishDescription} onChange={e => setPublishDescription(e.target.value)} placeholder="What makes this chapter useful?" rows={3} style={{ width: '100%', boxSizing: 'border-box', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e0d5'}`, background: cardBg, color: tp, padding: '11px 13px', fontSize: 14, outline: 'none', resize: 'none' }} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: ts, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif' }}>Description</span>
+                <textarea value={publishDescription} onChange={e => setPublishDescription(e.target.value)} placeholder="What makes this chapter useful?" rows={3} style={{ width: '100%', boxSizing: 'border-box', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e0d5'}`, background: cardBg, color: tp, padding: '11px 13px', fontSize: 15, outline: 'none', resize: 'none', fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif' }} />
               </label>
               <label style={{ display: 'grid', gap: 6 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: tp }}>Tags</span>
-                <input value={publishTagsInput} onChange={e => setPublishTagsInput(e.target.value)} placeholder="family, food, weekend, disneyland" style={{ width: '100%', boxSizing: 'border-box', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e0d5'}`, background: cardBg, color: tp, padding: '11px 13px', fontSize: 14, outline: 'none' }} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: ts, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif' }}>Tags</span>
+                <input value={publishTagsInput} onChange={e => setPublishTagsInput(e.target.value)} placeholder="family, food, weekend, disneyland" style={{ width: '100%', boxSizing: 'border-box', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e0d5'}`, background: cardBg, color: tp, padding: '11px 13px', fontSize: 15, outline: 'none', fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif' }} />
               </label>
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
@@ -1388,7 +1388,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                 <button onClick={() => savePublishSettings(false)} disabled={publishSaving} style={{ flex: 1, padding: '12px 14px', borderRadius: 14, border: `1px solid ${darkMode ? 'rgba(248,113,113,0.35)' : '#fecaca'}`, background: darkMode ? 'rgba(127,29,29,0.16)' : '#fef2f2', color: '#dc2626', fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: publishSaving ? 0.6 : 1 }}>Unpublish</button>
               )}
               <button onClick={() => setShowPublishSheet(false)} disabled={publishSaving} style={{ flex: 1, padding: '12px 14px', borderRadius: 14, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : '#e5e0d5'}`, background: 'transparent', color: ts, fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: publishSaving ? 0.6 : 1 }}>Cancel</button>
-              <button onClick={() => savePublishSettings(true)} disabled={publishSaving} style={{ flex: 1.2, padding: '12px 14px', borderRadius: 14, border: 'none', background: darkMode ? '#7c3aed' : '#8b5cf6', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: publishSaving ? 0.6 : 1 }}>{publishSaving ? 'Saving…' : (chapter.is_public ? 'Save changes' : 'Publish')}</button>
+              <button onClick={() => savePublishSettings(true)} disabled={publishSaving} style={{ flex: 1.2, padding: '12px 14px', borderRadius: 14, border: 'none', background: darkMode ? '#7c3aed' : '#8b5cf6', color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer', opacity: publishSaving ? 0.6 : 1, fontFamily: CAVEAT }}>{publishSaving ? 'Saving…' : (chapter.is_public ? 'Save changes' : 'Publish')}</button>
             </div>
           </div>
         </div>

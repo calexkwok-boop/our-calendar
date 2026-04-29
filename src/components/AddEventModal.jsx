@@ -231,7 +231,7 @@ const AddEventModal = ({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-        <style>{`#add-event-modal-panel, #add-event-modal-panel * { font-family: 'Caveat', cursive !important; }`}</style>
+        <style>{`#add-event-modal-panel, #add-event-modal-panel * { font-family: 'Caveat', cursive !important; } #add-event-modal-panel .sans-override, #add-event-modal-panel .sans-override * { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important; }`}</style>
         <div className="relative p-6 pb-5 border-b border-gray-200 dark:border-gray-700 rounded-t-[28px] overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1" style={{ background: themedGradient }} />
 
@@ -239,7 +239,7 @@ const AddEventModal = ({
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <Sparkles className="w-5 h-5" style={{ color: activeAccent }} />
-                <div className="text-sm uppercase tracking-widest font-semibold" style={{ color: activeAccent }}>
+                <div className="sans-override text-sm uppercase tracking-widest font-semibold" style={{ color: activeAccent }}>
                   {shareLink ? 'Event created' : 'Plan ahead'}
                 </div>
               </div>
@@ -293,7 +293,7 @@ const AddEventModal = ({
             </div>
           ) : (
           <>
-          <div>
+          <div className="sans-override">
             <label className="block text-sm font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2">
               What you're doing
             </label>
@@ -320,7 +320,7 @@ const AddEventModal = ({
             )}
           </div>
 
-          <div>
+          <div className="sans-override">
             <label className="block text-sm font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5" />
               Date
@@ -472,7 +472,7 @@ const AddEventModal = ({
             )}
           </div>
 
-          <div>
+          <div className="sans-override">
             <label className="block text-sm font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5" />
               Time
@@ -514,7 +514,7 @@ const AddEventModal = ({
             )}
           </div>
 
-          <div>
+          <div className="sans-override">
             <label className="block text-sm font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5" />
               Location
