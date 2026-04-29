@@ -3593,6 +3593,7 @@ function App() {
   const swipingLayerIdRef = useRef(null);
   const [layerOrder, setLayerOrder] = useState([]);
   const dragLayerIdRef = useRef(null);
+  const [hoveredLayerDragId, setHoveredLayerDragId] = useState(null);
   const [activeCalendarSortOrder, setActiveCalendarSortOrder] = useState([]);
   const [upcomingTripSortOrder, setUpcomingTripSortOrder] = useState([]);
   const [upcomingPopupSortOrder, setUpcomingPopupSortOrder] = useState([]);
@@ -29187,6 +29188,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         <div
                           key={layer.id}
                           className="relative rounded-xl overflow-hidden"
+                          data-layer-row={String(layer.id)}
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={() => {
                             const fromId = dragLayerIdRef.current;
@@ -29219,19 +29221,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       </button>
                     </div>
                   )}
-                  <button
-                    onTouchStart={(e) => handleLayerSwipeStart(e, layer.id, canSwipeLayerAction)}
-                    onTouchMove={handleLayerSwipeMove}
-                    onTouchEnd={handleLayerSwipeEnd}
-                    onTouchCancel={handleLayerSwipeEnd}
-                    onClick={() => {
-                      setActiveLayerId(layer.id);
-                      setCalendarTitle(layer.name || 'Our Calendar');
-                      if (user?.id) localStorage.setItem(`active-layer-${user.id}`, String(layer.id || ''));
-                      setShowCalendarSwitcher(false);
-                      openCalendarTab();
-                    }}
-                    className="relative z-10 w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left"
+                  <div
+                    className="relative z-10 flex items-center rounded-xl"
                     style={{
                       ...(isActive ? { background: `${rowTheme.accent}18`, border: `1.5px solid ${rowTheme.accent}40` } : { border: '1.5px solid transparent' }),
                       transform: `translateX(${rowOffset}px)`,
@@ -29241,18 +29232,58 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     <div
                       draggable
                       onDragStart={(e) => { dragLayerIdRef.current = String(layer.id); e.dataTransfer.effectAllowed = 'move'; e.stopPropagation(); }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="shrink-0 cursor-grab active:cursor-grabbing touch-none"
+                      onTouchStart={(e) => { e.stopPropagation(); dragLayerIdRef.current = String(layer.id); }}
+                      onTouchMove={(e) => {
+                        if (!dragLayerIdRef.current) return;
+                        const touch = e.touches[0];
+                        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+                        const row = el?.closest('[data-layer-row]');
+                        if (row) setHoveredLayerDragId(row.getAttribute('data-layer-row'));
+                      }}
+                      onTouchEnd={() => {
+                        const fromId = dragLayerIdRef.current;
+                        const toId = hoveredLayerDragId;
+                        dragLayerIdRef.current = null;
+                        setHoveredLayerDragId(null);
+                        if (!fromId || !toId || fromId === toId) return;
+                        setLayerOrder(prev => {
+                          const base = prev.length > 0 ? [...prev] : visibleLayerCalendars.map(l => String(l.id));
+                          const fromIdx = base.indexOf(fromId);
+                          const toIdx = base.indexOf(toId);
+                          if (fromIdx === -1 || toIdx === -1) return prev;
+                          const next = [...base];
+                          next.splice(fromIdx, 1);
+                          next.splice(toIdx, 0, fromId);
+                          return next;
+                        });
+                      }}
+                      className="shrink-0 cursor-grab active:cursor-grabbing pl-3 pr-1 py-2.5"
+                      style={{ touchAction: 'none' }}
                     >
                       <GripVertical className="w-3.5 h-3.5 text-gray-300 dark:text-gray-600" />
                     </div>
-                    <div className="w-3 h-3 rounded-full shrink-0" style={{ background: rowTheme.accent }} />
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-semibold truncate text-gray-900 dark:text-gray-100">{layer.name || 'Untitled'}</div>
-                      {layer.is_public && <div className="text-[10px] text-gray-400">Public</div>}
-                    </div>
-                    {isActive && <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: rowTheme.accent }} />}
-                  </button>
+                    <button
+                      onTouchStart={(e) => handleLayerSwipeStart(e, layer.id, canSwipeLayerAction)}
+                      onTouchMove={handleLayerSwipeMove}
+                      onTouchEnd={handleLayerSwipeEnd}
+                      onTouchCancel={handleLayerSwipeEnd}
+                      onClick={() => {
+                        setActiveLayerId(layer.id);
+                        setCalendarTitle(layer.name || 'Our Calendar');
+                        if (user?.id) localStorage.setItem(`active-layer-${user.id}`, String(layer.id || ''));
+                        setShowCalendarSwitcher(false);
+                        openCalendarTab();
+                      }}
+                      className="relative flex-1 flex items-center gap-3 pr-3 py-2.5 rounded-xl text-left"
+                    >
+                      <div className="w-3 h-3 rounded-full shrink-0" style={{ background: rowTheme.accent }} />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold truncate text-gray-900 dark:text-gray-100">{layer.name || 'Untitled'}</div>
+                        {layer.is_public && <div className="text-[10px] text-gray-400">Public</div>}
+                      </div>
+                      {isActive && <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: rowTheme.accent }} />}
+                    </button>
+                  </div>
                 </div>
               );
             })}
