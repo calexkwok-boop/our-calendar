@@ -3403,6 +3403,7 @@ function App() {
   const [aiError, setAiError] = useState('');
   const [inAppNotifications, setInAppNotifications] = useState([]);
   const [pendingTripInvites, setPendingTripInvites] = useState([]);
+  const [pendingCalendarInvites, setPendingCalendarInvites] = useState([]);
   const [pendingChapterInvites, setPendingChapterInvites] = useState([]);
   const [chapterInviteRefreshToken, setChapterInviteRefreshToken] = useState(0);
   const seenInAppNotificationKeysRef = useRef(new Set());
@@ -4101,6 +4102,25 @@ function App() {
         || String(current.endDate || '') !== String(next.endDate || '')
         || String(current.invitedAt || '') !== String(next.invitedAt || '')
         || String(current.identity || '') !== String(next.identity || '')
+      ) {
+        return false;
+      }
+    }
+    return true;
+  };
+  const arePendingCalendarInvitesEqual = (a, b) => {
+    const left = Array.isArray(a) ? a : [];
+    const right = Array.isArray(b) ? b : [];
+    if (left.length !== right.length) return false;
+    for (let i = 0; i < left.length; i += 1) {
+      const current = left[i] || {};
+      const next = right[i] || {};
+      if (
+        String(current.shareId || '') !== String(next.shareId || '')
+        || String(current.layerId || '') !== String(next.layerId || '')
+        || String(current.calendarName || '') !== String(next.calendarName || '')
+        || String(current.ownerId || '') !== String(next.ownerId || '')
+        || String(current.createdAt || '') !== String(next.createdAt || '')
       ) {
         return false;
       }
@@ -16608,6 +16628,69 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
   }, [user?.email]);
 
+  const loadPendingCalendarInvites = React.useCallback(async () => {
+    if (!user?.id) {
+      setPendingCalendarInvites((prev) => (prev.length ? [] : prev));
+      return;
+    }
+    const myEmail = normalizeEmail(user?.email);
+    const myPhone = normalizePhoneNumber(user?.phone);
+    const shareRecipientFilter = buildShareRecipientFilter(user.id, myEmail, myPhone);
+    if (!shareRecipientFilter) {
+      setPendingCalendarInvites((prev) => (prev.length ? [] : prev));
+      return;
+    }
+    try {
+      const { data: rows, error } = await supabase
+        .from('shared_access')
+        .select('id,layer_id,calendar_id,owner_id,shared_with_id,shared_with_email,shared_with_phone,created_at')
+        .or(shareRecipientFilter)
+        .is('shared_with_id', null)
+        .order('created_at', { ascending: false, nullsFirst: false })
+        .limit(200);
+      if (error) {
+        console.error('loadPendingCalendarInvites failed:', error);
+        setPendingCalendarInvites((prev) => (prev.length ? [] : prev));
+        return;
+      }
+      const filteredRows = (rows || []).filter((row) => {
+        const shareId = String(row?.id || '').trim();
+        if (shareId && dismissedCalendarInviteIdsRef.current.has(shareId)) return false;
+        const sharedWithId = String(row?.shared_with_id || '').trim();
+        if (sharedWithId) return false;
+        const recipient = getShareRecipientFromRow(row);
+        return recipient === myEmail || recipient === myPhone;
+      });
+      const layerIds = Array.from(new Set(filteredRows.map((row) => String(row?.layer_id || row?.calendar_id || '')).filter(Boolean)));
+      let layerNameById = new Map();
+      if (layerIds.length > 0) {
+        const { data: layerRows, error: layerErr } = await supabase
+          .from('calendar_layers')
+          .select('id,name')
+          .in('id', layerIds);
+        if (layerErr) {
+          console.error('loadPendingCalendarInvites layer lookup failed:', layerErr);
+        } else {
+          layerNameById = new Map((layerRows || []).map((row) => [String(row?.id || ''), String(row?.name || 'Shared calendar').trim() || 'Shared calendar']));
+        }
+      }
+      const pending = filteredRows.map((row) => {
+        const layerId = String(row?.layer_id || row?.calendar_id || '').trim();
+        return {
+          shareId: String(row?.id || '').trim(),
+          layerId,
+          ownerId: String(row?.owner_id || '').trim(),
+          calendarName: layerNameById.get(layerId) || 'Shared calendar',
+          createdAt: row?.created_at || null,
+        };
+      }).filter((invite) => invite.shareId && invite.layerId);
+      setPendingCalendarInvites((prev) => (arePendingCalendarInvitesEqual(prev, pending) ? prev : pending));
+    } catch (err) {
+      console.error('loadPendingCalendarInvites exception:', err);
+      setPendingCalendarInvites((prev) => (prev.length ? [] : prev));
+    }
+  }, [user?.email, user?.id, user?.phone]);
+
   const acceptChapterInvite = async (invite) => {
     if (!invite?.chapterId || !user?.email) return;
     const myEmail = normalizeEmail(user?.email);
@@ -16770,6 +16853,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       window.removeEventListener('focus', onFocus);
     };
   }, [user?.email, user?.phone, user?.id, layerRefreshToken, loadPendingTripInvites]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setPendingCalendarInvites((prev) => (prev.length ? [] : prev));
+      return;
+    }
+    loadPendingCalendarInvites();
+    const interval = setInterval(loadPendingCalendarInvites, 60 * 1000);
+    const onFocus = () => loadPendingCalendarInvites();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [user?.id, user?.email, user?.phone, layerRefreshToken, loadPendingCalendarInvites]);
 
   useEffect(() => {
     if (!user?.email) {
@@ -17320,6 +17418,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       setActiveLayerId(invite.layerId);
       localStorage.setItem(`active-layer-${user.id}`, invite.layerId);
       markCalendarInviteDismissed(invite.shareId);
+      setPendingCalendarInvites((prev) => prev.filter((item) => String(item?.shareId || '') !== String(invite.shareId || '')));
       clearInviteNotifications({ kind: 'calendar', shareId: invite.shareId });
       setLayerRefreshToken(prev => prev + 1);
     } catch (err) {
@@ -17343,6 +17442,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         return;
       }
       markCalendarInviteDismissed(invite.shareId);
+      setPendingCalendarInvites((prev) => prev.filter((item) => String(item?.shareId || '') !== String(invite.shareId || '')));
       clearInviteNotifications({ kind: 'calendar', shareId: invite.shareId });
     } catch (err) {
       alert(`Decline failed: ${err.message || 'Unknown error'}`);
@@ -23410,6 +23510,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }
 
   const unreadInAppCount = inAppNotifications.reduce((sum, n) => sum + (n.read ? 0 : 1), 0);
+  const unreadNonInviteInAppCount = inAppNotifications.reduce((sum, n) => (
+    n.read || String(n?.type || '').trim().toLowerCase() === 'invite' ? sum : sum + 1
+  ), 0);
+  const totalNotificationBadgeCount = unreadNonInviteInAppCount + pendingTripInvites.length + pendingCalendarInvites.length + pendingChapterInvites.length;
   const readInAppCount = inAppNotifications.reduce((sum, n) => sum + (n.read ? 1 : 0), 0);
   const activeChatUnreadCount = Number(chatUnreadCounts[String(activeLayerId || '')] || 0);
   const activeControlWidgets = [...new Set(controlWidgetOrder.filter((id) => CONTROL_WIDGET_IDS.includes(id)))];
@@ -24494,7 +24598,7 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
       icon: notificationsEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />,
       active: Boolean(widgetCardOpenById.notifications),
       disabled: false,
-      badge: unreadInAppCount > 0 ? (unreadInAppCount > 99 ? '99+' : String(unreadInAppCount)) : '',
+      badge: totalNotificationBadgeCount > 0 ? (totalNotificationBadgeCount > 99 ? '99+' : String(totalNotificationBadgeCount)) : '',
     };
     if (id === 'list') return { label: 'List', icon: <Tag className="w-4 h-4" />, active: Boolean(widgetCardOpenById.list), disabled: false };
     if (id === 'notes') return { label: 'Notes', icon: <span className="text-sm leading-none">📝</span>, active: Boolean(widgetCardOpenById.notes), disabled: false };
@@ -26697,9 +26801,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         roundedClass="rounded-xl"
                         textClass="text-base sm:text-lg"
                       />
-                      {(unreadInAppCount + pendingTripInvites.length + pendingChapterInvites.length) > 0 && (
+                      {totalNotificationBadgeCount > 0 && (
                         <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full border border-white bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-md dark:border-gray-900">
-                          {(unreadInAppCount + pendingTripInvites.length + pendingChapterInvites.length) > 99 ? '99+' : (unreadInAppCount + pendingTripInvites.length + pendingChapterInvites.length)}
+                          {totalNotificationBadgeCount > 99 ? '99+' : totalNotificationBadgeCount}
                         </span>
                       )}
                     </span>
@@ -27033,6 +27137,37 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           </button>
                           <button
                             onClick={() => declineTripInvite(invite)}
+                            className="px-2.5 py-1.5 rounded-md text-xs font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {pendingCalendarInvites.length > 0 && (
+                <div className="p-4 bg-sky-50 dark:bg-sky-900/20 rounded-xl border border-sky-200 dark:border-sky-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Bell className="w-5 h-5 text-sky-600" />
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">Calendar Invites</span>
+                    <span className="px-1.5 py-0.5 rounded-full bg-sky-500 text-white text-[10px] font-bold">{pendingCalendarInvites.length}</span>
+                  </div>
+                  <div className="space-y-2">
+                    {pendingCalendarInvites.map((invite) => (
+                      <div key={`${invite.shareId}-${invite.createdAt || 'invite'}`} className="rounded-lg border border-sky-200 dark:border-sky-700 bg-white dark:bg-gray-800 p-2.5">
+                        <div className="text-sm font-medium text-gray-800 dark:text-gray-100">{invite.calendarName}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Shared calendar invite</div>
+                        <div className="mt-2 flex gap-2">
+                          <button
+                            onClick={() => acceptCalendarInvite(invite)}
+                            className="px-2.5 py-1.5 rounded-md text-xs font-semibold bg-sky-500 hover:bg-sky-600 text-white"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => declineCalendarInvite(invite)}
                             className="px-2.5 py-1.5 rounded-md text-xs font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
                           >
                             Decline
@@ -28885,9 +29020,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               sizeClass="w-10 h-10"
               roundedClass="rounded-full"
             />
-            {unreadInAppCount > 0 && (
+            {totalNotificationBadgeCount > 0 && (
               <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full border border-white bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-md dark:border-gray-900">
-                {unreadInAppCount > 99 ? '99+' : unreadInAppCount}
+                {totalNotificationBadgeCount > 99 ? '99+' : totalNotificationBadgeCount}
               </span>
             )}
           </span>
@@ -28926,9 +29061,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           className="mt-1 w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all flex items-center justify-between gap-3"
         >
           <span>Notifications</span>
-          {unreadInAppCount > 0 && (
+          {totalNotificationBadgeCount > 0 && (
             <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold">
-              {unreadInAppCount > 99 ? '99+' : unreadInAppCount}
+              {totalNotificationBadgeCount > 99 ? '99+' : totalNotificationBadgeCount}
             </span>
           )}
         </button>
@@ -29280,7 +29415,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             themeAccentBorder={themeAccentBorder}
             yearStats={homeYearStatsForHome}
              profilePhotoUrl={currentUserProfilePhotoUrl}
-             profileBadgeCount={unreadInAppCount + pendingTripInvites.length + pendingChapterInvites.length}
+             profileBadgeCount={totalNotificationBadgeCount}
               onOpenAccountMenu={toggleAccountMenu}
               onEditProfilePhoto={openLayerMediaMenu}
             />

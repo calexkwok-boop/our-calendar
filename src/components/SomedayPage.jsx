@@ -1043,13 +1043,18 @@ function ChapterPinSheet({ pin, onClose, onRemove, darkMode, hasLinkedTrip = fal
 
 
 // ─── Chapter Page ─────────────────────────────────────────────────────────────
-function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, darkMode, hasLinkedTrip = false, onInvite, onCoverChange }) {
+function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, darkMode, hasLinkedTrip = false, onInvite, onCoverChange, onPublishChange }) {
   const [showAddMemory, setShowAddMemory] = useState(false);
   const [memoryText, setMemoryText] = useState('');
   const [selectedPin, setSelectedPin] = useState(null);
   const [showInvite, setShowInvite] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showCoverPicker, setShowCoverPicker] = useState(false);
+  const [showPublishSheet, setShowPublishSheet] = useState(false);
+  const [publishTitle, setPublishTitle] = useState(chapter.public_title || chapter.title || '');
+  const [publishDescription, setPublishDescription] = useState(chapter.public_description || '');
+  const [publishTagsInput, setPublishTagsInput] = useState(Array.isArray(chapter.public_tags) ? chapter.public_tags.join(', ') : '');
+  const [publishSaving, setPublishSaving] = useState(false);
   const [coverPinId, setCoverPinId] = useState(chapter.coverPinId || chapter.cover_pin_id || null);
   const menuRef = useRef(null);
   // seed rotates each time the page mounts (chapter reopened)
@@ -1084,12 +1089,57 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
   }, [chapter.id, chapter.itemIds, chapter.pins, pins]);
   const imagePins = chapterPins.filter(p => p.imageUrl);
   const coverPin = (coverPinId ? imagePins.find(p => String(p.id) === String(coverPinId)) : null) || imagePins[0] || null;
+  const canPublish = Boolean(onDeleteChapter);
+
+  useEffect(() => {
+    setCoverPinId(chapter.coverPinId || chapter.cover_pin_id || null);
+    setPublishTitle(chapter.public_title || chapter.title || '');
+    setPublishDescription(chapter.public_description || '');
+    setPublishTagsInput(Array.isArray(chapter.public_tags) ? chapter.public_tags.join(', ') : '');
+  }, [chapter.coverPinId, chapter.cover_pin_id, chapter.public_description, chapter.public_tags, chapter.public_title, chapter.title]);
 
   async function pickCover(pin) {
     setCoverPinId(pin.id);
     setShowCoverPicker(false);
     await supabase.from('chapters').update({ cover_pin_id: pin.id }).eq('id', chapter.id);
     onCoverChange?.({ chapterId: chapter.id, coverPinId: pin.id });
+  }
+
+  async function savePublishSettings(nextPublicValue) {
+    if (!canPublish || publishSaving) return;
+    const normalizedTitle = (publishTitle || chapter.title || '').trim();
+    const normalizedDescription = publishDescription.trim();
+    const normalizedTags = publishTagsInput
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+      .slice(0, 8);
+    if (nextPublicValue && !normalizedTitle) {
+      window.alert('Add a public title before publishing this chapter.');
+      return;
+    }
+    setPublishSaving(true);
+    const payload = {
+      is_public: nextPublicValue,
+      public_title: normalizedTitle || null,
+      public_description: normalizedDescription || null,
+      public_tags: normalizedTags,
+      public_cover_pin_id: coverPinId || chapter.cover_pin_id || null,
+      published_at: nextPublicValue ? new Date().toISOString() : null,
+    };
+    const { data, error } = await supabase
+      .from('chapters')
+      .update(payload)
+      .eq('id', chapter.id)
+      .select('id, is_public, public_title, public_description, public_tags, public_cover_pin_id, published_at')
+      .single();
+    setPublishSaving(false);
+    if (error) {
+      window.alert('Could not update publish settings right now.');
+      return;
+    }
+    onPublishChange?.(chapter.id, data || payload);
+    if (nextPublicValue) setShowPublishSheet(false);
   }
   const pageBg = darkMode ? '#0e1520' : '#faf8f3';
   const tp     = darkMode ? '#e8eaf0' : '#1a1a2e';
@@ -1128,6 +1178,12 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                 style={{ background: darkMode ? 'rgba(125,211,252,0.14)' : '#ecfeff', border: `1px solid ${darkMode ? 'rgba(125,211,252,0.28)' : '#a5f3fc'}`, borderRadius: 20, padding: '6px 14px', fontSize: 15, color: darkMode ? '#7dd3fc' : '#0e7490', cursor: 'pointer', flexShrink: 0, fontWeight: 700, fontFamily: CAVEAT }}
               >Create trip</button>
             )}
+            {canPublish && (
+              <button
+                onClick={() => setShowPublishSheet(true)}
+                style={{ background: chapter.is_public ? (darkMode ? 'rgba(196,181,253,0.16)' : '#f5f3ff') : (darkMode ? 'rgba(255,255,255,0.04)' : '#fff'), border: `1px solid ${chapter.is_public ? (darkMode ? 'rgba(196,181,253,0.34)' : '#d8b4fe') : (darkMode ? 'rgba(255,255,255,0.12)' : '#e5e0d5')}`, borderRadius: 20, padding: '6px 14px', fontSize: 15, color: chapter.is_public ? (darkMode ? '#c4b5fd' : '#7c3aed') : ts, cursor: 'pointer', flexShrink: 0, fontWeight: 700, fontFamily: CAVEAT }}
+              >{chapter.is_public ? 'Published' : 'Publish'}</button>
+            )}
             {onDeleteChapter && (
               <div ref={menuRef} style={{ position: 'relative' }}>
                 <button
@@ -1150,6 +1206,17 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
           </div>
         </div>
       </div>
+
+      {chapter.is_public && (
+        <div style={{ padding: '12px 16px 0' }}>
+          <div style={{ background: darkMode ? 'rgba(124,58,237,0.12)' : '#faf5ff', border: `1px solid ${darkMode ? 'rgba(196,181,253,0.18)' : '#e9d5ff'}`, borderRadius: 16, padding: '12px 14px' }}>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: darkMode ? '#c4b5fd' : '#7c3aed' }}>Published template</p>
+            <p style={{ margin: '4px 0 0', fontSize: 13, lineHeight: 1.45, color: darkMode ? '#d6d3f7' : '#5b21b6' }}>
+              Other users will be able to discover this chapter and copy it into their own Komo Book.
+            </p>
+          </div>
+        </div>
+      )}
 
       {coverPin?.imageUrl && (
         <div style={{ position: 'relative', width: '100%', height: 200, overflow: 'hidden' }}>
@@ -1292,6 +1359,37 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
           onClose={() => setShowInvite(false)}
           darkMode={darkMode}
         />
+      )}
+
+      {showPublishSheet && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 10060, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end' }} onClick={() => { if (!publishSaving) setShowPublishSheet(false); }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: darkMode ? '#131c2e' : '#fff', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 480, margin: '0 auto', padding: '20px 20px max(32px, calc(env(safe-area-inset-bottom) + 20px))' }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 auto 18px' }} />
+            <p style={{ fontSize: 18, fontWeight: 700, color: tp, margin: 0 }}>Publish chapter</p>
+            <p style={{ fontSize: 13, lineHeight: 1.5, color: ts, margin: '6px 0 18px' }}>This makes your chapter discoverable as a read-only template that other people can copy.</p>
+            <div style={{ display: 'grid', gap: 12 }}>
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: tp }}>Public title</span>
+                <input value={publishTitle} onChange={e => setPublishTitle(e.target.value)} placeholder={chapter.title || 'Chapter title'} style={{ width: '100%', boxSizing: 'border-box', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e0d5'}`, background: cardBg, color: tp, padding: '11px 13px', fontSize: 14, outline: 'none' }} />
+              </label>
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: tp }}>Description</span>
+                <textarea value={publishDescription} onChange={e => setPublishDescription(e.target.value)} placeholder="What makes this chapter useful?" rows={3} style={{ width: '100%', boxSizing: 'border-box', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e0d5'}`, background: cardBg, color: tp, padding: '11px 13px', fontSize: 14, outline: 'none', resize: 'none' }} />
+              </label>
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: tp }}>Tags</span>
+                <input value={publishTagsInput} onChange={e => setPublishTagsInput(e.target.value)} placeholder="family, food, weekend, disneyland" style={{ width: '100%', boxSizing: 'border-box', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e0d5'}`, background: cardBg, color: tp, padding: '11px 13px', fontSize: 14, outline: 'none' }} />
+              </label>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+              {chapter.is_public && (
+                <button onClick={() => savePublishSettings(false)} disabled={publishSaving} style={{ flex: 1, padding: '12px 14px', borderRadius: 14, border: `1px solid ${darkMode ? 'rgba(248,113,113,0.35)' : '#fecaca'}`, background: darkMode ? 'rgba(127,29,29,0.16)' : '#fef2f2', color: '#dc2626', fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: publishSaving ? 0.6 : 1 }}>Unpublish</button>
+              )}
+              <button onClick={() => setShowPublishSheet(false)} disabled={publishSaving} style={{ flex: 1, padding: '12px 14px', borderRadius: 14, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : '#e5e0d5'}`, background: 'transparent', color: ts, fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: publishSaving ? 0.6 : 1 }}>Cancel</button>
+              <button onClick={() => savePublishSettings(true)} disabled={publishSaving} style={{ flex: 1.2, padding: '12px 14px', borderRadius: 14, border: 'none', background: darkMode ? '#7c3aed' : '#8b5cf6', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: publishSaving ? 0.6 : 1 }}>{publishSaving ? 'Saving…' : (chapter.is_public ? 'Save changes' : 'Publish')}</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {selectedPin && (
@@ -1580,7 +1678,7 @@ const SomedayPage = ({
   }
 
   async function loadChapters() {
-    const CHAPTER_SELECT = 'id, title, created_at, owner_id, cover_pin_id, chapter_pins(*)';
+    const CHAPTER_SELECT = 'id, title, created_at, owner_id, cover_pin_id, is_public, public_title, public_description, public_tags, public_cover_pin_id, published_at, copy_count, chapter_pins(*)';
     const [ownedResult, memberResult] = await Promise.all([
       supabase.from('chapters').select(CHAPTER_SELECT).eq('owner_id', currentUser),
       userEmail
@@ -1747,6 +1845,14 @@ const SomedayPage = ({
       .eq('chapter_id', chapterId)
       .eq('email', userEmail);
     setPendingInvites(prev => prev.filter(i => i.chapter_id !== chapterId));
+  }
+
+  function updateChapterPublishState(chapterId, patch) {
+    setChapters(prev => prev.map(chapter => (
+      String(chapter.id) === String(chapterId)
+        ? { ...chapter, ...patch }
+        : chapter
+    )));
   }
 
   useEffect(() => {
@@ -2028,7 +2134,7 @@ const SomedayPage = ({
       return (
         <>
           <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
-          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={chapter.owner_id === currentUser ? () => deleteChapter(activeChapterId) : undefined} onCreateTrip={chapter.owner_id === currentUser ? onCreateTripFromChapter : undefined} darkMode={darkMode} hasLinkedTrip={chaptersWithLinkedTrips.has(String(chapter.id))} onInvite={email => inviteToChapter(activeChapterId, email)} onCoverChange={({ chapterId, coverPinId }) => setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, cover_pin_id: coverPinId } : c))} />
+          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={chapter.owner_id === currentUser ? () => deleteChapter(activeChapterId) : undefined} onCreateTrip={chapter.owner_id === currentUser ? onCreateTripFromChapter : undefined} darkMode={darkMode} hasLinkedTrip={chaptersWithLinkedTrips.has(String(chapter.id))} onInvite={email => inviteToChapter(activeChapterId, email)} onCoverChange={({ chapterId, coverPinId }) => setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, cover_pin_id: coverPinId } : c))} onPublishChange={updateChapterPublishState} />
         </>
       );
     }
