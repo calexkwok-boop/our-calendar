@@ -8,6 +8,7 @@ import HikingPage from "./HikingPage";
 import DreamShelfPage from "./DreamShelfPage";
 import DestinationsPage from "./DestinationsPage";
 import { getDestinationImageOverride } from "../data/destinationImageOverrides";
+import { supabase } from "../supabaseClient";
 
 const TMDB_KEY = "b66752afda91b8258d32f4388f049a22";
 const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
@@ -117,6 +118,20 @@ function getExploreCardImageUrl(post = {}, googleImgUrl = "") {
     return getDestinationImageOverride(post) || googleImgUrl || getExploreImageUrl(post);
   }
   return googleImgUrl || getExploreImageUrl(post);
+}
+
+function isUuidLike(value = "") {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || "").trim());
+}
+
+function getPublishedChapterCreatorLabel(chapter = {}) {
+  const handle = String(chapter?.creatorHandle || "").trim();
+  const displayName = String(chapter?.creatorDisplayName || "").trim();
+  const ownerId = String(chapter?.owner_id || "").trim();
+  if (handle) return `@${handle}`;
+  if (displayName) return displayName;
+  if (ownerId && !isUuidLike(ownerId)) return ownerId.startsWith("@") ? ownerId : `@${ownerId}`;
+  return "Community";
 }
 
 const SOURCE_CONFIG = {
@@ -698,6 +713,144 @@ function SkeletonCard() {
   );
 }
 
+function PublishedChapterCard({ chapter, onOpen, darkMode }) {
+  const coverUrl = String(chapter?.coverImageUrl || "").trim();
+  const creatorLabel = getPublishedChapterCreatorLabel(chapter);
+  const previewCount = Array.isArray(chapter?.previewPins) ? chapter.previewPins.length : 0;
+  return (
+    <button
+      onClick={() => onOpen?.(chapter)}
+      className={`flex-shrink-0 w-72 rounded-[26px] overflow-hidden text-left border shadow-sm active:opacity-80 ${darkMode ? "bg-[#161f30] border-transparent shadow-none" : "bg-white border-stone-100"}`}
+    >
+      <div className={`relative h-40 ${coverUrl ? "" : darkMode ? "bg-gradient-to-br from-violet-900/60 via-fuchsia-900/40 to-slate-900" : "bg-gradient-to-br from-fuchsia-100 via-violet-50 to-amber-50"}`}>
+        {coverUrl ? (
+          <img src={coverUrl} alt={chapter.public_title || chapter.title} className="w-full h-full object-cover" loading="lazy" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-5xl">📖</div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
+        <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-white/85 text-[10px] font-semibold tracking-wide text-violet-700">
+          Published chapter
+        </div>
+        <div className="absolute bottom-3 left-3 right-3">
+          <div className="text-white font-handwritten text-[28px] font-bold leading-tight line-clamp-2">
+            {chapter.public_title || chapter.title}
+          </div>
+          <div className="text-white/85 text-xs mt-1">{creatorLabel}</div>
+        </div>
+      </div>
+      <div className="px-4 pt-3.5 pb-4">
+        <p className={`text-sm leading-relaxed line-clamp-2 ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
+          {chapter.public_description || "A community-made chapter you can browse for trip inspiration."}
+        </p>
+        {Array.isArray(chapter?.public_tags) && chapter.public_tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {chapter.public_tags.slice(0, 3).map((tag) => (
+              <span
+                key={`${chapter.id}-${tag}`}
+                className={`px-2.5 py-1 rounded-full text-[10px] font-medium ${darkMode ? "bg-white/5 text-violet-200" : "bg-violet-50 text-violet-700"}`}
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+        <div className={`flex items-center justify-between mt-3 text-[11px] ${darkMode ? "text-slate-400" : "text-slate-500"}`}>
+          <span>{previewCount} saved spot{previewCount === 1 ? "" : "s"}</span>
+          <span>{Number(chapter.copy_count || 0)} copies</span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function PublishedChapterPreviewSheet({ chapter, onClose, darkMode }) {
+  const { sheetStyle, handleProps } = useSwipeDownSheet(onClose, true);
+  const coverUrl = String(chapter?.coverImageUrl || "").trim();
+  const creatorLabel = getPublishedChapterCreatorLabel(chapter);
+  const previewPins = Array.isArray(chapter?.previewPins) ? chapter.previewPins : [];
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  return createPortal(
+    <div className="fixed inset-0 z-[10110] flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}>
+      <div className={`w-full max-w-lg rounded-t-[28px] shadow-2xl max-h-[92vh] flex flex-col overflow-hidden ${darkMode ? "bg-[#0e1520]" : "bg-white"}`} style={sheetStyle}>
+        <div {...handleProps} className="pt-3 pb-1">
+          <div className={`w-10 h-1 rounded-full mx-auto ${darkMode ? "bg-white/10" : "bg-stone-200"}`} />
+        </div>
+        <div className="overflow-y-auto flex-1">
+          <div className={`relative h-56 ${coverUrl ? "" : darkMode ? "bg-gradient-to-br from-violet-900/60 via-fuchsia-900/40 to-slate-900" : "bg-gradient-to-br from-fuchsia-100 via-violet-50 to-amber-50"}`}>
+            {coverUrl ? (
+              <img src={coverUrl} alt={chapter.public_title || chapter.title} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-6xl">📖</div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+            <button onClick={onClose} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/45 text-white flex items-center justify-center text-sm">✕</button>
+            <div className="absolute bottom-4 left-5 right-5 text-white">
+              <div className="font-handwritten text-[34px] font-bold leading-tight">{chapter.public_title || chapter.title}</div>
+              <div className="text-sm text-white/85 mt-1">By {creatorLabel}</div>
+            </div>
+          </div>
+          <div className="px-5 py-5">
+            {Array.isArray(chapter?.public_tags) && chapter.public_tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {chapter.public_tags.map((tag) => (
+                  <span
+                    key={`${chapter.id}-preview-${tag}`}
+                    className={`px-3 py-1 rounded-full text-[11px] font-medium ${darkMode ? "bg-violet-500/10 text-violet-200" : "bg-violet-50 text-violet-700"}`}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className={`text-sm leading-relaxed ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
+              {chapter.public_description || "A published Komo Book chapter from the community."}
+            </p>
+            {previewPins.length > 0 && (
+              <>
+                <div className={`mt-5 text-[10px] font-semibold tracking-[0.18em] uppercase ${darkMode ? "text-slate-500" : "text-slate-400"}`}>
+                  Saved Polaroids
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  {previewPins.slice(0, 4).map((pin) => (
+                    <div key={pin.id} className={`rounded-2xl overflow-hidden border ${darkMode ? "bg-[#161f30] border-white/5" : "bg-stone-50 border-stone-100"}`}>
+                      <div className={`h-28 ${pin.imageUrl ? "" : darkMode ? "bg-white/5" : "bg-white"} flex items-center justify-center`}>
+                        {pin.imageUrl ? (
+                          <img src={pin.imageUrl} alt={pin.label || pin.description || "Chapter pin"} className="w-full h-full object-cover" loading="lazy" />
+                        ) : (
+                          <span className="text-4xl">{pin.emoji || "✨"}</span>
+                        )}
+                      </div>
+                      <div className="px-3 py-2.5">
+                        <p className={`text-sm font-medium leading-tight line-clamp-2 ${darkMode ? "text-slate-100" : "text-slate-800"}`}>
+                          {pin.label || pin.description || "Saved idea"}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            <div className={`mt-5 rounded-2xl border px-4 py-3 ${darkMode ? "border-violet-400/15 bg-violet-400/5 text-violet-100" : "border-violet-200 bg-violet-50 text-violet-800"}`}>
+              <div className="font-handwritten text-xl font-bold">Copy to Komo Book next</div>
+              <div className="text-xs leading-relaxed mt-1 opacity-80">
+                This first pass is read-only so we can get public discovery working cleanly before adding duplication.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 // ─── Section header ───────────────────────────────────────────────────────────
 function SectionHeader({ label }) {
   const tone =
@@ -760,6 +913,9 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
   const [moviesRetry, setMoviesRetry]     = useState(0);
   const [activePage, setActivePage]             = useState(null);
   const [selectedPost, setSelectedPost]         = useState(null);
+  const [publishedChapters, setPublishedChapters] = useState([]);
+  const [publishedChaptersLoading, setPublishedChaptersLoading] = useState(true);
+  const [selectedPublishedChapter, setSelectedPublishedChapter] = useState(null);
 
   const moviePosts = useMemo(() => shuffle(movies.slice(0, 20)).slice(0, 6).map(m => ({ ...m, type: "movies" })), [movies]);
   const activeCom  = useMemo(() => shuffle(communityPosts.filter(p => sources[p.type])), [communityPosts, sources]);
@@ -775,6 +931,87 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
       .catch(() => { if (!cancelled) { setMoviesError(true); setMoviesLoading(false); } });
     return () => { cancelled = true; };
   }, [sources.movies, moviesRetry]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadPublishedChapters() {
+      setPublishedChaptersLoading(true);
+      try {
+        const { data: chapterRows, error: chapterErr } = await supabase
+          .from("chapters")
+          .select("id, title, owner_id, cover_pin_id, is_public, public_title, public_description, public_tags, public_cover_pin_id, published_at, copy_count")
+          .eq("is_public", true)
+          .order("published_at", { ascending: false })
+          .limit(12);
+        if (chapterErr) throw chapterErr;
+        const rows = Array.isArray(chapterRows) ? chapterRows : [];
+        const chapterIds = rows.map((row) => String(row?.id || "").trim()).filter(Boolean);
+        const ownerIds = Array.from(new Set(rows.map((row) => String(row?.owner_id || "").trim()).filter((value) => isUuidLike(value))));
+        const [{ data: pinRows }, { data: handleRows }] = await Promise.all([
+          chapterIds.length > 0
+            ? supabase
+                .from("chapter_pins")
+                .select("id, chapter_id, label, description, image_url, emoji, category_id, status, pin_color, note_color, type, position")
+                .in("chapter_id", chapterIds)
+                .order("position", { ascending: true })
+            : Promise.resolve({ data: [] }),
+          ownerIds.length > 0
+            ? supabase
+                .from("user_handles")
+                .select("user_id, handle, display_name")
+                .in("user_id", ownerIds)
+            : Promise.resolve({ data: [] }),
+        ]);
+        if (cancelled) return;
+        const pinsByChapterId = new Map();
+        (pinRows || []).forEach((row) => {
+          const chapterId = String(row?.chapter_id || "").trim();
+          if (!chapterId) return;
+          if (!pinsByChapterId.has(chapterId)) pinsByChapterId.set(chapterId, []);
+          pinsByChapterId.get(chapterId).push({
+            id: row.id,
+            label: row.label || "",
+            description: row.description || "",
+            imageUrl: row.image_url || "",
+            emoji: row.emoji || "",
+            type: row.type || "note",
+          });
+        });
+        const handleByUserId = new Map((handleRows || []).map((row) => [String(row?.user_id || "").trim(), row]));
+        const normalized = rows.map((row) => {
+          const chapterId = String(row?.id || "").trim();
+          const previewPins = pinsByChapterId.get(chapterId) || [];
+          const publicCoverPinId = String(row?.public_cover_pin_id || "").trim();
+          const coverPinId = String(row?.cover_pin_id || "").trim();
+          const coverPin = previewPins.find((pin) => String(pin?.id || "") === publicCoverPinId)
+            || previewPins.find((pin) => String(pin?.id || "") === coverPinId)
+            || previewPins.find((pin) => String(pin?.imageUrl || "").trim())
+            || previewPins[0]
+            || null;
+          const ownerId = String(row?.owner_id || "").trim();
+          const creator = handleByUserId.get(ownerId) || null;
+          return {
+            ...row,
+            public_tags: Array.isArray(row?.public_tags) ? row.public_tags.filter(Boolean) : [],
+            previewPins,
+            coverImageUrl: String(coverPin?.imageUrl || "").trim(),
+            creatorHandle: creator?.handle || "",
+            creatorDisplayName: creator?.display_name || "",
+          };
+        });
+        setPublishedChapters(normalized);
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Failed to load published chapters:", err);
+          setPublishedChapters([]);
+        }
+      } finally {
+        if (!cancelled) setPublishedChaptersLoading(false);
+      }
+    }
+    loadPublishedChapters();
+    return () => { cancelled = true; };
+  }, []);
 
   if (activePage === "movies") {
     return <MoviesPage onBack={() => setActivePage(null)} onAddToSomeday={onAddToSomeday} onPlanEvent={onPlanEvent} />;
@@ -928,6 +1165,31 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
           <SectionHeader label="Browse by interest" />
           <CategoryGrid onPageTap={setActivePage} />
 
+          {(publishedChaptersLoading || publishedChapters.length > 0) && (
+            <>
+              <SectionHeader label="Published chapters" />
+              <div className="flex gap-3 overflow-x-auto px-3.5 pb-1" style={{ scrollbarWidth: 'none' }}>
+                {publishedChaptersLoading
+                  ? (
+                    <>
+                      <div className={`flex-shrink-0 w-72 h-[268px] rounded-[26px] animate-pulse ${darkMode ? 'bg-[#161f30]' : 'bg-white border border-stone-100'}`} />
+                      <div className={`flex-shrink-0 w-72 h-[268px] rounded-[26px] animate-pulse ${darkMode ? 'bg-[#161f30]' : 'bg-white border border-stone-100'}`} />
+                    </>
+                  )
+                  : publishedChapters.map((chapter) => (
+                    <PublishedChapterCard
+                      key={chapter.id}
+                      chapter={chapter}
+                      onOpen={setSelectedPublishedChapter}
+                      darkMode={darkMode}
+                    />
+                  ))
+                }
+                <div className="flex-shrink-0 w-4" />
+              </div>
+            </>
+          )}
+
           {sectionData.dreaming.length > 0 && (
             <>
               <SectionHeader label="Dreaming of" />
@@ -955,6 +1217,14 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
           onRemoveFromSomeday={onRemoveFromSomeday}
           onPlanEvent={onPlanEvent}
           onMakeItHappen={onMakeItHappen}
+          darkMode={darkMode}
+        />
+      )}
+
+      {selectedPublishedChapter && (
+        <PublishedChapterPreviewSheet
+          chapter={selectedPublishedChapter}
+          onClose={() => setSelectedPublishedChapter(null)}
           darkMode={darkMode}
         />
       )}
