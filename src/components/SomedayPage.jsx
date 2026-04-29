@@ -1439,6 +1439,7 @@ const SomedayPage = ({
   darkMode = false,
   chaptersWithLinkedTrips = new Set(),
   userEmail = '',
+  inviteRefreshToken = 0,
 }) => {
   const [pins, setPins] = useState(() => dreams.map((d, idx) => {
     const pos = (d.x == null || d.y == null) ? gridPosition(idx) : { x: d.x, y: d.y, rot: d.rot };
@@ -1562,7 +1563,7 @@ const SomedayPage = ({
     loadChapters();
     loadPendingInvites();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, userEmail]);
+  }, [currentUser, userEmail, inviteRefreshToken]);
 
   async function loadPendingInvites() {
     if (!userEmail) return;
@@ -1680,14 +1681,15 @@ const SomedayPage = ({
   async function inviteToChapter(chapterId, email) {
     if (!email.trim()) return;
     const normalized = email.trim().toLowerCase();
+    const nowIso = new Date().toISOString();
     const { error: insertErr } = await supabase
       .from('chapter_collaborators')
-      .insert({ chapter_id: chapterId, email: normalized, invited_by: currentUser, status: 'pending' });
+      .insert({ chapter_id: chapterId, email: normalized, invited_by: currentUser, status: 'pending', invited_at: nowIso, accepted_at: null });
     if (insertErr) {
       // Row exists — only re-invite if they haven't already accepted
       await supabase
         .from('chapter_collaborators')
-        .update({ invited_by: currentUser, status: 'pending' })
+        .update({ invited_by: currentUser, status: 'pending', invited_at: nowIso, accepted_at: null })
         .eq('chapter_id', chapterId)
         .eq('email', normalized)
         .neq('status', 'accepted');

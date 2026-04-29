@@ -3403,6 +3403,8 @@ function App() {
   const [aiError, setAiError] = useState('');
   const [inAppNotifications, setInAppNotifications] = useState([]);
   const [pendingTripInvites, setPendingTripInvites] = useState([]);
+  const [pendingChapterInvites, setPendingChapterInvites] = useState([]);
+  const [chapterInviteRefreshToken, setChapterInviteRefreshToken] = useState(0);
   const seenInAppNotificationKeysRef = useRef(new Set());
   const seenInAppNotificationSignaturesRef = useRef(new Set());
   const dismissedCalendarInviteIdsRef = useRef(new Set());
@@ -4099,6 +4101,24 @@ function App() {
         || String(current.endDate || '') !== String(next.endDate || '')
         || String(current.invitedAt || '') !== String(next.invitedAt || '')
         || String(current.identity || '') !== String(next.identity || '')
+      ) {
+        return false;
+      }
+    }
+    return true;
+  };
+  const arePendingChapterInvitesEqual = (a, b) => {
+    const left = Array.isArray(a) ? a : [];
+    const right = Array.isArray(b) ? b : [];
+    if (left.length !== right.length) return false;
+    for (let i = 0; i < left.length; i += 1) {
+      const current = left[i] || {};
+      const next = right[i] || {};
+      if (
+        String(current.chapterId || '') !== String(next.chapterId || '')
+        || String(current.chapterTitle || '') !== String(next.chapterTitle || '')
+        || String(current.invitedBy || '') !== String(next.invitedBy || '')
+        || String(current.invitedAt || '') !== String(next.invitedAt || '')
       ) {
         return false;
       }
@@ -15788,6 +15808,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             const parts = key.split(':');
             return `trip_invite:${parts[1] || ''}:${parts[2] || ''}`;
           }
+          if (key.startsWith('chapter_invite:')) {
+            const parts = key.split(':');
+            return `chapter_invite:${parts[1] || ''}:${parts[2] || ''}`;
+          }
           return key;
         })();
         const target = (item?.target && typeof item.target === 'object') ? item.target : null;
@@ -16530,6 +16554,106 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
   }, [user?.email, user?.phone, user?.id]);
 
+  const loadPendingChapterInvites = React.useCallback(async () => {
+    const myEmail = normalizeEmail(user?.email);
+    if (!myEmail) {
+      setPendingChapterInvites((prev) => (prev.length ? [] : prev));
+      return;
+    }
+    try {
+      const primaryResult = await supabase
+        .from('chapter_collaborators')
+        .select('chapter_id,email,invited_by,status,created_at,invited_at,accepted_at')
+        .eq('email', myEmail)
+        .eq('status', 'pending')
+        .order('invited_at', { ascending: false, nullsFirst: false });
+      let rows = [];
+      if (!primaryResult.error) {
+        rows = primaryResult.data || [];
+      } else {
+        const fallbackResult = await supabase
+          .from('chapter_collaborators')
+          .select('chapter_id,email,invited_by,status,created_at')
+          .eq('email', myEmail);
+        if (fallbackResult.error) {
+          console.error('loadPendingChapterInvites failed:', fallbackResult.error);
+          setPendingChapterInvites((prev) => (prev.length ? [] : prev));
+          return;
+        }
+        rows = (fallbackResult.data || []).filter((row) => String(row?.status || '').trim().toLowerCase() === 'pending');
+      }
+      const chapterIds = Array.from(new Set((rows || []).map((row) => String(row?.chapter_id || '')).filter(Boolean)));
+      if (chapterIds.length === 0) {
+        setPendingChapterInvites((prev) => (prev.length ? [] : prev));
+        return;
+      }
+      const { data: chapterRows, error: chapterErr } = await supabase
+        .from('chapters')
+        .select('id,title')
+        .in('id', chapterIds);
+      if (chapterErr) {
+        console.error('loadPendingChapterInvites chapter lookup failed:', chapterErr);
+      }
+      const titleById = new Map((chapterRows || []).map((row) => [String(row?.id || ''), String(row?.title || 'A Chapter').trim() || 'A Chapter']));
+      const pending = (rows || []).map((row) => ({
+        chapterId: String(row?.chapter_id || ''),
+        chapterTitle: titleById.get(String(row?.chapter_id || '')) || 'A Chapter',
+        invitedBy: String(row?.invited_by || ''),
+        invitedAt: row?.invited_at || row?.created_at || null,
+      })).filter((invite) => invite.chapterId);
+      setPendingChapterInvites((prev) => (arePendingChapterInvitesEqual(prev, pending) ? prev : pending));
+    } catch (err) {
+      console.error('loadPendingChapterInvites exception:', err);
+      setPendingChapterInvites((prev) => (prev.length ? [] : prev));
+    }
+  }, [user?.email]);
+
+  const acceptChapterInvite = async (invite) => {
+    if (!invite?.chapterId || !user?.email) return;
+    const myEmail = normalizeEmail(user?.email);
+    if (!myEmail) return;
+    try {
+      const { error } = await supabase
+        .from('chapter_collaborators')
+        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+        .eq('chapter_id', invite.chapterId)
+        .eq('email', myEmail);
+      if (error) {
+        alert(`Accept failed: ${error.message || 'Could not accept chapter invite.'}`);
+        return;
+      }
+      setPendingChapterInvites((prev) => prev.filter((item) => String(item?.chapterId || '') !== String(invite.chapterId || '')));
+      clearInviteNotifications({ kind: 'chapter', chapterId: invite.chapterId });
+      setChapterInviteRefreshToken((prev) => prev + 1);
+      setBottomNavTab('someday');
+      setShowNotificationSettings(false);
+    } catch (err) {
+      alert(`Accept failed: ${err.message || 'Unknown error'}`);
+    }
+  };
+
+  const declineChapterInvite = async (invite) => {
+    if (!invite?.chapterId || !user?.email) return;
+    const myEmail = normalizeEmail(user?.email);
+    if (!myEmail) return;
+    try {
+      const { error } = await supabase
+        .from('chapter_collaborators')
+        .delete()
+        .eq('chapter_id', invite.chapterId)
+        .eq('email', myEmail);
+      if (error) {
+        alert(`Decline failed: ${error.message || 'Could not decline chapter invite.'}`);
+        return;
+      }
+      setPendingChapterInvites((prev) => prev.filter((item) => String(item?.chapterId || '') !== String(invite.chapterId || '')));
+      clearInviteNotifications({ kind: 'chapter', chapterId: invite.chapterId });
+      setChapterInviteRefreshToken((prev) => prev + 1);
+    } catch (err) {
+      alert(`Decline failed: ${err.message || 'Unknown error'}`);
+    }
+  };
+
   const acceptTripInvite = async (invite) => {
     if (!invite || !user?.id) return;
     const myEmail = normalizeEmail(user?.email);
@@ -16646,6 +16770,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       window.removeEventListener('focus', onFocus);
     };
   }, [user?.email, user?.phone, user?.id, layerRefreshToken, loadPendingTripInvites]);
+
+  useEffect(() => {
+    if (!user?.email) {
+      setPendingChapterInvites((prev) => (prev.length ? [] : prev));
+      return;
+    }
+    loadPendingChapterInvites();
+    const interval = setInterval(loadPendingChapterInvites, 60 * 1000);
+    const onFocus = () => loadPendingChapterInvites();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [user?.email, layerRefreshToken, chapterInviteRefreshToken, loadPendingChapterInvites]);
 
   // Check notification permission on load
   useEffect(() => {
@@ -17019,6 +17158,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         const parts = normalizedKey.split(':');
         return `trip_invite:${parts[1] || ''}:${parts[2] || ''}`;
       }
+      if (normalizedKey.startsWith('chapter_invite:')) {
+        const parts = normalizedKey.split(':');
+        return `chapter_invite:${parts[1] || ''}:${parts[2] || ''}`;
+      }
       return normalizedKey;
     })();
     const normalizedSignature = [
@@ -17081,10 +17224,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     });
   };
 
-  const clearInviteNotifications = ({ kind, subCalendarId, shareId }) => {
+  const clearInviteNotifications = ({ kind, subCalendarId, shareId, chapterId }) => {
     const normalizedKind = String(kind || '').trim().toLowerCase();
     const normalizedSubCalId = String(subCalendarId || '').trim();
     const normalizedShareId = String(shareId || '').trim();
+    const normalizedChapterId = String(chapterId || '').trim();
     const removedKeys = [];
     const removedSignatures = [];
     setInAppNotifications(prev => prev.filter((item) => {
@@ -17094,6 +17238,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         shouldRemove = key.startsWith(`trip_invite:${normalizedSubCalId}:`);
       } else if (normalizedKind === 'calendar' && normalizedShareId) {
         shouldRemove = key.startsWith(`calendar_invite:${normalizedShareId}:`);
+      } else if (normalizedKind === 'chapter' && normalizedChapterId) {
+        shouldRemove = key.startsWith(`chapter_invite:${normalizedChapterId}:`);
       }
       if (shouldRemove && key) removedKeys.push(key);
       if (shouldRemove) {
@@ -17144,6 +17290,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const layerId = String(parts[2] || '').trim();
       if (!shareId || !layerId) return null;
       return { kind: 'calendar', shareId, layerId };
+    }
+    if (key.startsWith('chapter_invite:')) {
+      const parts = key.split(':');
+      if (parts.length < 3) return null;
+      const chapterId = String(parts[1] || '').trim();
+      const identity = String(parts[2] || '').trim().toLowerCase();
+      if (!chapterId || !identity) return null;
+      return { kind: 'chapter', chapterId, identity };
     }
     return null;
   };
@@ -17305,6 +17459,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       setShowChatPanel(false);
       setShowListPanel(false);
       setShowNotificationSettings(false);
+    }
+    if (String(target?.panel || '').trim().toLowerCase() === 'someday') {
+      setBottomNavTab('someday');
+      setShowDateDetailModal(false);
+      setShowNotificationSettings(false);
+      return;
     }
     const revealListPanel = () => {
       setListPanelAttention(true);
@@ -26537,9 +26697,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         roundedClass="rounded-xl"
                         textClass="text-base sm:text-lg"
                       />
-                      {(unreadInAppCount + pendingTripInvites.length) > 0 && (
+                      {(unreadInAppCount + pendingTripInvites.length + pendingChapterInvites.length) > 0 && (
                         <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full border border-white bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-md dark:border-gray-900">
-                          {(unreadInAppCount + pendingTripInvites.length) > 99 ? '99+' : (unreadInAppCount + pendingTripInvites.length)}
+                          {(unreadInAppCount + pendingTripInvites.length + pendingChapterInvites.length) > 99 ? '99+' : (unreadInAppCount + pendingTripInvites.length + pendingChapterInvites.length)}
                         </span>
                       )}
                     </span>
@@ -26883,6 +27043,37 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   </div>
                 </div>
               )}
+              {pendingChapterInvites.length > 0 && (
+                <div className="p-4 bg-fuchsia-50 dark:bg-fuchsia-900/20 rounded-xl border border-fuchsia-200 dark:border-fuchsia-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Bell className="w-5 h-5 text-fuchsia-600" />
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">Chapter Invites</span>
+                    <span className="px-1.5 py-0.5 rounded-full bg-fuchsia-500 text-white text-[10px] font-bold">{pendingChapterInvites.length}</span>
+                  </div>
+                  <div className="space-y-2">
+                    {pendingChapterInvites.map((invite) => (
+                      <div key={`${invite.chapterId}-${invite.invitedAt || 'invite'}`} className="rounded-lg border border-fuchsia-200 dark:border-fuchsia-700 bg-white dark:bg-gray-800 p-2.5">
+                        <div className="text-sm font-medium text-gray-800 dark:text-gray-100">{invite.chapterTitle}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Shared Komo Book chapter invite</div>
+                        <div className="mt-2 flex gap-2">
+                          <button
+                            onClick={() => acceptChapterInvite(invite)}
+                            className="px-2.5 py-1.5 rounded-md text-xs font-semibold bg-fuchsia-500 hover:bg-fuchsia-600 text-white"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => declineChapterInvite(invite)}
+                            className="px-2.5 py-1.5 rounded-md text-xs font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div
                 className="p-4 rounded-xl border"
                 style={{
@@ -26972,6 +27163,36 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     declineCalendarInvite(parsedInvite);
+                                    markInAppNotificationRead(item.id);
+                                  }}
+                                  className="px-2.5 py-1.5 rounded-md text-[11px] font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                                >
+                                  Decline
+                                </button>
+                              </div>
+                            );
+                          }
+
+                          if (parsedInvite.kind === 'chapter') {
+                            const pendingInvite = pendingChapterInvites.find(
+                              (inv) => String(inv?.chapterId || '') === String(parsedInvite.chapterId || '')
+                            );
+                            return (
+                              <div className="mt-2 flex gap-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void acceptChapterInvite(pendingInvite || { chapterId: parsedInvite.chapterId });
+                                    markInAppNotificationRead(item.id);
+                                  }}
+                                  className="px-2.5 py-1.5 rounded-md text-[11px] font-semibold bg-fuchsia-500 hover:bg-fuchsia-600 text-white"
+                                >
+                                  Accept
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void declineChapterInvite(pendingInvite || { chapterId: parsedInvite.chapterId });
                                     markInAppNotificationRead(item.id);
                                   }}
                                   className="px-2.5 py-1.5 rounded-md text-[11px] font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
@@ -29059,7 +29280,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             themeAccentBorder={themeAccentBorder}
             yearStats={homeYearStatsForHome}
              profilePhotoUrl={currentUserProfilePhotoUrl}
-             profileBadgeCount={unreadInAppCount + pendingTripInvites.length}
+             profileBadgeCount={unreadInAppCount + pendingTripInvites.length + pendingChapterInvites.length}
               onOpenAccountMenu={toggleAccountMenu}
               onEditProfilePhoto={openLayerMediaMenu}
             />
@@ -31175,6 +31396,7 @@ transform: translateY(0);
                 onConvertToTrip={planFromDream}
                 currentUser={currentUser}
                 userEmail={user?.email || ''}
+                inviteRefreshToken={chapterInviteRefreshToken}
                 onChaptersChange={setKomoChapters}
                 onCreateTripFromChapter={startTripFromKomoChapter}
                 chaptersWithLinkedTrips={chaptersWithLinkedTrips}
