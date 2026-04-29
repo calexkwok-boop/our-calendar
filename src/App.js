@@ -25567,6 +25567,31 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     setBucketList((prev) => (Array.isArray(prev) ? prev : []).filter((item) => String(item?.id || '') !== dreamId));
   };
 
+  const handleCopyChapter = async (chapter) => {
+    if (!user?.id) return;
+    const newChapterId = uuidv4();
+    const now = new Date().toISOString();
+    const { error: chapterErr } = await supabase.from('chapters').insert({
+      id: newChapterId,
+      title: chapter.public_title || chapter.title || 'Copied Chapter',
+      owner_id: String(user.id),
+      created_at: now,
+      is_public: false,
+    });
+    if (chapterErr) {
+      console.error('Copy chapter failed:', chapterErr);
+      alert('Could not copy chapter. Please try again.');
+      return;
+    }
+    const { data: sourcePins } = await supabase.from('chapter_pins').select('*').eq('chapter_id', chapter.id);
+    if (sourcePins && sourcePins.length > 0) {
+      const newPins = sourcePins.map(pin => ({ ...pin, id: uuidv4(), chapter_id: newChapterId }));
+      await supabase.from('chapter_pins').insert(newPins);
+    }
+    await supabase.from('chapters').update({ copy_count: Number(chapter.copy_count || 0) + 1 }).eq('id', chapter.id);
+    setBottomNavTab('someday');
+  };
+
   // Called when a pin is added from within SomedayPage's own AddSheet
   const handleSomedayAddDream = (pin) => {
     if (pin.type === 'label' || pin.type === 'sticker') {
@@ -31486,6 +31511,7 @@ transform: translateY(0);
                 }}
                 onPlanEvent={(hint) => openHomeAddEventModal(hint)}
                 onMakeItHappen={(item) => planFromDream(item)}
+                onCopyChapter={handleCopyChapter}
               />
 
 

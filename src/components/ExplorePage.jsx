@@ -762,7 +762,18 @@ function PublishedChapterCard({ chapter, onOpen, darkMode }) {
   );
 }
 
-function PublishedChapterPreviewSheet({ chapter, onClose, darkMode }) {
+function PublishedChapterPreviewSheet({ chapter, onClose, onCopy, darkMode }) {
+  const [copying, setCopying] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    if (copying || copied || !onCopy) return;
+    setCopying(true);
+    await onCopy(chapter);
+    setCopying(false);
+    setCopied(true);
+    setTimeout(() => { onClose?.(); }, 900);
+  };
   const { sheetStyle, handleProps } = useSwipeDownSheet(onClose, true);
   const coverUrl = String(chapter?.coverImageUrl || "").trim();
   const creatorLabel = getPublishedChapterCreatorLabel(chapter);
@@ -835,12 +846,18 @@ function PublishedChapterPreviewSheet({ chapter, onClose, darkMode }) {
                 </div>
               </>
             )}
-            <div className={`mt-5 rounded-2xl border px-4 py-3 ${darkMode ? "border-violet-400/15 bg-violet-400/5 text-violet-100" : "border-violet-200 bg-violet-50 text-violet-800"}`}>
-              <div className="font-handwritten text-xl font-bold">Copy to Komo Book next</div>
-              <div className="text-xs leading-relaxed mt-1 opacity-80">
-                This first pass is read-only so we can get public discovery working cleanly before adding duplication.
+            <button
+              onClick={handleCopy}
+              disabled={copying || copied}
+              className={`mt-5 w-full rounded-2xl px-4 py-3.5 text-left transition-all active:scale-[0.98] ${darkMode ? "bg-violet-600 hover:bg-violet-500 text-white" : "bg-violet-600 hover:bg-violet-700 text-white"} ${(copying || copied) ? "opacity-70" : ""}`}
+            >
+              <div className="font-handwritten text-xl font-bold">
+                {copied ? "✓ Added to your Komo Book" : copying ? "Copying…" : "Copy to my Komo Book"}
               </div>
-            </div>
+              <div className="text-xs leading-relaxed mt-0.5 text-white/75">
+                {copied ? "Switching to your Komo Book…" : "Saves all pins as your own private chapter"}
+              </div>
+            </button>
           </div>
         </div>
       </div>
@@ -900,7 +917,7 @@ function CategoryGrid({ onPageTap }) {
   );
 }
 
-export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPlanEvent = () => {}, onMakeItHappen, darkMode = false }) {
+export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPlanEvent = () => {}, onMakeItHappen, onCopyChapter, darkMode = false }) {
   const [sources, setSources]             = useState({ friends: true, movies: true, hiking: true, games: true, restaurants: true, products: true, destinations: true });
   const [communityPosts]                  = useState(pickCommunityPosts);
   const [drawerOpen, setDrawerOpen]       = useState(false);
@@ -1223,6 +1240,7 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
         <PublishedChapterPreviewSheet
           chapter={selectedPublishedChapter}
           onClose={() => setSelectedPublishedChapter(null)}
+          onCopy={onCopyChapter}
           darkMode={darkMode}
         />
       )}
