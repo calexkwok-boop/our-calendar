@@ -1534,6 +1534,7 @@ const SomedayPage = ({
   authUserId = '',
   ownerName,
   onChaptersChange,
+  onPersistPinLayout,
   onCreateTripFromChapter,
   darkMode = false,
   chaptersWithLinkedTrips = new Set(),
@@ -1618,7 +1619,13 @@ const SomedayPage = ({
     if (!autoSortPendingRef.current) return;
     autoSortPendingRef.current = false;
     const startY = chapterTotalHeight > 20 ? chapterTotalHeight + 32 : 20;
-    setPins(prev => buildAutoSortedPins(prev, onAddDream, onDeleteDream, onUpdateDream, startY, chapters));
+    let nextPinsSnapshot = [];
+    setPins(prev => {
+      const nextPins = buildAutoSortedPins(prev, onAddDream, onDeleteDream, onUpdateDream, startY, chapters);
+      nextPinsSnapshot = nextPins;
+      return nextPins;
+    });
+    if (nextPinsSnapshot.length > 0) onPersistPinLayout?.(nextPinsSnapshot);
   }, [chapters]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Supabase helpers ────────────────────────────────────────────────────────
@@ -2164,7 +2171,13 @@ const SomedayPage = ({
 
   function autoSort() {
     const startY = chapterTotalHeight > 20 ? chapterTotalHeight + 32 : 20;
-    setPins(prev => buildAutoSortedPins(prev, onAddDream, onDeleteDream, onUpdateDream, startY, chapters));
+    let nextPinsSnapshot = [];
+    setPins(prev => {
+      const nextPins = buildAutoSortedPins(prev, onAddDream, onDeleteDream, onUpdateDream, startY, chapters);
+      nextPinsSnapshot = nextPins;
+      return nextPins;
+    });
+    if (nextPinsSnapshot.length > 0) onPersistPinLayout?.(nextPinsSnapshot);
   }
 
   function addPin(data) {

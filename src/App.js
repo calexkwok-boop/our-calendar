@@ -25514,6 +25514,17 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     }, 0);
   };
 
+  const handleSomedayPersistPinLayout = (pins = []) => {
+    const nextPositionPatch = {};
+    (Array.isArray(pins) ? pins : []).forEach((pin) => {
+      if (!pin || pin.type === 'label' || pin.type === 'sticker') return;
+      if (pin.x == null || pin.y == null) return;
+      nextPositionPatch[pin.id] = { x: pin.x, y: pin.y, rot: pin.rot };
+    });
+    if (Object.keys(nextPositionPatch).length === 0) return;
+    setSomedayPinPositions((prev) => ({ ...prev, ...nextPositionPatch }));
+  };
+
   // Called when a pin is deleted from SomedayPage — remove from whichever list owns it
   const handleSomedayDeleteDream = (id) => {
     setSomedayDecorPins((prev) => (Array.isArray(prev) ? prev : []).filter((p) => String(p?.id || '') !== id));
@@ -31571,6 +31582,7 @@ transform: translateY(0);
                 userEmail={user?.email || ''}
                 inviteRefreshToken={chapterInviteRefreshToken}
                 onChaptersChange={setKomoChapters}
+                onPersistPinLayout={handleSomedayPersistPinLayout}
                 onCreateTripFromChapter={startTripFromKomoChapter}
                 chaptersWithLinkedTrips={chaptersWithLinkedTrips}
               />
