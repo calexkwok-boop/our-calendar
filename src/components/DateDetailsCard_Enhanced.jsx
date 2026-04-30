@@ -939,10 +939,18 @@ export default function DateDetailsCardEnhanced({
                             || event?.category === 'popup_event'
                           );
                           if (isPopupLike) {
-                            setSelectedPopupEventPanelId?.(String(event?.id || ''));
+                            if (typeof onEventClick === 'function') {
+                              onEventClick(event);
+                            } else {
+                              setSelectedPopupEventPanelId?.(String(event?.id || ''));
+                            }
                             return;
                           }
-                          setEditingEvent?.(String(event?.id || ''));
+                          if (typeof onEventClick === 'function') {
+                            onEventClick(event);
+                          } else {
+                            setEditingEvent?.(String(event?.id || ''));
+                          }
                         }}
                         onTouchStart={(touchEvent) => handleEventSwipeStart?.(touchEvent, eventSwipeKey, canDeleteThisEvent)}
                         onTouchMove={handleEventSwipeMove}

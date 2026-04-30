@@ -84,6 +84,8 @@ export default function SportsEventCardOverlay({
   const sheetRef = useRef(null);
   const dragStartYRef = useRef(null);
   const dragCurrentYRef = useRef(0);
+  const hasLoadedFullMembersRef = useRef(false);
+  const currentUserId = String(user?.id || '').trim();
 
   const effectiveDisplayName = String(displayName || '').trim()
     || (typeof resolveHandleLikeLabel === 'function'
@@ -112,17 +114,23 @@ export default function SportsEventCardOverlay({
     ).trim();
   };
 
-  const loadEvent = useCallback(async (id) => {
+  const loadEvent = useCallback(async (id, options = {}) => {
     if (!id || !supabase) return;
+    const includeMembers = options?.includeMembers === true;
     if (!isUuid(id)) {
       if (fallbackRef.current) setEvent(normalizeEvent(fallbackRef.current, fallbackRef.current));
       return;
     }
 
     try {
-      const [{ data: ev }, { data: mems }, { data: signups }] = await Promise.all([
+      const [{ data: ev }, { data: mems }, { data: myMember }, { data: signups }] = await Promise.all([
         supabase.from('popup_event_details').select('*').eq('id', id).single(),
-        supabase.from('popup_event_members').select('*').eq('event_id', id).order('joined_at'),
+        includeMembers
+          ? supabase.from('popup_event_members').select('*').eq('event_id', id).order('joined_at')
+          : Promise.resolve({ data: [] }),
+        !includeMembers && currentUserId
+          ? supabase.from('popup_event_members').select('*').eq('event_id', id).eq('user_id', currentUserId).maybeSingle()
+          : Promise.resolve({ data: null }),
         supabase.from('popup_event_signups').select('*').eq('event_id', id).order('created_at'),
       ]);
 
@@ -131,7 +139,10 @@ export default function SportsEventCardOverlay({
 
       const list = [];
       const seenUserIds = new Set();
-      (mems || []).forEach((member) => {
+      const membersSource = includeMembers
+        ? (mems || [])
+        : (myMember ? [myMember] : []);
+      (membersSource || []).forEach((member) => {
         const userId = String(member?.user_id || '').trim();
         if (userId) seenUserIds.add(userId);
         list.push({
@@ -179,6 +190,7 @@ export default function SportsEventCardOverlay({
         });
       });
 
+      if (includeMembers) hasLoadedFullMembersRef.current = true;
       setMembers(list);
       return normalizedEv;
     } catch {
@@ -192,16 +204,22 @@ export default function SportsEventCardOverlay({
   }, [initialEventId, loadEvent]);
 
   useEffect(() => {
+    if (!event?.id || !isUuid(event.id)) return;
+    if (activeScreen === 'detail' || hasLoadedFullMembersRef.current) return;
+    void loadEvent(event.id, { includeMembers: true });
+  }, [activeScreen, event?.id, loadEvent]);
+
+  useEffect(() => {
     if (!event?.id || !supabase || !isUuid(event.id)) return undefined;
+    const includeMembers = activeScreen !== 'detail' || hasLoadedFullMembersRef.current;
     const channel = supabase.channel(`sports-card-members-${event.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { includeMembers }))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { includeMembers }))
       .subscribe();
     return () => supabase.removeChannel(channel);
-  }, [event?.id, supabase, loadEvent]);
+  }, [event?.id, supabase, loadEvent, activeScreen]);
 
   const creatorUserId = String(event?.created_by || event?.created_by_user_id || '').trim();
-  const currentUserId = String(user?.id || '').trim();
   const creatorIsCurrentUser = Boolean(creatorUserId && currentUserId && creatorUserId === currentUserId);
   const hasHostMember = members.some((member) => String(member?.role || '').trim() === 'host');
   const displayMembers = !hasHostMember && creatorIsCurrentUser

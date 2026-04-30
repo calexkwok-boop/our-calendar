@@ -1224,6 +1224,7 @@ export default function PopupEventPanel({
   const eventRef = useRef(event);
   const memberRoleOverridesRef = useRef(memberRoleOverrides);
   const inFlightLoadRef = useRef(new Map());
+  const hasLoadedFullMembersRef = useRef(false);
 
   useEffect(() => {
     if (typeof document === 'undefined' || typeof window === 'undefined') return undefined;
@@ -1345,6 +1346,7 @@ export default function PopupEventPanel({
     const normalizedId = String(id || '').trim();
     if (!normalizedId) return null;
     const silent = options?.silent === true;
+    const includeMembers = options?.includeMembers === true;
     if (inFlightLoadRef.current.has(normalizedId)) {
       return inFlightLoadRef.current.get(normalizedId);
     }
@@ -1357,9 +1359,15 @@ export default function PopupEventPanel({
     }
     const request = (async () => {
       try {
-        const [{ data: ev }, { data: mems }, { data: signups }] = await Promise.all([
+        const currentUserId = String(user?.id || '').trim();
+        const [{ data: ev }, { data: mems }, { data: myMemberRow }, { data: signups }] = await Promise.all([
           supabase.from('popup_event_details').select('*').eq('id', id).maybeSingle(),
-          supabase.from('popup_event_members').select('*').eq('event_id', id).order('joined_at'),
+          includeMembers
+            ? supabase.from('popup_event_members').select('*').eq('event_id', id).order('joined_at')
+            : Promise.resolve({ data: [] }),
+          !includeMembers && currentUserId
+            ? supabase.from('popup_event_members').select('*').eq('event_id', id).eq('user_id', currentUserId).maybeSingle()
+            : Promise.resolve({ data: null }),
           supabase.from('popup_event_signups').select('*').eq('event_id', id).order('created_at'),
         ]);
         let normalizedEv = null;
@@ -1387,7 +1395,10 @@ export default function PopupEventPanel({
         }
         const dedupedMembers = [];
         const seenSelfAliasByRole = new Set();
-        (mems || []).forEach((member) => {
+        const membersSource = includeMembers
+          ? (mems || [])
+          : (myMemberRow ? [myMemberRow] : []);
+        (membersSource || []).forEach((member) => {
           const memberUserId = String(member?.user_id || '').trim();
           const memberRole = String(member?.role || 'player').trim() || 'player';
           const memberName = String(member?.display_name || '').trim();
@@ -1447,6 +1458,7 @@ export default function PopupEventPanel({
           const overrideRole = String(memberRoleOverridesRef.current?.[overrideKey] || '').trim();
           return overrideRole ? { ...entry, role: overrideRole } : entry;
         });
+        if (includeMembers) hasLoadedFullMembersRef.current = true;
         setMembers(nextMembers);
         return normalizedEv;
       } catch {}
@@ -1461,18 +1473,25 @@ export default function PopupEventPanel({
         setLoading(false);
       }
     }
-  }, [supabase]);
+  }, [supabase, user?.id]);
 
   useEffect(() => { if (initialEventId) loadEvent(initialEventId); }, [initialEventId, loadEvent]);
 
   useEffect(() => {
+    if (!event?.id || !isUuid(event.id)) return;
+    if (screen === 'detail' || hasLoadedFullMembersRef.current) return;
+    void loadEvent(event.id, { silent: true, includeMembers: true });
+  }, [screen, event?.id, loadEvent]);
+
+  useEffect(() => {
     if (!event?.id || !supabase || !isUuid(event.id)) return;
+    const includeMembers = screen !== 'detail' || hasLoadedFullMembersRef.current;
     const channel = supabase.channel(`popup-members-${event.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { silent: true }))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { silent: true }))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { silent: true, includeMembers }))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { silent: true, includeMembers }))
       .subscribe();
     return () => supabase.removeChannel(channel);
-  }, [event?.id, supabase, loadEvent]);
+  }, [event?.id, supabase, loadEvent, screen]);
 
   const handleJoin = async () => {
     if (!event || isMember || isFull) return;

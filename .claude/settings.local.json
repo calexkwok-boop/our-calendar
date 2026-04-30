@@ -30,7 +30,11 @@
       "Bash(awk '/^function App\\\\\\(\\\\\\) {/,/^}$/ { if \\(/return \\\\\\(/\\) { found=NR } if \\(found && /^  \\\\\\);$/ && NR > found + 10\\) { print NR; exit } }' \"c:/Users/a_kwo/Desktop/our-calendar/src/App.js\")",
       "Bash(awk '/^function App\\\\\\(\\\\\\) {/,/^}$/ { if \\(/return \\\\\\(/\\) { start=NR } if \\(start && NR > start && /^    </\\) { print NR\": \"$0; exit } }' \"c:/Users/a_kwo/Desktop/our-calendar/src/App.js\")",
       "Bash(awk '/^function App\\\\\\(\\\\\\) {/,/^}$/ { print NR\": \"$0 }' \"c:/Users/a_kwo/Desktop/our-calendar/src/App.js\")",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(awk '{print $9, $5}')",
+      "Bash(sort -k2 -hr)",
+      "Bash(awk '{sum += $5} END {print \"Total size: \" sum/1024/1024 \" MB, Count: \" NR}')",
+      "Bash(awk '{sum += $1} END {print sum \" KB total \\(apparent\\)\"}')"
     ]
   }
 }
