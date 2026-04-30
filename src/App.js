@@ -671,12 +671,17 @@ const buildTripPhotoVariantUrl = (url, variant) => {
   }
 };
 
+const _transformedUrlCache = new Map();
 const buildTripPhotoTransformedUrl = (url, transform) => {
+  const cacheKey = `${url}|${JSON.stringify(transform)}`;
+  if (_transformedUrlCache.has(cacheKey)) return _transformedUrlCache.get(cacheKey);
   const location = getTripPhotoStorageLocation(url);
   if (!location?.bucket || !location?.path) return '';
   try {
     const { data } = supabase.storage.from(location.bucket).getPublicUrl(location.path, { transform });
-    return String(data?.publicUrl || '').trim();
+    const result = String(data?.publicUrl || '').trim();
+    if (result) _transformedUrlCache.set(cacheKey, result);
+    return result;
   } catch {
     return '';
   }

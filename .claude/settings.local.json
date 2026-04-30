@@ -37,7 +37,8 @@
       "Bash(awk '{sum += $1} END {print sum \" KB total \\(apparent\\)\"}')",
       "Bash(git reset *)",
       "Bash(git ls-remote *)",
-      "Bash(xargs -I {} echo \"{}\")"
+      "Bash(xargs -I {} echo \"{}\")",
+      "Bash(awk '/useEffect\\\\\\(\\\\\\(\\\\\\)\\\\s*=>\\\\s*\\\\{/,/^\\\\s*\\\\},[^\\)]*\\\\\\);/' /c/Users/a_kwo/Desktop/our-calendar/src/App.js)"
     ]
   }
 }
