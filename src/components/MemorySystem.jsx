@@ -35,14 +35,27 @@ const createEmptyMemoryDraft = (overrides = {}) => ({
   date: normalizeMemoryDateInput(overrides?.date),
 });
 
-const getMemoryCoverUrl = (memory) => String(
+const toDirectStorageUrl = (url) => {
+  const raw = String(url || '').trim();
+  if (!raw) return '';
+  try {
+    const parsed = new URL(raw);
+    const renderMarker = '/storage/v1/render/image/public/';
+    if (parsed.pathname.startsWith(renderMarker)) {
+      return `${parsed.origin}/storage/v1/object/public/${parsed.pathname.slice(renderMarker.length)}`;
+    }
+  } catch {}
+  return raw;
+};
+
+const getMemoryCoverUrl = (memory) => toDirectStorageUrl(String(
   memory?.coverPhoto
   || memory?.photos?.[0]?.url
   || memory?.photos?.[0]?.photoUrl
   || memory?.photoUrl
   || memory?.photo_url
   || ''
-).trim();
+).trim());
 
 const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader();
@@ -1323,7 +1336,7 @@ const MemoryPhotosStep = ({
             {data.photos.map((photo, index) => (
               <div key={photo.id} className="relative group">
                 <img
-                  src={photo.url}
+                  src={toDirectStorageUrl(photo.url)}
                   alt={`Photo ${index + 1}`}
                   className="w-full aspect-square object-cover rounded-xl"
                 />
@@ -1670,7 +1683,7 @@ const MemoryPreviewStep = ({ data, darkMode }) => {
                 {data.photos.slice(0, 6).map((photo, idx) => (
                   <img
                     key={photo.id}
-                    src={photo.url}
+                    src={toDirectStorageUrl(photo.url)}
                     alt={`Photo ${idx + 1}`}
                     className="aspect-square object-cover rounded-lg"
                   />
@@ -1927,7 +1940,7 @@ const CoverSlide = ({ memory }) => (
 
 const PhotoSlide = ({ photo }) => (
   <div className="w-full h-full relative flex items-center justify-center bg-black px-2 pt-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))] pb-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))]">
-    <img src={photo.url} alt={photo.caption} className="max-w-full max-h-full rounded-[28px] object-contain" />
+    <img src={toDirectStorageUrl(photo.url)} alt={photo.caption} className="max-w-full max-h-full rounded-[28px] object-contain" />
     <div className="pointer-events-none absolute inset-x-2 top-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))] h-20 rounded-t-[28px] bg-gradient-to-b from-black/50 via-black/18 to-transparent" />
     <div className="pointer-events-none absolute inset-x-2 bottom-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))] h-24 rounded-b-[28px] bg-gradient-to-t from-black/70 via-black/24 to-transparent" />
     {photo.caption && (
