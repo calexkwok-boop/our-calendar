@@ -933,6 +933,8 @@ function CategoryGrid({ onPageTap }) {
 }
 
 function getPublicCalendarCreatorLabel(calendar = {}) {
+  const creatorLabel = String(calendar?.creator_label || "").trim();
+  if (creatorLabel) return creatorLabel.startsWith("@") ? creatorLabel : `@${creatorLabel}`;
   const createdBy = String(calendar?.created_by || "").trim();
   if (createdBy) return createdBy.startsWith("@") ? createdBy : `@${createdBy}`;
   const ownerId = String(calendar?.owner_id || "").trim();
@@ -942,22 +944,36 @@ function getPublicCalendarCreatorLabel(calendar = {}) {
 
 function PublishedCalendarCard({ calendar, onOpen, darkMode }) {
   const tags = Array.isArray(calendar?.public_tags) ? calendar.public_tags : [];
+  const coverUrl = String(calendar?.header_bg_url || calendar?.icon_url || "").trim();
   return (
     <button
       onClick={() => onOpen?.(calendar)}
       className={`flex-shrink-0 w-72 rounded-[26px] overflow-hidden text-left border shadow-sm active:opacity-80 ${darkMode ? "bg-[#161f30] border-transparent shadow-none" : "bg-white border-stone-100"}`}
     >
-      <div className={`relative h-40 ${darkMode ? "bg-gradient-to-br from-teal-900/60 via-cyan-900/40 to-slate-900" : "bg-gradient-to-br from-teal-100 via-cyan-50 to-amber-50"}`}>
+      <div className={`relative h-40 overflow-hidden ${darkMode ? "bg-gradient-to-br from-teal-900/60 via-cyan-900/40 to-slate-900" : "bg-gradient-to-br from-teal-100 via-cyan-50 to-amber-50"}`}>
+        {coverUrl ? (
+          <img
+            src={coverUrl}
+            alt={calendar.public_title || calendar.name || "Public Calendar"}
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+          />
+        ) : null}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
         <div className="absolute inset-0 flex items-center justify-center text-5xl">📅</div>
-        <div className="absolute bottom-3 left-3 right-3">
-          <div className="text-white font-handwritten text-[28px] font-bold leading-tight line-clamp-2">
-            {calendar.public_title || calendar.name || "Public Calendar"}
-          </div>
-          <div className="text-white/85 text-xs mt-1">{getPublicCalendarCreatorLabel(calendar)}</div>
-        </div>
+        {coverUrl ? (
+          <img
+            src={coverUrl}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : null}
       </div>
       <div className="px-4 pt-3.5 pb-4">
+        <div className={`text-lg font-semibold leading-tight line-clamp-2 ${darkMode ? "text-white" : "text-slate-900"}`}>
+          {calendar.public_title || calendar.name || "Public Calendar"}
+        </div>
         <p className={`text-sm leading-relaxed line-clamp-2 ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
           {calendar.public_description || "A community calendar you can browse and join."}
         </p>
@@ -990,6 +1006,7 @@ function PublishedCalendarPreviewSheet({
   const [busy, setBusy] = useState(false);
   const { sheetStyle, handleProps } = useSwipeDownSheet(onClose, true);
   const tags = Array.isArray(calendar?.public_tags) ? calendar.public_tags : [];
+  const coverUrl = String(calendar?.header_bg_url || calendar?.icon_url || "").trim();
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -1029,13 +1046,27 @@ function PublishedCalendarPreviewSheet({
           <div className={`w-10 h-1 rounded-full mx-auto ${darkMode ? "bg-white/10" : "bg-stone-200"}`} />
         </div>
         <div className="overflow-y-auto flex-1">
-          <div className={`relative h-56 ${darkMode ? "bg-gradient-to-br from-teal-900/60 via-cyan-900/40 to-slate-900" : "bg-gradient-to-br from-teal-100 via-cyan-50 to-amber-50"}`}>
+          <div className={`relative h-56 overflow-hidden ${darkMode ? "bg-gradient-to-br from-teal-900/60 via-cyan-900/40 to-slate-900" : "bg-gradient-to-br from-teal-100 via-cyan-50 to-amber-50"}`}>
+            {coverUrl ? (
+              <img
+                src={coverUrl}
+                alt={calendar.public_title || calendar.name || "Public Calendar"}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : null}
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
             <button onClick={onClose} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/45 text-white flex items-center justify-center text-sm">✕</button>
             <div className="absolute inset-0 flex items-center justify-center text-6xl">📅</div>
+            {coverUrl ? (
+              <img
+                src={coverUrl}
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : null}
             <div className="absolute bottom-4 left-5 right-5 text-white">
               <div className="font-handwritten text-[34px] font-bold leading-tight">{calendar.public_title || calendar.name || "Public Calendar"}</div>
-              <div className="text-sm text-white/85 mt-1">By {getPublicCalendarCreatorLabel(calendar)}</div>
             </div>
           </div>
           <div className="px-5 py-5">

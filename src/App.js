@@ -9674,7 +9674,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     try {
       const { data: rows, error } = await supabase
         .from('calendar_layers')
-        .select('id,name,owner_id,created_by,created_at,is_public,public_description,public_tags')
+        .select('id,name,owner_id,created_by,created_at,is_public,public_description,public_tags,header_bg_url,icon_url')
         .eq('is_public', true)
         .order('created_at', { ascending: false })
         .limit(300);
@@ -9689,9 +9689,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }
 
       const ids = (rows || []).map(r => String(r?.id || '')).filter(Boolean);
+      const ownerIds = Array.from(new Set((rows || []).map((row) => String(row?.owner_id || '').trim()).filter(Boolean)));
       let countsMap = {};
       let voteSummaryByLayer = {};
       let myVotesByLayer = {};
+      let ownerHandleById = {};
       let votesMode = 'db';
       const localVotes = readExploreVotesLocal(user?.id);
       if (ids.length > 0) {
@@ -9755,14 +9757,29 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         }
       }
 
+      if (ownerIds.length > 0) {
+        const { data: ownerRows } = await supabase
+          .from(ACCOUNT_HANDLE_TABLE)
+          .select('user_id,handle')
+          .in('user_id', ownerIds);
+        ownerHandleById = (ownerRows || []).reduce((acc, row) => {
+          const uid = String(row?.user_id || '').trim();
+          const handle = String(row?.handle || '').trim();
+          if (uid && handle) acc[uid] = handle;
+          return acc;
+        }, {});
+      }
+
       const normalized = (rows || [])
         .filter((row) => String(row?.id || '').trim())
         .map((row) => {
         const layerId = String(row?.id || '').trim();
+        const ownerId = String(row?.owner_id || '').trim();
         const voteSummary = voteSummaryByLayer[layerId] || { up: 0, down: 0 };
         const myVote = normalizeVoteValue(myVotesByLayer[layerId] || 0);
         return normalizePublicCalendarRow({
           ...row,
+          creator_label: String(ownerHandleById?.[ownerId] || '').trim() || null,
           upvote_count: Number(voteSummary.up || 0),
           downvote_count: Number(voteSummary.down || 0),
           my_vote: myVote,
