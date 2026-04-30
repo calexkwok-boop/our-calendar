@@ -6,6 +6,7 @@ const dedupeById = (rows) =>
 export async function loadFriendsList({
   userId,
   userEmail,
+  ownerIdentity = '',
   knownHandlesByEmail = {},
   includeSharedEvents = false,
 }) {
@@ -30,7 +31,17 @@ export async function loadFriendsList({
     includeSharedEvents && userId
       ? supabase.from('popup_event_signups').select('event_id').eq('user_id', userId)
       : Promise.resolve({ data: [] }),
-    userId ? supabase.from('chapters').select('id').eq('owner_id', userId) : Promise.resolve({ data: [] }),
+    (userId || ownerIdentity)
+      ? (() => {
+          let query = supabase.from('chapters').select('id');
+          const ownerClauses = [];
+          if (userId) ownerClauses.push(`owner_id.eq.${String(userId).trim()}`);
+          if (ownerIdentity) ownerClauses.push(`owner_id.eq.${String(ownerIdentity).trim()}`);
+          if (ownerClauses.length > 1) return query.or(ownerClauses.join(','));
+          if (ownerClauses.length === 1) return query.or(ownerClauses[0]);
+          return Promise.resolve({ data: [] });
+        })()
+      : Promise.resolve({ data: [] }),
     userEmail
       ? supabase.from('chapter_collaborators').select('chapter_id').eq('email', userEmail).eq('status', 'accepted')
       : Promise.resolve({ data: [] }),

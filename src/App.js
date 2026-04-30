@@ -20312,6 +20312,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         const friends = await loadFriendsListLib({
           userId,
           userEmail,
+          ownerIdentity: String(currentUser || '').trim(),
           knownHandlesByEmail: knownHandlesByEmailRef.current,
           includeSharedEvents: false,
         });

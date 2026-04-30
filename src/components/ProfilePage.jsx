@@ -377,8 +377,16 @@ const ProfilePage = ({
           currentUser?.id
             ? supabase.from('popup_event_signups').select('event_id').eq('user_id', currentUser.id)
             : Promise.resolve({ data: [] }),
-          currentUser?.id
-            ? supabase.from('chapters').select('id').eq('owner_id', currentUser.id)
+          (currentUser?.id || accountHandle)
+            ? (() => {
+                let query = supabase.from('chapters').select('id');
+                const ownerClauses = [];
+                if (currentUser?.id) ownerClauses.push(`owner_id.eq.${String(currentUser.id).trim()}`);
+                if (accountHandle) ownerClauses.push(`owner_id.eq.${String(accountHandle).trim()}`);
+                if (ownerClauses.length > 1) return query.or(ownerClauses.join(','));
+                if (ownerClauses.length === 1) return query.or(ownerClauses[0]);
+                return Promise.resolve({ data: [] });
+              })()
             : Promise.resolve({ data: [] }),
           userEmail
             ? supabase.from('chapter_collaborators').select('chapter_id').eq('email', userEmail).eq('status', 'accepted')
@@ -626,7 +634,7 @@ const ProfilePage = ({
     };
 
     load();
-  }, [isOwnProfile, userEmail, currentUser?.id, prefetchedFriendsList]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOwnProfile, userEmail, currentUser?.id, accountHandle, prefetchedFriendsList]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Load friend profile + connection context
   useEffect(() => {
