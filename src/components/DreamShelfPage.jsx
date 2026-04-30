@@ -685,7 +685,7 @@ function shuffleArray(arr) {
   return out;
 }
 
-function getAllCuratedItemsShuffled() {
+export function getAllCuratedItemsShuffled() {
   const buckets = shuffleArray(Object.entries(CURATED_ITEMS)).map(([categoryId, categoryItems]) => {
     const cat = getDreamShelfCategoryMeta(categoryId);
     return {

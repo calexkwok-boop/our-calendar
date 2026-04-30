@@ -41,7 +41,7 @@ const VIBES = [
 ];
 
 // ─── curated destination lists ────────────────────────────────────────────────
-const CURATED_DESTINATIONS = {
+export const CURATED_DESTINATIONS = {
   bucket_list: [
     { id: 'bl-1',  name: 'Machu Picchu',          location: 'Peru',             vibe: 'bucket_list', description: 'The lost city of the Incas, perched in the clouds. One of those places you have to see once in your life.', emoji: '🏛️', website: 'https://www.peru.travel/en/attractions/machu-picchu' },
     { id: 'bl-2',  name: 'Santorini',             location: 'Greece',           vibe: 'bucket_list', description: 'White-washed cliffs, infinite blue, and sunsets that feel almost unfair. The poster child of dream travel.', emoji: '🌅', website: '' },

@@ -5,8 +5,8 @@ import MoviesPage from "./MoviesPage";
 import BoardGamePage from "./BoardGamePage";
 import RestaurantPage from "./RestaurantPage";
 import HikingPage from "./HikingPage";
-import DreamShelfPage from "./DreamShelfPage";
-import DestinationsPage from "./DestinationsPage";
+import DreamShelfPage, { getAllCuratedItemsShuffled } from "./DreamShelfPage";
+import DestinationsPage, { CURATED_DESTINATIONS } from "./DestinationsPage";
 import { getDestinationImageOverride } from "../data/destinationImageOverrides";
 import { supabase } from "../supabaseClient";
 
@@ -37,30 +37,11 @@ const COMMUNITY_POOL = {
     { id: "r4", type: "restaurants", icon: "🍜", page: "Restaurants", time: "Bucket list", cardTitle: "The French Laundry", location: "Yountville, Napa Valley", desc: "The American bucket-list tasting menu. Three hours, twenty courses, one unforgettable night.", votes: 412, tag: "Restaurants", imageUrl: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan dinner"] },
     { id: "r5", type: "restaurants", icon: "🍜", page: "Restaurants", time: "Community pick", cardTitle: "Bestia", location: "Downtown LA", desc: "House-made pastas and whole-animal roasts in a buzzy Arts District space. A dinner you talk about.", votes: 253, tag: "Restaurants", imageUrl: "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan dinner"] },
   ],
-  products: [
-    { id: "p1",  type: "products", icon: "✨", page: "Someday", time: "Most dreamed about", cardTitle: "Rolex Submariner",         desc: "A forever watch with quiet presence — the kind of piece people save for and keep for life.",                              actions: ["Add to someday", "Open Someday"], imageUrl: "https://media.rolex.com/image/upload/q_auto/f_auto/t_v7-cover-majesty-landscape/c_limit,w_1200/v1/a677b2c664f6/catalogue/2026/upright-c/m124060-0001" },
-    { id: "p2",  type: "products", icon: "✨", page: "Someday", time: "Trending",           cardTitle: "Porsche Taycan Turbo S",     desc: "Electric, impossibly quick, and still unmistakably Porsche. The daily-drive dream with launch-control energy.",        actions: ["Add to someday", "Open Someday"], imageUrl: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/car8-porsche-taycan-turbo-s.avif" },
-    { id: "p3",  type: "products", icon: "✨", page: "Someday", time: "Community pick",     cardTitle: "Le Creuset Dutch Oven",      desc: "The heirloom kitchen piece. Once you cook in it you understand why people pass these down.",                          actions: ["Add to someday", "Open Someday"], imageUrl: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/h9-le-creuset-dutch-oven.jpg" },
-    { id: "p4",  type: "products", icon: "✨", page: "Someday", time: "Hidden gem",         cardTitle: "Breville Espresso Machine",  desc: "The morning ritual upgrade. Café energy at home, minus the line and the second errand.",                              actions: ["Add to someday", "Open Someday"], imageUrl: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/h10-breville-espresso-machine.png" },
-    { id: "p5",  type: "products", icon: "✨", page: "Someday", time: "Most dreamed about", cardTitle: "Hermès Birkin 30",           desc: "The bag that started a waiting list. Quiet, rare, and somehow still the most recognized in any room.",                  actions: ["Add to someday", "Open Someday"], imageUrl: "https://assets.hermes.com/is/image/hermesedito/P_11_Birkin_2018?fit=wrap%2C0&wid=1920&resMode=sharp2&op_usm=1%2C1%2C6%2C0" },
-    { id: "p6",  type: "products", icon: "✨", page: "Someday", time: "Trending",           cardTitle: "Whoop 4.0 Membership",       desc: "Recovery, sleep, and strain in one quiet habit. A little data ritual for taking care of yourself.",                   actions: ["Add to someday", "Open Someday"], imageUrl: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/wl6-whoop-4-0-membership.webp" },
-    { id: "p7",  type: "products", icon: "✨", page: "Someday", time: "Community pick",     cardTitle: "Cartier Love Bracelet",      desc: "The jewelry-box classic. Simple, recognizable, and somehow still deeply personal.",                                  actions: ["Add to someday", "Open Someday"], imageUrl: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/j1-cartier-love-bracelet.jpg" },
-    { id: "p8",  type: "products", icon: "✨", page: "Someday", time: "Hidden gem",         cardTitle: "Vitamix Ascent A3500",       desc: "The blender that handles anything. Smoothies, soups, nut butters — it changes what you cook.",                       actions: ["Add to someday", "Open Someday"], imageUrl: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/h12-vitamix-ascent-a3500.avif" },
-    { id: "p9",  type: "products", icon: "✨", page: "Someday", time: "Most dreamed about", cardTitle: "Cartier Santos",             desc: "A square-case icon with real history. Dressy enough for dinner, relaxed enough for every day.",                      actions: ["Add to someday", "Open Someday"], imageUrl: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/w6-cartier-santos.avif" },
-    { id: "p10", type: "products", icon: "✨", page: "Someday", time: "Trending",           cardTitle: "Acaia Pearl Scale",          desc: "A tiny coffee ritual object for mornings that feel measured, calm, and a little more intentional.",                   actions: ["Add to someday", "Open Someday"], imageUrl: "https://qyifsblebdnlcyurrgbt.supabase.co/storage/v1/object/public/dream-shelf-images/dreamshelf/cf7-acaia-pearl-scale.webp" },
-  ],
-  destinations: [
-    { id: "d1", type: "destinations", icon: "✈️", page: "Destinations", time: "Dream trip", cardTitle: "Kyoto in Cherry Blossom Season", location: "Japan", desc: "Temples, lantern-lit alleys, and a city transformed by spring. Save this one for the kind of trip you plan around.", votes: 276, tag: "Destinations", imageUrl: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan trip"] },
-    { id: "d2", type: "destinations", icon: "✈️", page: "Destinations", time: "Bucket list", cardTitle: "Amalfi Coast", location: "Italy", desc: "Clifftop villages, turquoise water, and pasta on terraces overlooking the sea. A trip that earns its reputation.", votes: 389, tag: "Destinations", imageUrl: "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan trip"] },
-    { id: "d3", type: "destinations", icon: "✈️", page: "Destinations", time: "Hidden gem", cardTitle: "Oaxaca, Mexico", location: "Mexico", desc: "Mezcal, mole, markets, and one of the most vibrant food and art scenes in the world.", votes: 231, tag: "Destinations", imageUrl: "https://images.unsplash.com/photo-1518638150340-f706e86654de?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan trip"] },
-    { id: "d4", type: "destinations", icon: "✈️", page: "Destinations", time: "Trending", cardTitle: "Patagonia", location: "Chile & Argentina", desc: "The end of the world, in the best way. Glaciers, peaks, and trails that feel genuinely wild.", votes: 318, tag: "Destinations", imageUrl: "https://images.unsplash.com/photo-1501854140801-50d01698950b?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan trip"] },
-    { id: "d5", type: "destinations", icon: "✈️", page: "Destinations", time: "Dream trip", cardTitle: "Santorini", location: "Greece", desc: "Blue domes, white walls, and sunsets that actually live up to the photos. Worth every cliché.", votes: 344, tag: "Destinations", imageUrl: "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=900&q=80", actions: ["Add to someday", "Plan trip"] },
-  ],
 };
 
-function pickCommunityPosts() {
+function pickCommunityPosts(extraPools = {}) {
   const out = [];
-  for (const pool of Object.values(COMMUNITY_POOL)) {
+  for (const pool of Object.values({ ...COMMUNITY_POOL, ...extraPools })) {
     const shuffled = [...pool].sort(() => Math.random() - 0.5);
     out.push(...shuffled.slice(0, Math.min(3, shuffled.length)));
   }
@@ -118,6 +99,43 @@ function getExploreCardImageUrl(post = {}, googleImgUrl = "") {
     return getDestinationImageOverride(post) || googleImgUrl || getExploreImageUrl(post);
   }
   return googleImgUrl || getExploreImageUrl(post);
+}
+
+function buildDestinationExplorePool() {
+  return Object.values(CURATED_DESTINATIONS)
+    .flat()
+    .map((destination, index) => ({
+      id: `dest-${destination.id || index}`,
+      type: "destinations",
+      icon: "✈️",
+      page: "Destinations",
+      time: destination.vibe === "bucket_list" ? "Bucket list" : destination.vibe === "romantic" ? "Dream trip" : "Community pick",
+      cardTitle: destination.name,
+      location: destination.location,
+      desc: destination.description,
+      tag: "Destinations",
+      imageUrl: getDestinationImageOverride(destination) || "",
+      actions: ["Add to someday", "Plan trip"],
+      ...destination,
+    }));
+}
+
+function buildProductExplorePool() {
+  return getAllCuratedItemsShuffled().map((item, index) => ({
+    id: `prod-${item.id || index}`,
+    type: "products",
+    icon: "✨",
+    page: "Someday",
+    time: item.category === "experiences" ? "Most dreamed about" : item.category === "wellness" ? "Trending" : "Community pick",
+    cardTitle: item.name,
+    desc: item.description,
+    imageUrl: item.image || "",
+    actions: ["Add to someday", "Open Someday"],
+    brand: item.brand || "",
+    categoryId: item.category || "buy",
+    priceRange: item.priceRange || "",
+    ...item,
+  }));
 }
 
 function isUuidLike(value = "") {
@@ -919,7 +937,6 @@ function CategoryGrid({ onPageTap }) {
 
 export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPlanEvent = () => {}, onMakeItHappen, onCopyChapter, darkMode = false }) {
   const [sources, setSources]             = useState({ friends: true, movies: true, hiking: true, games: true, restaurants: true, products: true, destinations: true });
-  const [communityPosts]                  = useState(pickCommunityPosts);
   const [drawerOpen, setDrawerOpen]       = useState(false);
   const [search, setSearch]               = useState("");
   const [movies, setMovies]               = useState([]);
@@ -932,6 +949,12 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
   const [publishedChaptersLoading, setPublishedChaptersLoading] = useState(true);
   const [selectedPublishedChapter, setSelectedPublishedChapter] = useState(null);
 
+  const fullDestinationPool = useMemo(() => buildDestinationExplorePool(), []);
+  const fullProductPool = useMemo(() => buildProductExplorePool(), []);
+  const communityPosts = useMemo(
+    () => pickCommunityPosts({ destinations: fullDestinationPool, products: fullProductPool }),
+    [fullDestinationPool, fullProductPool]
+  );
   const moviePosts = useMemo(() => shuffle(movies.slice(0, 20)).slice(0, 6).map(m => ({ ...m, type: "movies" })), [movies]);
   const activeCom  = useMemo(() => shuffle(communityPosts.filter(p => sources[p.type])), [communityPosts, sources]);
 
