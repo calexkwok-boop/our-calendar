@@ -3622,6 +3622,14 @@ function App() {
   const [layerOrder, setLayerOrder] = useState([]);
   const dragLayerIdRef = useRef(null);
   const hoveredLayerDragIdRef = useRef(null);
+  const layerDragScrollContainerRef = useRef(null);
+  useEffect(() => {
+    const el = layerDragScrollContainerRef.current;
+    if (!el) return;
+    const prevent = (e) => { if (dragLayerIdRef.current) e.preventDefault(); };
+    el.addEventListener('touchmove', prevent, { passive: false });
+    return () => el.removeEventListener('touchmove', prevent);
+  });
   const [activeCalendarSortOrder, setActiveCalendarSortOrder] = useState([]);
   const [upcomingTripSortOrder, setUpcomingTripSortOrder] = useState([]);
   const [upcomingPopupSortOrder, setUpcomingPopupSortOrder] = useState([]);
@@ -28576,7 +28584,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               style={themeAccentButtonStyle}
             >+ New</button>
           </div>
-          <div className="space-y-1 max-h-48 overflow-y-auto">
+          <div ref={layerDragScrollContainerRef} className="space-y-1 max-h-48 overflow-y-auto">
             {visibleLayerCalendars.map(layer => {
               const isActive = String(layer.id) === String(activeLayerId);
               const rowTheme = normalizeLayerPageTheme(layer?.page_theme, layer?.title_style);
@@ -29749,13 +29757,13 @@ transform: translateY(0);
             quickEntry={quickEntry}
             setQuickEntry={setQuickEntry}
             onEventClick={(event) => {
-              setShowDateDetailModal(false);
               const eventId = String(event?.id || '');
               const isPopup = Boolean(popupEventsByEventId && popupEventsByEventId[eventId]);
               if (isPopup) {
+                setShowDateDetailModal(false);
                 setSelectedPopupEventPanelId(eventId);
               } else {
-                openUserTabEvent?.(event);
+                setEditingEvent(eventId);
               }
             }}
             handleQuickAdd={handleQuickAdd}
