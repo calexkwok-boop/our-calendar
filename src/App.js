@@ -41,158 +41,15 @@ import ProfilePage from "./components/ProfilePage";
 import FriendPhotoModal from "./components/FriendPhotoModal";
 import JOURNEY_QUOTES from "./data/journeyQuotes";
 import { getDestinationImageOverride } from "./data/destinationImageOverrides";
+import { loadFriendsList as loadFriendsListLib } from "./lib/loadFriendsList";
+import * as memoryPersistence from "./lib/memoryPersistence";
 
 const MemoryCreator = ImportedMemoryCreator || (() => null);
 
 // ─── Friends list loader ───────────────────────────────────────────────────────
 // Runs in 3 sequential round trips instead of 4 by pulling the event
 // co-members query into Step 2 alongside trip/calendar co-members.
-const _dedupeById = (rows) =>
-  [...new Map(rows.filter(h => h.user_id).map(h => [h.user_id, h])).values()];
 
-async function loadFriendsList({ userId, userEmail, knownHandlesByEmail = {}, includeSharedEvents = false }) {
-  if (!userId && !userEmail) return [];
-  const friendMap = new Map();
-
-  // Step 1: all IDs this user is involved in (5 parallel, no inter-deps)
-  const [ownedTripsRes, memberTripIdsRes, myLayerAccessRes, ownedLayersRes, myEventMembershipsRes] = await Promise.all([
-    userId ? supabase.from('sub_calendars').select('id, name').eq('owner_id', userId) : Promise.resolve({ data: [] }),
-    userEmail ? supabase.from('sub_calendar_members').select('sub_calendar_id').eq('email', userEmail) : Promise.resolve({ data: [] }),
-    userEmail ? supabase.from('shared_access').select('layer_id, owner_id').eq('shared_with_email', userEmail) : Promise.resolve({ data: [] }),
-    userId ? supabase.from('categories').select('id').eq('owner_id', userId) : Promise.resolve({ data: [] }),
-    includeSharedEvents && userId
-      ? supabase.from('popup_event_members').select('event_id').eq('user_id', userId)
-      : Promise.resolve({ data: [] }),
-  ]);
-
-  const ownedTripNameById = {};
-  for (const t of (ownedTripsRes.data || [])) ownedTripNameById[t.id] = t.name || 'Trip';
-  const memberTripIds = (memberTripIdsRes.data || []).map(m => m.sub_calendar_id).filter(id => id && !ownedTripNameById[id]);
-  const allTripIds = [...Object.keys(ownedTripNameById), ...memberTripIds];
-  const receivedLayerIds = (myLayerAccessRes.data || []).map(a => a.layer_id).filter(Boolean);
-  const calendarOwnerIds = [...new Set((myLayerAccessRes.data || []).map(a => a.owner_id).filter(id => id && id !== userId))];
-  const calendarOwnerIdSet = new Set(calendarOwnerIds);
-  const ownedLayerIds = (ownedLayersRes.data || []).map(l => l.id).filter(Boolean);
-  const uniqueLayerIds = [...new Set([...receivedLayerIds, ...ownedLayerIds])];
-  const myEventIds = (myEventMembershipsRes.data || []).map(m => m.event_id).filter(Boolean);
-
-  // Step 2: all co-members + event co-members in one round trip (was formerly 2 separate steps)
-  const [memberTripDataRes, coMembersRes, coCalMembersRes, calOwnerHandlesRes, calOwnerHandlesFbRes, eventCoMembersRes] = await Promise.all([
-    memberTripIds.length > 0 ? supabase.from('sub_calendars').select('id, owner_id, name').in('id', memberTripIds) : Promise.resolve({ data: [] }),
-    allTripIds.length > 0 ? supabase.from('sub_calendar_members').select('email, sub_calendar_id').in('sub_calendar_id', allTripIds).neq('email', userEmail || '') : Promise.resolve({ data: [] }),
-    uniqueLayerIds.length > 0 ? supabase.from('shared_access').select('shared_with_email, shared_with_id').in('layer_id', uniqueLayerIds).neq('shared_with_email', userEmail || '') : Promise.resolve({ data: [] }),
-    calendarOwnerIds.length > 0 ? supabase.from('user_handles').select('email, user_id').in('user_id', calendarOwnerIds) : Promise.resolve({ data: [] }),
-    calendarOwnerIds.length > 0 ? supabase.from('handles').select('email, user_id').in('user_id', calendarOwnerIds) : Promise.resolve({ data: [] }),
-    includeSharedEvents && myEventIds.length > 0
-      ? supabase.from('popup_event_members').select('event_id, user_id').in('event_id', myEventIds).neq('user_id', userId || '')
-      : Promise.resolve({ data: [] }),
-  ]);
-
-  const tripNameById = { ...ownedTripNameById };
-  const tripOwnerIdToName = {};
-  for (const t of (memberTripDataRes.data || [])) {
-    if (!t.id) continue;
-    tripNameById[t.id] = t.name || 'Trip';
-    if (t.owner_id && t.owner_id !== userId) tripOwnerIdToName[t.owner_id] = t.name || 'Shared trip';
-  }
-  const tripOwnerIds = Object.keys(tripOwnerIdToName);
-
-  for (const m of (coMembersRes.data || [])) {
-    const email = String(m.email || '').toLowerCase().trim();
-    if (!email) continue;
-    const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedEvents: 0, userId: null };
-    const tripName = tripNameById[m.sub_calendar_id] || 'Shared trip';
-    if (!entry.trips.includes(tripName)) entry.trips.push(tripName);
-    friendMap.set(email, entry);
-  }
-  for (const m of (coCalMembersRes.data || [])) {
-    const email = String(m.shared_with_email || '').toLowerCase().trim();
-    if (!email) continue;
-    const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedEvents: 0, userId: null };
-    entry.sharedCalendars++;
-    if (!entry.userId && m.shared_with_id) entry.userId = m.shared_with_id;
-    friendMap.set(email, entry);
-  }
-  for (const h of _dedupeById([...(calOwnerHandlesRes.data || []), ...(calOwnerHandlesFbRes.data || [])])) {
-    const email = String(h.email || '').toLowerCase().trim();
-    if (!email || email === userEmail) continue;
-    const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedEvents: 0, userId: null };
-    if (!entry.userId) entry.userId = h.user_id;
-    if (calendarOwnerIdSet.has(h.user_id)) entry.sharedCalendars++;
-    friendMap.set(email, entry);
-  }
-
-  // Tally shared events and collect event-only friend user IDs when requested.
-  const sharedEventsByUserId = {};
-  if (includeSharedEvents) {
-    for (const m of (eventCoMembersRes.data || [])) {
-      if (!m.user_id || !m.event_id) continue;
-      if (!sharedEventsByUserId[m.user_id]) sharedEventsByUserId[m.user_id] = new Set();
-      sharedEventsByUserId[m.user_id].add(m.event_id);
-    }
-    for (const ctx of friendMap.values()) {
-      if (ctx.userId && sharedEventsByUserId[ctx.userId]) ctx.sharedEvents = sharedEventsByUserId[ctx.userId].size;
-    }
-  }
-  const knownUserIds = new Set([...friendMap.values()].map(ctx => ctx.userId).filter(Boolean));
-  const newEventFriendIds = includeSharedEvents
-    ? [...new Set((eventCoMembersRes.data || []).map(r => r.user_id).filter(uid => uid && !knownUserIds.has(uid)))]
-    : [];
-
-  // Step 3: resolve trip owner emails + missing userIds + event-only friend handles (all parallel)
-  const emailsMissingId = [...friendMap.entries()].filter(([, ctx]) => !ctx.userId).map(([email]) => email);
-  const [tripOwnerHandlesRes, tripOwnerHandlesFbRes, handleRowsRes, handleRowsFbRes, newHandlesRes, newHandlesFbRes] = await Promise.all([
-    tripOwnerIds.length > 0 ? supabase.from('user_handles').select('email, user_id').in('user_id', tripOwnerIds) : Promise.resolve({ data: [] }),
-    tripOwnerIds.length > 0 ? supabase.from('handles').select('email, user_id').in('user_id', tripOwnerIds) : Promise.resolve({ data: [] }),
-    emailsMissingId.length > 0 ? supabase.from('user_handles').select('email, user_id').in('email', emailsMissingId) : Promise.resolve({ data: [] }),
-    emailsMissingId.length > 0 ? supabase.from('handles').select('email, user_id').in('email', emailsMissingId) : Promise.resolve({ data: [] }),
-    newEventFriendIds.length > 0 ? supabase.from('user_handles').select('email, user_id').in('user_id', newEventFriendIds) : Promise.resolve({ data: [] }),
-    newEventFriendIds.length > 0 ? supabase.from('handles').select('email, user_id').in('user_id', newEventFriendIds) : Promise.resolve({ data: [] }),
-  ]);
-
-  for (const h of _dedupeById([...(tripOwnerHandlesRes.data || []), ...(tripOwnerHandlesFbRes.data || [])])) {
-    const email = String(h.email || '').toLowerCase().trim();
-    if (!email || email === userEmail) continue;
-    const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedEvents: 0, userId: null };
-    if (!entry.userId) entry.userId = h.user_id;
-    if (h.user_id && tripOwnerIdToName[h.user_id]) {
-      const tripName = tripOwnerIdToName[h.user_id];
-      if (!entry.trips.includes(tripName)) entry.trips.push(tripName);
-    }
-    friendMap.set(email, entry);
-  }
-  for (const row of [...(handleRowsRes.data || []), ...(handleRowsFbRes.data || [])]) {
-    const email = String(row.email || '').toLowerCase().trim();
-    if (row.user_id && friendMap.has(email) && !friendMap.get(email).userId) friendMap.get(email).userId = row.user_id;
-  }
-  for (const h of _dedupeById([...(newHandlesRes.data || []), ...(newHandlesFbRes.data || [])])) {
-    const email = String(h.email || '').toLowerCase().trim();
-    if (!email || email === userEmail) continue;
-    const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedEvents: 0, userId: h.user_id };
-    if (!entry.userId) entry.userId = h.user_id;
-    if (sharedEventsByUserId[h.user_id]) entry.sharedEvents = sharedEventsByUserId[h.user_id].size;
-    friendMap.set(email, entry);
-  }
-
-  const friends = [];
-  for (const [email, ctx] of friendMap.entries()) {
-    const handle = (knownHandlesByEmail || {})[email] || email.split('@')[0];
-    const parts = [];
-    if (ctx.trips.length === 1) parts.push(ctx.trips[0]);
-    else if (ctx.trips.length > 1) parts.push(`${ctx.trips.length} trips`);
-    if (ctx.sharedCalendars > 0) parts.push('shared calendar');
-    if (ctx.sharedEvents > 0) parts.push(`${ctx.sharedEvents} event${ctx.sharedEvents === 1 ? '' : 's'}`);
-    friends.push({
-      email,
-      userId: ctx.userId || null,
-      handle,
-      displayName: handle,
-      avatarUrl: ctx.userId ? `${supabase.supabaseUrl}/storage/v1/object/public/avatars/${ctx.userId}/avatar` : '',
-      connectionSummary: parts.join(' · ') || 'Connected',
-    });
-  }
-  return friends;
-}
 
 
 
@@ -1669,314 +1526,6 @@ const mergePersistedQuickThoughts = (...thoughtLists) => {
     (a, b) => Number(new Date(b?.createdAt || 0)) - Number(new Date(a?.createdAt || 0))
   );
 };
-const MEMORIES_DB_NAME = 'our-calendar-memories-db';
-const MEMORIES_STORE_NAME = 'memories';
-const USER_MEMORIES_TABLE = 'user_memories';
-const USER_QUICK_THOUGHTS_TABLE = 'user_quick_thoughts';
-const USER_BUCKET_LIST_TABLE = 'user_bucket_list';
-const PROFILE_PHOTO_OVERRIDE_STORAGE_KEY = 'our-calendar-uploaded-profile-photo';
-
-const openMemoriesDb = () => new Promise((resolve, reject) => {
-  if (typeof window === 'undefined' || !window.indexedDB) {
-    resolve(null);
-    return;
-  }
-  try {
-    const request = window.indexedDB.open(MEMORIES_DB_NAME, 1);
-    request.onerror = () => reject(request.error || new Error('Could not open memories database.'));
-    request.onsuccess = () => resolve(request.result || null);
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains(MEMORIES_STORE_NAME)) {
-        db.createObjectStore(MEMORIES_STORE_NAME);
-      }
-    };
-  } catch (error) {
-    reject(error);
-  }
-});
-
-const readMemoriesIndexedDb = async (userId) => {
-  const key = getMemoriesStorageKey(userId);
-  try {
-    const db = await openMemoriesDb();
-    if (!db) return [];
-    const result = await new Promise((resolve, reject) => {
-      const tx = db.transaction(MEMORIES_STORE_NAME, 'readonly');
-      const store = tx.objectStore(MEMORIES_STORE_NAME);
-      const request = store.get(key);
-      request.onerror = () => reject(request.error || new Error('Could not read memories.'));
-      request.onsuccess = () => resolve(request.result);
-    });
-    db.close();
-    return Array.isArray(result) ? result : [];
-  } catch {
-    return [];
-  }
-};
-
-const writeMemoriesIndexedDb = async (userId, memories) => {
-  const key = getMemoriesStorageKey(userId);
-  try {
-    const db = await openMemoriesDb();
-    if (!db) return;
-    await new Promise((resolve, reject) => {
-      const tx = db.transaction(MEMORIES_STORE_NAME, 'readwrite');
-      const store = tx.objectStore(MEMORIES_STORE_NAME);
-      const request = store.put(Array.isArray(memories) ? memories : [], key);
-      request.onerror = () => reject(request.error || new Error('Could not write memories.'));
-      request.onsuccess = () => resolve();
-    });
-    db.close();
-  } catch {}
-};
-
-const readMemoriesState = (userId) => {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(getMemoriesStorageKey(userId));
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
-
-const writeMemoriesState = (userId, memories) => {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(getMemoriesStorageKey(userId), JSON.stringify(Array.isArray(memories) ? memories : []));
-  } catch {}
-};
-
-const persistMemoriesState = (userId, memories) => {
-  writeMemoriesState(userId, memories);
-  void writeMemoriesIndexedDb(userId, memories);
-};
-const getMemoriesTombstonesKey = (userId) => `memories-deleted-${String(userId || 'guest').trim() || 'guest'}`;
-const readMemoriesTombstones = (userId) => {
-  if (typeof window === 'undefined') return new Set();
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(getMemoriesTombstonesKey(userId)) || '[]');
-    return new Set(Array.isArray(parsed) ? parsed : []);
-  } catch { return new Set(); }
-};
-const addMemoryTombstone = (userId, id) => {
-  if (typeof window === 'undefined' || !id) return;
-  try {
-    const existing = readMemoriesTombstones(userId);
-    existing.add(String(id));
-    window.localStorage.setItem(getMemoriesTombstonesKey(userId), JSON.stringify([...existing]));
-  } catch {}
-};
-
-const mergePersistedMemories = (...memoryLists) => {
-  const byKey = new Map();
-  memoryLists.forEach((list) => {
-    (Array.isArray(list) ? list : []).forEach((memory, index) => {
-      if (!memory || typeof memory !== 'object') return;
-      const idKey = String(memory?.id || '').trim();
-      const fallbackKey = [
-        String(memory?.date || '').trim(),
-        String(memory?.title || '').trim().toLowerCase(),
-        String(
-          memory?.coverPhoto
-          || memory?.photos?.[0]?.url
-          || memory?.photos?.[0]?.photoUrl
-          || memory?.photoUrl
-          || memory?.photo_url
-          || ''
-        ).trim(),
-        index,
-      ].join('|');
-      const key = idKey || fallbackKey;
-      if (!key) return;
-      byKey.set(key, memory);
-    });
-  });
-  return Array.from(byKey.values()).sort(
-    (a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0))
-  );
-};
-
-const getPersonalMemoryOwnerId = (userId) => String(userId || 'guest').trim() || 'guest';
-
-const getMemoryPrimaryPhotoUrl = (memory) => String(
-  memory?.coverPhoto
-  || memory?.photos?.[0]?.url
-  || memory?.photos?.[0]?.photoUrl
-  || memory?.photoUrl
-  || memory?.photo_url
-  || ''
-).trim();
-
-const stampMemoryOwner = (memory, userId) => {
-  if (!memory || typeof memory !== 'object') return memory;
-  const fallbackOwnerId = getPersonalMemoryOwnerId(userId);
-  const existingOwnerId = String(memory?.ownerUserId || memory?.createdByUserId || '').trim();
-  const ownerUserId = existingOwnerId || fallbackOwnerId;
-  return {
-    ...memory,
-    ownerUserId,
-    createdByUserId: String(memory?.createdByUserId || ownerUserId).trim() || ownerUserId,
-  };
-};
-
-const toRemoteMemoryRow = (memory, userId) => {
-  if (!memory || typeof memory !== 'object') return null;
-  const ownerUserId = getPersonalMemoryOwnerId(userId);
-  if (!ownerUserId || ownerUserId === 'guest') return null;
-  const stampedMemory = stampMemoryOwner(memory, ownerUserId);
-  const id = String(stampedMemory?.id || '').trim();
-  if (!id) return null;
-  const rawMemoryDate = String(stampedMemory?.date || '').trim().slice(0, 10);
-  const memoryDate = /^\d{4}-\d{2}-\d{2}$/.test(rawMemoryDate) ? rawMemoryDate : null;
-  return {
-    owner_user_id: ownerUserId,
-    id,
-    memory: stampedMemory,
-    memory_date: memoryDate,
-    created_at: String(stampedMemory?.createdAt || '').trim() || new Date().toISOString(),
-    updated_at: String(stampedMemory?.updatedAt || '').trim() || new Date().toISOString(),
-  };
-};
-
-const fromRemoteMemoryRow = (row, userId) => {
-  if (!row || typeof row !== 'object') return null;
-  const rowMemory = row?.memory && typeof row.memory === 'object' ? row.memory : {};
-  return stampMemoryOwner({
-    ...rowMemory,
-    id: String(rowMemory?.id || row?.id || '').trim(),
-    date: String(rowMemory?.date || row?.memory_date || '').trim(),
-    createdAt: String(rowMemory?.createdAt || row?.created_at || '').trim(),
-    updatedAt: String(rowMemory?.updatedAt || row?.updated_at || '').trim(),
-  }, row?.owner_user_id || userId);
-};
-
-const readRemoteQuickThoughtsState = async (userId) => {
-  const ownerUserId = String(userId || '').trim();
-  if (!ownerUserId || ownerUserId === 'guest') return [];
-  try {
-    const { data, error } = await supabase
-      .from(USER_QUICK_THOUGHTS_TABLE)
-      .select('thoughts')
-      .eq('owner_user_id', ownerUserId)
-      .maybeSingle();
-    if (error) throw error;
-    return Array.isArray(data?.thoughts) ? data.thoughts : [];
-  } catch {
-    return [];
-  }
-};
-
-const persistRemoteQuickThoughtsState = async (userId, thoughts) => {
-  const ownerUserId = String(userId || '').trim();
-  if (!ownerUserId || ownerUserId === 'guest') return;
-  try {
-    await supabase
-      .from(USER_QUICK_THOUGHTS_TABLE)
-      .upsert({
-        owner_user_id: ownerUserId,
-        thoughts: Array.isArray(thoughts) ? thoughts : [],
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'owner_user_id' });
-  } catch {}
-};
-
-const readRemoteBucketListState = async (userId) => {
-  const ownerUserId = String(userId || '').trim();
-  if (!ownerUserId || ownerUserId === 'guest') return [];
-  try {
-    const { data, error } = await supabase
-      .from(USER_BUCKET_LIST_TABLE)
-      .select('dreams')
-      .eq('owner_user_id', ownerUserId)
-      .maybeSingle();
-    if (error) throw error;
-    return Array.isArray(data?.dreams) ? data.dreams : [];
-  } catch {
-    return [];
-  }
-};
-
-const persistRemoteBucketListState = async (userId, dreams) => {
-  const ownerUserId = String(userId || '').trim();
-  if (!ownerUserId || ownerUserId === 'guest') return;
-  try {
-    await supabase
-      .from(USER_BUCKET_LIST_TABLE)
-      .upsert({
-        owner_user_id: ownerUserId,
-        dreams: Array.isArray(dreams) ? dreams : [],
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'owner_user_id' });
-  } catch {}
-};
-
-const readRemoteMemoriesState = async (userId) => {
-  const ownerUserId = getPersonalMemoryOwnerId(userId);
-  if (!ownerUserId || ownerUserId === 'guest') return [];
-  try {
-    const { data, error } = await supabase
-      .from(USER_MEMORIES_TABLE)
-      .select('id, owner_user_id, memory, memory_date, created_at, updated_at')
-      .eq('owner_user_id', ownerUserId)
-      .order('memory_date', { ascending: false, nullsFirst: false })
-      .order('updated_at', { ascending: false });
-    if (error) throw error;
-    return (Array.isArray(data) ? data : [])
-      .map((row) => fromRemoteMemoryRow(row, ownerUserId))
-      .filter(Boolean);
-  } catch (error) {
-    console.warn('Could not load remote memories; using local memories only.', error?.message || error);
-    return [];
-  }
-};
-
-const persistRemoteMemoriesState = async (userId, memories) => {
-  const rows = (Array.isArray(memories) ? memories : [])
-    .map((memory) => toRemoteMemoryRow(memory, userId))
-    .filter(Boolean);
-  if (rows.length === 0) return;
-  try {
-    const { error } = await supabase
-      .from(USER_MEMORIES_TABLE)
-      .upsert(rows, { onConflict: 'owner_user_id,id' });
-    if (error) throw error;
-  } catch (error) {
-    console.warn('Could not sync memories remotely.', error?.message || error);
-  }
-};
-
-const persistRemoteMemory = async (userId, memory) => {
-  const row = toRemoteMemoryRow(memory, userId);
-  if (!row) return;
-  try {
-    const { error } = await supabase
-      .from(USER_MEMORIES_TABLE)
-      .upsert(row, { onConflict: 'owner_user_id,id' });
-    if (error) throw error;
-  } catch (error) {
-    console.warn('Could not sync memory remotely.', error?.message || error);
-  }
-};
-
-const deleteRemoteMemory = async (userId, memoryId) => {
-  const ownerUserId = getPersonalMemoryOwnerId(userId);
-  const id = String(memoryId || '').trim();
-  if (!ownerUserId || ownerUserId === 'guest' || !id) return;
-  try {
-    const { error } = await supabase
-      .from(USER_MEMORIES_TABLE)
-      .delete()
-      .eq('owner_user_id', ownerUserId)
-      .eq('id', id);
-    if (error) throw error;
-  } catch (error) {
-    console.warn('Could not delete remote memory.', error?.message || error);
-  }
-};
-
 const readStoredProfilePhotoOverrideUrl = () => {
   if (typeof window === 'undefined') return '';
   try {
@@ -20393,8 +19942,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     getHolidayNameSet,
     isLikelyHolidayTitle,
     shouldIncludeEventInPersonalOverview,
-    getPersonalMemoryOwnerId,
-    getMemoryPrimaryPhotoUrl,
+    getPersonalMemoryOwnerId: memoryPersistence.getPersonalMemoryOwnerId,
+    getMemoryPrimaryPhotoUrl: memoryPersistence.getMemoryPrimaryPhotoUrl,
     getJourneyGoalType,
   });
   const homeReflectionStreak = homeReflectionStats.streak;
@@ -20638,7 +20187,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         return;
       }
       const tombstones = readQuickThoughtTombstones(user?.id);
-      const remoteThoughts = (await readRemoteQuickThoughtsState(user?.id))
+      const remoteThoughts = (await memoryPersistence.readRemoteQuickThoughtsState(user?.id))
         .filter((t) => !tombstones.has(String(t?.id || '')));
       if (cancelled) return;
       const mergedThoughts = mergePersistedQuickThoughts(remoteThoughts, localThoughts)
@@ -20646,7 +20195,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       quickThoughtsRemoteSyncRef.current = true;
       setQuickThoughts(mergedThoughts);
       writeQuickThoughtsState(user?.id, mergedThoughts);
-      void persistRemoteQuickThoughtsState(user?.id, mergedThoughts);
+      void memoryPersistence.persistRemoteQuickThoughtsState(user?.id, mergedThoughts);
       setQuickThoughtsHydratedUserId(currentQuickThoughtsUserId);
     })();
     return () => {
@@ -20662,7 +20211,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
     if (quickThoughtsHydratedUserId !== currentQuickThoughtsUserId) return;
     writeQuickThoughtsState(user?.id, quickThoughts);
-    void persistRemoteQuickThoughtsState(user?.id, quickThoughts);
+    void memoryPersistence.persistRemoteQuickThoughtsState(user?.id, quickThoughts);
   }, [user?.id, quickThoughts, quickThoughtsHydratedUserId]);
 
   // ─── Friends' daily photos for home screen strip
@@ -20746,7 +20295,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     let cancelled = false;
     (async () => {
       try {
-        const friends = await loadFriendsList({
+        const friends = await loadFriendsListLib({
           userId,
           userEmail,
           knownHandlesByEmail: knownHandlesByEmailRef.current,
@@ -20772,7 +20321,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         return;
       }
       const bucketTombstones = readBucketListTombstones(user?.id);
-      const remoteDreams = (await readRemoteBucketListState(user?.id))
+      const remoteDreams = (await memoryPersistence.readRemoteBucketListState(user?.id))
         .filter((d) => !bucketTombstones.has(String(d?.id || '')));
       if (cancelled) return;
       const mergedDreams = mergePersistedBucketList(remoteDreams, localDreams)
@@ -20780,7 +20329,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       bucketListRemoteSyncRef.current = true;
       setBucketList(mergedDreams);
       writeBucketListState(user?.id, mergedDreams);
-      void persistRemoteBucketListState(user?.id, mergedDreams);
+      void memoryPersistence.persistRemoteBucketListState(user?.id, mergedDreams);
       setBucketListHydratedUserId(currentBucketListUserId);
     })();
     return () => {
@@ -20796,7 +20345,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
     if (bucketListHydratedUserId !== currentBucketListUserId) return;
     writeBucketListState(user?.id, bucketList);
-    void persistRemoteBucketListState(user?.id, bucketList);
+    void memoryPersistence.persistRemoteBucketListState(user?.id, bucketList);
   }, [user?.id, bucketList, bucketListHydratedUserId]);
 
   useEffect(() => {
@@ -20808,7 +20357,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const refreshBucketList = async () => {
       const localDreams = readBucketListState(user?.id);
       const bucketTombstones = readBucketListTombstones(user?.id);
-      const remoteDreams = (await readRemoteBucketListState(user?.id))
+      const remoteDreams = (await memoryPersistence.readRemoteBucketListState(user?.id))
         .filter((d) => !bucketTombstones.has(String(d?.id || '')));
       if (cancelled) return;
       const mergedDreams = mergePersistedBucketList(remoteDreams, localDreams)
@@ -20822,7 +20371,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const refreshQuickThoughts = async () => {
       const localThoughts = readQuickThoughtsState(user?.id);
       const tombstones = readQuickThoughtTombstones(user?.id);
-      const remoteThoughts = (await readRemoteQuickThoughtsState(user?.id))
+      const remoteThoughts = (await memoryPersistence.readRemoteQuickThoughtsState(user?.id))
         .filter((t) => !tombstones.has(String(t?.id || '')));
       if (cancelled) return;
       const mergedThoughts = mergePersistedQuickThoughts(remoteThoughts, localThoughts)
@@ -20835,12 +20384,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     const bucketChannel = supabase
       .channel(`bucket-list-sync-${ownerUserId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: USER_BUCKET_LIST_TABLE, filter: `owner_user_id=eq.${ownerUserId}` }, refreshBucketList)
+      .on('postgres_changes', { event: '*', schema: 'public', table: memoryPersistence.USER_BUCKET_LIST_TABLE, filter: `owner_user_id=eq.${ownerUserId}` }, refreshBucketList)
       .subscribe();
 
     const quickThoughtsChannel = supabase
       .channel(`quick-thoughts-sync-${ownerUserId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: USER_QUICK_THOUGHTS_TABLE, filter: `owner_user_id=eq.${ownerUserId}` }, refreshQuickThoughts)
+      .on('postgres_changes', { event: '*', schema: 'public', table: memoryPersistence.USER_QUICK_THOUGHTS_TABLE, filter: `owner_user_id=eq.${ownerUserId}` }, refreshQuickThoughts)
       .subscribe();
 
     return () => {
@@ -20885,27 +20434,27 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
     let cancelled = false;
     (async () => {
-      const tombstones = readMemoriesTombstones(user?.id);
+      const tombstones = memoryPersistence.readMemoriesTombstones(user?.id);
       const filterTombstones = (list) => list.filter((m) => !tombstones.has(String(m?.id || '')));
       const savedForCurrentUser = filterTombstones(
-        mergePersistedMemories(
-          await readRemoteMemoriesState(user?.id),
-          await readMemoriesIndexedDb(user?.id),
-          readMemoriesState(user?.id)
+        memoryPersistence.mergePersistedMemories(
+          await memoryPersistence.readRemoteMemoriesState(user?.id),
+          await memoryPersistence.readMemoriesIndexedDb(user?.id),
+          memoryPersistence.readMemoriesState(user?.id)
         )
-      ).map((memory) => stampMemoryOwner(memory, currentMemoriesUserId));
+      ).map((memory) => memoryPersistence.stampMemoryOwner(memory, currentMemoriesUserId));
       if (currentMemoriesUserId !== 'guest') {
         const guestMemories = filterTombstones(
-          mergePersistedMemories(
-            await readMemoriesIndexedDb('guest'),
-            readMemoriesState('guest')
+          memoryPersistence.mergePersistedMemories(
+            await memoryPersistence.readMemoriesIndexedDb('guest'),
+            memoryPersistence.readMemoriesState('guest')
           )
-        ).map((memory) => stampMemoryOwner(memory, currentMemoriesUserId));
-        const merged = filterTombstones(mergePersistedMemories(savedForCurrentUser, guestMemories));
+        ).map((memory) => memoryPersistence.stampMemoryOwner(memory, currentMemoriesUserId));
+        const merged = filterTombstones(memoryPersistence.mergePersistedMemories(savedForCurrentUser, guestMemories));
         if (cancelled) return;
         setMemories(merged);
-        persistMemoriesState(user?.id, merged);
-        void persistRemoteMemoriesState(user?.id, merged);
+        memoryPersistence.persistMemoriesState(user?.id, merged);
+        void memoryPersistence.persistRemoteMemoriesState(user?.id, merged);
       } else {
         if (cancelled) return;
         setMemories(savedForCurrentUser);
@@ -20920,8 +20469,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
     if (memoriesHydratedUserId !== currentMemoriesUserId) return;
-    persistMemoriesState(user?.id, memories);
-    void persistRemoteMemoriesState(user?.id, memories);
+    memoryPersistence.persistMemoriesState(user?.id, memories);
+    void memoryPersistence.persistRemoteMemoriesState(user?.id, memories);
   }, [user?.id, memories, memoriesHydratedUserId]);
 
   const eligibleMemoryTripSyncEntries = useMemo(() => (
@@ -25523,7 +25072,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   function createMemoryRecordShape(memoryData) {
     if (!memoryData) return null;
     const nowIso = new Date().toISOString();
-    const currentMemoryOwnerId = getPersonalMemoryOwnerId(user?.id);
+    const currentMemoryOwnerId = memoryPersistence.getPersonalMemoryOwnerId(user?.id);
     const ownerUserId = String(memoryData?.ownerUserId || memoryData?.createdByUserId || currentMemoryOwnerId).trim()
       || currentMemoryOwnerId;
     const normalizedPhotos = Array.isArray(memoryData?.photos)
@@ -25594,8 +25143,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     setMemories((prev) => {
       const nextMemories = [nextMemory, ...prev.filter((memory) => String(memory?.id || '') !== nextMemory.id)]
         .sort((a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0)));
-      persistMemoriesState(user?.id, nextMemories);
-      void persistRemoteMemory(user?.id, nextMemory);
+      memoryPersistence.persistMemoriesState(user?.id, nextMemories);
+      void memoryPersistence.persistRemoteMemory(user?.id, nextMemory);
       return nextMemories;
     });
     setMemoryCreateDraft(null);
@@ -25609,12 +25158,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       const nextMemories = prev.map((memory) => {
         if (String(memory?.id || '') !== String(memoryId || '')) return memory;
         const updated = typeof updater === 'function' ? updater(memory) : { ...memory, ...updater };
-        const stampedUpdated = stampMemoryOwner({ ...updated, updatedAt: new Date().toISOString() }, user?.id);
+        const stampedUpdated = memoryPersistence.stampMemoryOwner({ ...updated, updatedAt: new Date().toISOString() }, user?.id);
         nextSelected = stampedUpdated;
-        void persistRemoteMemory(user?.id, stampedUpdated);
+        void memoryPersistence.persistRemoteMemory(user?.id, stampedUpdated);
         return stampedUpdated;
       });
-      persistMemoriesState(user?.id, nextMemories);
+      memoryPersistence.persistMemoriesState(user?.id, nextMemories);
       return nextMemories;
     });
     if (nextSelected) setMemorySystemCurrentMemory(nextSelected);
@@ -25622,11 +25171,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
   const deleteMemoryRecord = (memoryId) => {
     const id = String(memoryId || '').trim();
-    if (id) addMemoryTombstone(user?.id, id);
+    if (id) memoryPersistence.addMemoryTombstone(user?.id, id);
     setMemories((prev) => {
       const nextMemories = prev.filter((memory) => String(memory?.id || '') !== String(memoryId || ''));
-      persistMemoriesState(user?.id, nextMemories);
-      void deleteRemoteMemory(user?.id, memoryId);
+      memoryPersistence.persistMemoriesState(user?.id, nextMemories);
+      void memoryPersistence.deleteRemoteMemory(user?.id, memoryId);
       return nextMemories;
     });
     setMemorySystemCurrentMemory(null);
@@ -36558,3 +36107,5 @@ const shakeStyle = `
 `;
 
 export default App;
+
+
