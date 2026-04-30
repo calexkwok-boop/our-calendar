@@ -932,7 +932,169 @@ function CategoryGrid({ onPageTap }) {
   );
 }
 
-export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPlanEvent = () => {}, onMakeItHappen, onCopyChapter, darkMode = false }) {
+function getPublicCalendarCreatorLabel(calendar = {}) {
+  const createdBy = String(calendar?.created_by || "").trim();
+  if (createdBy) return createdBy.startsWith("@") ? createdBy : `@${createdBy}`;
+  const ownerId = String(calendar?.owner_id || "").trim();
+  if (ownerId && !isUuidLike(ownerId)) return ownerId.startsWith("@") ? ownerId : `@${ownerId}`;
+  return "Community";
+}
+
+function PublishedCalendarCard({ calendar, onOpen, darkMode }) {
+  const tags = Array.isArray(calendar?.public_tags) ? calendar.public_tags : [];
+  return (
+    <button
+      onClick={() => onOpen?.(calendar)}
+      className={`flex-shrink-0 w-72 rounded-[26px] overflow-hidden text-left border shadow-sm active:opacity-80 ${darkMode ? "bg-[#161f30] border-transparent shadow-none" : "bg-white border-stone-100"}`}
+    >
+      <div className={`relative h-40 ${darkMode ? "bg-gradient-to-br from-teal-900/60 via-cyan-900/40 to-slate-900" : "bg-gradient-to-br from-teal-100 via-cyan-50 to-amber-50"}`}>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+        <div className="absolute inset-0 flex items-center justify-center text-5xl">📅</div>
+        <div className="absolute bottom-3 left-3 right-3">
+          <div className="text-white font-handwritten text-[28px] font-bold leading-tight line-clamp-2">
+            {calendar.public_title || calendar.name || "Public Calendar"}
+          </div>
+          <div className="text-white/85 text-xs mt-1">{getPublicCalendarCreatorLabel(calendar)}</div>
+        </div>
+      </div>
+      <div className="px-4 pt-3.5 pb-4">
+        <p className={`text-sm leading-relaxed line-clamp-2 ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
+          {calendar.public_description || "A community calendar you can browse and join."}
+        </p>
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {tags.slice(0, 3).map((tag) => (
+              <span
+                key={`${calendar.id}-${tag}`}
+                className={`px-2.5 py-1 rounded-full text-[10px] font-medium ${darkMode ? "bg-cyan-500/10 text-cyan-200" : "bg-cyan-50 text-cyan-700"}`}
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </button>
+  );
+}
+
+function PublishedCalendarPreviewSheet({
+  calendar,
+  joined,
+  onClose,
+  onJoin,
+  onLeave,
+  onOpenCalendar,
+  darkMode,
+}) {
+  const [busy, setBusy] = useState(false);
+  const { sheetStyle, handleProps } = useSwipeDownSheet(onClose, true);
+  const tags = Array.isArray(calendar?.public_tags) ? calendar.public_tags : [];
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  const handleJoinToggle = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      if (joined) {
+        await onLeave?.(calendar?.id);
+      } else {
+        await onJoin?.(calendar);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleOpen = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await onOpenCalendar?.(calendar);
+      onClose?.();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-[10110] flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}>
+      <div className={`w-full max-w-lg rounded-t-[28px] shadow-2xl max-h-[92vh] flex flex-col overflow-hidden ${darkMode ? "bg-[#0e1520]" : "bg-white"}`} style={sheetStyle}>
+        <div {...handleProps} className="pt-3 pb-1">
+          <div className={`w-10 h-1 rounded-full mx-auto ${darkMode ? "bg-white/10" : "bg-stone-200"}`} />
+        </div>
+        <div className="overflow-y-auto flex-1">
+          <div className={`relative h-56 ${darkMode ? "bg-gradient-to-br from-teal-900/60 via-cyan-900/40 to-slate-900" : "bg-gradient-to-br from-teal-100 via-cyan-50 to-amber-50"}`}>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+            <button onClick={onClose} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/45 text-white flex items-center justify-center text-sm">✕</button>
+            <div className="absolute inset-0 flex items-center justify-center text-6xl">📅</div>
+            <div className="absolute bottom-4 left-5 right-5 text-white">
+              <div className="font-handwritten text-[34px] font-bold leading-tight">{calendar.public_title || calendar.name || "Public Calendar"}</div>
+              <div className="text-sm text-white/85 mt-1">By {getPublicCalendarCreatorLabel(calendar)}</div>
+            </div>
+          </div>
+          <div className="px-5 py-5">
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {tags.map((tag) => (
+                  <span
+                    key={`${calendar.id}-preview-${tag}`}
+                    className={`px-3 py-1 rounded-full text-[11px] font-medium ${darkMode ? "bg-cyan-500/10 text-cyan-200" : "bg-cyan-50 text-cyan-700"}`}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className={`text-sm leading-relaxed ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
+              {calendar.public_description || "A published community calendar you can join and open."}
+            </p>
+          </div>
+        </div>
+        <div className={`flex-shrink-0 px-6 pt-3 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] border-t flex gap-3 ${darkMode ? 'border-white/5' : 'border-stone-100'}`}>
+          <button
+            onClick={handleOpen}
+            disabled={busy}
+            className="flex-1 py-3 rounded-2xl text-base transition-colors font-handwritten font-bold"
+            style={{ background: '#2dd4bf', color: '#111827' }}
+          >
+            Open calendar
+          </button>
+          <button
+            onClick={handleJoinToggle}
+            disabled={busy}
+            className="flex-1 py-3 rounded-2xl text-base border transition-colors font-handwritten font-bold"
+            style={{ background: darkMode ? 'rgba(196,181,253,0.16)' : '#f5f3ff', border: '1px solid rgba(139,92,246,0.25)', color: darkMode ? '#ddd6fe' : '#7c3aed' }}
+          >
+            {busy ? 'Saving…' : joined ? 'Subscribed' : 'Join calendar'}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+export default function ExplorePage({
+  onAddToSomeday,
+  onRemoveFromSomeday,
+  onPlanEvent = () => {},
+  onMakeItHappen,
+  onCopyChapter,
+  currentUser,
+  publicCalendars = [],
+  publicCalendarsLoading = false,
+  publicCalendarIds = [],
+  onJoinPublicCalendar,
+  onLeavePublicCalendarById,
+  onOpenPublicCalendar,
+  darkMode = false,
+}) {
   const [sources, setSources]             = useState({ friends: true, movies: true, hiking: true, games: true, restaurants: true, products: true, destinations: true });
   const [drawerOpen, setDrawerOpen]       = useState(false);
   const [search, setSearch]               = useState("");
@@ -945,6 +1107,7 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
   const [publishedChapters, setPublishedChapters] = useState([]);
   const [publishedChaptersLoading, setPublishedChaptersLoading] = useState(true);
   const [selectedPublishedChapter, setSelectedPublishedChapter] = useState(null);
+  const [selectedPublishedCalendar, setSelectedPublishedCalendar] = useState(null);
   const [destinationPlacePhotos, setDestinationPlacePhotos] = useState({});
   const destinationPhotoFetchedRef = useRef(new Set());
 
@@ -1291,6 +1454,31 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
             </>
           )}
 
+          {(publicCalendarsLoading || publicCalendars.length > 0) && (
+            <>
+              <SectionHeader label="Published calendars" />
+              <div className="flex gap-3 overflow-x-auto px-3.5 pb-1" style={{ scrollbarWidth: 'none' }}>
+                {publicCalendarsLoading
+                  ? (
+                    <>
+                      <div className={`flex-shrink-0 w-72 h-[228px] rounded-[26px] animate-pulse ${darkMode ? 'bg-[#161f30]' : 'bg-white border border-stone-100'}`} />
+                      <div className={`flex-shrink-0 w-72 h-[228px] rounded-[26px] animate-pulse ${darkMode ? 'bg-[#161f30]' : 'bg-white border border-stone-100'}`} />
+                    </>
+                  )
+                  : publicCalendars.map((calendar) => (
+                    <PublishedCalendarCard
+                      key={calendar.id}
+                      calendar={calendar}
+                      onOpen={setSelectedPublishedCalendar}
+                      darkMode={darkMode}
+                    />
+                  ))
+                }
+                <div className="flex-shrink-0 w-4" />
+              </div>
+            </>
+          )}
+
           {sectionData.dreaming.length > 0 && (
             <>
               <SectionHeader label="Dreaming of" />
@@ -1327,6 +1515,18 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
           chapter={selectedPublishedChapter}
           onClose={() => setSelectedPublishedChapter(null)}
           onCopy={onCopyChapter}
+          darkMode={darkMode}
+        />
+      )}
+
+      {selectedPublishedCalendar && (
+        <PublishedCalendarPreviewSheet
+          calendar={selectedPublishedCalendar}
+          joined={publicCalendarIds.includes(String(selectedPublishedCalendar?.id || ""))}
+          onClose={() => setSelectedPublishedCalendar(null)}
+          onJoin={onJoinPublicCalendar}
+          onLeave={onLeavePublicCalendarById}
+          onOpenCalendar={onOpenPublicCalendar}
           darkMode={darkMode}
         />
       )}

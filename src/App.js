@@ -10029,6 +10029,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setLayerRefreshToken(prev => prev + 1);
   };
 
+  const openPublicCalendar = async (layer) => {
+    const layerId = String(layer?.id || '').trim();
+    if (!layerId) return;
+    const joinedLayer = (layers || []).find((item) => String(item?.id || '') === layerId);
+    if (!joinedLayer && layer?.owner_id && user?.id && String(layer?.owner_id || '') !== String(user?.id || '')) {
+      await joinPublicCalendar(layer);
+    }
+    setActiveLayerId(layerId);
+    setBottomNavTab('calendar');
+  };
+
   const createLayerCalendar = async () => {
     const name = newLayerName.trim();
     if (!name || !user?.id) return;
@@ -30510,6 +30521,12 @@ transform: translateY(0);
                   name: user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || 'You',
                   avatarUrl: currentUserProfilePhotoUrl || undefined,
                 }}
+                publicCalendars={publicCalendars}
+                publicCalendarsLoading={exploreLoading}
+                publicCalendarIds={(layers || []).filter((layer) => Boolean(layer?.is_public)).map((layer) => String(layer?.id || ''))}
+                onJoinPublicCalendar={joinPublicCalendar}
+                onLeavePublicCalendarById={leavePublicCalendarById}
+                onOpenPublicCalendar={openPublicCalendar}
                 onAddToSomeday={(post) => {
                   const text = String(post?.title || post?.movieTitle || post?.cardTitle || post?.text || '').trim();
                   if (!text) return;
