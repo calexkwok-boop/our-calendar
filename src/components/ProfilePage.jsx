@@ -598,7 +598,8 @@ const ProfilePage = ({
         const friends = [];
         for (const [key, ctx] of friendMap.entries()) {
           const actualEmail = String(ctx?.email || '').toLowerCase().trim();
-          const handle = String(ctx?.handle || '').trim() || (actualEmail ? (knownHandlesRef.current[actualEmail] || actualEmail.split('@')[0]) : (ctx?.userId ? String(ctx.userId).slice(0, 8) : String(key || '').replace(/^user:/, 'friend')));
+          const handle = String(ctx?.handle || '').trim()
+            || (actualEmail ? (knownHandlesRef.current[actualEmail] || actualEmail.split('@')[0]) : 'Friend');
           const parts = [];
           if (ctx.trips.length === 1) parts.push(ctx.trips[0]);
           else if (ctx.trips.length > 1) parts.push(`${ctx.trips.length} trips`);

@@ -190,7 +190,8 @@ export async function loadFriendsList({
   const friends = [];
   for (const [key, context] of friendMap.entries()) {
     const actualEmail = String(context?.email || '').toLowerCase().trim();
-    const handle = String(context?.handle || '').trim() || (actualEmail ? ((knownHandlesByEmail || {})[actualEmail] || actualEmail.split('@')[0]) : (context?.userId ? String(context.userId).slice(0, 8) : String(key || '').replace(/^user:/, 'friend')));
+    const handle = String(context?.handle || '').trim()
+      || (actualEmail ? ((knownHandlesByEmail || {})[actualEmail] || actualEmail.split('@')[0]) : 'Friend');
     const parts = [];
     if (context.trips.length === 1) parts.push(context.trips[0]);
     else if (context.trips.length > 1) parts.push(`${context.trips.length} trips`);
