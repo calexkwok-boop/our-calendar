@@ -8,6 +8,8 @@ const isAcceptedChapterCollaborator = (row) => {
   return !status || status === 'accepted';
 };
 
+const UUID_LIKE_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export async function loadFriendsList({
   userId,
   userEmail,
@@ -128,8 +130,15 @@ export async function loadFriendsList({
     if (calendarOwnerIdSet.has(handleRow.user_id)) entry.sharedCalendars += 1;
     friendMap.set(mapKey, entry);
   }
-  const chapterOwnerIds = [...new Set((chapterRowsRes.data || []).map((row) => row.owner_id).filter((id) => id && id !== userId))];
+  const normalizedOwnerIdentity = String(ownerIdentity || '').trim().toLowerCase();
+  const chapterOwnerIds = [...new Set(
+    (chapterRowsRes.data || [])
+      .map((row) => String(row?.owner_id || '').trim())
+      .filter((id) => id && id !== String(userId || '').trim() && id.toLowerCase() !== normalizedOwnerIdentity && id.toLowerCase() !== String(userEmail || '').trim().toLowerCase())
+  )];
   const chapterOwnerIdSet = new Set(chapterOwnerIds);
+  const chapterOwnerUserIds = chapterOwnerIds.filter((id) => UUID_LIKE_RE.test(id));
+  const chapterOwnerLegacyKeys = chapterOwnerIds.filter((id) => !UUID_LIKE_RE.test(id));
   for (const collaborator of (chapterCollaboratorsRes.data || []).filter(isAcceptedChapterCollaborator)) {
     const email = String(collaborator?.email || '').toLowerCase().trim();
     if (!email || email === userEmail) continue;
@@ -160,15 +169,19 @@ export async function loadFriendsList({
     : [];
 
   const emailsMissingId = [...friendMap.entries()].filter(([, context]) => !context.userId).map(([email]) => email);
-  const [tripOwnerHandlesRes, tripOwnerHandlesFbRes, handleRowsRes, handleRowsFbRes, newHandlesRes, newHandlesFbRes, chapterOwnerHandlesRes, chapterOwnerHandlesFbRes] = await Promise.all([
+  const [tripOwnerHandlesRes, tripOwnerHandlesFbRes, handleRowsRes, handleRowsFbRes, newHandlesRes, newHandlesFbRes, chapterOwnerHandlesRes, chapterOwnerHandlesFbRes, chapterOwnerHandleKeyRes, chapterOwnerHandleKeyFbRes, chapterOwnerEmailKeyRes, chapterOwnerEmailKeyFbRes] = await Promise.all([
     tripOwnerIds.length > 0 ? supabase.from('user_handles').select('email, user_id').in('user_id', tripOwnerIds) : Promise.resolve({ data: [] }),
     tripOwnerIds.length > 0 ? supabase.from('handles').select('email, user_id').in('user_id', tripOwnerIds) : Promise.resolve({ data: [] }),
     emailsMissingId.length > 0 ? supabase.from('user_handles').select('email, user_id').in('email', emailsMissingId) : Promise.resolve({ data: [] }),
     emailsMissingId.length > 0 ? supabase.from('handles').select('email, user_id').in('email', emailsMissingId) : Promise.resolve({ data: [] }),
     newEventFriendIds.length > 0 ? supabase.from('user_handles').select('email, user_id').in('user_id', newEventFriendIds) : Promise.resolve({ data: [] }),
     newEventFriendIds.length > 0 ? supabase.from('handles').select('email, user_id').in('user_id', newEventFriendIds) : Promise.resolve({ data: [] }),
-    chapterOwnerIds.length > 0 ? supabase.from('user_handles').select('email, user_id, handle').in('user_id', chapterOwnerIds) : Promise.resolve({ data: [] }),
-    chapterOwnerIds.length > 0 ? supabase.from('handles').select('email, user_id, handle').in('user_id', chapterOwnerIds) : Promise.resolve({ data: [] }),
+    chapterOwnerUserIds.length > 0 ? supabase.from('user_handles').select('email, user_id, handle').in('user_id', chapterOwnerUserIds) : Promise.resolve({ data: [] }),
+    chapterOwnerUserIds.length > 0 ? supabase.from('handles').select('email, user_id, handle').in('user_id', chapterOwnerUserIds) : Promise.resolve({ data: [] }),
+    chapterOwnerLegacyKeys.length > 0 ? supabase.from('user_handles').select('email, user_id, handle').in('handle', chapterOwnerLegacyKeys) : Promise.resolve({ data: [] }),
+    chapterOwnerLegacyKeys.length > 0 ? supabase.from('handles').select('email, user_id, handle').in('handle', chapterOwnerLegacyKeys) : Promise.resolve({ data: [] }),
+    chapterOwnerLegacyKeys.length > 0 ? supabase.from('user_handles').select('email, user_id, handle').in('email', chapterOwnerLegacyKeys) : Promise.resolve({ data: [] }),
+    chapterOwnerLegacyKeys.length > 0 ? supabase.from('handles').select('email, user_id, handle').in('email', chapterOwnerLegacyKeys) : Promise.resolve({ data: [] }),
   ]);
 
   for (const handleRow of dedupeById([...(tripOwnerHandlesRes.data || []), ...(tripOwnerHandlesFbRes.data || [])])) {
@@ -194,7 +207,14 @@ export async function loadFriendsList({
     if (sharedEventsByUserId[handleRow.user_id]) entry.sharedEvents = sharedEventsByUserId[handleRow.user_id].size;
     friendMap.set(email, entry);
   }
-  for (const handleRow of dedupeById([...(chapterOwnerHandlesRes.data || []), ...(chapterOwnerHandlesFbRes.data || [])])) {
+  for (const handleRow of dedupeById([
+    ...(chapterOwnerHandlesRes.data || []),
+    ...(chapterOwnerHandlesFbRes.data || []),
+    ...(chapterOwnerHandleKeyRes.data || []),
+    ...(chapterOwnerHandleKeyFbRes.data || []),
+    ...(chapterOwnerEmailKeyRes.data || []),
+    ...(chapterOwnerEmailKeyFbRes.data || []),
+  ])) {
     const email = String(handleRow.email || '').toLowerCase().trim();
     const mapKey = email || (handleRow.user_id ? `user:${String(handleRow.user_id).trim()}` : '');
     if (!mapKey || email === userEmail) continue;

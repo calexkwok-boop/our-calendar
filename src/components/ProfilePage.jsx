@@ -29,6 +29,8 @@ const isAcceptedChapterCollaborator = (row) => {
   return !status || status === 'accepted';
 };
 
+const UUID_LIKE_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 // ─── Avatar gradients ─────────────────────────────────────────────────────────
 const AVATAR_GRADIENTS = [
   'linear-gradient(135deg, #f43f5e 0%, #a855f7 100%)',
@@ -495,8 +497,15 @@ const ProfilePage = ({
           if (calendarOwnerIdSet.has(h.user_id)) entry.sharedCalendars++;
           friendMap.set(mapKey, entry);
         }
-        const chapterOwnerIds = [...new Set((chapterRowsRes.data || []).map((row) => row.owner_id).filter((id) => id && id !== currentUser?.id))];
+        const normalizedAccountHandle = String(accountHandle || '').trim().toLowerCase();
+        const chapterOwnerIds = [...new Set(
+          (chapterRowsRes.data || [])
+            .map((row) => String(row?.owner_id || '').trim())
+            .filter((id) => id && id !== String(currentUser?.id || '').trim() && id.toLowerCase() !== normalizedAccountHandle && id.toLowerCase() !== String(userEmail || '').trim().toLowerCase())
+        )];
         const chapterOwnerIdSet = new Set(chapterOwnerIds);
+        const chapterOwnerUserIds = chapterOwnerIds.filter((id) => UUID_LIKE_RE.test(id));
+        const chapterOwnerLegacyKeys = chapterOwnerIds.filter((id) => !UUID_LIKE_RE.test(id));
         for (const collaborator of (chapterCollaboratorsRes.data || []).filter(isAcceptedChapterCollaborator)) {
           const email = String(collaborator?.email || '').toLowerCase().trim();
           if (!email || email === userEmail) continue;
@@ -508,7 +517,7 @@ const ProfilePage = ({
         // Step 3 (4 parallel): trip owner emails + userId resolution for event counting.
         // Both sets of inputs are ready after Step 2.
         const emailsMissingId = [...friendMap.entries()].filter(([, ctx]) => !ctx.userId).map(([email]) => email);
-        const [tripOwnerHandlesRes, tripOwnerHandlesFbRes, handleRowsRes, handleRowsFbRes, chapterOwnerHandlesRes, chapterOwnerHandlesFbRes] = await Promise.all([
+        const [tripOwnerHandlesRes, tripOwnerHandlesFbRes, handleRowsRes, handleRowsFbRes, chapterOwnerHandlesRes, chapterOwnerHandlesFbRes, chapterOwnerHandleKeyRes, chapterOwnerHandleKeyFbRes, chapterOwnerEmailKeyRes, chapterOwnerEmailKeyFbRes] = await Promise.all([
           tripOwnerIds.length > 0
             ? supabase.from('user_handles').select('email, user_id').in('user_id', tripOwnerIds)
             : Promise.resolve({ data: [] }),
@@ -521,11 +530,23 @@ const ProfilePage = ({
           emailsMissingId.length > 0
             ? supabase.from('handles').select('email, user_id').in('email', emailsMissingId)
             : Promise.resolve({ data: [] }),
-          chapterOwnerIds.length > 0
-            ? supabase.from('user_handles').select('email, user_id, handle').in('user_id', chapterOwnerIds)
+          chapterOwnerUserIds.length > 0
+            ? supabase.from('user_handles').select('email, user_id, handle').in('user_id', chapterOwnerUserIds)
             : Promise.resolve({ data: [] }),
-          chapterOwnerIds.length > 0
-            ? supabase.from('handles').select('email, user_id, handle').in('user_id', chapterOwnerIds)
+          chapterOwnerUserIds.length > 0
+            ? supabase.from('handles').select('email, user_id, handle').in('user_id', chapterOwnerUserIds)
+            : Promise.resolve({ data: [] }),
+          chapterOwnerLegacyKeys.length > 0
+            ? supabase.from('user_handles').select('email, user_id, handle').in('handle', chapterOwnerLegacyKeys)
+            : Promise.resolve({ data: [] }),
+          chapterOwnerLegacyKeys.length > 0
+            ? supabase.from('handles').select('email, user_id, handle').in('handle', chapterOwnerLegacyKeys)
+            : Promise.resolve({ data: [] }),
+          chapterOwnerLegacyKeys.length > 0
+            ? supabase.from('user_handles').select('email, user_id, handle').in('email', chapterOwnerLegacyKeys)
+            : Promise.resolve({ data: [] }),
+          chapterOwnerLegacyKeys.length > 0
+            ? supabase.from('handles').select('email, user_id, handle').in('email', chapterOwnerLegacyKeys)
             : Promise.resolve({ data: [] }),
         ]);
 
@@ -549,7 +570,14 @@ const ProfilePage = ({
             friendMap.get(email).userId = row.user_id;
           }
         }
-        for (const h of dedupeById([...(chapterOwnerHandlesRes.data || []), ...(chapterOwnerHandlesFbRes.data || [])])) {
+        for (const h of dedupeById([
+          ...(chapterOwnerHandlesRes.data || []),
+          ...(chapterOwnerHandlesFbRes.data || []),
+          ...(chapterOwnerHandleKeyRes.data || []),
+          ...(chapterOwnerHandleKeyFbRes.data || []),
+          ...(chapterOwnerEmailKeyRes.data || []),
+          ...(chapterOwnerEmailKeyFbRes.data || []),
+        ])) {
           const email = String(h.email || '').toLowerCase().trim();
           const mapKey = email || (h.user_id ? `user:${String(h.user_id).trim()}` : '');
           if (!mapKey || email === userEmail) continue;
