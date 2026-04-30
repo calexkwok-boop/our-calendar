@@ -308,13 +308,11 @@ export function useNotifications({ user, notificationsEnabled }) {
     }
 
     pollInviteRows();
-    const interval = setInterval(pollInviteRows, 60 * 1000);
     window.addEventListener('focus', pollInviteRows);
     const onVisible = () => { if (document.visibilityState === 'visible') pollInviteRows(); };
     document.addEventListener('visibilitychange', onVisible);
 
     return () => {
-      clearInterval(interval);
       window.removeEventListener('focus', pollInviteRows);
       document.removeEventListener('visibilitychange', onVisible);
       if (inviteChannel) supabase.removeChannel(inviteChannel);

@@ -13956,6 +13956,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setShowDateDetailModal(true);
   };
 
+  const shouldRefreshPopupCollections = () =>
+    bottomNavTab === 'events' || Boolean(selectedPopupEventPanelId);
+
   const joinPopupEvent = async (eventId, fallbackMeta = null) => {
     const normalizedEventId = String(eventId || '').trim();
     const popup = popupEventsByEventId[normalizedEventId] || null;
@@ -14009,7 +14012,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           .maybeSingle(),
       ]);
       if (existingSignup || existingMember) {
-        await loadPopupEventData();
+        if (shouldRefreshPopupCollections()) await loadPopupEventData();
         focusOnPopupEventDate(normalizedEventId, fallbackMeta?.dateKey || null);
         return;
       }
@@ -14018,14 +14021,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (error) {
       if (String(error?.code || '') === '23505') {
         // Already joined (unique event_id + user_id); treat as success.
-        await loadPopupEventData();
+        if (shouldRefreshPopupCollections()) await loadPopupEventData();
         focusOnPopupEventDate(normalizedEventId, fallbackMeta?.dateKey || null);
         return;
       }
       alert(`Could not join popup event: ${error.message}`);
       return;
     }
-    await loadPopupEventData();
+    if (shouldRefreshPopupCollections()) await loadPopupEventData();
     focusOnPopupEventDate(normalizedEventId, fallbackMeta?.dateKey || null);
   };
 
@@ -14048,7 +14051,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       alert(`Could not leave popup event: ${error.message}`);
       return;
     }
-    await loadPopupEventData();
+    if (shouldRefreshPopupCollections()) await loadPopupEventData();
   };
 
   const loadChatMembers = async () => {
@@ -15248,10 +15251,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [activeSubCalendar?.id, tripPhotos, subCalendarEvents]);
 
   useEffect(() => {
-    const shouldLoadUserCollections = bottomNavTab === 'home' || bottomNavTab === 'events';
-    if (!shouldLoadUserCollections) return;
-    loadUserTabTrips();
-    loadUserTabEvents();
+    if (bottomNavTab === 'home') {
+      loadUserTabTrips();
+      return;
+    }
+    if (bottomNavTab === 'events') {
+      loadUserTabEvents();
+    }
   }, [bottomNavTab, layers, layerRefreshToken, user?.id]);
 
   useEffect(() => {
@@ -15309,6 +15315,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   useEffect(() => {
     if (!activeLayerId) return;
+    if (document.visibilityState !== 'visible') return;
     loadKnownHandlesForActiveLayer();
   }, [knownHandlesLookupKey, activeLayerId]);
 
@@ -15892,17 +15899,20 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     };
 
     pollMembershipChanges();
-    const timer = setInterval(pollMembershipChanges, 30000);
+    const onFocus = () => {
+      if (document.visibilityState === 'visible') pollMembershipChanges();
+    };
     const onVisible = () => {
       if (document.visibilityState === 'visible') pollMembershipChanges();
     };
+    window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisible);
     return () => {
       canceled = true;
-      clearInterval(timer);
+      window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [user?.id, user?.email, user?.phone]);
+  }, [user?.id, user?.email, user?.phone, layerRefreshToken]);
 
   // Invite channel + loadPendingInvites functions moved to useNotifications.
 
@@ -16064,7 +16074,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       if (document.visibilityState !== 'visible') return;
       loadPendingTripInvites();
     };
-    const interval = setInterval(pollPendingTripInvites, 60 * 1000);
     const onFocus = () => pollPendingTripInvites();
     window.addEventListener('focus', onFocus);
     const onVisible = () => {
@@ -16072,7 +16081,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
-      clearInterval(interval);
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisible);
     };
@@ -16088,7 +16096,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       if (document.visibilityState !== 'visible') return;
       loadPendingCalendarInvites();
     };
-    const interval = setInterval(pollPendingCalendarInvites, 60 * 1000);
     const onFocus = () => pollPendingCalendarInvites();
     window.addEventListener('focus', onFocus);
     const onVisible = () => {
@@ -16096,7 +16103,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
-      clearInterval(interval);
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisible);
     };
@@ -16112,7 +16118,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       if (document.visibilityState !== 'visible') return;
       loadPendingChapterInvites();
     };
-    const interval = setInterval(pollPendingChapterInvites, 60 * 1000);
     const onFocus = () => pollPendingChapterInvites();
     window.addEventListener('focus', onFocus);
     const onVisible = () => {
@@ -16120,7 +16125,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
-      clearInterval(interval);
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisible);
     };
@@ -20276,7 +20280,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return () => { cancelled = true; };
   }, [user?.id]);
 
-  // ─── Eager friends list prefetch (runs in background after login)
+  // ????????? Eager friends list prefetch (runs in background after login)
   useEffect(() => {
     const userId = String(user?.id || '').trim();
     const userEmail = String(user?.email || '').toLowerCase().trim();
@@ -20284,16 +20288,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     const CACHE_KEY = `komo-friends-${userId}`;
     const CACHE_TTL = 10 * 60 * 1000; // 10 min
-    // Show stale cache immediately so the tab opens with content
+    let hasFreshCache = false;
     try {
       const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
       if (cached?.friends && Array.isArray(cached.friends) && Date.now() - (cached.ts || 0) < CACHE_TTL) {
         setPrefetchedFriendsList(cached.friends);
+        hasFreshCache = true;
       }
     } catch {}
 
+    if (hasFreshCache && !profileViewState.open) return;
+
     let cancelled = false;
-    (async () => {
+    let timeoutId = null;
+    let idleId = null;
+    const runPrefetch = async () => {
+      if (cancelled) return;
+      if (document.visibilityState !== 'visible') return;
       try {
         const friends = await loadFriendsListLib({
           userId,
@@ -20305,9 +20316,24 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         setPrefetchedFriendsList(friends);
         try { localStorage.setItem(CACHE_KEY, JSON.stringify({ friends, ts: Date.now() })); } catch {}
       } catch {}
-    })();
-    return () => { cancelled = true; };
-  }, [user?.id, user?.email]); // eslint-disable-line react-hooks/exhaustive-deps
+    };
+
+    if (profileViewState.open) {
+      runPrefetch();
+    } else if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      idleId = window.requestIdleCallback(() => { runPrefetch(); }, { timeout: 12000 });
+    } else {
+      timeoutId = window.setTimeout(() => { runPrefetch(); }, 4000);
+    }
+
+    return () => {
+      cancelled = true;
+      if (idleId !== null && typeof window !== 'undefined' && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    };
+  }, [user?.id, user?.email, profileViewState.open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const currentBucketListUserId = String(user?.id || 'guest').trim() || 'guest';
