@@ -146,9 +146,9 @@ const truncateText = (text, max = 120) => {
 };
 
 export const getDestinationResolvedImage = (destination = {}, fetchedPhotoUrl = '') => (
-  getDestinationImageOverride(destination)
-  || String(destination?.photo || destination?.imageUrl || destination?.destination_image || '').trim()
+  String(destination?.photo || destination?.imageUrl || destination?.destination_image || '').trim()
   || String(fetchedPhotoUrl || '').trim()
+  || getDestinationImageOverride(destination)
 );
 
 const destinationSomedayPayload = (post, photoUrl = '') => ({
@@ -692,6 +692,7 @@ const DestinationsPage = ({
   const fetchedRef       = useRef(false);
   const photoFetchedRef  = useRef(new Set());
   const placePhotosRef   = useRef({});
+  const overrideCacheWarmedRef = useRef(new Set());
   const lastSheetCloseAtRef = useRef(0);
   const travelToday = new Date();
   const travelDailyQuoteSeed = (
@@ -809,6 +810,40 @@ const DestinationsPage = ({
         });
         return changed ? merged : prev;
       });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filtered, featuredPost]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const nextCandidates = Array.from(new Map(
+      [...filtered.slice(0, 24), featuredPost]
+        .filter(Boolean)
+        .map((destination) => [String(destination?.id || ''), destination])
+        .filter(([id]) => id)
+    ).values());
+    if (!nextCandidates.length) return undefined;
+
+    (async () => {
+      for (const destination of nextCandidates) {
+        if (cancelled) return;
+        const destinationId = String(destination?.id || '').trim();
+        if (!destinationId) continue;
+        if (String(placePhotosRef.current[destinationId] || '').trim()) continue;
+        if (overrideCacheWarmedRef.current.has(destinationId)) continue;
+        const overrideImageUrl = String(getDestinationImageOverride(destination) || '').trim();
+        if (!overrideImageUrl) continue;
+        overrideCacheWarmedRef.current.add(destinationId);
+        const stableImageUrl = await persistDestinationImageCache({ destination, imageUrl: overrideImageUrl });
+        if (cancelled) return;
+        if (!String(stableImageUrl || '').trim()) continue;
+        setPlacePhotos((prev) => (
+          prev[destinationId] ? prev : { ...prev, [destinationId]: stableImageUrl }
+        ));
+      }
     })();
 
     return () => {

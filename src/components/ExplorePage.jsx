@@ -7,7 +7,6 @@ import RestaurantPage from "./RestaurantPage";
 import HikingPage from "./HikingPage";
 import DreamShelfPage, { getAllCuratedItemsShuffled } from "./DreamShelfPage";
 import DestinationsPage, { CURATED_DESTINATIONS, getDestinationResolvedImage } from "./DestinationsPage";
-import { getDestinationImageOverride } from "../data/destinationImageOverrides";
 import { getDestinationCacheKey, loadDestinationImageCache } from "../lib/destinationImageCache";
 import { supabase } from "../supabaseClient";
 
@@ -99,7 +98,6 @@ function buildDestinationExplorePool() {
   return Object.values(CURATED_DESTINATIONS)
     .flat()
     .map((destination, index) => {
-      const overrideImageUrl = getDestinationImageOverride(destination) || "";
       return {
         ...destination,
         id: destination.id || `dest-${index}`,
@@ -112,8 +110,8 @@ function buildDestinationExplorePool() {
         location: destination.location,
         desc: destination.description,
         tag: "Destinations",
-        imageUrl: overrideImageUrl || String(destination.imageUrl || "").trim(),
-        destination_image: overrideImageUrl || String(destination.destination_image || destination.imageUrl || "").trim(),
+        imageUrl: String(destination.imageUrl || "").trim(),
+        destination_image: String(destination.destination_image || destination.imageUrl || "").trim(),
         actions: ["Add to someday", "Plan trip"],
       };
     });
