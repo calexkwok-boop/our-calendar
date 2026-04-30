@@ -12,7 +12,7 @@ export async function loadFriendsList({
   if (!userId && !userEmail) return [];
   const friendMap = new Map();
 
-  const [ownedTripsRes, memberTripIdsRes, myLayerAccessRes, ownedLayersRes, myEventMembershipsRes] = await Promise.all([
+  const [ownedTripsRes, memberTripIdsRes, myLayerAccessRes, ownedLayersRes, myEventMembershipsRes, myEventSignupsRes] = await Promise.all([
     userId ? supabase.from('sub_calendars').select('id, name').eq('owner_id', userId) : Promise.resolve({ data: [] }),
     userEmail ? supabase.from('sub_calendar_members').select('sub_calendar_id').eq('email', userEmail) : Promise.resolve({ data: [] }),
     (userId || userEmail)
@@ -27,6 +27,9 @@ export async function loadFriendsList({
     includeSharedEvents && userId
       ? supabase.from('popup_event_members').select('event_id').eq('user_id', userId)
       : Promise.resolve({ data: [] }),
+    includeSharedEvents && userId
+      ? supabase.from('popup_event_signups').select('event_id').eq('user_id', userId)
+      : Promise.resolve({ data: [] }),
   ]);
 
   const ownedTripNameById = {};
@@ -38,9 +41,12 @@ export async function loadFriendsList({
   const calendarOwnerIdSet = new Set(calendarOwnerIds);
   const ownedLayerIds = (ownedLayersRes.data || []).map((row) => row.id).filter(Boolean);
   const uniqueLayerIds = [...new Set([...receivedLayerIds, ...ownedLayerIds])];
-  const myEventIds = (myEventMembershipsRes.data || []).map((row) => row.event_id).filter(Boolean);
+  const myEventIds = [...new Set([
+    ...(myEventMembershipsRes.data || []).map((row) => row.event_id),
+    ...(myEventSignupsRes.data || []).map((row) => row.event_id),
+  ].filter(Boolean))];
 
-  const [memberTripDataRes, coMembersRes, coCalMembersRes, calOwnerHandlesRes, calOwnerHandlesFbRes, eventCoMembersRes] = await Promise.all([
+  const [memberTripDataRes, coMembersRes, coCalMembersRes, calOwnerHandlesRes, calOwnerHandlesFbRes, eventCoMembersRes, eventCoSignupsRes] = await Promise.all([
     memberTripIds.length > 0 ? supabase.from('sub_calendars').select('id, owner_id, name').in('id', memberTripIds) : Promise.resolve({ data: [] }),
     allTripIds.length > 0 ? supabase.from('sub_calendar_members').select('email, sub_calendar_id').in('sub_calendar_id', allTripIds).neq('email', userEmail || '') : Promise.resolve({ data: [] }),
     uniqueLayerIds.length > 0 ? supabase.from('shared_access').select('shared_with_email, shared_with_id').in('layer_id', uniqueLayerIds).neq('shared_with_email', userEmail || '') : Promise.resolve({ data: [] }),
@@ -48,6 +54,9 @@ export async function loadFriendsList({
     calendarOwnerIds.length > 0 ? supabase.from('handles').select('email, user_id').in('user_id', calendarOwnerIds) : Promise.resolve({ data: [] }),
     includeSharedEvents && myEventIds.length > 0
       ? supabase.from('popup_event_members').select('event_id, user_id').in('event_id', myEventIds).neq('user_id', userId || '')
+      : Promise.resolve({ data: [] }),
+    includeSharedEvents && myEventIds.length > 0
+      ? supabase.from('popup_event_signups').select('event_id, user_id').in('event_id', myEventIds).neq('user_id', userId || '')
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -87,7 +96,11 @@ export async function loadFriendsList({
 
   const sharedEventsByUserId = {};
   if (includeSharedEvents) {
-    for (const row of (eventCoMembersRes.data || [])) {
+    const eventCoRows = Array.from(new Map(
+      [...(eventCoMembersRes.data || []), ...(eventCoSignupsRes.data || [])]
+        .map((row) => [`${String(row?.event_id || '')}|${String(row?.user_id || '')}`, row])
+    ).values());
+    for (const row of eventCoRows) {
       if (!row.user_id || !row.event_id) continue;
       if (!sharedEventsByUserId[row.user_id]) sharedEventsByUserId[row.user_id] = new Set();
       sharedEventsByUserId[row.user_id].add(row.event_id);
@@ -95,10 +108,10 @@ export async function loadFriendsList({
     for (const context of friendMap.values()) {
       if (context.userId && sharedEventsByUserId[context.userId]) context.sharedEvents = sharedEventsByUserId[context.userId].size;
     }
-  }
-  const knownUserIds = new Set([...friendMap.values()].map((context) => context.userId).filter(Boolean));
-  const newEventFriendIds = includeSharedEvents
-    ? [...new Set((eventCoMembersRes.data || []).map((row) => row.user_id).filter((uid) => uid && !knownUserIds.has(uid)))]
+    }
+    const knownUserIds = new Set([...friendMap.values()].map((context) => context.userId).filter(Boolean));
+    const newEventFriendIds = includeSharedEvents
+    ? [...new Set(eventCoRows.map((row) => row.user_id).filter((uid) => uid && !knownUserIds.has(uid)))]
     : [];
 
   const emailsMissingId = [...friendMap.entries()].filter(([, context]) => !context.userId).map(([email]) => email);

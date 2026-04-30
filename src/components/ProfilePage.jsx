@@ -355,7 +355,7 @@ const ProfilePage = ({
 
         // Step 1 (6 parallel): no inter-dependencies, only needs user identity.
         // Inlines getMyTripData's first half alongside the layer/event queries so they all fire together.
-        const [ownedTripsRes, memberTripIdsRes, myLayerAccessRes, ownedLayersRes, myEventMembershipsRes] = await Promise.all([
+        const [ownedTripsRes, memberTripIdsRes, myLayerAccessRes, ownedLayersRes, myEventMembershipsRes, myEventSignupsRes] = await Promise.all([
           currentUser?.id
             ? supabase.from('sub_calendars').select('id, name').eq('owner_id', currentUser.id)
             : Promise.resolve({ data: [] }),
@@ -374,6 +374,9 @@ const ProfilePage = ({
           currentUser?.id
             ? supabase.from('popup_event_members').select('event_id').eq('user_id', currentUser.id)
             : Promise.resolve({ data: [] }),
+          currentUser?.id
+            ? supabase.from('popup_event_signups').select('event_id').eq('user_id', currentUser.id)
+            : Promise.resolve({ data: [] }),
         ]);
 
         const ownedTripNameById = {};
@@ -391,7 +394,10 @@ const ProfilePage = ({
         const calendarOwnerIdSet = new Set(calendarOwnerIds);
         const ownedLayerIds = (ownedLayersRes.data || []).map(l => l.id).filter(Boolean);
         const uniqueLayerIds = [...new Set([...receivedLayerIds, ...ownedLayerIds])];
-        const myEventIds = (myEventMembershipsRes.data || []).map(m => m.event_id).filter(Boolean);
+        const myEventIds = [...new Set([
+          ...(myEventMembershipsRes.data || []).map(m => m.event_id),
+          ...(myEventSignupsRes.data || []).map(m => m.event_id),
+        ].filter(Boolean))];
 
         // Step 2 (5 parallel): needs trip IDs and layer IDs from Step 1.
         // memberTripDataRes replaces getMyTripData's second query + memberTripOwnersRes — one query yields both names and owners.
@@ -497,14 +503,25 @@ const ProfilePage = ({
 
         // Step 4: discover event-based connections + count shared events (bidirectional)
         if (myEventIds.length > 0) {
-          const { data: eventCoMembers } = await supabase
-            .from('popup_event_members')
-            .select('event_id, user_id')
-            .in('event_id', myEventIds)
-            .neq('user_id', currentUser?.id || '');
+          const [{ data: eventCoMembers }, { data: eventCoSignups }] = await Promise.all([
+            supabase
+              .from('popup_event_members')
+              .select('event_id, user_id')
+              .in('event_id', myEventIds)
+              .neq('user_id', currentUser?.id || ''),
+            supabase
+              .from('popup_event_signups')
+              .select('event_id, user_id')
+              .in('event_id', myEventIds)
+              .neq('user_id', currentUser?.id || ''),
+          ]);
+          const eventCoRows = Array.from(new Map(
+            [...(eventCoMembers || []), ...(eventCoSignups || [])]
+              .map((row) => [`${String(row?.event_id || '')}|${String(row?.user_id || '')}`, row])
+          ).values());
 
           const sharedEventsByUserId = {};
-          for (const m of (eventCoMembers || [])) {
+          for (const m of eventCoRows) {
             if (!m.user_id || !m.event_id) continue;
             if (!sharedEventsByUserId[m.user_id]) sharedEventsByUserId[m.user_id] = new Set();
             sharedEventsByUserId[m.user_id].add(m.event_id);
@@ -516,7 +533,7 @@ const ProfilePage = ({
           // Discover NEW friends from shared events (people not yet in friendMap)
           const knownUserIds = new Set([...friendMap.values()].map(ctx => ctx.userId).filter(Boolean));
           const newCoMemberUserIds = [...new Set(
-            (eventCoMembers || []).map(r => r.user_id).filter(uid => uid && !knownUserIds.has(uid))
+            eventCoRows.map(r => r.user_id).filter(uid => uid && !knownUserIds.has(uid))
           )];
           if (newCoMemberUserIds.length > 0) {
             const [newHandlesRes, newHandlesFbRes] = await Promise.all([
@@ -590,7 +607,9 @@ const ProfilePage = ({
           myLayerAccessRes,
           ownedLayersRes,
           myEventMembershipsRes,
+          myEventSignupMembershipsRes,
           friendEventMembershipsRes,
+          friendEventSignupMembershipsRes,
           userProfilesRes,
         ] = await Promise.all([
           email
@@ -615,8 +634,14 @@ const ProfilePage = ({
           currentUser?.id
             ? supabase.from('popup_event_members').select('event_id').eq('user_id', currentUser.id)
             : Promise.resolve({ data: [] }),
+          currentUser?.id
+            ? supabase.from('popup_event_signups').select('event_id').eq('user_id', currentUser.id)
+            : Promise.resolve({ data: [] }),
           viewedUserId
             ? supabase.from('popup_event_members').select('event_id').eq('user_id', viewedUserId)
+            : Promise.resolve({ data: [] }),
+          viewedUserId
+            ? supabase.from('popup_event_signups').select('event_id').eq('user_id', viewedUserId)
             : Promise.resolve({ data: [] }),
           viewedUserId
             ? supabase.from('user_profiles').select('share_photo_of_day, share_memories, share_komo_items').eq('user_id', viewedUserId).maybeSingle()
@@ -648,8 +673,14 @@ const ProfilePage = ({
         const sharedTripIds = [...allMyTripIdSet].filter(id => friendMemberIds.has(id));
 
         // Symmetric event count: intersection of both users' distinct event memberships
-        const myEventIdSet = new Set((myEventMembershipsRes.data || []).map(m => m.event_id).filter(Boolean));
-        const friendEventIdSet = new Set((friendEventMembershipsRes.data || []).map(m => m.event_id).filter(Boolean));
+        const myEventIdSet = new Set([
+          ...(myEventMembershipsRes.data || []).map(m => m.event_id),
+          ...(myEventSignupMembershipsRes.data || []).map(m => m.event_id),
+        ].filter(Boolean));
+        const friendEventIdSet = new Set([
+          ...(friendEventMembershipsRes.data || []).map(m => m.event_id),
+          ...(friendEventSignupMembershipsRes.data || []).map(m => m.event_id),
+        ].filter(Boolean));
         const sharedEventCount = [...myEventIdSet].filter(id => friendEventIdSet.has(id)).length;
 
         const receivedLayerIds = (myLayerAccessRes.data || []).map(a => a.layer_id).filter(Boolean);
