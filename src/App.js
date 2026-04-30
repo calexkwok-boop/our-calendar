@@ -3412,6 +3412,21 @@ function App() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
   const {
+    user, setUser,
+    isLoading, setIsLoading,
+    showAuth, setShowAuth,
+    authError, setAuthError,
+    authBusy, setAuthBusy,
+    preservedProfilePhotoUrlRef,
+  } = useAuth({
+    readCachedProfilePhotoUrl,
+    mergeAuthUserPreservingProfilePhoto,
+    onUserHydrated: (u) => {
+      if (u) void loadAccountHandleForUser(u);
+      else setCurrentUser('');
+    },
+  });
+  const {
     inAppNotifications, setInAppNotifications,
     pendingTripInvites, setPendingTripInvites,
     pendingCalendarInvites, setPendingCalendarInvites,
@@ -3486,21 +3501,6 @@ function App() {
   const [coverHeaderControlsInteractionAt, setCoverHeaderControlsInteractionAt] = useState(() => Date.now());
   const coverOpacityPreviewValueRef = useRef(null);
   const coverOpacityPreviewRafRef = useRef(null);
-  const {
-    user, setUser,
-    isLoading, setIsLoading,
-    showAuth, setShowAuth,
-    authError, setAuthError,
-    authBusy, setAuthBusy,
-    preservedProfilePhotoUrlRef,
-  } = useAuth({
-    readCachedProfilePhotoUrl,
-    mergeAuthUserPreservingProfilePhoto,
-    onUserHydrated: (u) => {
-      if (u) void loadAccountHandleForUser(u);
-      else setCurrentUser('');
-    },
-  });
   const [isImportingCalendar, setIsImportingCalendar] = useState(false);
   const [uploadingLayerMedia, setUploadingLayerMedia] = useState(false);
   const [showFirstImportPrompt, setShowFirstImportPrompt] = useState(false);
