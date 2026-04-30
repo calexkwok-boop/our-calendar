@@ -601,6 +601,8 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
   const [mapFailed, setMapFailed] = useState(Boolean(typeof window !== 'undefined' && window.googleMapsAuthFailed));
   const hasEventCoordinates = isValidLatLng(event?.location_lat, event?.location_lng);
   const sharedSelfLocation = locations.find((loc) => loc.user_id === user?.id) || null;
+  const hasSharedLocations = locations.length > 0;
+  const shouldActivateMap = hasSharedLocations || sharing;
   const mapHref = event?.location
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(String(event.location || '').trim())}`
     : hasEventCoordinates
@@ -646,6 +648,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
   }, [currentPosition, event.location_lat, event.location_lng, hasEventCoordinates, sharedSelfLocation]);
 
   useEffect(() => {
+    if (!shouldActivateMap) return undefined;
     if (typeof navigator === 'undefined' || !navigator.geolocation) return undefined;
     let cancelled = false;
     navigator.geolocation.getCurrentPosition(
@@ -667,10 +670,32 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
     return () => {
       cancelled = true;
     };
-  }, [syncViewport]);
+  }, [shouldActivateMap, syncViewport]);
+
+  useEffect(() => {
+    if (shouldActivateMap) return undefined;
+    Object.values(markersRef.current || {}).forEach((marker) => marker?.setMap?.(null));
+    markersRef.current = {};
+    if (eventMarkerRef.current) {
+      eventMarkerRef.current.setMap(null);
+      eventMarkerRef.current = null;
+    }
+    if (currentUserMarkerRef.current) {
+      currentUserMarkerRef.current.setMap(null);
+      currentUserMarkerRef.current = null;
+    }
+    if (mapRef.current) {
+      mapRef.current.innerHTML = '';
+    }
+    mapInstanceRef.current = null;
+    manualZoomRef.current = false;
+    setMapReady(false);
+    return undefined;
+  }, [shouldActivateMap]);
 
   // Init Google Map
   useEffect(() => {
+    if (!shouldActivateMap) return undefined;
     if (!mapRef.current || mapInstanceRef.current) return undefined;
 
     let cancelled = false;
@@ -735,9 +760,10 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
       cancelled = true;
       if (retryId) window.clearTimeout(retryId);
     };
-  }, [currentPosition, darkMode, event.location_lat, event.location_lng, hasEventCoordinates, syncViewport]);
+  }, [currentPosition, darkMode, event.location_lat, event.location_lng, hasEventCoordinates, shouldActivateMap, syncViewport]);
 
   useEffect(() => {
+    if (!shouldActivateMap) return;
     if (!mapInstanceRef.current || !mapReady || !window.google?.maps) return;
     if (hasEventCoordinates) {
       const eventPosition = { lat: Number(event.location_lat), lng: Number(event.location_lng) };
@@ -788,7 +814,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
     }
 
     syncViewport();
-  }, [accent, currentPosition, event.location, event.location_lat, event.location_lng, hasEventCoordinates, mapReady, sharedSelfLocation, syncViewport]);
+  }, [accent, currentPosition, event.location, event.location_lat, event.location_lng, hasEventCoordinates, mapReady, sharedSelfLocation, shouldActivateMap, syncViewport]);
 
   // Load + realtime locations
   const loadLocations = useCallback(async () => {
@@ -926,6 +952,39 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
                 Open in Google Maps
               </a>
             ) : null}
+          </div>
+        </div>
+      ) : !shouldActivateMap ? (
+        <div style={{ height: 300, background: darkMode ? '#0f172a' : '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ width: '100%', maxWidth: 360, borderRadius: 18, border: `1px solid ${border}`, background: softBg, padding: 18, textAlign: 'center' }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: darkMode ? '#fff' : 'var(--color-text-primary)' }}>No live location yet</div>
+            <div style={{ fontSize: 12, lineHeight: 1.5, color: darkMode ? '#cbd5e1' : 'var(--color-text-secondary)', marginTop: 6 }}>
+              The map stays off until at least one person shares their location.
+            </div>
+            {event?.location ? (
+              <div style={{ fontSize: 12, lineHeight: 1.5, color: darkMode ? '#e2e8f0' : 'var(--color-text-primary)', marginTop: 10 }}>
+                {event.location}
+              </div>
+            ) : null}
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 14 }}>
+              <button
+                type="button"
+                onClick={startSharing}
+                style={{ padding: '10px 14px', borderRadius: 12, border: 'none', background: accent, color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}
+              >
+                Share my location
+              </button>
+              {mapHref ? (
+                <a
+                  href={mapHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '10px 14px', borderRadius: 12, border: `1px solid ${border}`, background: darkMode ? 'rgba(255,255,255,0.04)' : '#fff', color: darkMode ? '#f8fafc' : 'var(--color-text-primary)', fontSize: 12, fontWeight: 800, textDecoration: 'none' }}
+                >
+                  Open venue
+                </a>
+              ) : null}
+            </div>
           </div>
         </div>
       ) : (
