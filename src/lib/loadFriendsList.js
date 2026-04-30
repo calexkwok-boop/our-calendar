@@ -170,12 +170,12 @@ export async function loadFriendsList({
 
   const emailsMissingId = [...friendMap.entries()].filter(([, context]) => !context.userId).map(([email]) => email);
   const [tripOwnerHandlesRes, tripOwnerHandlesFbRes, handleRowsRes, handleRowsFbRes, newHandlesRes, newHandlesFbRes, chapterOwnerHandlesRes, chapterOwnerHandlesFbRes, chapterOwnerHandleKeyRes, chapterOwnerHandleKeyFbRes, chapterOwnerEmailKeyRes, chapterOwnerEmailKeyFbRes] = await Promise.all([
-    tripOwnerIds.length > 0 ? supabase.from('user_handles').select('email, user_id').in('user_id', tripOwnerIds) : Promise.resolve({ data: [] }),
-    tripOwnerIds.length > 0 ? supabase.from('handles').select('email, user_id').in('user_id', tripOwnerIds) : Promise.resolve({ data: [] }),
-    emailsMissingId.length > 0 ? supabase.from('user_handles').select('email, user_id').in('email', emailsMissingId) : Promise.resolve({ data: [] }),
-    emailsMissingId.length > 0 ? supabase.from('handles').select('email, user_id').in('email', emailsMissingId) : Promise.resolve({ data: [] }),
-    newEventFriendIds.length > 0 ? supabase.from('user_handles').select('email, user_id').in('user_id', newEventFriendIds) : Promise.resolve({ data: [] }),
-    newEventFriendIds.length > 0 ? supabase.from('handles').select('email, user_id').in('user_id', newEventFriendIds) : Promise.resolve({ data: [] }),
+    tripOwnerIds.length > 0 ? supabase.from('user_handles').select('email, user_id, handle').in('user_id', tripOwnerIds) : Promise.resolve({ data: [] }),
+    tripOwnerIds.length > 0 ? supabase.from('handles').select('email, user_id, handle').in('user_id', tripOwnerIds) : Promise.resolve({ data: [] }),
+    emailsMissingId.length > 0 ? supabase.from('user_handles').select('email, user_id, handle').in('email', emailsMissingId) : Promise.resolve({ data: [] }),
+    emailsMissingId.length > 0 ? supabase.from('handles').select('email, user_id, handle').in('email', emailsMissingId) : Promise.resolve({ data: [] }),
+    newEventFriendIds.length > 0 ? supabase.from('user_handles').select('email, user_id, handle').in('user_id', newEventFriendIds) : Promise.resolve({ data: [] }),
+    newEventFriendIds.length > 0 ? supabase.from('handles').select('email, user_id, handle').in('user_id', newEventFriendIds) : Promise.resolve({ data: [] }),
     chapterOwnerUserIds.length > 0 ? supabase.from('user_handles').select('email, user_id, handle').in('user_id', chapterOwnerUserIds) : Promise.resolve({ data: [] }),
     chapterOwnerUserIds.length > 0 ? supabase.from('handles').select('email, user_id, handle').in('user_id', chapterOwnerUserIds) : Promise.resolve({ data: [] }),
     chapterOwnerLegacyKeys.length > 0 ? supabase.from('user_handles').select('email, user_id, handle').in('handle', chapterOwnerLegacyKeys) : Promise.resolve({ data: [] }),
@@ -187,8 +187,9 @@ export async function loadFriendsList({
   for (const handleRow of dedupeById([...(tripOwnerHandlesRes.data || []), ...(tripOwnerHandlesFbRes.data || [])])) {
     const email = String(handleRow.email || '').toLowerCase().trim();
     if (!email || email === userEmail) continue;
-    const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedChapters: 0, sharedEvents: 0, userId: null };
+    const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedChapters: 0, sharedEvents: 0, userId: null, handle: String(handleRow.handle || '').trim() };
     if (!entry.userId) entry.userId = handleRow.user_id;
+    if (!entry.handle && handleRow.handle) entry.handle = String(handleRow.handle || '').trim();
     if (handleRow.user_id && tripOwnerIdToName[handleRow.user_id]) {
       const tripName = tripOwnerIdToName[handleRow.user_id];
       if (!entry.trips.includes(tripName)) entry.trips.push(tripName);
@@ -197,13 +198,17 @@ export async function loadFriendsList({
   }
   for (const row of [...(handleRowsRes.data || []), ...(handleRowsFbRes.data || [])]) {
     const email = String(row.email || '').toLowerCase().trim();
-    if (row.user_id && friendMap.has(email) && !friendMap.get(email).userId) friendMap.get(email).userId = row.user_id;
+    if (friendMap.has(email)) {
+      if (row.user_id && !friendMap.get(email).userId) friendMap.get(email).userId = row.user_id;
+      if (row.handle && !friendMap.get(email).handle) friendMap.get(email).handle = String(row.handle || '').trim();
+    }
   }
   for (const handleRow of dedupeById([...(newHandlesRes.data || []), ...(newHandlesFbRes.data || [])])) {
     const email = String(handleRow.email || '').toLowerCase().trim();
     if (!email || email === userEmail) continue;
-    const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedChapters: 0, sharedEvents: 0, userId: handleRow.user_id };
+    const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedChapters: 0, sharedEvents: 0, userId: handleRow.user_id, handle: String(handleRow.handle || '').trim() };
     if (!entry.userId) entry.userId = handleRow.user_id;
+    if (!entry.handle && handleRow.handle) entry.handle = String(handleRow.handle || '').trim();
     if (sharedEventsByUserId[handleRow.user_id]) entry.sharedEvents = sharedEventsByUserId[handleRow.user_id].size;
     friendMap.set(email, entry);
   }
