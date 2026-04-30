@@ -953,6 +953,8 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
   const [publishedChapters, setPublishedChapters] = useState([]);
   const [publishedChaptersLoading, setPublishedChaptersLoading] = useState(true);
   const [selectedPublishedChapter, setSelectedPublishedChapter] = useState(null);
+  const [destinationPlacePhotos, setDestinationPlacePhotos] = useState({});
+  const destinationPhotoFetchedRef = useRef(new Set());
 
   const fullDestinationPool = useMemo(() => buildDestinationExplorePool(), []);
   const fullProductPool = useMemo(() => buildProductExplorePool(), []);
@@ -960,8 +962,66 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
     () => pickCommunityPosts({ destinations: fullDestinationPool, products: fullProductPool }),
     [fullDestinationPool, fullProductPool]
   );
+  const communityPostsWithDestinationPhotos = useMemo(
+    () => communityPosts.map((post) => {
+      if (post.type !== "destinations") return post;
+      const placePhotoUrl = String(destinationPlacePhotos[post.id] || "").trim();
+      if (!placePhotoUrl) return post;
+      return {
+        ...post,
+        imageUrl: placePhotoUrl,
+        destination_image: placePhotoUrl,
+        photo: placePhotoUrl,
+      };
+    }),
+    [communityPosts, destinationPlacePhotos]
+  );
   const moviePosts = useMemo(() => shuffle(movies.slice(0, 20)).slice(0, 6).map(m => ({ ...m, type: "movies" })), [movies]);
-  const activeCom  = useMemo(() => shuffle(communityPosts.filter(p => sources[p.type])), [communityPosts, sources]);
+  const activeCom  = useMemo(() => shuffle(communityPostsWithDestinationPhotos.filter(p => sources[p.type])), [communityPostsWithDestinationPhotos, sources]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const destinationPosts = communityPosts.filter((post) => post.type === "destinations");
+    destinationPosts.forEach((post) => {
+      const postId = String(post?.id || "").trim();
+      const destinationName = String(post?.destination_name || post?.name || post?.cardTitle || "").trim();
+      if (!postId || !destinationName) return;
+      if (String(post?.imageUrl || post?.destination_image || post?.photo || "").trim()) return;
+      if (destinationPlacePhotos[postId]) return;
+      if (destinationPhotoFetchedRef.current.has(postId)) return;
+      destinationPhotoFetchedRef.current.add(postId);
+      const query = encodeURIComponent(`${destinationName} ${post.location || ""} travel destination`);
+      fetch(`/api/places?action=textsearch&query=${query}&type=tourist_attraction`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (cancelled) return;
+          const photoRef = data?.results?.[0]?.photos?.[0]?.photo_reference;
+          if (!photoRef) return;
+          const photoUrl = `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800`;
+          setDestinationPlacePhotos((prev) => (prev[postId] ? prev : { ...prev, [postId]: photoUrl }));
+        })
+        .catch(() => {});
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [communityPosts, destinationPlacePhotos]);
+
+  useEffect(() => {
+    if (!selectedPost || selectedPost.type !== "destinations") return;
+    const placePhotoUrl = String(destinationPlacePhotos[selectedPost.id] || "").trim();
+    if (!placePhotoUrl) return;
+    setSelectedPost((prev) => {
+      if (!prev || prev.type !== "destinations" || String(prev.id || "") !== String(selectedPost.id || "")) return prev;
+      if (String(prev.imageUrl || prev.destination_image || prev.photo || "").trim() === placePhotoUrl) return prev;
+      return {
+        ...prev,
+        imageUrl: placePhotoUrl,
+        destination_image: placePhotoUrl,
+        photo: placePhotoUrl,
+      };
+    });
+  }, [selectedPost, destinationPlacePhotos]);
 
   useEffect(() => {
     if (!sources.movies) return;
