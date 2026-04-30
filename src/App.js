@@ -19953,7 +19953,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     shouldIncludeEventInPersonalOverview,
     getPersonalMemoryOwnerId: memoryPersistence.getPersonalMemoryOwnerId,
     getMemoryPrimaryPhotoUrl: memoryPersistence.getMemoryPrimaryPhotoUrl,
-    getMemoryPhotoUrls: memoryPersistence.getMemoryPhotoUrls,
     getJourneyGoalType,
   });
   const homeReflectionStreak = homeReflectionStats.streak;

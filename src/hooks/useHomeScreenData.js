@@ -382,11 +382,21 @@ export default function useHomeScreenData({
   const homeTodayPlanCount = overviewTodayEvents.length;
   const homeUpcomingEventCount = filteredUpcomingUserTabEvents.length;
   const currentHomeMemoryOwnerId = getPersonalMemoryOwnerId(user?.id);
+  const currentHomeMemoryIdentitySet = useMemo(() => {
+    const values = [currentHomeMemoryOwnerId, user?.id, user?.email, currentUser];
+    return new Set(values.map((v) => String(v || '').trim().toLowerCase()).filter(Boolean));
+  }, [currentHomeMemoryOwnerId, currentUser, user?.email, user?.id]);
 
   const isMemoryOwnedByCurrentUser = useCallback((memory) => {
-    const ownerId = String(memory?.ownerUserId || memory?.createdByUserId || '').trim();
-    return !ownerId || ownerId === currentHomeMemoryOwnerId;
-  }, [currentHomeMemoryOwnerId]);
+    const ownerCandidates = [
+      memory?.ownerUserId,
+      memory?.createdByUserId,
+      memory?.ownerEmail,
+      memory?.createdByEmail,
+    ].map((v) => String(v || '').trim().toLowerCase()).filter(Boolean);
+    if (ownerCandidates.length === 0) return true;
+    return ownerCandidates.some((c) => currentHomeMemoryIdentitySet.has(c));
+  }, [currentHomeMemoryIdentitySet]);
 
   const personalMemories = useMemo(() => (
     (Array.isArray(memories) ? memories : []).filter(isMemoryOwnedByCurrentUser)
