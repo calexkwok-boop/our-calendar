@@ -443,15 +443,27 @@ export default function useHomeScreenData({
     homeResolvedMemories.reduce((total, memory) => total + (memory?.photos?.length || 0), 0)
   ), [homeResolvedMemories]);
 
-  const homeMemoryCollagePhotos = useMemo(() => (
-    [...homeResolvedMemories]
+  const homeMemoryCollagePhotos = useMemo(() => {
+    const toDisplayUrl = (url) => {
+      const raw = String(url || '').trim();
+      if (!raw) return '';
+      try {
+        const parsed = new URL(raw);
+        const renderMarker = '/storage/v1/render/image/public/';
+        if (parsed.pathname.startsWith(renderMarker)) {
+          return `${parsed.origin}/storage/v1/object/public/${parsed.pathname.slice(renderMarker.length)}`;
+        }
+      } catch {}
+      return raw;
+    };
+    return [...homeResolvedMemories]
       .flatMap((memory) => {
         const urls = [];
         const cover = getMemoryPrimaryPhotoUrl(memory);
-        if (cover) urls.push(cover);
+        if (cover) urls.push(toDisplayUrl(cover));
         (memory?.photos || []).forEach((photo) => {
           const url = String(photo?.url || photo?.photoUrl || '').trim();
-          if (url) urls.push(url);
+          if (url) urls.push(toDisplayUrl(url));
         });
         return urls;
       })
@@ -461,8 +473,8 @@ export default function useHomeScreenData({
         const rightKey = `${todayKey}:${String(user?.id || 'guest').trim() || 'guest'}:${right}`;
         return hashHomeMemoryRotationKey(leftKey) - hashHomeMemoryRotationKey(rightKey);
       })
-      .slice(0, 4)
-  ), [getMemoryPrimaryPhotoUrl, homeResolvedMemories, todayKey, user?.id]);
+      .slice(0, 4);
+  }, [getMemoryPrimaryPhotoUrl, homeResolvedMemories, todayKey, user?.id]);
 
   const homeYearStats = useMemo(() => {
     const currentYear = new Date().getFullYear();
