@@ -15,7 +15,14 @@ export async function loadFriendsList({
   const [ownedTripsRes, memberTripIdsRes, myLayerAccessRes, ownedLayersRes, myEventMembershipsRes] = await Promise.all([
     userId ? supabase.from('sub_calendars').select('id, name').eq('owner_id', userId) : Promise.resolve({ data: [] }),
     userEmail ? supabase.from('sub_calendar_members').select('sub_calendar_id').eq('email', userEmail) : Promise.resolve({ data: [] }),
-    userEmail ? supabase.from('shared_access').select('layer_id, owner_id').eq('shared_with_email', userEmail) : Promise.resolve({ data: [] }),
+    (userId || userEmail)
+      ? (() => {
+          let query = supabase.from('shared_access').select('layer_id, owner_id');
+          if (userId && userEmail) return query.or(`shared_with_id.eq.${String(userId).trim()},shared_with_email.eq.${userEmail}`);
+          if (userId) return query.eq('shared_with_id', String(userId).trim());
+          return query.eq('shared_with_email', userEmail);
+        })()
+      : Promise.resolve({ data: [] }),
     userId ? supabase.from('categories').select('id').eq('owner_id', userId) : Promise.resolve({ data: [] }),
     includeSharedEvents && userId
       ? supabase.from('popup_event_members').select('event_id').eq('user_id', userId)

@@ -20090,7 +20090,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const selectedJourneyWeightMetrics = getJourneyWeightMetrics(selectedJourneyWeightGoal, journeyState?.entries || []);
   const journeyRunElapsedMs = calculateJourneyRunElapsedMs(journeyRunSession, journeyRunNowMs);
   const journeyRunPaceLabel = formatJourneyPace(journeyRunSession?.distanceMiles || 0, journeyRunElapsedMs);
-  const journeyRunRoutePreview = buildJourneyRoutePreview(journeyRunSession?.routePoints || []);
+  const journeyRunRoutePreview = useMemo(
+    () => (showJourneyRunTrackerModal ? buildJourneyRoutePreview(journeyRunSession?.routePoints || []) : null),
+    [showJourneyRunTrackerModal, journeyRunSession?.routePoints]
+  );
   const journeyWorkoutElapsedMs = calculateJourneyRunElapsedMs(journeyWorkoutSession, journeyWorkoutNowMs);
   const journeyWorkoutRestRemainingSeconds = Math.max(0, Math.ceil((Number(new Date(journeyWorkoutSession?.restEndsAt || 0)) - journeyWorkoutNowMs) / 1000));
   const createdJourneyGoal = journeyGoalById[String(journeyCreatedGoalId || '')] || null;
@@ -20749,16 +20752,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [showRoundRobinPanel]);
 
   useEffect(() => {
-    if (journeyRunSession?.status !== 'active') return undefined;
+    const shouldTickRunTracker = showJourneyRunTrackerModal && journeyRunSession?.status === 'active';
+    if (!shouldTickRunTracker) return undefined;
+    setJourneyRunNowMs(Date.now());
     const intervalId = window.setInterval(() => setJourneyRunNowMs(Date.now()), 1000);
     return () => window.clearInterval(intervalId);
-  }, [journeyRunSession?.status]);
+  }, [showJourneyRunTrackerModal, journeyRunSession?.status]);
 
   useEffect(() => {
-    if (journeyWorkoutSession?.status !== 'active' && !journeyWorkoutSession?.restEndsAt) return undefined;
+    const shouldTickWorkoutTracker = showJourneyWorkoutTrackerModal
+      && (journeyWorkoutSession?.status === 'active' || Boolean(journeyWorkoutSession?.restEndsAt));
+    if (!shouldTickWorkoutTracker) return undefined;
+    setJourneyWorkoutNowMs(Date.now());
     const intervalId = window.setInterval(() => setJourneyWorkoutNowMs(Date.now()), 1000);
     return () => window.clearInterval(intervalId);
-  }, [journeyWorkoutSession?.status, journeyWorkoutSession?.restEndsAt]);
+  }, [showJourneyWorkoutTrackerModal, journeyWorkoutSession?.status, journeyWorkoutSession?.restEndsAt]);
 
   useEffect(() => {
     const isTrackingRun = showJourneyRunTrackerModal && journeyRunSession?.status === 'active';

@@ -359,7 +359,12 @@ const ProfilePage = ({
           userEmail
             ? supabase.from('sub_calendar_members').select('sub_calendar_id').eq('email', userEmail)
             : Promise.resolve({ data: [] }),
-          supabase.from('shared_access').select('layer_id, owner_id').eq('shared_with_email', userEmail),
+          (() => {
+            let query = supabase.from('shared_access').select('layer_id, owner_id');
+            if (currentUser?.id && userEmail) return query.or(`shared_with_id.eq.${String(currentUser.id).trim()},shared_with_email.eq.${userEmail}`);
+            if (currentUser?.id) return query.eq('shared_with_id', String(currentUser.id).trim());
+            return query.eq('shared_with_email', userEmail);
+          })(),
           currentUser?.id
             ? supabase.from('categories').select('id').eq('owner_id', currentUser.id)
             : Promise.resolve({ data: [] }),
