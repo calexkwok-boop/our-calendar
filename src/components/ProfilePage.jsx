@@ -24,6 +24,11 @@ import { supabase } from '../supabaseClient';
 
 const getSharingPrefsKey = (userId) => `profile-sharing-prefs-${String(userId || 'guest')}`;
 
+const isAcceptedChapterCollaborator = (row) => {
+  const status = String(row?.status || '').trim().toLowerCase();
+  return !status || status === 'accepted';
+};
+
 // ─── Avatar gradients ─────────────────────────────────────────────────────────
 const AVATAR_GRADIENTS = [
   'linear-gradient(135deg, #f43f5e 0%, #a855f7 100%)',
@@ -389,7 +394,7 @@ const ProfilePage = ({
               })()
             : Promise.resolve({ data: [] }),
           userEmail
-            ? supabase.from('chapter_collaborators').select('chapter_id').eq('email', userEmail).eq('status', 'accepted')
+            ? supabase.from('chapter_collaborators').select('chapter_id, status').ilike('email', userEmail)
             : Promise.resolve({ data: [] }),
         ]);
 
@@ -409,7 +414,10 @@ const ProfilePage = ({
         const ownedLayerIds = (ownedLayersRes.data || []).map(l => l.id).filter(Boolean);
         const uniqueLayerIds = [...new Set([...receivedLayerIds, ...ownedLayerIds])];
         const ownedChapterIds = (ownedChaptersRes.data || []).map(row => row.id).filter(Boolean);
-        const memberChapterIds = (memberChapterIdsRes.data || []).map(row => row.chapter_id).filter(Boolean);
+        const memberChapterIds = (memberChapterIdsRes.data || [])
+          .filter(isAcceptedChapterCollaborator)
+          .map(row => row.chapter_id)
+          .filter(Boolean);
         const allChapterIds = [...new Set([...ownedChapterIds, ...memberChapterIds])];
         const myEventIds = [...new Set([
           ...(myEventMembershipsRes.data || []).map(m => m.event_id),
@@ -439,7 +447,7 @@ const ProfilePage = ({
             ? supabase.from('chapters').select('id, owner_id').in('id', allChapterIds)
             : Promise.resolve({ data: [] }),
           allChapterIds.length > 0
-            ? supabase.from('chapter_collaborators').select('chapter_id, email, status').in('chapter_id', allChapterIds).eq('status', 'accepted')
+            ? supabase.from('chapter_collaborators').select('chapter_id, email, status').in('chapter_id', allChapterIds)
             : Promise.resolve({ data: [] }),
         ]);
 
@@ -489,7 +497,7 @@ const ProfilePage = ({
         }
         const chapterOwnerIds = [...new Set((chapterRowsRes.data || []).map((row) => row.owner_id).filter((id) => id && id !== currentUser?.id))];
         const chapterOwnerIdSet = new Set(chapterOwnerIds);
-        for (const collaborator of (chapterCollaboratorsRes.data || [])) {
+        for (const collaborator of (chapterCollaboratorsRes.data || []).filter(isAcceptedChapterCollaborator)) {
           const email = String(collaborator?.email || '').toLowerCase().trim();
           if (!email || email === userEmail) continue;
           const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedChapters: 0, sharedEvents: 0, userId: null };
@@ -694,13 +702,13 @@ const ProfilePage = ({
             ? supabase.from('chapters').select('id').eq('owner_id', currentUser.id)
             : Promise.resolve({ data: [] }),
           userEmail
-            ? supabase.from('chapter_collaborators').select('chapter_id').eq('email', userEmail).eq('status', 'accepted')
+            ? supabase.from('chapter_collaborators').select('chapter_id, status').ilike('email', userEmail)
             : Promise.resolve({ data: [] }),
           viewedUserId
             ? supabase.from('chapters').select('id').eq('owner_id', viewedUserId)
             : Promise.resolve({ data: [] }),
           email
-            ? supabase.from('chapter_collaborators').select('chapter_id').eq('email', email).eq('status', 'accepted')
+            ? supabase.from('chapter_collaborators').select('chapter_id, status').ilike('email', email)
             : Promise.resolve({ data: [] }),
           currentUser?.id
             ? supabase.from('popup_event_members').select('event_id').eq('user_id', currentUser.id)
@@ -744,11 +752,11 @@ const ProfilePage = ({
         const sharedTripIds = [...allMyTripIdSet].filter(id => friendMemberIds.has(id));
         const allMyChapterIdSet = new Set([
           ...(myOwnedChapterIdsRes.data || []).map(row => row.id),
-          ...(myMemberChapterIdsRes.data || []).map(row => row.chapter_id),
+          ...(myMemberChapterIdsRes.data || []).filter(isAcceptedChapterCollaborator).map(row => row.chapter_id),
         ].filter(Boolean));
         const friendChapterIdSet = new Set([
           ...(friendOwnedChapterIdsRes.data || []).map(row => row.id),
-          ...(friendMemberChapterIdsRes.data || []).map(row => row.chapter_id),
+          ...(friendMemberChapterIdsRes.data || []).filter(isAcceptedChapterCollaborator).map(row => row.chapter_id),
         ].filter(Boolean));
         const sharedChapterCount = [...allMyChapterIdSet].filter(id => friendChapterIdSet.has(id)).length;
 

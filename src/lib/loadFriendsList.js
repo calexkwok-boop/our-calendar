@@ -3,6 +3,11 @@ import { supabase } from '../supabaseClient';
 const dedupeById = (rows) =>
   [...new Map((rows || []).filter((row) => row?.user_id).map((row) => [row.user_id, row])).values()];
 
+const isAcceptedChapterCollaborator = (row) => {
+  const status = String(row?.status || '').trim().toLowerCase();
+  return !status || status === 'accepted';
+};
+
 export async function loadFriendsList({
   userId,
   userEmail,
@@ -43,7 +48,7 @@ export async function loadFriendsList({
         })()
       : Promise.resolve({ data: [] }),
     userEmail
-      ? supabase.from('chapter_collaborators').select('chapter_id').eq('email', userEmail).eq('status', 'accepted')
+      ? supabase.from('chapter_collaborators').select('chapter_id, status').ilike('email', userEmail)
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -57,7 +62,10 @@ export async function loadFriendsList({
   const ownedLayerIds = (ownedLayersRes.data || []).map((row) => row.id).filter(Boolean);
   const uniqueLayerIds = [...new Set([...receivedLayerIds, ...ownedLayerIds])];
   const ownedChapterIds = (ownedChaptersRes.data || []).map((row) => row.id).filter(Boolean);
-  const memberChapterIds = (memberChapterIdsRes.data || []).map((row) => row.chapter_id).filter(Boolean);
+  const memberChapterIds = (memberChapterIdsRes.data || [])
+    .filter(isAcceptedChapterCollaborator)
+    .map((row) => row.chapter_id)
+    .filter(Boolean);
   const allChapterIds = [...new Set([...ownedChapterIds, ...memberChapterIds])];
   const myEventIds = [...new Set([
     ...(myEventMembershipsRes.data || []).map((row) => row.event_id),
@@ -80,7 +88,7 @@ export async function loadFriendsList({
       ? supabase.from('chapters').select('id, owner_id').in('id', allChapterIds)
       : Promise.resolve({ data: [] }),
     allChapterIds.length > 0
-      ? supabase.from('chapter_collaborators').select('chapter_id, email, status').in('chapter_id', allChapterIds).eq('status', 'accepted')
+      ? supabase.from('chapter_collaborators').select('chapter_id, email, status').in('chapter_id', allChapterIds)
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -122,7 +130,7 @@ export async function loadFriendsList({
   }
   const chapterOwnerIds = [...new Set((chapterRowsRes.data || []).map((row) => row.owner_id).filter((id) => id && id !== userId))];
   const chapterOwnerIdSet = new Set(chapterOwnerIds);
-  for (const collaborator of (chapterCollaboratorsRes.data || [])) {
+  for (const collaborator of (chapterCollaboratorsRes.data || []).filter(isAcceptedChapterCollaborator)) {
     const email = String(collaborator?.email || '').toLowerCase().trim();
     if (!email || email === userEmail) continue;
     const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedChapters: 0, sharedEvents: 0, userId: null };
