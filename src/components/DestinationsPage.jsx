@@ -23,6 +23,7 @@ import { supabase } from '../supabaseClient';
 import JourneyQuoteDisplay from './JourneyQuoteDisplay';
 import TRAVEL_QUOTES from '../data/travelQuotes';
 import { getDestinationImageOverride } from '../data/destinationImageOverrides';
+import { getDestinationCacheKey, loadDestinationImageCache, persistDestinationImageCache } from '../lib/destinationImageCache';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 const handwritten = '"Caveat", cursive';
@@ -690,6 +691,7 @@ const DestinationsPage = ({
   const searchBoxRef     = useRef(null);
   const fetchedRef       = useRef(false);
   const photoFetchedRef  = useRef(new Set());
+  const placePhotosRef   = useRef({});
   const lastSheetCloseAtRef = useRef(0);
   const travelToday = new Date();
   const travelDailyQuoteSeed = (
@@ -771,6 +773,50 @@ const DestinationsPage = ({
   }, [destinations, search, vibe]);
 
   useEffect(() => {
+    placePhotosRef.current = placePhotos;
+  }, [placePhotos]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const nextCandidates = Array.from(new Map(
+      [...filtered.slice(0, 24), featuredPost]
+        .filter(Boolean)
+        .map((destination) => [String(destination?.id || ''), destination])
+        .filter(([id]) => id)
+    ).values());
+    if (!nextCandidates.length) return undefined;
+
+    (async () => {
+      const cachedByKey = await loadDestinationImageCache(nextCandidates);
+      if (cancelled || !cachedByKey || typeof cachedByKey !== 'object') return;
+      const nextPhotos = {};
+      nextCandidates.forEach((destination) => {
+        const destinationId = String(destination?.id || '').trim();
+        const destinationKey = getDestinationCacheKey(destination);
+        const imageUrl = String(cachedByKey[destinationKey] || '').trim();
+        if (!destinationId || !imageUrl) return;
+        nextPhotos[destinationId] = imageUrl;
+        photoFetchedRef.current.add(destinationId);
+      });
+      if (!Object.keys(nextPhotos).length) return;
+      setPlacePhotos((prev) => {
+        let changed = false;
+        const merged = { ...prev };
+        Object.entries(nextPhotos).forEach(([destinationId, imageUrl]) => {
+          if (merged[destinationId] === imageUrl) return;
+          merged[destinationId] = imageUrl;
+          changed = true;
+        });
+        return changed ? merged : prev;
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filtered, featuredPost]);
+
+  useEffect(() => {
     const query = search.trim();
     if (!query) {
       setGoogleSearchResults([]);
@@ -836,7 +882,8 @@ const DestinationsPage = ({
     const destinationId = String(destination?.id || '');
     const destinationName = destination?.name || destination?.destination_name || '';
     const destinationPhoto = getDestinationResolvedImage(destination, '');
-    if (!destinationId || !destinationName || destinationPhoto || photoFetchedRef.current.has(destinationId)) return;
+    const cachedPhoto = String(placePhotosRef.current[destinationId] || '').trim();
+    if (!destinationId || !destinationName || destinationPhoto || cachedPhoto || photoFetchedRef.current.has(destinationId)) return;
     photoFetchedRef.current.add(destinationId);
 
     try {
@@ -848,8 +895,9 @@ const DestinationsPage = ({
       if (!photoRef) return;
 
       const url = `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800`;
+      const stableImageUrl = await persistDestinationImageCache({ destination, imageUrl: url });
       setPlacePhotos((prev) => (
-        prev[destination.id] ? prev : { ...prev, [destination.id]: url }
+        prev[destination.id] ? prev : { ...prev, [destination.id]: stableImageUrl || url }
       ));
 
       const attribution = photo.html_attributions?.[0] || '';

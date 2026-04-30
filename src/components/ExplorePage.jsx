@@ -8,6 +8,7 @@ import HikingPage from "./HikingPage";
 import DreamShelfPage, { getAllCuratedItemsShuffled } from "./DreamShelfPage";
 import DestinationsPage, { CURATED_DESTINATIONS, getDestinationResolvedImage } from "./DestinationsPage";
 import { getDestinationImageOverride } from "../data/destinationImageOverrides";
+import { getDestinationCacheKey, loadDestinationImageCache } from "../lib/destinationImageCache";
 import { supabase } from "../supabaseClient";
 
 const TMDB_KEY = "b66752afda91b8258d32f4388f049a22";
@@ -947,7 +948,6 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
   const [publishedChaptersLoading, setPublishedChaptersLoading] = useState(true);
   const [selectedPublishedChapter, setSelectedPublishedChapter] = useState(null);
   const [destinationPlacePhotos, setDestinationPlacePhotos] = useState({});
-  const destinationPhotoFetchedRef = useRef(new Set());
 
   const fullDestinationPool = useMemo(() => buildDestinationExplorePool(), []);
   const fullProductPool = useMemo(() => buildProductExplorePool(), []);
@@ -975,30 +975,36 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
   useEffect(() => {
     let cancelled = false;
     const destinationPosts = communityPosts.filter((post) => post.type === "destinations");
-    destinationPosts.forEach((post) => {
-      const postId = String(post?.id || "").trim();
-      const destinationName = String(post?.destination_name || post?.name || post?.cardTitle || "").trim();
-      if (!postId || !destinationName) return;
-      if (String(post?.imageUrl || post?.destination_image || post?.photo || "").trim()) return;
-      if (destinationPlacePhotos[postId]) return;
-      if (destinationPhotoFetchedRef.current.has(postId)) return;
-      destinationPhotoFetchedRef.current.add(postId);
-      const query = encodeURIComponent(`${destinationName} ${post.location || ""} travel destination`);
-      fetch(`/api/places?action=textsearch&query=${query}&type=tourist_attraction`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (cancelled) return;
-          const photoRef = data?.results?.[0]?.photos?.[0]?.photo_reference;
-          if (!photoRef) return;
-          const photoUrl = `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800`;
-          setDestinationPlacePhotos((prev) => (prev[postId] ? prev : { ...prev, [postId]: photoUrl }));
-        })
-        .catch(() => {});
-    });
+    if (!destinationPosts.length) return undefined;
+
+    (async () => {
+      const cachedByKey = await loadDestinationImageCache(destinationPosts);
+      if (cancelled || !cachedByKey || typeof cachedByKey !== "object") return;
+      const nextPhotos = {};
+      destinationPosts.forEach((post) => {
+        const postId = String(post?.id || "").trim();
+        const imageUrl = String(cachedByKey[getDestinationCacheKey(post)] || "").trim();
+        if (!postId || !imageUrl) return;
+        nextPhotos[postId] = imageUrl;
+        destinationPhotoFetchedRef.current.add(postId);
+      });
+      if (!Object.keys(nextPhotos).length) return;
+      setDestinationPlacePhotos((prev) => {
+        let changed = false;
+        const merged = { ...prev };
+        Object.entries(nextPhotos).forEach(([postId, imageUrl]) => {
+          if (merged[postId] === imageUrl) return;
+          merged[postId] = imageUrl;
+          changed = true;
+        });
+        return changed ? merged : prev;
+      });
+    })();
+
     return () => {
       cancelled = true;
     };
-  }, [communityPosts, destinationPlacePhotos]);
+  }, [communityPosts]);
 
   useEffect(() => {
     if (!selectedPost || selectedPost.type !== "destinations") return;
