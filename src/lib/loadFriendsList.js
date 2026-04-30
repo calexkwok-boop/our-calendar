@@ -1,7 +1,23 @@
 import { supabase } from '../supabaseClient';
 
-const dedupeById = (rows) =>
-  [...new Map((rows || []).filter((row) => row?.user_id).map((row) => [row.user_id, row])).values()];
+const dedupeById = (rows) => {
+  const byKey = new Map();
+  for (const row of (rows || [])) {
+    const key =
+      String(row?.user_id || '').trim()
+      || String(row?.email || '').trim().toLowerCase()
+      || String(row?.handle || '').trim().toLowerCase();
+    if (!key) continue;
+    const existing = byKey.get(key) || {};
+    byKey.set(key, {
+      ...row,
+      user_id: row?.user_id || existing?.user_id || '',
+      email: row?.email || existing?.email || '',
+      handle: existing?.handle || row?.handle || '',
+    });
+  }
+  return [...byKey.values()];
+};
 
 const isAcceptedChapterCollaborator = (row) => {
   const status = String(row?.status || '').trim().toLowerCase();
@@ -15,6 +31,7 @@ export async function loadFriendsList({
   userEmail,
   ownerIdentity = '',
   knownHandlesByEmail = {},
+  knownHandlesByUserId = {},
   includeSharedEvents = false,
 }) {
   if (!userId && !userEmail) return [];
@@ -234,8 +251,25 @@ export async function loadFriendsList({
   const friends = [];
   for (const [key, context] of friendMap.entries()) {
     const actualEmail = String(context?.email || '').toLowerCase().trim();
-    const handle = String(context?.handle || '').trim()
-      || (actualEmail ? ((knownHandlesByEmail || {})[actualEmail] || actualEmail.split('@')[0]) : 'Friend');
+    const legacyKey = String(key || '').trim();
+    const explicitHandleKey =
+      legacyKey && !legacyKey.startsWith('user:') && !legacyKey.includes('@')
+        ? legacyKey
+        : '';
+    const keyFallback =
+      legacyKey && !legacyKey.startsWith('user:')
+        ? (legacyKey.includes('@') ? legacyKey.split('@')[0] : legacyKey)
+        : '';
+    const knownHandle = actualEmail ? String((knownHandlesByEmail || {})[actualEmail] || '').trim() : '';
+    const knownHandleByUserId = context?.userId ? String((knownHandlesByUserId || {})[context.userId] || '').trim() : '';
+    const resolvedHandle = String(context?.handle || '').trim();
+    const handle = knownHandleByUserId
+      || resolvedHandle
+      || knownHandle
+      || explicitHandleKey
+      || (actualEmail ? actualEmail.split('@')[0] : '')
+      || keyFallback
+      || 'Friend';
     const parts = [];
     if (context.trips.length === 1) parts.push(context.trips[0]);
     else if (context.trips.length > 1) parts.push(`${context.trips.length} trips`);

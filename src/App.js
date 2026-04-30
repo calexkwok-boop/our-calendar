@@ -72,6 +72,7 @@ const withTimeout = async (promise, timeoutMs, fallbackValue = null) => {
 const SUPABASE_URL = String(process.env.REACT_APP_SUPABASE_URL || '').trim().replace(/\/+$/, '');
 const TRIP_PHOTO_BUCKETS = ['trip-photos', 'trip_photos'];
 const PROFILE_PHOTO_STORAGE_PREFIX = 'profile-photos';
+const PROFILE_PHOTO_OVERRIDE_STORAGE_KEY = 'komo-profile-photo-override-url';
 const PROFILE_PHOTO_BUCKETS = ['avatars', 'layer-media', 'layer_media', 'trip-photos', 'trip_photos'];
 const AVATAR_BUCKET = 'avatars';
 const TRIP_PHOTO_STORAGE_PROVIDER = String(process.env.REACT_APP_TRIP_PHOTO_STORAGE_PROVIDER || 'supabase').trim().toLowerCase();
@@ -20314,6 +20315,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           userEmail,
           ownerIdentity: String(currentUser || '').trim(),
           knownHandlesByEmail: knownHandlesByEmailRef.current,
+          knownHandlesByUserId: knownHandlesByUserIdRef.current,
           includeSharedEvents: false,
         });
         if (cancelled) return;
@@ -36002,6 +36004,7 @@ transform: translateY(0);
         onBack={() => setProfileViewState({ open: false, email: null, userId: null })}
         onOpenProfile={({ email, userId }) => setProfileViewState({ open: true, email: email || null, userId: userId || null })}
         knownHandlesByEmail={knownHandlesByEmail}
+        knownHandlesByUserId={knownHandlesByUserId}
         accountHandleInput={accountHandleInput}
         onAccountHandleChange={(val) => { setAccountHandleInput(val); setAccountHandleMessage(''); }}
         accountHandleMessage={accountHandleMessage}

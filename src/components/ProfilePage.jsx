@@ -145,6 +145,7 @@ const ProfilePage = ({
   onBack,
   onOpenProfile,
   knownHandlesByEmail = {},
+  knownHandlesByUserId = {},
   // Account section (own profile only)
   accountHandleInput = '',
   onAccountHandleChange,
@@ -166,6 +167,8 @@ const ProfilePage = ({
 
   const knownHandlesRef = useRef(knownHandlesByEmail);
   useEffect(() => { knownHandlesRef.current = knownHandlesByEmail; }, [knownHandlesByEmail]);
+  const knownHandlesByUserIdRef = useRef(knownHandlesByUserId);
+  useEffect(() => { knownHandlesByUserIdRef.current = knownHandlesByUserId; }, [knownHandlesByUserId]);
 
   const [sharingPrefs, setSharingPrefs] = useState({
     sharePhotoOfDay: false,
@@ -351,9 +354,25 @@ const ProfilePage = ({
       }
     } catch {}
 
-    // Dedup rows by user_id (prevents double-counting when same row exists in both handle tables)
-    const dedupeById = (rows) =>
-      [...new Map(rows.filter(h => h.user_id).map(h => [h.user_id, h])).values()];
+    // Dedup rows by the best identity we have (user_id first, then email/handle for legacy rows)
+    const dedupeById = (rows) => {
+      const byKey = new Map();
+      for (const h of (rows || [])) {
+        const key =
+          String(h?.user_id || '').trim()
+          || String(h?.email || '').trim().toLowerCase()
+          || String(h?.handle || '').trim().toLowerCase();
+        if (!key) continue;
+        const existing = byKey.get(key) || {};
+        byKey.set(key, {
+          ...h,
+          user_id: h?.user_id || existing?.user_id || '',
+          email: h?.email || existing?.email || '',
+          handle: existing?.handle || h?.handle || '',
+        });
+      }
+      return [...byKey.values()];
+    };
 
     const load = async () => {
       if (!hadCache && !hadPrefetchedFriends) setLoading(true);
@@ -649,8 +668,25 @@ const ProfilePage = ({
         const friends = [];
         for (const [key, ctx] of friendMap.entries()) {
           const actualEmail = String(ctx?.email || '').toLowerCase().trim();
-          const handle = String(ctx?.handle || '').trim()
-            || (actualEmail ? (knownHandlesRef.current[actualEmail] || actualEmail.split('@')[0]) : 'Friend');
+          const legacyKey = String(key || '').trim();
+          const explicitHandleKey =
+            legacyKey && !legacyKey.startsWith('user:') && !legacyKey.includes('@')
+              ? legacyKey
+              : '';
+          const keyFallback =
+            legacyKey && !legacyKey.startsWith('user:')
+              ? (legacyKey.includes('@') ? legacyKey.split('@')[0] : legacyKey)
+              : '';
+          const knownHandle = actualEmail ? String(knownHandlesRef.current[actualEmail] || '').trim() : '';
+          const knownHandleByUserId = ctx?.userId ? String(knownHandlesByUserIdRef.current[ctx.userId] || '').trim() : '';
+          const resolvedHandle = String(ctx?.handle || '').trim();
+          const handle = knownHandleByUserId
+            || resolvedHandle
+            || knownHandle
+            || explicitHandleKey
+            || (actualEmail ? actualEmail.split('@')[0] : '')
+            || keyFallback
+            || 'Friend';
           const parts = [];
           if (ctx.trips.length === 1) parts.push(ctx.trips[0]);
           else if (ctx.trips.length > 1) parts.push(`${ctx.trips.length} trips`);
