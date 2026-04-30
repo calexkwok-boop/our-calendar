@@ -6,7 +6,7 @@ import BoardGamePage from "./BoardGamePage";
 import RestaurantPage from "./RestaurantPage";
 import HikingPage from "./HikingPage";
 import DreamShelfPage, { getAllCuratedItemsShuffled } from "./DreamShelfPage";
-import DestinationsPage, { CURATED_DESTINATIONS } from "./DestinationsPage";
+import DestinationsPage, { CURATED_DESTINATIONS, getDestinationResolvedImage } from "./DestinationsPage";
 import { getDestinationImageOverride } from "../data/destinationImageOverrides";
 import { supabase } from "../supabaseClient";
 
@@ -66,8 +66,7 @@ const EXPLORE_IMAGE_FALLBACKS = {
 
 function getExploreImageUrl(post = {}) {
   if (post.type === "destinations") {
-    const overrideUrl = getDestinationImageOverride(post);
-    if (overrideUrl) return overrideUrl;
+    return getDestinationResolvedImage(post, "");
   }
   if (post.imageUrl) return post.imageUrl;
   if (!["destinations", "hiking", "products", "restaurants"].includes(post.type)) return "";
@@ -85,18 +84,12 @@ function getExploreImageUrl(post = {}) {
     if (text.includes("pizza") || text.includes("italian")) return "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=900&q=80";
     return "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80";
   }
-  if (post.type === "destinations") {
-    if (text.includes("kyoto") || text.includes("japan")) return EXPLORE_IMAGE_FALLBACKS.destinations;
-    if (text.includes("beach") || text.includes("island") || text.includes("santorini")) return "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=900&q=80";
-    if (text.includes("paris")) return "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80";
-    return "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80";
-  }
   return EXPLORE_IMAGE_FALLBACKS.products;
 }
 
 function getExploreCardImageUrl(post = {}, googleImgUrl = "") {
   if (post.type === "destinations") {
-    return getDestinationImageOverride(post) || googleImgUrl || getExploreImageUrl(post);
+    return getDestinationResolvedImage(post, googleImgUrl || "");
   }
   return googleImgUrl || getExploreImageUrl(post);
 }

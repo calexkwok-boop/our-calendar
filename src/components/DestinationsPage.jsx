@@ -144,7 +144,7 @@ const truncateText = (text, max = 120) => {
   return clean.length > max ? `${clean.slice(0, max).trimEnd()}…` : clean;
 };
 
-const getDestinationResolvedImage = (destination = {}, fetchedPhotoUrl = '') => (
+export const getDestinationResolvedImage = (destination = {}, fetchedPhotoUrl = '') => (
   getDestinationImageOverride(destination)
   || String(destination?.photo || destination?.imageUrl || destination?.destination_image || '').trim()
   || String(fetchedPhotoUrl || '').trim()
