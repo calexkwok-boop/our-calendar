@@ -320,11 +320,14 @@ const ProfilePage = ({
   useEffect(() => {
     if (!isOwnProfile || (!userEmail && !currentUser?.id)) { setLoading(false); return; }
 
-    // Use prefetched data from App.js if available — instant render, no fetch needed
+    // Use prefetched data from App.js for instant render, but still revalidate here.
+    // The app-level prefetch is intentionally lighter and can miss richer friend contexts
+    // like shared event relationships.
+    let hadPrefetchedFriends = false;
     if (prefetchedFriendsList !== null) {
       setFriendsList(prefetchedFriendsList);
       setLoading(false);
-      return;
+      hadPrefetchedFriends = true;
     }
 
     const CACHE_KEY = `komo-friends-${currentUser?.id || userEmail}`;
@@ -346,7 +349,7 @@ const ProfilePage = ({
       [...new Map(rows.filter(h => h.user_id).map(h => [h.user_id, h])).values()];
 
     const load = async () => {
-      if (!hadCache) setLoading(true);
+      if (!hadCache && !hadPrefetchedFriends) setLoading(true);
       try {
         const friendMap = new Map(); // email → { trips: string[], sharedCalendars: number, sharedEvents: number, userId: string|null }
 
