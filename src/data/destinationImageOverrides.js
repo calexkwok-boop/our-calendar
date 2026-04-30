@@ -1,6 +1,7 @@
 export const DESTINATION_IMAGE_OVERRIDES = {
   'amalfi-coast': 'https://www.royalcaribbean.com/media-assets/pmc/content/dam/shore-x/naples-nap/np07-sorrento-and-the-amalfi-drive/stock-photo-view-of-positano-village-along-amalfi-coast-in-italy-at-dusk-1157705677.jpg?w=1440',
   amsterdam: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/KeizersgrachtReguliersgrachtAmsterdam.jpg/1280px-KeizersgrachtReguliersgrachtAmsterdam.jpg',
+  'anse-source-d': 'https://worlds50beaches.com/assets/images/beaches-2026/242.webp',
   'anse-source-d-argent': 'https://worlds50beaches.com/assets/images/beaches-2026/242.webp',
   'banff-national-park': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Moraine_Lake_17092005.jpg/960px-Moraine_Lake_17092005.jpg',
   bruges: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Br%C3%BCgge_Blick_vom_Belfried_4.jpg/960px-Br%C3%BCgge_Blick_vom_Belfried_4.jpg',
@@ -61,7 +62,20 @@ export const DESTINATION_IMAGE_OVERRIDES = {
   'the-icefields-parkway': 'https://www.travelandleisure.com/thmb/clAPBgePJldJA7iOgkI8fYFxdIA=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/TAL-icefields-parkway-canada-GLACIERHGWAY0225-f736d5daa8d64ac6abe49df5dc283823.jpg',
   'tuscany-road-trip': 'https://www.happy.rentals/admin/uploads/The-iconic-cypress-lined-road-in-Asciano-Province-of-Siena-Crete-Senesi-11041.jpg',
   'new-zealand-south-island': 'https://static.routesonline.com/images/cached/newsarticle-298184-scaled-620x0.jpg',
-  
+  'machu-picchu': 'https://lh3.googleusercontent.com/gps-cs-s/APNQkAGTEX0fTBAvsYUuqtBZQfQiab4l3IOmdNZXUnRlN3GyYkmpf_8WPNepzIBK_koBg2WcwHgxlW7kwZb_RpwePJg7pcpyIOC3Z5JIZ9xti2TylAiKXLV4aLN7ODPl5yFbRWE34_g=s1360-w1360-h1020-rw',
+  'serengeti': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Serengeti_sunset-1001.jpg/500px-Serengeti_sunset-1001.jpg',
+  'angkor-wat': 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Buddhist_monks_in_front_of_the_Angkor_Wat.jpg/500px-Buddhist_monks_in_front_of_the_Angkor_Wat.jpg',
+  'bora-bora': 'https://digital.ihg.com/is/image/ihg/intercontinental-bora-bora-9636653008-2x1?size=700,0',
+  'whitehaven-beach': 'https://hamiltonisland.imgix.net/hamiltonisland/media/originals/scenery-(gbr,-catseye,-whitehaven)/hill-inlet-aerial-with-whitehaven-beach.jpg?width=347&height=230&fit=crop&d=20191212112603',
+  'tulum': 'https://cdn.sanity.io/images/atvntylo/production/c0ecfd1532bab076b06a10c654008364527b9d99-1080x720.webp?w=3840&q=65&fit=clip&auto=format',
+  'cinque-terre': 'https://www.travelawaits.com/wp-content/uploads/2021/04/3826ad5ad0776fadbcc3d277752123826ad.jpg?w=2000',
+  'kauai': 'https://www.gohawaii.com/sites/default/files/styles/curated__380x500/public/content-images/Kauai%20Region%20North%20Shore%20-%20Max%20Seigel.jpg.webp?itok=33FgXh0i',
+  'phi-phi-islands': 'https://dynamic-media.tacdn.com/media/photo-o/2e/f4/54/21/caption.jpg?w=1100&h=800&s=1',
+  'algarve': 'https://www.siestacampers.com/_next/image?url=https%3A%2F%2Fimages.prismic.io%2Fsiestacampers%2FaD2K0Lh8WN-LVeYu_things-to-do-in-algarve.webp%3Fauto%3Dformat%2Ccompress&w=1920&q=75',
+  'queenstown': 'https://ik.imgkit.net/3vlqs5axxjf/TAW/ik-seo/uploadedImages/All_Gateways/ASPAC/Asia/Queenstown_Hero/5-Exceptional-Things-to-Do-in-Queenstown-New-Zeala.jpg?tr=w-1008%2Ch-567%2Cfo-auto',
+  'everest-base-camp': 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Mount_Everest_Base_Camp.jpg/960px-Mount_Everest_Base_Camp.jpg',
+  'norwegian-fjords': 'https://nordicventures.com/wp-content/uploads/2019/02/The-Norwegian-Fjords.jpg',
+  'the-gal-pagos-islands': 'https://en.wikipedia.org/wiki/File:Lobo_marino_(Zalophus_californianus_wollebaeki),_Punta_Pitt,_isla_de_San_Crist%C3%B3bal,_islas_Gal%C3%A1pagos,_Ecuador,_2015-07-24,_DD_11.JPG'
 };
 
 export const getDestinationImageOverride = (destination = {}) => {
