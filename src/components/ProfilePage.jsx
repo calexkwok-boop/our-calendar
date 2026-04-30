@@ -422,10 +422,10 @@ const ProfilePage = ({
             ? supabase.from('shared_access').select('shared_with_email, shared_with_id').in('layer_id', uniqueLayerIds).neq('shared_with_email', userEmail)
             : Promise.resolve({ data: [] }),
           calendarOwnerIds.length > 0
-            ? supabase.from('user_handles').select('email, user_id').in('user_id', calendarOwnerIds)
+            ? supabase.from('user_handles').select('email, user_id, handle').in('user_id', calendarOwnerIds)
             : Promise.resolve({ data: [] }),
           calendarOwnerIds.length > 0
-            ? supabase.from('handles').select('email, user_id').in('user_id', calendarOwnerIds)
+            ? supabase.from('handles').select('email, user_id, handle').in('user_id', calendarOwnerIds)
             : Promise.resolve({ data: [] }),
           allChapterIds.length > 0
             ? supabase.from('chapters').select('id, owner_id').in('id', allChapterIds)
@@ -470,11 +470,14 @@ const ProfilePage = ({
         // Add calendar owners (deduped across both handle tables)
         for (const h of dedupeById([...(calOwnerHandlesRes.data || []), ...(calOwnerHandlesFbRes.data || [])])) {
           const email = String(h.email || '').toLowerCase().trim();
-          if (!email || email === userEmail) continue;
-          const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedChapters: 0, sharedEvents: 0, userId: null };
+          const mapKey = email || (h.user_id ? `user:${String(h.user_id).trim()}` : '');
+          if (!mapKey || email === userEmail) continue;
+          const entry = friendMap.get(mapKey) || { trips: [], sharedCalendars: 0, sharedChapters: 0, sharedEvents: 0, userId: null, email: email || '', handle: String(h.handle || '').trim() };
           if (!entry.userId) entry.userId = h.user_id;
+          if (!entry.email && email) entry.email = email;
+          if (!entry.handle && h.handle) entry.handle = String(h.handle || '').trim();
           if (calendarOwnerIdSet.has(h.user_id)) entry.sharedCalendars++;
-          friendMap.set(email, entry);
+          friendMap.set(mapKey, entry);
         }
         const chapterOwnerIds = [...new Set((chapterRowsRes.data || []).map((row) => row.owner_id).filter((id) => id && id !== currentUser?.id))];
         const chapterOwnerIdSet = new Set(chapterOwnerIds);
@@ -503,10 +506,10 @@ const ProfilePage = ({
             ? supabase.from('handles').select('email, user_id').in('email', emailsMissingId)
             : Promise.resolve({ data: [] }),
           chapterOwnerIds.length > 0
-            ? supabase.from('user_handles').select('email, user_id').in('user_id', chapterOwnerIds)
+            ? supabase.from('user_handles').select('email, user_id, handle').in('user_id', chapterOwnerIds)
             : Promise.resolve({ data: [] }),
           chapterOwnerIds.length > 0
-            ? supabase.from('handles').select('email, user_id').in('user_id', chapterOwnerIds)
+            ? supabase.from('handles').select('email, user_id, handle').in('user_id', chapterOwnerIds)
             : Promise.resolve({ data: [] }),
         ]);
 
@@ -532,11 +535,14 @@ const ProfilePage = ({
         }
         for (const h of dedupeById([...(chapterOwnerHandlesRes.data || []), ...(chapterOwnerHandlesFbRes.data || [])])) {
           const email = String(h.email || '').toLowerCase().trim();
-          if (!email || email === userEmail) continue;
-          const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedChapters: 0, sharedEvents: 0, userId: null };
+          const mapKey = email || (h.user_id ? `user:${String(h.user_id).trim()}` : '');
+          if (!mapKey || email === userEmail) continue;
+          const entry = friendMap.get(mapKey) || { trips: [], sharedCalendars: 0, sharedChapters: 0, sharedEvents: 0, userId: null, email: email || '', handle: String(h.handle || '').trim() };
           if (!entry.userId) entry.userId = h.user_id;
+          if (!entry.email && email) entry.email = email;
+          if (!entry.handle && h.handle) entry.handle = String(h.handle || '').trim();
           if (chapterOwnerIdSet.has(h.user_id)) entry.sharedChapters += 1;
-          friendMap.set(email, entry);
+          friendMap.set(mapKey, entry);
         }
 
         // Step 4: discover event-based connections + count shared events (bidirectional)
@@ -590,8 +596,9 @@ const ProfilePage = ({
         }
 
         const friends = [];
-        for (const [email, ctx] of friendMap.entries()) {
-          const handle = knownHandlesRef.current[email] || email.split('@')[0];
+        for (const [key, ctx] of friendMap.entries()) {
+          const actualEmail = String(ctx?.email || '').toLowerCase().trim();
+          const handle = String(ctx?.handle || '').trim() || (actualEmail ? (knownHandlesRef.current[actualEmail] || actualEmail.split('@')[0]) : (ctx?.userId ? String(ctx.userId).slice(0, 8) : String(key || '').replace(/^user:/, 'friend')));
           const parts = [];
           if (ctx.trips.length === 1) parts.push(ctx.trips[0]);
           else if (ctx.trips.length > 1) parts.push(`${ctx.trips.length} trips`);
@@ -599,7 +606,7 @@ const ProfilePage = ({
           if (ctx.sharedChapters > 0) parts.push(ctx.sharedChapters > 1 ? `${ctx.sharedChapters} shared chapters` : 'shared chapter');
           if (ctx.sharedEvents > 0) parts.push(`${ctx.sharedEvents} event${ctx.sharedEvents === 1 ? '' : 's'}`);
           friends.push({
-            email,
+            email: actualEmail,
             userId: ctx.userId || null,
             handle,
             displayName: handle,

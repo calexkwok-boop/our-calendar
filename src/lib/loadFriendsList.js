@@ -57,8 +57,8 @@ export async function loadFriendsList({
     memberTripIds.length > 0 ? supabase.from('sub_calendars').select('id, owner_id, name').in('id', memberTripIds) : Promise.resolve({ data: [] }),
     allTripIds.length > 0 ? supabase.from('sub_calendar_members').select('email, sub_calendar_id').in('sub_calendar_id', allTripIds).neq('email', userEmail || '') : Promise.resolve({ data: [] }),
     uniqueLayerIds.length > 0 ? supabase.from('shared_access').select('shared_with_email, shared_with_id').in('layer_id', uniqueLayerIds).neq('shared_with_email', userEmail || '') : Promise.resolve({ data: [] }),
-    calendarOwnerIds.length > 0 ? supabase.from('user_handles').select('email, user_id').in('user_id', calendarOwnerIds) : Promise.resolve({ data: [] }),
-    calendarOwnerIds.length > 0 ? supabase.from('handles').select('email, user_id').in('user_id', calendarOwnerIds) : Promise.resolve({ data: [] }),
+    calendarOwnerIds.length > 0 ? supabase.from('user_handles').select('email, user_id, handle').in('user_id', calendarOwnerIds) : Promise.resolve({ data: [] }),
+    calendarOwnerIds.length > 0 ? supabase.from('handles').select('email, user_id, handle').in('user_id', calendarOwnerIds) : Promise.resolve({ data: [] }),
     includeSharedEvents && myEventIds.length > 0
       ? supabase.from('popup_event_members').select('event_id, user_id').in('event_id', myEventIds).neq('user_id', userId || '')
       : Promise.resolve({ data: [] }),
@@ -100,11 +100,14 @@ export async function loadFriendsList({
   }
   for (const handleRow of dedupeById([...(calOwnerHandlesRes.data || []), ...(calOwnerHandlesFbRes.data || [])])) {
     const email = String(handleRow.email || '').toLowerCase().trim();
-    if (!email || email === userEmail) continue;
-    const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedChapters: 0, sharedEvents: 0, userId: null };
+    const mapKey = email || (handleRow.user_id ? `user:${String(handleRow.user_id).trim()}` : '');
+    if (!mapKey || email === userEmail) continue;
+    const entry = friendMap.get(mapKey) || { trips: [], sharedCalendars: 0, sharedChapters: 0, sharedEvents: 0, userId: null, email: email || '', handle: String(handleRow.handle || '').trim() };
     if (!entry.userId) entry.userId = handleRow.user_id;
+    if (!entry.email && email) entry.email = email;
+    if (!entry.handle && handleRow.handle) entry.handle = String(handleRow.handle || '').trim();
     if (calendarOwnerIdSet.has(handleRow.user_id)) entry.sharedCalendars += 1;
-    friendMap.set(email, entry);
+    friendMap.set(mapKey, entry);
   }
   const chapterOwnerIds = [...new Set((chapterRowsRes.data || []).map((row) => row.owner_id).filter((id) => id && id !== userId))];
   const chapterOwnerIdSet = new Set(chapterOwnerIds);
@@ -145,8 +148,8 @@ export async function loadFriendsList({
     emailsMissingId.length > 0 ? supabase.from('handles').select('email, user_id').in('email', emailsMissingId) : Promise.resolve({ data: [] }),
     newEventFriendIds.length > 0 ? supabase.from('user_handles').select('email, user_id').in('user_id', newEventFriendIds) : Promise.resolve({ data: [] }),
     newEventFriendIds.length > 0 ? supabase.from('handles').select('email, user_id').in('user_id', newEventFriendIds) : Promise.resolve({ data: [] }),
-    chapterOwnerIds.length > 0 ? supabase.from('user_handles').select('email, user_id').in('user_id', chapterOwnerIds) : Promise.resolve({ data: [] }),
-    chapterOwnerIds.length > 0 ? supabase.from('handles').select('email, user_id').in('user_id', chapterOwnerIds) : Promise.resolve({ data: [] }),
+    chapterOwnerIds.length > 0 ? supabase.from('user_handles').select('email, user_id, handle').in('user_id', chapterOwnerIds) : Promise.resolve({ data: [] }),
+    chapterOwnerIds.length > 0 ? supabase.from('handles').select('email, user_id, handle').in('user_id', chapterOwnerIds) : Promise.resolve({ data: [] }),
   ]);
 
   for (const handleRow of dedupeById([...(tripOwnerHandlesRes.data || []), ...(tripOwnerHandlesFbRes.data || [])])) {
@@ -174,16 +177,20 @@ export async function loadFriendsList({
   }
   for (const handleRow of dedupeById([...(chapterOwnerHandlesRes.data || []), ...(chapterOwnerHandlesFbRes.data || [])])) {
     const email = String(handleRow.email || '').toLowerCase().trim();
-    if (!email || email === userEmail) continue;
-    const entry = friendMap.get(email) || { trips: [], sharedCalendars: 0, sharedChapters: 0, sharedEvents: 0, userId: null };
+    const mapKey = email || (handleRow.user_id ? `user:${String(handleRow.user_id).trim()}` : '');
+    if (!mapKey || email === userEmail) continue;
+    const entry = friendMap.get(mapKey) || { trips: [], sharedCalendars: 0, sharedChapters: 0, sharedEvents: 0, userId: null, email: email || '', handle: String(handleRow.handle || '').trim() };
     if (!entry.userId) entry.userId = handleRow.user_id;
+    if (!entry.email && email) entry.email = email;
+    if (!entry.handle && handleRow.handle) entry.handle = String(handleRow.handle || '').trim();
     if (chapterOwnerIdSet.has(handleRow.user_id)) entry.sharedChapters += 1;
-    friendMap.set(email, entry);
+    friendMap.set(mapKey, entry);
   }
 
   const friends = [];
-  for (const [email, context] of friendMap.entries()) {
-    const handle = (knownHandlesByEmail || {})[email] || email.split('@')[0];
+  for (const [key, context] of friendMap.entries()) {
+    const actualEmail = String(context?.email || '').toLowerCase().trim();
+    const handle = String(context?.handle || '').trim() || (actualEmail ? ((knownHandlesByEmail || {})[actualEmail] || actualEmail.split('@')[0]) : (context?.userId ? String(context.userId).slice(0, 8) : String(key || '').replace(/^user:/, 'friend')));
     const parts = [];
     if (context.trips.length === 1) parts.push(context.trips[0]);
     else if (context.trips.length > 1) parts.push(`${context.trips.length} trips`);
@@ -191,7 +198,7 @@ export async function loadFriendsList({
     if (context.sharedChapters > 0) parts.push(context.sharedChapters > 1 ? `${context.sharedChapters} shared chapters` : 'shared chapter');
     if (context.sharedEvents > 0) parts.push(`${context.sharedEvents} event${context.sharedEvents === 1 ? '' : 's'}`);
     friends.push({
-      email,
+      email: actualEmail,
       userId: context.userId || null,
       handle,
       displayName: handle,
