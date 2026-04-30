@@ -531,8 +531,8 @@ export function useNotifications({ user, notificationsEnabled }) {
     if (!filter) { setPendingCalendarInvites(prev => prev.length ? [] : prev); return; }
     try {
       const { data: rows, error } = await supabase.from('shared_access')
-        .select('id,layer_id,calendar_id,owner_id,shared_with_id,shared_with_email,shared_with_phone,created_at')
-        .or(filter).is('shared_with_id', null)
+        .select('id,layer_id,owner_id,shared_with_id,shared_with_email,shared_with_phone,created_at')
+        .or(filter)
         .order('created_at', { ascending: false, nullsFirst: false }).limit(200);
       if (error) { setPendingCalendarInvites(prev => prev.length ? [] : prev); return; }
       const filtered = (rows || []).filter(row => {

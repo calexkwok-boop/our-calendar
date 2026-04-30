@@ -34,7 +34,10 @@
       "Bash(awk '{print $9, $5}')",
       "Bash(sort -k2 -hr)",
       "Bash(awk '{sum += $5} END {print \"Total size: \" sum/1024/1024 \" MB, Count: \" NR}')",
-      "Bash(awk '{sum += $1} END {print sum \" KB total \\(apparent\\)\"}')"
+      "Bash(awk '{sum += $1} END {print sum \" KB total \\(apparent\\)\"}')",
+      "Bash(git reset *)",
+      "Bash(git ls-remote *)",
+      "Bash(xargs -I {} echo \"{}\")"
     ]
   }
 }

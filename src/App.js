@@ -4234,10 +4234,9 @@ function App() {
         const error = result?.error || null;
         if (error) {
           console.error('Error loading user tab trips:', error);
-          setUserTabTrips([]);
-          return [];
+        } else {
+          directRows = data || [];
         }
-        directRows = data || [];
       }
       let memberRows = [];
       if (memberRecipientFilter) {
@@ -4247,33 +4246,31 @@ function App() {
           .or(memberRecipientFilter);
         if (memberErr) {
           console.error('Error loading trip memberships for user tab:', memberErr);
-          setUserTabTrips([]);
-          return [];
-        }
-        const memberTripIds = Array.from(new Set((memberLinks || [])
-          .filter((row) => {
-            const status = String(row?.status || '').toLowerCase();
-            return !status || status === 'accepted';
-          })
-          .map((row) => String(row?.sub_calendar_id || '').trim())
-          .filter(Boolean)));
-        if (memberTripIds.length > 0) {
-          const tripResult = await withTimeout(
-            supabase
-              .from('sub_calendars')
-              .select('*')
-              .in('id', memberTripIds),
-            4000,
-            { data: [], error: { message: 'member trips timed out' } }
-          );
-          const trips = tripResult?.data || [];
-          const tripsErr = tripResult?.error || null;
-          if (tripsErr) {
-            console.error('Error loading accepted trip invite rows for user tab:', tripsErr);
-            setUserTabTrips([]);
-            return [];
+        } else {
+          const memberTripIds = Array.from(new Set((memberLinks || [])
+            .filter((row) => {
+              const status = String(row?.status || '').toLowerCase();
+              return !status || status === 'accepted';
+            })
+            .map((row) => String(row?.sub_calendar_id || '').trim())
+            .filter(Boolean)));
+          if (memberTripIds.length > 0) {
+            const tripResult = await withTimeout(
+              supabase
+                .from('sub_calendars')
+                .select('*')
+                .in('id', memberTripIds),
+              4000,
+              { data: [], error: { message: 'member trips timed out' } }
+            );
+            const trips = tripResult?.data || [];
+            const tripsErr = tripResult?.error || null;
+            if (tripsErr) {
+              console.error('Error loading accepted trip invite rows for user tab:', tripsErr);
+            } else {
+              memberRows = trips || [];
+            }
           }
-          memberRows = trips || [];
         }
       }
       const deduped = Array.from(new Map([...(directRows || []), ...(memberRows || [])].map((row) => [String(row?.id || ''), row])).values());
@@ -15252,7 +15249,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [activeSubCalendar?.id, tripPhotos, subCalendarEvents]);
 
   useEffect(() => {
-    if (bottomNavTab === 'home') {
+    if (bottomNavTab === 'home' || bottomNavTab === 'trips') {
       loadUserTabTrips();
       return;
     }
@@ -15861,11 +15858,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       if (document.visibilityState !== 'visible') return;
       let data = [];
       try {
-        const { data: rows, error } = await supabase
+        let { data: rows, error } = await supabase
           .from('shared_access')
-          .select('id,layer_id,calendar_id,shared_with_id,shared_with_email,shared_with_phone,is_banned,can_edit,banned_reason,updated_at,created_at')
+          .select('id,layer_id,shared_with_id,shared_with_email,shared_with_phone,is_banned,can_edit,banned_reason,updated_at,created_at')
           .or(shareRecipientFilter);
-        if (error) return;
+        if (error) {
+          const fallback = await supabase
+            .from('shared_access')
+            .select('id,layer_id,shared_with_id,shared_with_email,shared_with_phone,updated_at,created_at')
+            .or(shareRecipientFilter);
+          if (fallback.error) return;
+          rows = fallback.data;
+        }
         data = rows || [];
       } catch {
         return;
@@ -19949,6 +19953,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     shouldIncludeEventInPersonalOverview,
     getPersonalMemoryOwnerId: memoryPersistence.getPersonalMemoryOwnerId,
     getMemoryPrimaryPhotoUrl: memoryPersistence.getMemoryPrimaryPhotoUrl,
+    getMemoryPhotoUrls: memoryPersistence.getMemoryPhotoUrls,
     getJourneyGoalType,
   });
   const homeReflectionStreak = homeReflectionStats.streak;

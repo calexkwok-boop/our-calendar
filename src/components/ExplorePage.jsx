@@ -946,6 +946,7 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
   const [publishedChaptersLoading, setPublishedChaptersLoading] = useState(true);
   const [selectedPublishedChapter, setSelectedPublishedChapter] = useState(null);
   const [destinationPlacePhotos, setDestinationPlacePhotos] = useState({});
+  const destinationPhotoFetchedRef = useRef(new Set());
 
   const fullDestinationPool = useMemo(() => buildDestinationExplorePool(), []);
   const fullProductPool = useMemo(() => buildProductExplorePool(), []);
