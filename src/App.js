@@ -9547,32 +9547,29 @@ useEffect(() => {
         ].filter((bucket, index, array) => array.indexOf(bucket) === index);
 
         // Run all bucket×prefix combinations in parallel instead of sequentially
-        const pairs = candidateBuckets.flatMap(bucket =>
-          candidatePrefixes.map(prefix => ({ bucket, prefix }))
-        );
-        const results = await Promise.allSettled(
-          pairs.map(({ bucket, prefix }) =>
-            supabase.storage.from(bucket).list(prefix, {
-              limit: 20,
-              sortBy: { column: 'name', order: 'desc' },
-            }).then(({ data, error }) => {
-              if (error || !data) return null;
+        let recoveredUrl = null;
+        for (const bucket of candidateBuckets) {
+          if (cancelled || recoveredUrl) break;
+          for (const prefix of candidatePrefixes) {
+            if (cancelled || recoveredUrl) break;
+            try {
+              const { data, error } = await supabase.storage.from(bucket).list(prefix, {
+                limit: 20,
+                sortBy: { column: 'name', order: 'desc' },
+              });
+              if (error || !data) continue;
               const avatarFile = data
                 .filter(entry => /^(avatar|profile|icon_)/i.test(String(entry?.name || '')) || String(entry?.name || '').toLowerCase() === 'avatar')
                 .sort((a, b) => Number(new Date(b?.created_at || b?.updated_at || 0)) - Number(new Date(a?.created_at || a?.updated_at || 0)))[0];
-              if (!avatarFile) return null;
+              if (!avatarFile) continue;
               const objectPath = `${prefix}/${String(avatarFile.name || '').trim()}`;
               const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(objectPath);
-              return normalizeProfilePhotoUrl(urlData?.publicUrl || '') || null;
-            })
-          )
-        );
+              recoveredUrl = normalizeProfilePhotoUrl(urlData?.publicUrl || '') || null;
+            } catch {}
+          }
+        }
 
-        if (cancelled) return;
-        const recoveredUrl = results
-          .find(r => r.status === 'fulfilled' && r.value)
-          ?.value || null;
-        if (!recoveredUrl) return;
+        if (cancelled || !recoveredUrl) return;
         preservedProfilePhotoUrlRef.current = recoveredUrl;
         setProfilePhotoOverrideUrl(recoveredUrl);
         writeStoredProfilePhotoOverrideUrl(recoveredUrl);
@@ -11735,6 +11732,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     const CACHE_KEY = 'weather-location-cache';
     const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
+    let intervalId = null;
 
     const initWeather = () => {
       // Use cached coords if fresh — avoids re-prompting for location every session
@@ -11742,8 +11740,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
         if (cached && cached.lat && cached.lng && (Date.now() - cached.ts) < CACHE_TTL) {
           fetchWeather(cached.lat, cached.lng);
-          const interval = setInterval(() => fetchWeather(cached.lat, cached.lng), 3 * 60 * 60 * 1000);
-          return () => clearInterval(interval);
+          intervalId = window.setInterval(() => fetchWeather(cached.lat, cached.lng), 3 * 60 * 60 * 1000);
+          return;
         }
       } catch {}
 
@@ -11756,8 +11754,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           const { latitude, longitude } = pos.coords;
           try { localStorage.setItem(CACHE_KEY, JSON.stringify({ lat: latitude, lng: longitude, ts: Date.now() })); } catch {}
           fetchWeather(latitude, longitude);
-          const interval = setInterval(() => fetchWeather(latitude, longitude), 3 * 60 * 60 * 1000);
-          return () => clearInterval(interval);
+          intervalId = window.setInterval(() => fetchWeather(latitude, longitude), 3 * 60 * 60 * 1000);
         },
         () => {
           fetchWeather(36.7378, -119.7871);
@@ -11766,6 +11763,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       );
     };
     initWeather();
+    return () => {
+      if (intervalId) window.clearInterval(intervalId);
+    };
   }, []);
   const handleDateTap = (date) => {
     if (!date) return;

@@ -51,6 +51,7 @@ export default function PartyEventCardOverlay({
   const dragStartYRef = useRef(null);
   const dragCurrentYRef = useRef(0);
   const hasLoadedFullMembersRef = useRef(false);
+  const includeMembersRealtimeRef = useRef(false);
 
   const currentUserId = String(user?.id || '').trim();
   const effectiveDisplayName = String(displayName || '').trim()
@@ -62,6 +63,10 @@ export default function PartyEventCardOverlay({
     fallbackRef.current = eventMetaFallback;
     if (eventMetaFallback) setEvent((prev) => normalizeEvent(prev || eventMetaFallback, eventMetaFallback));
   }, [eventMetaFallback]);
+
+  useEffect(() => {
+    includeMembersRealtimeRef.current = activeScreen !== 'detail' || hasLoadedFullMembersRef.current;
+  }, [activeScreen, event?.id]);
 
   const memberPhotoUrl = (memberLike = {}) => {
     const memberUserId = String(memberLike?.user_id || memberLike?.userId || '').trim();
@@ -135,7 +140,10 @@ export default function PartyEventCardOverlay({
         });
       });
 
-      if (includeMembers) hasLoadedFullMembersRef.current = true;
+      if (includeMembers) {
+        hasLoadedFullMembersRef.current = true;
+        includeMembersRealtimeRef.current = true;
+      }
       setMembers(list);
       return normalizedEv;
     } catch {
@@ -156,13 +164,12 @@ export default function PartyEventCardOverlay({
 
   useEffect(() => {
     if (!event?.id || !supabase || !isUuid(event.id)) return undefined;
-    const includeMembers = activeScreen !== 'detail' || hasLoadedFullMembersRef.current;
     const channel = supabase.channel(`party-card-members-${event.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { includeMembers }))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { includeMembers }))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { includeMembers: includeMembersRealtimeRef.current }))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { includeMembers: includeMembersRealtimeRef.current }))
       .subscribe();
     return () => supabase.removeChannel(channel);
-  }, [event?.id, supabase, loadEvent, activeScreen]);
+  }, [event?.id, supabase, loadEvent]);
 
   const creatorUserId = String(event?.created_by || event?.created_by_user_id || '').trim();
   const creatorIsCurrentUser = Boolean(creatorUserId && currentUserId && creatorUserId === currentUserId);

@@ -795,7 +795,28 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
     if (!event?.id || !supabase) return;
     const { data } = await supabase.from('popup_event_locations').select('*').eq('event_id', event.id);
     if (data) setLocations(data);
-  }, [event?.id]);
+  }, [event?.id, supabase]);
+
+  const applyLocationRealtimePayload = useCallback((payload) => {
+    const nextRow = payload?.new || payload?.old;
+    const rowId = String(nextRow?.id || '').trim();
+    const userId = String(nextRow?.user_id || '').trim();
+    if (!rowId && !userId) return;
+    setLocations((prev) => {
+      const current = Array.isArray(prev) ? prev : [];
+      const matchIndex = current.findIndex((entry) => {
+        const entryId = String(entry?.id || '').trim();
+        const entryUserId = String(entry?.user_id || '').trim();
+        return (rowId && entryId === rowId) || (!rowId && userId && entryUserId === userId);
+      });
+      if (payload?.eventType === 'DELETE') {
+        if (matchIndex === -1) return current;
+        return current.filter((_, index) => index !== matchIndex);
+      }
+      if (matchIndex === -1) return [...current, nextRow];
+      return current.map((entry, index) => (index === matchIndex ? { ...entry, ...nextRow } : entry));
+    });
+  }, []);
 
   useEffect(() => { loadLocations(); }, [loadLocations]);
 
@@ -803,10 +824,10 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
     if (!event?.id || !supabase) return;
     const channel = supabase.channel(`locations-${event.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_locations', filter: `event_id=eq.${event.id}` },
-        () => loadLocations())
+        (payload) => applyLocationRealtimePayload(payload))
       .subscribe();
     return () => supabase.removeChannel(channel);
-  }, [event?.id, loadLocations]);
+  }, [event?.id, supabase, applyLocationRealtimePayload]);
 
   // Update map markers when locations change
   useEffect(() => {
@@ -1223,6 +1244,7 @@ export default function PopupEventPanel({
   const eventMetaFallbackRef = useRef(eventMetaFallback);
   const eventRef = useRef(event);
   const memberRoleOverridesRef = useRef(memberRoleOverrides);
+  const includeMembersRealtimeRef = useRef(false);
   const inFlightLoadRef = useRef(new Map());
   const hasLoadedFullMembersRef = useRef(false);
 
@@ -1290,6 +1312,10 @@ export default function PopupEventPanel({
   useEffect(() => {
     memberRoleOverridesRef.current = memberRoleOverrides;
   }, [memberRoleOverrides]);
+
+  useEffect(() => {
+    includeMembersRealtimeRef.current = screen !== 'detail' || hasLoadedFullMembersRef.current;
+  }, [screen, event?.id]);
 
   const myMember = members.find((m) => String(m?.user_id || '').trim() === String(user?.id || '').trim());
   const creatorUserId = String(event?.created_by || event?.created_by_user_id || '').trim();
@@ -1458,7 +1484,10 @@ export default function PopupEventPanel({
           const overrideRole = String(memberRoleOverridesRef.current?.[overrideKey] || '').trim();
           return overrideRole ? { ...entry, role: overrideRole } : entry;
         });
-        if (includeMembers) hasLoadedFullMembersRef.current = true;
+        if (includeMembers) {
+          hasLoadedFullMembersRef.current = true;
+          includeMembersRealtimeRef.current = true;
+        }
         setMembers(nextMembers);
         return normalizedEv;
       } catch {}
@@ -1485,13 +1514,12 @@ export default function PopupEventPanel({
 
   useEffect(() => {
     if (!event?.id || !supabase || !isUuid(event.id)) return;
-    const includeMembers = screen !== 'detail' || hasLoadedFullMembersRef.current;
     const channel = supabase.channel(`popup-members-${event.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { silent: true, includeMembers }))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { silent: true, includeMembers }))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { silent: true, includeMembers: includeMembersRealtimeRef.current }))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { silent: true, includeMembers: includeMembersRealtimeRef.current }))
       .subscribe();
     return () => supabase.removeChannel(channel);
-  }, [event?.id, supabase, loadEvent, screen]);
+  }, [event?.id, supabase, loadEvent]);
 
   const handleJoin = async () => {
     if (!event || isMember || isFull) return;

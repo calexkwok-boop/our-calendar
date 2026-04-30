@@ -85,6 +85,7 @@ export default function SportsEventCardOverlay({
   const dragStartYRef = useRef(null);
   const dragCurrentYRef = useRef(0);
   const hasLoadedFullMembersRef = useRef(false);
+  const includeMembersRealtimeRef = useRef(false);
   const currentUserId = String(user?.id || '').trim();
 
   const effectiveDisplayName = String(displayName || '').trim()
@@ -100,6 +101,10 @@ export default function SportsEventCardOverlay({
   useEffect(() => {
     setActiveScreen(initialScreen === 'game' ? 'game' : 'detail');
   }, [initialScreen]);
+
+  useEffect(() => {
+    includeMembersRealtimeRef.current = activeScreen !== 'detail' || hasLoadedFullMembersRef.current;
+  }, [activeScreen, event?.id]);
 
   const memberPhotoUrl = (memberLike = {}) => {
     const memberUserId = String(memberLike?.user_id || memberLike?.userId || '').trim();
@@ -190,7 +195,10 @@ export default function SportsEventCardOverlay({
         });
       });
 
-      if (includeMembers) hasLoadedFullMembersRef.current = true;
+      if (includeMembers) {
+        hasLoadedFullMembersRef.current = true;
+        includeMembersRealtimeRef.current = true;
+      }
       setMembers(list);
       return normalizedEv;
     } catch {
@@ -211,13 +219,12 @@ export default function SportsEventCardOverlay({
 
   useEffect(() => {
     if (!event?.id || !supabase || !isUuid(event.id)) return undefined;
-    const includeMembers = activeScreen !== 'detail' || hasLoadedFullMembersRef.current;
     const channel = supabase.channel(`sports-card-members-${event.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { includeMembers }))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { includeMembers }))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { includeMembers: includeMembersRealtimeRef.current }))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { includeMembers: includeMembersRealtimeRef.current }))
       .subscribe();
     return () => supabase.removeChannel(channel);
-  }, [event?.id, supabase, loadEvent, activeScreen]);
+  }, [event?.id, supabase, loadEvent]);
 
   const creatorUserId = String(event?.created_by || event?.created_by_user_id || '').trim();
   const creatorIsCurrentUser = Boolean(creatorUserId && currentUserId && creatorUserId === currentUserId);
