@@ -104,20 +104,25 @@ function getExploreCardImageUrl(post = {}, googleImgUrl = "") {
 function buildDestinationExplorePool() {
   return Object.values(CURATED_DESTINATIONS)
     .flat()
-    .map((destination, index) => ({
-      id: `dest-${destination.id || index}`,
-      type: "destinations",
-      icon: "✈️",
-      page: "Destinations",
-      time: destination.vibe === "bucket_list" ? "Bucket list" : destination.vibe === "romantic" ? "Dream trip" : "Community pick",
-      cardTitle: destination.name,
-      location: destination.location,
-      desc: destination.description,
-      tag: "Destinations",
-      imageUrl: getDestinationImageOverride(destination) || "",
-      actions: ["Add to someday", "Plan trip"],
-      ...destination,
-    }));
+    .map((destination, index) => {
+      const overrideImageUrl = getDestinationImageOverride(destination) || "";
+      return {
+        ...destination,
+        id: destination.id || `dest-${index}`,
+        type: "destinations",
+        icon: "✈️",
+        page: "Destinations",
+        time: destination.vibe === "bucket_list" ? "Bucket list" : destination.vibe === "romantic" ? "Dream trip" : "Community pick",
+        cardTitle: destination.name,
+        destination_name: destination.name,
+        location: destination.location,
+        desc: destination.description,
+        tag: "Destinations",
+        imageUrl: overrideImageUrl || String(destination.imageUrl || "").trim(),
+        destination_image: overrideImageUrl || String(destination.destination_image || destination.imageUrl || "").trim(),
+        actions: ["Add to someday", "Plan trip"],
+      };
+    });
 }
 
 function buildProductExplorePool() {
