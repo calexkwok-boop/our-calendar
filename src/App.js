@@ -3058,6 +3058,9 @@ function App() {
   const [eventsTabVisibleLayerIds, setEventsTabVisibleLayerIds] = useState([]);
   const [showEventsTabCalendarFilter, setShowEventsTabCalendarFilter] = useState(false);
   const [showHomeAddEventModal, setShowHomeAddEventModal] = useState(false);
+  const [isAppVisible, setIsAppVisible] = useState(() => (
+    typeof document === 'undefined' ? true : document.visibilityState === 'visible'
+  ));
   const [homeAddEventShareLink, setHomeAddEventShareLink] = useState('');
   const [shareResultLink, setShareResultLink] = useState('');
   const [homeAddEventForm, setHomeAddEventForm] = useState(() => ({
@@ -3068,6 +3071,18 @@ function App() {
   }));
   const [eventsTabVisibleLayerIdsInitialized, setEventsTabVisibleLayerIdsInitialized] = useState(false);
   const [popupFeatureAvailable, setPopupFeatureAvailable] = useState(true);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const syncVisibility = () => {
+      setIsAppVisible(document.visibilityState === 'visible');
+    };
+    syncVisibility();
+    document.addEventListener('visibilitychange', syncVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', syncVisibility);
+    };
+  }, []);
   const [layerRefreshToken, setLayerRefreshToken] = useState(0);
   // Use this instead of setLayerRefreshToken directly for background/automated callers
   // to collapse rapid-fire increments into a single fetch cycle.
@@ -9558,8 +9573,8 @@ useEffect(() => {
   useEffect(() => {
     const userId = String(user?.id || '').trim();
     const layerId = String(activeLayerId || '').trim();
-    const recoveryKey = `${userId}:${layerId}`;
-    if (!userId || !layerId) return undefined;
+    const recoveryKey = userId;
+    if (!userId) return undefined;
     if (String(currentUserProfilePhotoUrl || '').trim()) return undefined;
     if (attemptedStoredAvatarRecoveryRef.current.has(recoveryKey)) return undefined;
 
@@ -9570,8 +9585,7 @@ useEffect(() => {
         const candidatePrefixes = [
           `${userId}`,
           `${PROFILE_PHOTO_STORAGE_PREFIX}/${userId}`,
-          `layer-media/${layerId}`,
-          `${layerId}`,
+          ...(layerId ? [`layer-media/${layerId}`, `${layerId}`] : []),
         ];
         const candidateBuckets = [
           ...TRIP_PHOTO_BUCKETS,
@@ -15451,7 +15465,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   // Notification localStorage load/save and invite channel managed by useNotifications.
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || !isAppVisible) return;
     const me = String(user.id);
     const myEmail = normalizeEmail(user?.email);
     const myPhone = normalizePhoneNumber(user?.phone);
@@ -15901,7 +15915,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return () => {
       updatesChannel.unsubscribe();
     };
-  }, [user?.id, user?.email, user?.phone, realtimeLayerIdsSignature, realtimeSubCalendarIdsSignature]);
+  }, [user?.id, user?.email, user?.phone, realtimeLayerIdsSignature, realtimeSubCalendarIdsSignature, isAppVisible]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -21865,7 +21879,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [upcomingPopupEvents]);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || !isAppVisible) return;
     if (bottomNavTab !== 'explore') return;
     const hadFreshCache = applyPublicCalendarsCache(user.id);
     let cancelled = false;
