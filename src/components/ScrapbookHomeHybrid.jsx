@@ -221,6 +221,7 @@ const ScrapbookHomeHybrid = ({
   const tripSpotlightImage = String(tripSpotlight?.chapterCoverUrl || '').trim();
 
   const [avatarImgError, setAvatarImgError] = useState(false);
+  const [loadedMemoryCollageUrls, setLoadedMemoryCollageUrls] = useState(() => new Set());
 
   const todayKey = toLocalDateKey(new Date());
   const komoShuffleSeedRef = React.useRef(`komo-home-${Date.now()}-${Math.random()}`);
@@ -234,6 +235,40 @@ const ScrapbookHomeHybrid = ({
       return hashHomeShuffleKey(leftKey) - hashHomeShuffleKey(rightKey);
     })
   ), [bucketList]);
+
+  const memoryCollageTiles = React.useMemo(() => (
+    (memoryCollagePhotos.length > 0 ? memoryCollagePhotos : ['', '', '', '']).slice(0, 4)
+  ), [memoryCollagePhotos]);
+
+  React.useEffect(() => {
+    const activeUrls = memoryCollageTiles.filter(Boolean);
+    setLoadedMemoryCollageUrls((prev) => {
+      const next = new Set(activeUrls.filter((url) => prev.has(url)));
+      if (next.size === prev.size && Array.from(next).every((url) => prev.has(url))) return prev;
+      return next;
+    });
+    const preloads = activeUrls
+      .filter((url) => !loadedMemoryCollageUrls.has(url))
+      .map((url) => {
+        const img = new Image();
+        img.decoding = 'async';
+        img.src = url;
+        img.onload = () => {
+          setLoadedMemoryCollageUrls((prev) => {
+            if (prev.has(url)) return prev;
+            const next = new Set(prev);
+            next.add(url);
+            return next;
+          });
+        };
+        return img;
+      });
+    return () => {
+      preloads.forEach((img) => {
+        img.onload = null;
+      });
+    };
+  }, [loadedMemoryCollageUrls, memoryCollageTiles]);
 
   return (
     <div className="min-h-screen bg-[#faf8f3] dark:bg-slate-950 p-4 sm:p-6">
@@ -758,12 +793,32 @@ const ScrapbookHomeHybrid = ({
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            {(memoryCollagePhotos.length > 0 ? memoryCollagePhotos : ['', '', '', '']).slice(0, 4).map((url, index) => (
+            {memoryCollageTiles.map((url, index) => (
               <div
                 key={`memory-collage-${index}`}
-                className="h-36 sm:h-44 rounded-[14px] border border-white/40 dark:border-white/10 bg-gradient-to-br from-violet-100 via-rose-50 to-amber-100 dark:from-violet-900/30 dark:via-slate-900 dark:to-amber-900/20 bg-cover bg-center"
-                style={url ? { backgroundImage: `url(${url})` } : undefined}
-              />
+                className="relative h-36 sm:h-44 overflow-hidden rounded-[14px] border border-white/40 dark:border-white/10 bg-gradient-to-br from-violet-100 via-rose-50 to-amber-100 dark:from-violet-900/30 dark:via-slate-900 dark:to-amber-900/20"
+              >
+                {url ? (
+                  <img
+                    src={url}
+                    alt=""
+                    loading="eager"
+                    decoding="async"
+                    fetchPriority={index < 2 ? 'high' : 'auto'}
+                    onLoad={() => {
+                      setLoadedMemoryCollageUrls((prev) => {
+                        if (prev.has(url)) return prev;
+                        const next = new Set(prev);
+                        next.add(url);
+                        return next;
+                      });
+                    }}
+                    className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
+                      loadedMemoryCollageUrls.has(url) ? 'opacity-100' : 'opacity-0'
+                    }`}
+                  />
+                ) : null}
+              </div>
             ))}
           </div>
 
