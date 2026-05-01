@@ -20263,6 +20263,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     const userId = String(user?.id || '').trim();
     if (!userId) { setFriendsDailyPhotos([]); return; }
+    if (bottomNavTab !== 'home') return;
 
     const _d = new Date();
     const today = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`;
@@ -20319,7 +20320,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       } catch {}
     })();
     return () => { cancelled = true; };
-  }, [user?.id]);
+  }, [user?.id, bottomNavTab]);
 
   // ????????? Eager friends list prefetch (runs in background after login)
   useEffect(() => {
@@ -20494,6 +20495,100 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setKomoChapters(readSomedayChaptersState(komoOwnerKey));
     setTripKomoState(readTripKomoState(user?.id));
   }, [currentUser, user?.id]);
+
+  useEffect(() => {
+    const linkedChapterIds = Array.from(new Set(
+      Object.values(tripKomoState || {})
+        .map((value) => String(value?.chapterId || '').trim())
+        .filter(Boolean)
+    ));
+    if (linkedChapterIds.length === 0) return;
+
+    const missingChapterIds = linkedChapterIds.filter((chapterId) => {
+      const chapter = (komoChapters || []).find((row) => String(row?.id || '').trim() === chapterId);
+      if (!chapter) return true;
+      const pins = Array.isArray(chapter?.pins) ? chapter.pins : [];
+      const hasImagePin = pins.some((pin) => String(pin?.imageUrl || pin?.photoUrl || '').trim());
+      if (hasImagePin) return false;
+      const coverPinId = String(chapter?.cover_pin_id || chapter?.coverPinId || '').trim();
+      const itemIds = Array.isArray(chapter?.itemIds) ? chapter.itemIds.map((id) => String(id || '').trim()).filter(Boolean) : [];
+      return Boolean(coverPinId || itemIds.length > 0);
+    });
+    if (missingChapterIds.length === 0) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const [chapterRes, pinRes] = await Promise.all([
+          supabase
+            .from('chapters')
+            .select('id, title, owner_id, cover_pin_id')
+            .in('id', missingChapterIds),
+          supabase
+            .from('chapter_pins')
+            .select('id, chapter_id, image_url, position')
+            .in('chapter_id', missingChapterIds),
+        ]);
+        if (cancelled) return;
+        const chapterRows = Array.isArray(chapterRes?.data) ? chapterRes.data : [];
+        const pinRows = Array.isArray(pinRes?.data) ? pinRes.data : [];
+        if (chapterRows.length === 0 && pinRows.length === 0) return;
+
+        const pinsByChapterId = new Map();
+        pinRows.forEach((row) => {
+          const chapterId = String(row?.chapter_id || '').trim();
+          if (!chapterId) return;
+          if (!pinsByChapterId.has(chapterId)) pinsByChapterId.set(chapterId, []);
+          pinsByChapterId.get(chapterId).push({
+            id: row.id,
+            chapterId,
+            imageUrl: String(row?.image_url || '').trim(),
+            photoUrl: String(row?.image_url || '').trim(),
+            position: Number(row?.position || 0),
+          });
+        });
+        pinsByChapterId.forEach((pins, chapterId) => {
+          pins.sort((a, b) => Number(a?.position || 0) - Number(b?.position || 0));
+          pinsByChapterId.set(chapterId, pins);
+        });
+
+        setKomoChapters((prev) => {
+          const existing = Array.isArray(prev) ? prev : [];
+          const byId = new Map(existing.map((chapter) => [String(chapter?.id || '').trim(), chapter]));
+
+          chapterRows.forEach((row) => {
+            const chapterId = String(row?.id || '').trim();
+            if (!chapterId) return;
+            const current = byId.get(chapterId) || {};
+            const pins = pinsByChapterId.get(chapterId) || current?.pins || [];
+            byId.set(chapterId, {
+              ...current,
+              ...row,
+              pins,
+              itemIds: pins.map((pin) => pin.id),
+            });
+          });
+
+          pinsByChapterId.forEach((pins, chapterId) => {
+            const current = byId.get(chapterId) || { id: chapterId };
+            byId.set(chapterId, {
+              ...current,
+              pins,
+              itemIds: pins.map((pin) => pin.id),
+            });
+          });
+
+          return Array.from(byId.values());
+        });
+      } catch (error) {
+        console.error('Failed to preload linked trip chapter covers:', error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [komoChapters, tripKomoState]);
 
   useEffect(() => {
     writeTripKomoState(user?.id, tripKomoState);

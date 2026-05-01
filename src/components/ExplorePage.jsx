@@ -1229,6 +1229,8 @@ export default function ExplorePage({
 
   useEffect(() => {
     let cancelled = false;
+    let timeoutId = null;
+    let idleId = null;
     async function loadPublishedChapters() {
       setPublishedChaptersLoading(true);
       try {
@@ -1304,8 +1306,25 @@ export default function ExplorePage({
         if (!cancelled) setPublishedChaptersLoading(false);
       }
     }
-    loadPublishedChapters();
-    return () => { cancelled = true; };
+
+    const scheduleLoad = () => {
+      if (cancelled) return;
+      void loadPublishedChapters();
+    };
+
+    if (typeof window !== "undefined" && typeof window.requestIdleCallback === "function") {
+      idleId = window.requestIdleCallback(scheduleLoad, { timeout: 1200 });
+    } else {
+      timeoutId = window.setTimeout(scheduleLoad, 250);
+    }
+
+    return () => {
+      cancelled = true;
+      if (idleId !== null && typeof window !== "undefined" && typeof window.cancelIdleCallback === "function") {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    };
   }, []);
 
   if (activePage === "movies") {
