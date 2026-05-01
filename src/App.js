@@ -20322,17 +20322,39 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     let cancelled = false;
     (async () => {
       try {
-        const { data: myEvents } = await supabase
-          .from('popup_event_members').select('event_id').eq('user_id', userId);
-        if (cancelled || !myEvents?.length) return;
-        const myEventIds = myEvents.map((m) => m.event_id).filter(Boolean);
-        const [{ data: coMembers }, { data: sharingUsers }] = await Promise.all([
-          supabase.from('popup_event_members').select('user_id').in('event_id', myEventIds).neq('user_id', userId),
-          supabase.from('user_profiles').select('user_id').eq('share_photo_of_day', true),
-        ]);
+        const prefetchedFriendIds = Array.from(new Set(
+          (Array.isArray(prefetchedFriendsList) ? prefetchedFriendsList : [])
+            .map((friend) => String(friend?.userId || '').trim())
+            .filter(Boolean)
+        ));
+
+        let friendIds = prefetchedFriendIds;
+        let sharingUsers = null;
+
+        if (friendIds.length === 0) {
+          const { data: myEvents } = await supabase
+            .from('popup_event_members').select('event_id').eq('user_id', userId);
+          if (cancelled || !myEvents?.length) return;
+          const myEventIds = myEvents.map((m) => m.event_id).filter(Boolean);
+          const fallbackResults = await Promise.all([
+            supabase.from('popup_event_members').select('user_id').in('event_id', myEventIds).neq('user_id', userId),
+            supabase.from('user_profiles').select('user_id').eq('share_photo_of_day', true),
+          ]);
+          const coMembers = fallbackResults[0]?.data || [];
+          sharingUsers = fallbackResults[1]?.data || [];
+          if (cancelled) return;
+          const sharingIdSet = new Set((sharingUsers || []).map((row) => String(row.user_id)));
+          friendIds = [...new Set((coMembers || []).map((m) => String(m.user_id)).filter((id) => id && sharingIdSet.has(id)))];
+        } else {
+          const { data: sharingRows } = await supabase
+            .from('user_profiles').select('user_id').eq('share_photo_of_day', true).in('user_id', friendIds);
+          sharingUsers = sharingRows || [];
+          if (cancelled) return;
+          const sharingIdSet = new Set((sharingUsers || []).map((row) => String(row.user_id)));
+          friendIds = friendIds.filter((id) => sharingIdSet.has(id));
+        }
+
         if (cancelled) return;
-        const sharingIdSet = new Set((sharingUsers || []).map((u) => String(u.user_id)));
-        const friendIds = [...new Set((coMembers || []).map((m) => String(m.user_id)).filter((id) => id && sharingIdSet.has(id)))];
         if (!friendIds.length) { if (!cancelled) setFriendsDailyPhotos([]); return; }
         const [{ data: todayMemories }, { data: handles }] = await Promise.all([
           supabase.from('user_memories').select('owner_user_id, memory').in('owner_user_id', friendIds).eq('memory_date', today),
@@ -20361,7 +20383,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       } catch {}
     })();
     return () => { cancelled = true; };
-  }, [user?.id, bottomNavTab]);
+  }, [user?.id, bottomNavTab, prefetchedFriendsList]);
 
   // ????????? Eager friends list prefetch (runs in background after login)
   useEffect(() => {

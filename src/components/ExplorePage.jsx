@@ -12,6 +12,31 @@ import { supabase } from "../supabaseClient";
 
 const TMDB_KEY = "b66752afda91b8258d32f4388f049a22";
 const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
+const PUBLISHED_CHAPTERS_CACHE_TTL = 5 * 60 * 1000;
+const getPublishedChaptersCacheKey = () => "explore-published-chapters-cache";
+const readPublishedChaptersCache = () => {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(getPublishedChaptersCacheKey());
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (!parsed || typeof parsed !== "object") return null;
+    const ts = Number(parsed?.ts || 0);
+    const rows = Array.isArray(parsed?.rows) ? parsed.rows : null;
+    if (!Number.isFinite(ts) || !rows) return null;
+    return { ts, rows };
+  } catch {
+    return null;
+  }
+};
+const writePublishedChaptersCache = (rows) => {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      getPublishedChaptersCacheKey(),
+      JSON.stringify({ ts: Date.now(), rows: Array.isArray(rows) ? rows : [] })
+    );
+  } catch {}
+};
 
 
 const FRIEND_POSTS = [];
@@ -1167,6 +1192,7 @@ export default function ExplorePage({
 
   useEffect(() => {
     let cancelled = false;
+    if (!sources.destinations) return undefined;
     const destinationPosts = communityPosts.filter((post) => post.type === "destinations");
     if (!destinationPosts.length) return undefined;
 
@@ -1197,7 +1223,7 @@ export default function ExplorePage({
     return () => {
       cancelled = true;
     };
-  }, [communityPosts]);
+  }, [communityPosts, sources.destinations]);
 
   useEffect(() => {
     if (!selectedPost || selectedPost.type !== "destinations") return;
@@ -1231,8 +1257,18 @@ export default function ExplorePage({
     let cancelled = false;
     let timeoutId = null;
     let idleId = null;
+    const cached = readPublishedChaptersCache();
+    const hasFreshCache = Boolean(
+      cached
+      && Array.isArray(cached.rows)
+      && Date.now() - Number(cached.ts || 0) < PUBLISHED_CHAPTERS_CACHE_TTL
+    );
+    if (hasFreshCache) {
+      setPublishedChapters(cached.rows);
+      setPublishedChaptersLoading(false);
+    }
     async function loadPublishedChapters() {
-      setPublishedChaptersLoading(true);
+      if (!hasFreshCache) setPublishedChaptersLoading(true);
       try {
         const { data: chapterRows, error: chapterErr } = await supabase
           .from("chapters")
@@ -1297,6 +1333,7 @@ export default function ExplorePage({
           };
         });
         setPublishedChapters(normalized);
+        writePublishedChaptersCache(normalized);
       } catch (err) {
         if (!cancelled) {
           console.error("Failed to load published chapters:", err);
@@ -1313,9 +1350,9 @@ export default function ExplorePage({
     };
 
     if (typeof window !== "undefined" && typeof window.requestIdleCallback === "function") {
-      idleId = window.requestIdleCallback(scheduleLoad, { timeout: 1200 });
+      idleId = window.requestIdleCallback(scheduleLoad, { timeout: hasFreshCache ? 1800 : 1200 });
     } else {
-      timeoutId = window.setTimeout(scheduleLoad, 250);
+      timeoutId = window.setTimeout(scheduleLoad, hasFreshCache ? 300 : 250);
     }
 
     return () => {
