@@ -11662,13 +11662,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   // Fetch holidays for visible years whenever month changes
   useEffect(() => {
+    const needsHolidayData = bottomNavTab === 'calendar' || bottomNavTab === 'home';
+    if (!needsHolidayData) return;
     const year = currentDate.getFullYear();
     fetchHolidays(year);
     // Also pre-fetch adjacent year in case calendar spans it
     const month = currentDate.getMonth();
     if (month === 11) fetchHolidays(year + 1);
     if (month === 0) fetchHolidays(year - 1);
-  }, [currentDate]);
+  }, [currentDate, bottomNavTab]);
 
   const getEasterDateKey = (year) => {
     const y = Number(year);
@@ -11801,6 +11803,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   // Get user location then fetch weather
   useEffect(() => {
+    const needsWeather = bottomNavTab === 'home' || bottomNavTab === 'calendar';
+    if (!needsWeather) return undefined;
     const CACHE_KEY = 'weather-location-cache';
     const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
     let intervalId = null;
@@ -11837,7 +11841,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return () => {
       if (intervalId) window.clearInterval(intervalId);
     };
-  }, []);
+  }, [bottomNavTab]);
   const handleDateTap = (date) => {
     if (!date) return;
 
@@ -20264,7 +20268,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     const currentQuickThoughtsUserId = String(user?.id || 'guest').trim() || 'guest';
     let cancelled = false;
-    (async () => {
+    let timeoutId = null;
+    let idleId = null;
+    const runHydration = async () => {
       const localThoughts = readQuickThoughtsState(user?.id);
       if (currentQuickThoughtsUserId === 'guest') {
         if (cancelled) return;
@@ -20283,11 +20289,24 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       writeQuickThoughtsState(user?.id, mergedThoughts);
       void memoryPersistence.persistRemoteQuickThoughtsState(user?.id, mergedThoughts);
       setQuickThoughtsHydratedUserId(currentQuickThoughtsUserId);
-    })();
+    };
+
+    const needsNow = bottomNavTab === 'someday';
+    if (needsNow) {
+      void runHydration();
+    } else if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      idleId = window.requestIdleCallback(() => { void runHydration(); }, { timeout: 2500 });
+    } else {
+      timeoutId = window.setTimeout(() => { void runHydration(); }, 800);
+    }
     return () => {
       cancelled = true;
+      if (idleId !== null && typeof window !== 'undefined' && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
     };
-  }, [user?.id]);
+  }, [user?.id, bottomNavTab]);
 
   useEffect(() => {
     const currentQuickThoughtsUserId = String(user?.id || 'guest').trim() || 'guest';
@@ -20445,7 +20464,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     const currentBucketListUserId = String(user?.id || 'guest').trim() || 'guest';
     let cancelled = false;
-    (async () => {
+    let timeoutId = null;
+    let idleId = null;
+    const runHydration = async () => {
       const localDreams = readBucketListState(user?.id);
       if (currentBucketListUserId === 'guest') {
         if (cancelled) return;
@@ -20464,11 +20485,24 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       writeBucketListState(user?.id, mergedDreams);
       void memoryPersistence.persistRemoteBucketListState(user?.id, mergedDreams);
       setBucketListHydratedUserId(currentBucketListUserId);
-    })();
+    };
+
+    const needsNow = bottomNavTab === 'someday' || bottomNavTab === 'explore';
+    if (needsNow) {
+      void runHydration();
+    } else if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      idleId = window.requestIdleCallback(() => { void runHydration(); }, { timeout: 2500 });
+    } else {
+      timeoutId = window.setTimeout(() => { void runHydration(); }, 900);
+    }
     return () => {
       cancelled = true;
+      if (idleId !== null && typeof window !== 'undefined' && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
     };
-  }, [user?.id]);
+  }, [user?.id, bottomNavTab]);
 
   useEffect(() => {
     const currentBucketListUserId = String(user?.id || 'guest').trim() || 'guest';
@@ -20660,7 +20694,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
     let cancelled = false;
-    (async () => {
+    let timeoutId = null;
+    let idleId = null;
+    const runHydration = async () => {
       const tombstones = memoryPersistence.readMemoriesTombstones(user?.id);
       const filterTombstones = (list) => list.filter((m) => !tombstones.has(String(m?.id || '')));
       const savedForCurrentUser = filterTombstones(
@@ -20687,11 +20723,24 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         setMemories(savedForCurrentUser);
       }
       if (!cancelled) setMemoriesHydratedUserId(currentMemoriesUserId);
-    })();
+    };
+
+    const needsNow = bottomNavTab === 'home';
+    if (needsNow) {
+      void runHydration();
+    } else if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      idleId = window.requestIdleCallback(() => { void runHydration(); }, { timeout: 3000 });
+    } else {
+      timeoutId = window.setTimeout(() => { void runHydration(); }, 1200);
+    }
     return () => {
       cancelled = true;
+      if (idleId !== null && typeof window !== 'undefined' && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
     };
-  }, [user?.id]);
+  }, [user?.id, bottomNavTab]);
 
   useEffect(() => {
     const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
