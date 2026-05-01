@@ -165,17 +165,21 @@ export default function useHomeScreenData({
     userTabEvents,
   ]);
 
+  const visibleLayerIdSet = useMemo(() => (
+    new Set((eventsTabVisibleLayerIds || []).map((value) => String(value || '').trim()).filter(Boolean))
+  ), [eventsTabVisibleLayerIds]);
+
   const filteredUpcomingUserTabEvents = useMemo(() => (
     upcomingUserTabEvents.filter((event) => {
       const layerId = String(event?.layerId || event?.layer_id || '').trim();
       const eventTs = toDateOnlyTs(event?.date || event?.dateKey || '');
       const upcomingWindowEndTs = todayTs + (13 * 24 * 60 * 60 * 1000);
-      if ((eventsTabVisibleLayerIds || []).length > 0 && layerId && !eventsTabVisibleLayerIds.includes(layerId)) return false;
+      if (visibleLayerIdSet.size > 0 && layerId && !visibleLayerIdSet.has(layerId)) return false;
       if (eventTs === null || eventTs > upcomingWindowEndTs) return false;
       if (eventsTabHideRecurring && (event?.isAnnual || (event?.recurrence && event.recurrence !== 'once'))) return false;
       return true;
     })
-  ), [eventsTabHideRecurring, eventsTabVisibleLayerIds, toDateOnlyTs, todayTs, upcomingUserTabEvents]);
+  ), [eventsTabHideRecurring, toDateOnlyTs, todayTs, upcomingUserTabEvents, visibleLayerIdSet]);
 
   const getWeEventDisplayBadge = useCallback((event, popupMeta) => {
     const normalizedCategory = String(event?.category || '').trim().toLowerCase();
@@ -220,14 +224,20 @@ export default function useHomeScreenData({
     return { icon: '🎉', label: 'We Event', className: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-200' };
   }, []);
 
-  const eligibleMemoryEvents = useMemo(() => (
-    Object.values(events || {})
+  const uniqueEvents = useMemo(() => {
+    const seenEventIds = new Set();
+    return Object.values(events || {})
       .flat()
-      .filter((event, index, arr) => {
+      .filter((event) => {
         const eventId = String(event?.id || '').trim();
-        if (!eventId) return false;
-        return arr.findIndex((candidate) => String(candidate?.id || '').trim() === eventId) === index;
-      })
+        if (!eventId || seenEventIds.has(eventId)) return false;
+        seenEventIds.add(eventId);
+        return true;
+      });
+  }, [events]);
+
+  const eligibleMemoryEvents = useMemo(() => (
+    uniqueEvents
       .filter((event) => {
         const dateKey = String(event?.date || event?.dateKey || '').trim();
         const eventTs = toDateOnlyTs(dateKey);
@@ -269,7 +279,6 @@ export default function useHomeScreenData({
         return String(a?.title || '').localeCompare(String(b?.title || ''));
       })
   ), [
-    events,
     getHolidayForDate,
     getHolidayNameSet,
     getWeEventDisplayBadge,
@@ -279,6 +288,7 @@ export default function useHomeScreenData({
     popupSignupsByEventId,
     toDateOnlyTs,
     todayTs,
+    uniqueEvents,
     user?.id,
   ]);
 
@@ -324,50 +334,72 @@ export default function useHomeScreenData({
     })
   ), [shouldIncludeEventInPersonalOverview, todayKey, upcomingUserTabEvents]);
 
-  const homeDaySections = useMemo(() => (
-    HOME_DAY_SECTIONS.map((section) => ({
+  const homeDaySections = useMemo(() => {
+    const sectionEvents = { morning: [], afternoon: [], evening: [] };
+    overviewTodayEvents.forEach((event) => {
+      const key = getHomeSectionKeyForEvent(event);
+      if (sectionEvents[key]) sectionEvents[key].push(event);
+    });
+    return HOME_DAY_SECTIONS.map((section) => ({
       ...section,
-      events: overviewTodayEvents.filter((event) => getHomeSectionKeyForEvent(event) === section.key),
-    }))
-  ), [getHomeSectionKeyForEvent, overviewTodayEvents]);
+      events: sectionEvents[section.key] || [],
+    }));
+  }, [getHomeSectionKeyForEvent, overviewTodayEvents]);
 
-  const homeTripsPreview = useMemo(() => (
-    [...activeTrips, ...upcomingTrips]
-      .filter((trip, index, arr) => arr.findIndex((row) => String(row?.id || '') === String(trip?.id || '')) === index)
-      .slice(0, 3)
-  ), [activeTrips, upcomingTrips]);
+  const homeTripsPreview = useMemo(() => {
+    const seenTripIds = new Set();
+    return [...activeTrips, ...upcomingTrips]
+      .filter((trip) => {
+        const tripId = String(trip?.id || '').trim();
+        if (!tripId || seenTripIds.has(tripId)) return false;
+        seenTripIds.add(tripId);
+        return true;
+      })
+      .slice(0, 3);
+  }, [activeTrips, upcomingTrips]);
+
+  const komoChapterById = useMemo(() => (
+    Object.fromEntries((komoChapters || []).map((chapter) => [String(chapter?.id || '').trim(), chapter]))
+  ), [komoChapters]);
+
+  const komoBookItemById = useMemo(() => {
+    const entries = [
+      ...(Array.isArray(bucketList) ? bucketList : []),
+      ...(Array.isArray(quickThoughts) ? quickThoughts : []),
+    ];
+    const itemMap = {};
+    entries.forEach((item) => {
+      const itemId = String(item?.id || '').trim();
+      if (!itemId || itemMap[itemId]) return;
+      itemMap[itemId] = {
+        id: item?.id,
+        photoUrl: item?.photoUrl,
+        imageUrl: item?.imageUrl,
+      };
+    });
+    return itemMap;
+  }, [bucketList, quickThoughts]);
 
   const homeTripsPreviewCards = useMemo(() => (
     homeTripsPreview.map((trip) => {
       const tripId = String(trip?.id || '').trim();
       const linkedChapterId = String(tripKomoState?.[tripId]?.chapterId || '').trim();
-      const linkedChapter = linkedChapterId
-        ? (komoChapters || []).find((chapter) => String(chapter?.id || '').trim() === linkedChapterId)
-        : null;
+      const linkedChapter = linkedChapterId ? (komoChapterById[linkedChapterId] || null) : null;
       const chapterItemIds = new Set((linkedChapter?.itemIds || []).map((id) => String(id || '').trim()).filter(Boolean));
-      const komoBookItems = [
-        ...(Array.isArray(bucketList) ? bucketList : []).map((item) => ({
-          id: item?.id,
-          photoUrl: item?.photoUrl,
-          imageUrl: item?.imageUrl,
-        })),
-        ...(Array.isArray(quickThoughts) ? quickThoughts : []).map((item) => ({
-          id: item?.id,
-          photoUrl: item?.photoUrl,
-          imageUrl: item?.imageUrl,
-        })),
-      ];
       const coverPinId = String(linkedChapter?.cover_pin_id || '').trim();
       const chapterCoverUrl = linkedChapter
         ? (() => {
             if (coverPinId) {
-              const coverItem = komoBookItems.find((item) => String(item?.id || '').trim() === coverPinId);
+              const coverItem = komoBookItemById[coverPinId] || null;
               const url = String(coverItem?.photoUrl || coverItem?.imageUrl || '').trim();
               if (url) return url;
             }
-            return String(komoBookItems.find((item) => chapterItemIds.has(String(item?.id || '').trim()) && (item?.photoUrl || item?.imageUrl))?.photoUrl
-              || komoBookItems.find((item) => chapterItemIds.has(String(item?.id || '').trim()) && (item?.photoUrl || item?.imageUrl))?.imageUrl
-              || '').trim();
+            for (const itemId of chapterItemIds) {
+              const item = komoBookItemById[itemId] || null;
+              const url = String(item?.photoUrl || item?.imageUrl || '').trim();
+              if (url) return url;
+            }
+            return '';
           })()
         : '';
       return {
@@ -377,7 +409,7 @@ export default function useHomeScreenData({
         chapterCoverUrl,
       };
     })
-  ), [bucketList, getSubCalEndRaw, getSubCalStartRaw, homeTripsPreview, komoChapters, quickThoughts, tripKomoState]);
+  ), [getSubCalEndRaw, getSubCalStartRaw, homeTripsPreview, komoBookItemById, komoChapterById, tripKomoState]);
 
   const homeTodayPlanCount = overviewTodayEvents.length;
   const homeUpcomingEventCount = filteredUpcomingUserTabEvents.length;
@@ -403,6 +435,33 @@ export default function useHomeScreenData({
   ), [isMemoryOwnedByCurrentUser, memories]);
 
   const homeResolvedMemories = personalMemories;
+
+  const homeMemoryPhotosByMemoryId = useMemo(() => {
+    const toDisplayUrl = (url) => {
+      const raw = String(url || '').trim();
+      if (!raw) return '';
+      try {
+        const parsed = new URL(raw);
+        const renderMarker = '/storage/v1/render/image/public/';
+        if (parsed.pathname.startsWith(renderMarker)) {
+          return `${parsed.origin}/storage/v1/object/public/${parsed.pathname.slice(renderMarker.length)}`;
+        }
+      } catch {}
+      return raw;
+    };
+
+    return Object.fromEntries(homeResolvedMemories.map((memory) => {
+      const urls = [];
+      const cover = getMemoryPrimaryPhotoUrl(memory);
+      if (cover) urls.push(toDisplayUrl(cover));
+      (memory?.photos || []).forEach((photo) => {
+        const url = String(photo?.url || photo?.photoUrl || '').trim();
+        if (url) urls.push(toDisplayUrl(url));
+      });
+      const uniqueUrls = urls.filter((url, index, arr) => url && arr.indexOf(url) === index);
+      return [String(memory?.id || memory?.date || memory?.createdAt || ''), uniqueUrls];
+    }));
+  }, [getMemoryPrimaryPhotoUrl, homeResolvedMemories]);
 
   const homeTodaySpotlightEvent = useMemo(() => (
     [...overviewTodayEvents]
@@ -440,33 +499,15 @@ export default function useHomeScreenData({
   ), [homeResolvedMemories, todayKey, user?.id]);
 
   const homeMemoryPhotoCount = useMemo(() => (
-    homeResolvedMemories.reduce((total, memory) => total + (memory?.photos?.length || 0), 0)
-  ), [homeResolvedMemories]);
+    homeResolvedMemories.reduce((total, memory) => {
+      const memoryKey = String(memory?.id || memory?.date || memory?.createdAt || '');
+      return total + (homeMemoryPhotosByMemoryId[memoryKey]?.length || 0);
+    }, 0)
+  ), [homeMemoryPhotosByMemoryId, homeResolvedMemories]);
 
   const homeMemoryCollagePhotos = useMemo(() => {
-    const toDisplayUrl = (url) => {
-      const raw = String(url || '').trim();
-      if (!raw) return '';
-      try {
-        const parsed = new URL(raw);
-        const renderMarker = '/storage/v1/render/image/public/';
-        if (parsed.pathname.startsWith(renderMarker)) {
-          return `${parsed.origin}/storage/v1/object/public/${parsed.pathname.slice(renderMarker.length)}`;
-        }
-      } catch {}
-      return raw;
-    };
     return [...homeResolvedMemories]
-      .flatMap((memory) => {
-        const urls = [];
-        const cover = getMemoryPrimaryPhotoUrl(memory);
-        if (cover) urls.push(toDisplayUrl(cover));
-        (memory?.photos || []).forEach((photo) => {
-          const url = String(photo?.url || photo?.photoUrl || '').trim();
-          if (url) urls.push(toDisplayUrl(url));
-        });
-        return urls;
-      })
+      .flatMap((memory) => homeMemoryPhotosByMemoryId[String(memory?.id || memory?.date || memory?.createdAt || '')] || [])
       .filter((url, index, arr) => url && arr.indexOf(url) === index)
       .sort((left, right) => {
         const leftKey = `${todayKey}:${String(user?.id || 'guest').trim() || 'guest'}:${left}`;
@@ -474,7 +515,7 @@ export default function useHomeScreenData({
         return hashHomeMemoryRotationKey(leftKey) - hashHomeMemoryRotationKey(rightKey);
       })
       .slice(0, 4);
-  }, [getMemoryPrimaryPhotoUrl, homeResolvedMemories, todayKey, user?.id]);
+  }, [homeMemoryPhotosByMemoryId, homeResolvedMemories, todayKey, user?.id]);
 
   const homeYearStats = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -489,20 +530,13 @@ export default function useHomeScreenData({
       const startTs = toDateOnlyTs(startRaw);
       return startTs !== null && startOfYearTs !== null && startTs >= startOfYearTs && startTs <= todayTs;
     });
-    const yearEventCount = Object.values(events || {})
-      .flat()
-      .filter((event, index, arr) => {
-        const eventId = String(event?.id || '').trim();
-        if (!eventId) return false;
-        return arr.findIndex((candidate) => String(candidate?.id || '').trim() === eventId) === index;
-      })
+    const yearEventCount = uniqueEvents
       .filter((event) => inCurrentYearRange(event?.date || event?.dateKey || ''))
       .length;
     const yearMemories = homeResolvedMemories.filter((memory) => inCurrentYearRange(memory?.date || memory?.createdAt || ''));
     const yearPhotoCount = yearMemories.reduce((total, memory) => {
-      const coverBonus = getMemoryPrimaryPhotoUrl(memory) ? 1 : 0;
-      const galleryCount = Array.isArray(memory?.photos) ? memory.photos.filter((photo) => String(photo?.url || photo?.photoUrl || '').trim()).length : 0;
-      return total + Math.max(coverBonus, galleryCount);
+      const memoryKey = String(memory?.id || memory?.date || memory?.createdAt || '');
+      return total + (homeMemoryPhotosByMemoryId[memoryKey]?.length || 0);
     }, 0);
     return {
       year: currentYear,
@@ -510,7 +544,7 @@ export default function useHomeScreenData({
       trips: tripsTakenThisYear.length,
       photos: yearPhotoCount,
     };
-  }, [events, getMemoryPrimaryPhotoUrl, getSubCalStartRaw, homeResolvedMemories, tabTrips, toDateOnlyTs, todayTs]);
+  }, [getSubCalStartRaw, homeMemoryPhotosByMemoryId, homeResolvedMemories, tabTrips, toDateOnlyTs, todayTs, uniqueEvents]);
 
   const homeMemoryReadyCount = eligibleMemoryEvents.length;
   const homeMemoryOpportunities = eligibleMemoryEvents.slice(0, 2);
