@@ -15655,6 +15655,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         .map((subCal) => String(subCal?.id || '').trim())
         .filter(Boolean)
     ));
+    const shouldListenForCalendarActivity = bottomNavTab === 'home' || bottomNavTab === 'calendar';
+    const shouldListenForTripActivity = bottomNavTab === 'home' || bottomNavTab === 'calendar';
+    const shouldListenForSharedListActivity = bottomNavTab === 'home' || bottomNavTab === 'calendar';
 
     let updatesChannel = supabase
       .channel(`in-app-updates-${me}`);
@@ -15703,10 +15706,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         }, handler);
       });
     };
-    attachFilteredRealtime('events', 'layer_id', filteredLayerIds, handleEventInsert);
-    attachFilteredRealtime('events', 'calendar_id', filteredLayerIds, handleEventInsert);
-    attachFilteredRealtime('sub_calendar_events', 'sub_calendar_id', filteredSubCalIds, handleSubCalendarEventInsert);
-    attachFilteredRealtime('trip_photos', 'sub_calendar_id', filteredSubCalIds, handleTripPhotoInsert);
+    if (shouldListenForCalendarActivity) {
+      attachFilteredRealtime('events', 'layer_id', filteredLayerIds, handleEventInsert);
+      attachFilteredRealtime('events', 'calendar_id', filteredLayerIds, handleEventInsert);
+    }
+    if (shouldListenForTripActivity) {
+      attachFilteredRealtime('sub_calendar_events', 'sub_calendar_id', filteredSubCalIds, handleSubCalendarEventInsert);
+      attachFilteredRealtime('trip_photos', 'sub_calendar_id', filteredSubCalIds, handleTripPhotoInsert);
+    }
     const handleSharedListInsert = async ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
         if (!(await canAccessLayerId(row.layer_id || row.calendar_id))) return;
@@ -15720,8 +15727,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           createdAt: row.created_at,
         });
       };
-    attachFilteredRealtime('shared_lists', 'layer_id', filteredLayerIds, handleSharedListInsert);
-    attachFilteredRealtime('shared_lists', 'calendar_id', filteredLayerIds, handleSharedListInsert);
+    if (shouldListenForSharedListActivity) {
+      attachFilteredRealtime('shared_lists', 'layer_id', filteredLayerIds, handleSharedListInsert);
+      attachFilteredRealtime('shared_lists', 'calendar_id', filteredLayerIds, handleSharedListInsert);
+    }
 
     const handleTripInviteInsert = async ({ new: row }) => {
         if (!row) return;
@@ -15915,7 +15924,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return () => {
       updatesChannel.unsubscribe();
     };
-  }, [user?.id, user?.email, user?.phone, realtimeLayerIdsSignature, realtimeSubCalendarIdsSignature, isAppVisible]);
+  }, [user?.id, user?.email, user?.phone, realtimeLayerIdsSignature, realtimeSubCalendarIdsSignature, isAppVisible, bottomNavTab]);
 
   useEffect(() => {
     if (!user?.id) {
