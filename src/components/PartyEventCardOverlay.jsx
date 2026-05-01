@@ -52,6 +52,7 @@ export default function PartyEventCardOverlay({
   const dragCurrentYRef = useRef(0);
   const hasLoadedFullMembersRef = useRef(false);
   const includeMembersRealtimeRef = useRef(false);
+  const realtimeRefreshTimeoutRef = useRef(null);
 
   const currentUserId = String(user?.id || '').trim();
   const effectiveDisplayName = String(displayName || '').trim()
@@ -164,11 +165,24 @@ export default function PartyEventCardOverlay({
 
   useEffect(() => {
     if (!event?.id || !supabase || !isUuid(event.id)) return undefined;
+    const scheduleRealtimeRefresh = () => {
+      if (realtimeRefreshTimeoutRef.current) window.clearTimeout(realtimeRefreshTimeoutRef.current);
+      realtimeRefreshTimeoutRef.current = window.setTimeout(() => {
+        realtimeRefreshTimeoutRef.current = null;
+        void loadEvent(event.id, { includeMembers: includeMembersRealtimeRef.current });
+      }, 150);
+    };
     const channel = supabase.channel(`party-card-members-${event.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { includeMembers: includeMembersRealtimeRef.current }))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { includeMembers: includeMembersRealtimeRef.current }))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members', filter: `event_id=eq.${event.id}` }, scheduleRealtimeRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `event_id=eq.${event.id}` }, scheduleRealtimeRefresh)
       .subscribe();
-    return () => supabase.removeChannel(channel);
+    return () => {
+      if (realtimeRefreshTimeoutRef.current) {
+        window.clearTimeout(realtimeRefreshTimeoutRef.current);
+        realtimeRefreshTimeoutRef.current = null;
+      }
+      supabase.removeChannel(channel);
+    };
   }, [event?.id, supabase, loadEvent]);
 
   const creatorUserId = String(event?.created_by || event?.created_by_user_id || '').trim();

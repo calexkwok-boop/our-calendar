@@ -20331,14 +20331,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const DAILY_PHOTO_TTL = 5 * 60 * 1000; // 5 min
 
     // Show stale cache immediately so the strip renders before the fetch completes
+    let hasFreshDailyPhotoCache = false;
     try {
       const cached = JSON.parse(localStorage.getItem(DAILY_PHOTO_CACHE_KEY) || 'null');
       if (cached?.photos && Array.isArray(cached.photos) && Date.now() - (cached.ts || 0) < DAILY_PHOTO_TTL) {
         setFriendsDailyPhotos(cached.photos);
+        hasFreshDailyPhotoCache = true;
       }
     } catch {}
 
     let cancelled = false;
+    if (hasFreshDailyPhotoCache) {
+      return () => { cancelled = true; };
+    }
     (async () => {
       try {
         const prefetchedFriendIds = Array.from(new Set(
@@ -20518,6 +20523,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     const ownerUserId = String(user?.id || '').trim();
     if (!ownerUserId || ownerUserId === 'guest') return undefined;
+    if (bottomNavTab !== 'someday' && bottomNavTab !== 'explore') return undefined;
 
     let cancelled = false;
 
@@ -20564,7 +20570,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       supabase.removeChannel(bucketChannel);
       supabase.removeChannel(quickThoughtsChannel);
     };
-  }, [user?.id]);
+  }, [user?.id, bottomNavTab]);
 
   useEffect(() => {
     try { localStorage.setItem('someday-pin-positions', JSON.stringify(somedayPinPositions)); } catch {}

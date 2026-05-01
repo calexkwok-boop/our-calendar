@@ -1306,6 +1306,7 @@ export default function PopupEventPanel({
   const includeMembersRealtimeRef = useRef(false);
   const inFlightLoadRef = useRef(new Map());
   const hasLoadedFullMembersRef = useRef(false);
+  const realtimeRefreshTimeoutRef = useRef(null);
 
   useEffect(() => {
     if (typeof document === 'undefined' || typeof window === 'undefined') return undefined;
@@ -1573,11 +1574,24 @@ export default function PopupEventPanel({
 
   useEffect(() => {
     if (!event?.id || !supabase || !isUuid(event.id)) return;
+    const scheduleRealtimeRefresh = () => {
+      if (realtimeRefreshTimeoutRef.current) window.clearTimeout(realtimeRefreshTimeoutRef.current);
+      realtimeRefreshTimeoutRef.current = window.setTimeout(() => {
+        realtimeRefreshTimeoutRef.current = null;
+        void loadEvent(event.id, { silent: true, includeMembers: includeMembersRealtimeRef.current });
+      }, 150);
+    };
     const channel = supabase.channel(`popup-members-${event.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { silent: true, includeMembers: includeMembersRealtimeRef.current }))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id, { silent: true, includeMembers: includeMembersRealtimeRef.current }))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members', filter: `event_id=eq.${event.id}` }, scheduleRealtimeRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `event_id=eq.${event.id}` }, scheduleRealtimeRefresh)
       .subscribe();
-    return () => supabase.removeChannel(channel);
+    return () => {
+      if (realtimeRefreshTimeoutRef.current) {
+        window.clearTimeout(realtimeRefreshTimeoutRef.current);
+        realtimeRefreshTimeoutRef.current = null;
+      }
+      supabase.removeChannel(channel);
+    };
   }, [event?.id, supabase, loadEvent]);
 
   const handleJoin = async () => {
