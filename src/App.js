@@ -1993,6 +1993,36 @@ const SPORTS_SCHEDULE_TEMPLATES = Object.freeze([
 
 const normalizeVoteValue = (value) => (Number(value) === 1 ? 1 : Number(value) === -1 ? -1 : 0);
 const getExploreVotesLocalKey = (userId) => `public-calendar-votes:${String(userId || 'anon')}`;
+const PUBLIC_CALENDARS_CACHE_TTL = 5 * 60 * 1000;
+const getPublicCalendarsCacheKey = (userId) => `public-calendars-cache:${String(userId || 'anon')}`;
+const readPublicCalendarsCache = (userId) => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(getPublicCalendarsCacheKey(userId));
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (!parsed || typeof parsed !== 'object') return null;
+    const ts = Number(parsed?.ts || 0);
+    const rows = Array.isArray(parsed?.rows) ? parsed.rows : null;
+    const votesMode = String(parsed?.votesMode || 'db').trim() || 'db';
+    if (!Number.isFinite(ts) || !rows) return null;
+    return { ts, rows, votesMode };
+  } catch {
+    return null;
+  }
+};
+const writePublicCalendarsCache = (userId, rows, votesMode = 'db') => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(
+      getPublicCalendarsCacheKey(userId),
+      JSON.stringify({
+        ts: Date.now(),
+        rows: Array.isArray(rows) ? rows : [],
+        votesMode: String(votesMode || 'db').trim() || 'db',
+      })
+    );
+  } catch {}
+};
 const readExploreVotesLocal = (userId) => {
   if (typeof window === 'undefined') return {};
   try {
@@ -9663,13 +9693,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       : (typeof event.event_data === 'string' ? (() => { try { return JSON.parse(event.event_data); } catch { return null; } })() : null),
   });
 
-  const loadPublicCalendars = async () => {
+  const applyPublicCalendarsCache = (userId) => {
+    const cached = readPublicCalendarsCache(userId);
+    if (!cached) return false;
+    if (Date.now() - Number(cached.ts || 0) > PUBLIC_CALENDARS_CACHE_TTL) return false;
+    setExploreVotesMode(String(cached.votesMode || 'db').trim() || 'db');
+    setPublicCalendars(Array.isArray(cached.rows) ? cached.rows : []);
+    setExploreError('');
+    return true;
+  };
+
+  const loadPublicCalendars = async ({ skipLoading = false } = {}) => {
     if (!user?.id) {
       setPublicCalendars([]);
       setExploreError('');
       return;
     }
-    setExploreLoading(true);
+    if (!skipLoading) setExploreLoading(true);
     setExploreError('');
     try {
       const { data: rows, error } = await supabase
@@ -9806,6 +9846,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       });
       setExploreVotesMode(votesMode);
       setPublicCalendars(normalizedWithLocalOverrides);
+      writePublicCalendarsCache(user?.id, normalizedWithLocalOverrides, votesMode);
       setExpandedExploreDescriptions({});
     } catch (err) {
       console.error('Error loading public calendars:', err);
@@ -21749,7 +21790,31 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     if (!user?.id) return;
     if (bottomNavTab !== 'explore') return;
-    loadPublicCalendars();
+    const hadFreshCache = applyPublicCalendarsCache(user.id);
+    let cancelled = false;
+    let timeoutId = null;
+    let idleId = null;
+
+    if (!hadFreshCache) setExploreLoading(true);
+
+    const scheduleRefresh = () => {
+      if (cancelled) return;
+      void loadPublicCalendars({ skipLoading: hadFreshCache });
+    };
+
+    if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      idleId = window.requestIdleCallback(scheduleRefresh, { timeout: hadFreshCache ? 1500 : 700 });
+    } else {
+      timeoutId = window.setTimeout(scheduleRefresh, hadFreshCache ? 250 : 50);
+    }
+
+    return () => {
+      cancelled = true;
+      if (idleId !== null && typeof window !== 'undefined' && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    };
   }, [bottomNavTab, user?.id]);
 
   useEffect(() => {
