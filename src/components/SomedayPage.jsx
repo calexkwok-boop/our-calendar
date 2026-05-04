@@ -2346,7 +2346,7 @@ const SomedayPage = ({
 
   function addDirectPinToChapter(chapterId, pinData) {
     const newPin = {
-      id: `pin-ch-${Date.now()}`,
+      id: crypto.randomUUID(),
       ...pinData,
       chapterId,
       status: pinData.status || 'dreaming',
@@ -2360,7 +2360,7 @@ const SomedayPage = ({
       c.id === chapterId ? { ...c, itemIds: [...new Set([...(c.itemIds || []), newPin.id])] } : c
     ));
     const position = (chapters.find(c => c.id === chapterId)?.itemIds || []).length;
-    supabase.from('chapter_pins').upsert(pinToRow({ ...newPin, chapterId }, chapterId, position)).then(() => {});
+    supabase.from('chapter_pins').upsert(pinToRow({ ...newPin, chapterId }, chapterId, position)).then(({ error }) => { if (error) console.error('chapter_pins upsert failed:', error); });
   }
 
   function deleteChapter(chapterId) {
