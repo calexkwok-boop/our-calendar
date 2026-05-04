@@ -1045,9 +1045,21 @@ function ChapterPinSheet({ pin, onClose, onRemove, darkMode, hasLinkedTrip = fal
 
 
 // ─── Chapter Page ─────────────────────────────────────────────────────────────
-function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, darkMode, hasLinkedTrip = false, onInvite, onCoverChange, onPublishChange }) {
+function formatTripDateRange(start, end) {
+  if (!start) return null;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const [sy, sm, sd] = start.split('-').map(Number);
+  if (!end || end === start) return `${months[sm-1]} ${sd}, ${sy}`;
+  const [ey, em, ed] = end.split('-').map(Number);
+  if (sy === ey && sm === em) return `${months[sm-1]} ${sd}–${ed}, ${sy}`;
+  if (sy === ey) return `${months[sm-1]} ${sd} – ${months[em-1]} ${ed}, ${sy}`;
+  return `${months[sm-1]} ${sd}, ${sy} – ${months[em-1]} ${ed}, ${ey}`;
+}
+
+function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, darkMode, hasLinkedTrip = false, linkedTripDates = null, onInvite, onCoverChange, onPublishChange }) {
   const [showAddMemory, setShowAddMemory] = useState(false);
   const [memoryText, setMemoryText] = useState('');
+  const [tripAlbumPhotos, setTripAlbumPhotos] = useState([]);
   const [selectedPin, setSelectedPin] = useState(null);
   const [showInvite, setShowInvite] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -1099,6 +1111,17 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
     setPublishDescription(chapter.public_description || '');
     setPublishTagsInput(Array.isArray(chapter.public_tags) ? chapter.public_tags.join(', ') : '');
   }, [chapter.coverPinId, chapter.cover_pin_id, chapter.public_description, chapter.public_tags, chapter.public_title, chapter.title]);
+
+  useEffect(() => {
+    const tripId = linkedTripDates?.trip_id;
+    if (!tripId) { setTripAlbumPhotos([]); return; }
+    supabase
+      .from('trip_photos')
+      .select('id, url, thumbnail_url, medium_url, caption, date, uploaded_by')
+      .eq('sub_calendar_id', tripId)
+      .order('date', { ascending: true })
+      .then(({ data }) => setTripAlbumPhotos(data || []));
+  }, [linkedTripDates?.trip_id]);
 
   async function pickCover(pin) {
     setCoverPinId(pin.id);
@@ -1154,6 +1177,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
   const ts     = darkMode ? '#4a5568' : '#9ca3af';
   const cardBg = darkMode ? '#131c2e' : '#ffffff';
   const divider = darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)';
+  const tripDateRange = linkedTripDates ? formatTripDateRange(linkedTripDates.start_date, linkedTripDates.end_date) : null;
 
   function submitMemory() {
     if (!memoryText.trim()) return;
@@ -1171,6 +1195,9 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
             <div>
               <p style={{ fontSize: 10, color: '#5eadce', textTransform: 'uppercase', letterSpacing: '0.18em', margin: 0, fontWeight: 700 }}>Chapter</p>
               <h1 style={{ fontFamily: CAVEAT, fontSize: 26, fontWeight: 700, color: tp, margin: 0, lineHeight: 1.1 }}>{chapter.title}</h1>
+              {tripDateRange && (
+                <p style={{ fontSize: 10, color: ts, margin: '2px 0 0', fontWeight: 600, letterSpacing: '0.06em' }}>{tripDateRange}</p>
+              )}
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
@@ -1233,9 +1260,12 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
           <img src={coverPin.imageUrl} alt={chapter.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 35%, rgba(0,0,0,0.55))' }} />
           <div style={{ position: 'absolute', bottom: 14, left: 16 }}>
-            <span style={{ fontFamily: CAVEAT, fontSize: 30, color: '#fff', fontWeight: 700, textShadow: '0 2px 10px rgba(0,0,0,0.6)' }}>{chapter.title}</span>
+            <span style={{ fontFamily: CAVEAT, fontSize: 30, color: '#fff', fontWeight: 700, textShadow: '0 2px 10px rgba(0,0,0,0.6)', display: 'block' }}>{chapter.title}</span>
+            {tripDateRange && (
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.9)', fontWeight: 600, letterSpacing: '0.08em', textShadow: '0 1px 6px rgba(0,0,0,0.6)', display: 'block', marginTop: 3 }}>{tripDateRange}</span>
+            )}
           </div>
-          {chapter.createdAt && <div style={{ position: 'absolute', top: 12, right: 14, background: 'rgba(0,0,0,0.4)', color: '#fff', fontSize: 10, padding: '3px 8px', borderRadius: 20, backdropFilter: 'blur(4px)' }}>{chapter.createdAt}</div>}
+          {(tripDateRange ? null : chapter.createdAt) && <div style={{ position: 'absolute', top: 12, right: 14, background: 'rgba(0,0,0,0.4)', color: '#fff', fontSize: 10, padding: '3px 8px', borderRadius: 20, backdropFilter: 'blur(4px)' }}>{chapter.createdAt}</div>}
           {imagePins.length > 1 && (
             <button
               onClick={() => setShowCoverPicker(true)}
@@ -1338,6 +1368,21 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
             </div>
           </div>
         )}
+        {tripAlbumPhotos.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <p style={{ fontSize: 10, color: ts, textTransform: 'uppercase', letterSpacing: '0.14em', fontWeight: 600, margin: '0 0 10px' }}>Trip photos · {tripAlbumPhotos.length}</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
+              {tripAlbumPhotos.map(photo => {
+                const src = photo.thumbnail_url || photo.medium_url || photo.url;
+                return (
+                  <div key={photo.id} style={{ aspectRatio: '1', borderRadius: 10, overflow: 'hidden', background: darkMode ? 'rgba(255,255,255,0.05)' : '#f0ece4' }}>
+                    <img src={src} alt={photo.caption || ''} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
         {chapter.memories?.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {chapter.memories.map(mem => (
@@ -1351,10 +1396,12 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
             ))}
           </div>
         ) : (
-          <div style={{ textAlign: 'center', padding: '28px 0' }}>
-            <p style={{ fontFamily: CAVEAT, fontSize: 19, color: ts, fontStyle: 'italic', margin: 0 }}>No memories yet — they'll live here</p>
-            <p style={{ fontSize: 12, color: ts, margin: '6px 0 0', opacity: 0.7 }}>Add notes and moments as this chapter unfolds</p>
-          </div>
+          tripAlbumPhotos.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '28px 0' }}>
+              <p style={{ fontFamily: CAVEAT, fontSize: 19, color: ts, fontStyle: 'italic', margin: 0 }}>No memories yet — they'll live here</p>
+              <p style={{ fontSize: 12, color: ts, margin: '6px 0 0', opacity: 0.7 }}>Add notes and moments as this chapter unfolds</p>
+            </div>
+          )
         )}
       </div>
 
@@ -2272,7 +2319,7 @@ const SomedayPage = ({
       return (
         <>
           <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
-          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={chapter.owner_id === currentUser ? () => deleteChapter(activeChapterId) : undefined} onCreateTrip={chapter.owner_id === currentUser ? onCreateTripFromChapter : undefined} darkMode={darkMode} hasLinkedTrip={chaptersWithLinkedTrips.has(String(chapter.id))} onInvite={email => inviteToChapter(activeChapterId, email)} onCoverChange={({ chapterId, coverPinId }) => setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, cover_pin_id: coverPinId } : c))} onPublishChange={updateChapterPublishState} />
+          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={chapter.owner_id === currentUser ? () => deleteChapter(activeChapterId) : undefined} onCreateTrip={chapter.owner_id === currentUser ? onCreateTripFromChapter : undefined} darkMode={darkMode} hasLinkedTrip={chaptersWithLinkedTrips.has(String(chapter.id))} linkedTripDates={chaptersWithLinkedTrips.get(String(chapter.id)) || null} onInvite={email => inviteToChapter(activeChapterId, email)} onCoverChange={({ chapterId, coverPinId }) => setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, cover_pin_id: coverPinId } : c))} onPublishChange={updateChapterPublishState} />
         </>
       );
     }

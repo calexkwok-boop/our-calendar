@@ -20085,12 +20085,20 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     [activeTrips],
   );
   const chaptersWithLinkedTrips = React.useMemo(() => {
-    const s = new Set();
-    for (const v of Object.values(tripKomoState || {})) {
-      if (v?.chapterId) s.add(String(v.chapterId));
+    const m = new Map();
+    for (const [tripId, v] of Object.entries(tripKomoState || {})) {
+      if (v?.chapterId) {
+        const trip = subCalendars.find((sc) => String(sc.id) === String(tripId));
+        m.set(String(v.chapterId), {
+          trip_id: String(tripId),
+          start_date: trip?.start_date || null,
+          end_date: trip?.end_date || null,
+          name: trip?.name || trip?.title || '',
+        });
+      }
     }
-    return s;
-  }, [tripKomoState]);
+    return m;
+  }, [tripKomoState, subCalendars]);
   const primaryJourneyGoal = sortedJourneyGoals.find((goal) => goal?.active !== false) || null;
   const todayWeatherIcon = weather[todayKey]?.icon;
   const weatherGreetingEmoji = (todayWeatherIcon && todayWeatherIcon !== 'FOG') ? todayWeatherIcon : homeGreetingEmoji;
