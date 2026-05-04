@@ -1861,6 +1861,7 @@ const SomedayPage = ({
   async function fetchChapterPinRows(chapterIds = []) {
     if (!Array.isArray(chapterIds) || chapterIds.length === 0) return [];
     const allSelects = [
+      'id, chapter_id, label, description, image_url, emoji, category_id, status, tip, map_query, pin_color, note_color, type, meta, x, y, rot, position',
       'id, chapter_id, label, description, image_url, emoji, category_id, status, tip, map_query, pin_color, note_color, type, x, y, rot, position',
       'id, chapter_id, label, description, image_url, emoji, category_id, status, tip, map_query, pin_color, note_color, type, x, y, rot',
     ];
@@ -2354,7 +2355,7 @@ const SomedayPage = ({
       rot: (Math.random() - 0.5) * 3,
     };
     setPins(prev => [...prev, newPin]);
-    onAddDream?.(newPin);
+    if (newPin.type !== 'checklist' && newPin.type !== 'link') onAddDream?.(newPin);
     setChapters(prev => prev.map(c =>
       c.id === chapterId ? { ...c, itemIds: [...new Set([...(c.itemIds || []), newPin.id])] } : c
     ));
