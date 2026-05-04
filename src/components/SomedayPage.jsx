@@ -884,7 +884,9 @@ function DetailSheet({ pin, chapters, onClose, onConvertToEvent, onConvertToTrip
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 10020, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{ background: sheetBg, borderRadius: '24px 24px 0 0', padding: '20px 18px max(48px, calc(env(safe-area-inset-bottom) + 48px))', width: '100%', maxWidth: 480, margin: '0 auto', borderTop: `1px solid ${divider}`, maxHeight: '90dvh', overflowY: 'auto', ...sheetStyle }}>
-        <div {...handleProps} style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 auto 16px', ...handleProps.style }} />
+        <div {...handleProps}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
+        </div>
 
         {pin.type === 'photo' && pin.imageUrl && (
           <img src={pin.imageUrl} alt={pin.label} style={{ width: '100%', height: 180, objectFit: 'cover', borderRadius: 16, marginBottom: 14 }} />
