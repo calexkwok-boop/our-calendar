@@ -11,6 +11,16 @@ import {
 import QuickThoughtsSection from './QuickThoughtsSection';
 import { getDestinationImageOverride } from '../data/destinationImageOverrides';
 
+const TODAY_MOMENT_CACHE_KEY = 'home-today-moment-v1';
+const readCachedTodayMoment = (todayKey) => {
+  try {
+    const raw = typeof window !== 'undefined' ? window.localStorage.getItem(TODAY_MOMENT_CACHE_KEY) : null;
+    if (!raw) return null;
+    const cached = JSON.parse(raw);
+    return cached?.date === todayKey && cached?.url ? cached : null;
+  } catch { return null; }
+};
+
 const areShallowArraysEqual = (a, b) => {
   if (a === b) return true;
   if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
@@ -228,6 +238,17 @@ const ScrapbookHomeHybrid = ({
   const todayMoment = momentsThisWeek.find(
     (m) => String(m?.date || '').trim().slice(0, 10) === todayKey
   ) || null;
+
+  // Cache the photo URL so subsequent visits show it instantly, before memory hydration.
+  if (todayMoment?.photoUrl) {
+    try {
+      window.localStorage.setItem(TODAY_MOMENT_CACHE_KEY, JSON.stringify({
+        date: todayKey, url: todayMoment.photoUrl, title: todayMoment.title || '',
+      }));
+    } catch {}
+  }
+  const [cachedMoment] = useState(() => readCachedTodayMoment(todayKey));
+  const displayMoment = todayMoment || cachedMoment;
   const shuffledBucketList = React.useMemo(() => (
     [...bucketList].sort((left, right) => {
       const leftKey = `${komoShuffleSeedRef.current}:${String(left?.id || left?.text || '')}`;
@@ -452,20 +473,20 @@ const ScrapbookHomeHybrid = ({
             )}
           </div>
 
-          {todayMoment ? (
+          {displayMoment ? (
             <div className="flex justify-center">
               <div
                 className="bg-white dark:bg-slate-100 rounded-sm shadow-xl p-3 pb-0 w-full max-w-sm relative"
                 style={{ transform: 'rotate(-0.8deg)' }}
               >
                 <button
-                  onClick={() => onOpenMemory?.(todayMoment)}
+                  onClick={() => onOpenMemory?.(todayMoment || displayMoment)}
                   className="w-full"
                 >
                   <div className="aspect-[4/3] w-full overflow-hidden rounded-[2px]">
-                    {todayMoment.photoUrl ? (
+                    {displayMoment.photoUrl ? (
                       <img
-                        src={todayMoment.photoUrl}
+                        src={displayMoment.photoUrl}
                         alt="Today's moment"
                         className="h-full w-full object-cover"
                         fetchpriority="high"
@@ -478,11 +499,11 @@ const ScrapbookHomeHybrid = ({
                   </div>
                   <div className="py-4 px-2 text-center">
                     <p className="font-handwritten text-xl text-gray-700" style={{ fontFamily: "'Caveat', cursive" }}>
-                      {todayMoment.title || todayMoment.note || formatDisplayDate(todayMoment.date)}
+                      {displayMoment.title || displayMoment.note || formatDisplayDate(displayMoment.date)}
                     </p>
                   </div>
                 </button>
-                {onDeleteMoment && (
+                {onDeleteMoment && todayMoment && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

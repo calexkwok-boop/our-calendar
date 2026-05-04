@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 const HOME_DAY_SECTIONS = [
   { key: 'morning', label: 'Morning', emptyTitle: 'Ease into the day', emptyCopy: 'Add breakfast, a workout, or one clear priority.' },
@@ -505,7 +505,9 @@ export default function useHomeScreenData({
     }, 0)
   ), [homeMemoryPhotosByMemoryId, homeResolvedMemories]);
 
-  const homeMemoryCollagePhotos = useMemo(() => {
+  const frozenCollageRef = useRef(null);
+
+  const _rawCollagePhotos = useMemo(() => {
     return [...homeResolvedMemories]
       .flatMap((memory) => homeMemoryPhotosByMemoryId[String(memory?.id || memory?.date || memory?.createdAt || '')] || [])
       .filter((url, index, arr) => url && arr.indexOf(url) === index)
@@ -516,6 +518,17 @@ export default function useHomeScreenData({
       })
       .slice(0, 4);
   }, [homeMemoryPhotosByMemoryId, homeResolvedMemories, todayKey, user?.id]);
+
+  // Lock in the first non-empty selection per day+user so later memory updates
+  // (trip sync, remote hydration) don't reshuffle the collage mid-render.
+  const collageDayKey = `${todayKey}:${String(user?.id || 'guest').trim()}`;
+  if (_rawCollagePhotos.length > 0 && frozenCollageRef.current?.dayKey !== collageDayKey) {
+    frozenCollageRef.current = { dayKey: collageDayKey, photos: _rawCollagePhotos };
+  }
+  const homeMemoryCollagePhotos =
+    frozenCollageRef.current?.dayKey === collageDayKey && frozenCollageRef.current.photos.length > 0
+      ? frozenCollageRef.current.photos
+      : _rawCollagePhotos;
 
   const homeYearStats = useMemo(() => {
     const currentYear = new Date().getFullYear();
