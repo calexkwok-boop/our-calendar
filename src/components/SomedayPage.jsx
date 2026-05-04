@@ -8,6 +8,7 @@ import { supabase } from '../supabaseClient';
 import InvitePicker from './InvitePicker';
 
 const CAVEAT = '"Caveat", cursive';
+const SANS = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
 
 const SAMPLE_PINS = [
   { id: '1', type: 'photo', x: 18,  y: 70,  rot: -2.5, label: 'Trek in Patagonia',      emoji: '🏔️', imageUrl: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=400&q=80', pinColor: 'teal',   categoryId: 'places',      status: 'dreaming' },
@@ -756,21 +757,25 @@ function ChapterSuggestionPrompt({ group, pins, onConfirm, onDismiss, darkMode }
 
 // ─── Add Sheet ────────────────────────────────────────────────────────────────
 function AddSheet({ onClose, onAdd, darkMode }) {
-  const [type, setType]             = useState('photo');
-  const [label, setLabel]           = useState('');
-  const [emoji, setEmoji]           = useState('✨');
-  const [imageUrl, setUrl]          = useState('');
-  const [text, setText]             = useState('');
-  const [noteColor, setNoteColor]   = useState('yellow');
-  const [pinColor, setPinColor]     = useState('teal');
-  const [catId, setCatId]           = useState('experiences');
-  const [labelText, setLabelText]   = useState('');
-  const [fontStyle, setFontStyle]   = useState('handwritten');
-  const [fontSize, setFontSize]     = useState('medium');
-  const [textColor, setTextColor]   = useState(darkMode ? '#e8eaf0' : '#1a1a2e');
-  const [styleVariant, setStyleVar] = useState('plain');
-  const [sticker, setSticker]       = useState('⭐');
+  const [type, setType]               = useState('photo');
+  const [label, setLabel]             = useState('');
+  const [emoji, setEmoji]             = useState('✨');
+  const [imageUrl, setUrl]            = useState('');
+  const [text, setText]               = useState('');
+  const [noteColor, setNoteColor]     = useState('yellow');
+  const [pinColor, setPinColor]       = useState('teal');
+  const [catId, setCatId]             = useState('experiences');
+  const [labelText, setLabelText]     = useState('');
+  const [fontStyle, setFontStyle]     = useState('handwritten');
+  const [fontSize, setFontSize]       = useState('medium');
+  const [textColor, setTextColor]     = useState(darkMode ? '#e8eaf0' : '#1a1a2e');
+  const [styleVariant, setStyleVar]   = useState('plain');
+  const [sticker, setSticker]         = useState('⭐');
   const [stickerSize, setStickerSize] = useState('medium');
+  const [checklistTitle, setChecklistTitle] = useState('');
+  const [checklistItems, setChecklistItems] = useState([{ id: '1', text: '' }]);
+  const [linkUrl, setLinkUrl]         = useState('');
+  const [linkTitle, setLinkTitle]     = useState('');
   const labelPresets = ['MOVIES', 'My Wishlist', 'Date Night', 'Trips'];
   const sheetBg  = darkMode ? '#131c2e' : '#ffffff';
   const inputBg  = darkMode ? 'rgba(255,255,255,0.06)' : '#f8f7f2';
@@ -778,20 +783,25 @@ function AddSheet({ onClose, onAdd, darkMode }) {
   const tp = darkMode ? '#e8eaf0' : '#1a1a2e';
   const ts = darkMode ? '#4a5568' : '#9ca3af';
   const divider = darkMode ? 'rgba(255,255,255,0.05)' : '#f0ece4';
-  const inputStyle = { background: inputBg, border: `1px solid ${inputBdr}`, borderRadius: 12, padding: '10px 13px', fontFamily: CAVEAT, fontSize: 16, color: tp, outline: 'none', width: '100%' };
+  const inputStyle = { background: inputBg, border: `1px solid ${inputBdr}`, borderRadius: 12, padding: '10px 13px', fontFamily: SANS, fontSize: 15, color: tp, outline: 'none', width: '100%', boxSizing: 'border-box' };
+  const sectionLabel = { fontSize: 11, fontFamily: SANS, fontWeight: 600, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' };
   const { sheetStyle, handleProps } = useSwipeDownSheet(onClose);
   function pillStyle(active) {
-    return { flex: 1, padding: '7px 4px', borderRadius: 12, border: `1px solid ${active ? '#2dd4bf' : inputBdr}`, background: active ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', color: active ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer' };
+    return { flex: 1, padding: '7px 4px', borderRadius: 12, border: `1px solid ${active ? '#2dd4bf' : inputBdr}`, background: active ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', color: active ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, fontFamily: SANS, fontSize: 13, cursor: 'pointer' };
   }
   function submit() {
     if (type === 'photo' && !label.trim()) return;
-    if (type === 'note'  && !text.trim())  return;
+    if (type === 'note' && !text.trim()) return;
     if (type === 'label' && !labelText.trim()) return;
+    if (type === 'checklist' && !checklistTitle.trim() && !checklistItems.some(i => i.text.trim())) return;
+    if (type === 'link' && !linkUrl.trim()) return;
     let data = { type, status: 'dreaming' };
-    if (type === 'photo')   data = { ...data, label: label.trim(), emoji, pinColor, categoryId: catId, imageUrl };
-    if (type === 'note')    data = { ...data, text: text.trim(), noteColor, pinColor, categoryId: catId };
-    if (type === 'label')   data = { ...data, text: labelText.trim(), fontStyle, fontSize, textColor, styleVariant };
-    if (type === 'sticker') data = { ...data, sticker, size: stickerSize };
+    if (type === 'photo')     data = { ...data, label: label.trim(), emoji, pinColor, categoryId: catId, imageUrl };
+    if (type === 'note')      data = { ...data, text: text.trim(), noteColor, pinColor, categoryId: catId };
+    if (type === 'label')     data = { ...data, text: labelText.trim(), fontStyle, fontSize, textColor, styleVariant };
+    if (type === 'sticker')   data = { ...data, sticker, size: stickerSize };
+    if (type === 'checklist') data = { ...data, label: checklistTitle.trim() || 'Checklist', meta: { items: checklistItems.filter(i => i.text.trim()).map(i => ({ id: i.id, text: i.text.trim(), checked: false })) } };
+    if (type === 'link')      data = { ...data, label: linkTitle.trim() || linkUrl.trim(), meta: { url: linkUrl.trim(), title: linkTitle.trim() } };
     onAdd(data); onClose();
   }
   return (
@@ -802,57 +812,82 @@ function AddSheet({ onClose, onAdd, darkMode }) {
         </div>
         <div style={{ padding: '4px 0 18px' }}><p style={{ fontFamily: CAVEAT, fontSize: 24, fontWeight: 700, color: tp, margin: 0 }}>Pin something new</p></div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
-          {[['photo','📸','Photo / emoji'],['note','📝','Quick note'],['label','🏷️','Label'],['sticker','✦','Sticker']].map(([t, ic, lbl]) => (
-            <button key={t} onClick={() => setType(t)} style={{ padding: '9px 6px', borderRadius: 14, border: `1px solid ${type === t ? '#2dd4bf' : inputBdr}`, background: type === t ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', color: type === t ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer' }}>{ic} {lbl}</button>
+          {[['photo','📸','Photo'],['note','📝','Note'],['checklist','✅','Checklist'],['link','🔗','Link'],['label','🏷️','Label'],['sticker','✦','Sticker']].map(([t, ic, lbl]) => (
+            <button key={t} onClick={() => setType(t)} style={{ padding: '9px 6px', borderRadius: 14, border: `1px solid ${type === t ? '#2dd4bf' : inputBdr}`, background: type === t ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', color: type === t ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, fontFamily: SANS, fontSize: 13, cursor: 'pointer', fontWeight: type === t ? 600 : 400 }}>{ic} {lbl}</button>
           ))}
         </div>
         {type === 'photo' && (<>
           <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Label (e.g. Visit Boston)" style={{ ...inputStyle, marginBottom: 10 }} />
-          <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Photo</p>
+          <p style={sectionLabel}>Photo</p>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            <button onClick={() => { const i=document.createElement('input'); i.type='file'; i.accept='image/*'; i.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>setUrl(ev.target.result);r.readAsDataURL(f);}; i.click(); }} style={{ flex: 1, padding: '9px 6px', borderRadius: 12, border: `1px solid ${inputBdr}`, background: 'transparent', color: ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer' }}>📁 Upload photo</button>
-            <button onClick={() => { const i=document.createElement('input'); i.type='file'; i.accept='image/*'; i.capture='environment'; i.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>setUrl(ev.target.result);r.readAsDataURL(f);}; i.click(); }} style={{ flex: 1, padding: '9px 6px', borderRadius: 12, border: `1px solid ${inputBdr}`, background: 'transparent', color: ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer' }}>📷 Take photo</button>
+            <button onClick={() => { const i=document.createElement('input'); i.type='file'; i.accept='image/*'; i.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>setUrl(ev.target.result);r.readAsDataURL(f);}; i.click(); }} style={{ flex: 1, padding: '9px 6px', borderRadius: 12, border: `1px solid ${inputBdr}`, background: 'transparent', color: ts, fontFamily: SANS, fontSize: 13, cursor: 'pointer' }}>📁 Upload photo</button>
+            <button onClick={() => { const i=document.createElement('input'); i.type='file'; i.accept='image/*'; i.capture='environment'; i.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>setUrl(ev.target.result);r.readAsDataURL(f);}; i.click(); }} style={{ flex: 1, padding: '9px 6px', borderRadius: 12, border: `1px solid ${inputBdr}`, background: 'transparent', color: ts, fontFamily: SANS, fontSize: 13, cursor: 'pointer' }}>📷 Take photo</button>
           </div>
           {imageUrl && imageUrl.startsWith('data:') && (<div style={{ position: 'relative', marginBottom: 10 }}><img src={imageUrl} alt="" style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 12 }} /><button onClick={() => setUrl('')} style={{ position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button></div>)}
           <input value={imageUrl.startsWith('data:') ? '' : imageUrl} onChange={e => setUrl(e.target.value)} placeholder="or paste image URL (optional)" style={{ ...inputStyle, marginBottom: 12 }} />
-          <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Emoji</p>
+          <p style={sectionLabel}>Emoji</p>
           <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 14 }}>
             {['✨','🌍','🍜','🏔️','🚗','🏡','🎬','🎲','🛍️','🌊','🏄','🎵','📚','🍣','🌸','✈️','🍕','🎪','🌮','☕','🍷','🌙','🌈','🎭'].map(e => (<button key={e} onClick={() => setEmoji(e)} style={{ width: 36, height: 36, borderRadius: 10, border: `1px solid ${emoji===e?'#2dd4bf':inputBdr}`, background: emoji===e?(darkMode?'rgba(45,212,191,0.1)':'#f0fdfb'):'transparent', fontSize: 18, cursor: 'pointer' }}>{e}</button>))}
           </div>
         </>)}
         {type === 'note' && (<>
           <textarea value={text} onChange={e => setText(e.target.value)} placeholder="What's on your mind?" rows={3} style={{ ...inputStyle, resize: 'none', marginBottom: 12 }} />
-          <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Note colour</p>
+          <p style={sectionLabel}>Note colour</p>
           <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
             {NOTE_COLOR_OPTIONS.map(k => { const c=NOTE_COLORS[k][darkMode?'dark':'light']; return <button key={k} onClick={() => setNoteColor(k)} style={{ width: 34, height: 34, borderRadius: 10, background: c.bg, border: noteColor===k?'2px solid #2dd4bf':`1px solid ${c.fold}33`, cursor: 'pointer' }} />; })}
           </div>
         </>)}
+        {type === 'checklist' && (<>
+          <input value={checklistTitle} onChange={e => setChecklistTitle(e.target.value)} placeholder="List title (e.g. Packing List)" style={{ ...inputStyle, marginBottom: 14 }} />
+          <p style={sectionLabel}>Items</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
+            {checklistItems.map((item, idx) => (
+              <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 16, flexShrink: 0 }}>☐</span>
+                <input
+                  value={item.text}
+                  onChange={e => setChecklistItems(prev => prev.map(i => i.id === item.id ? { ...i, text: e.target.value } : i))}
+                  placeholder={`Item ${idx + 1}`}
+                  style={{ ...inputStyle, flex: 1, width: 'auto' }}
+                />
+                {checklistItems.length > 1 && (
+                  <button onClick={() => setChecklistItems(prev => prev.filter(i => i.id !== item.id))} style={{ background: 'none', border: 'none', color: ts, fontSize: 18, cursor: 'pointer', padding: '0 4px', flexShrink: 0 }}>✕</button>
+                )}
+              </div>
+            ))}
+          </div>
+          <button onClick={() => setChecklistItems(prev => [...prev, { id: Date.now().toString(), text: '' }])} style={{ width: '100%', padding: '9px', borderRadius: 12, border: `1px dashed ${inputBdr}`, background: 'transparent', color: ts, fontFamily: SANS, fontSize: 13, cursor: 'pointer', marginBottom: 14 }}>+ Add item</button>
+        </>)}
+        {type === 'link' && (<>
+          <input value={linkUrl} onChange={e => setLinkUrl(e.target.value)} placeholder="https://..." style={{ ...inputStyle, marginBottom: 10 }} />
+          <input value={linkTitle} onChange={e => setLinkTitle(e.target.value)} placeholder="Display name (optional)" style={{ ...inputStyle, marginBottom: 14 }} />
+        </>)}
         {type === 'label' && (<>
           <input value={labelText} onChange={e => setLabelText(e.target.value)} placeholder="MOVIES · My Wishlist · Date Night" style={{ ...inputStyle, marginBottom: 12 }} />
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-            {labelPresets.map(preset => { const active=labelText.trim().toLowerCase()===preset.toLowerCase(); return <button key={preset} type="button" onClick={() => setLabelText(preset)} style={{ padding: '6px 10px', borderRadius: 999, border: `1px solid ${active?'#2dd4bf':inputBdr}`, background: active?(darkMode?'rgba(45,212,191,0.1)':'#f0fdfb'):'transparent', color: active?(darkMode?'#2dd4bf':'#0d9488'):ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer' }}>{preset}</button>; })}
+            {labelPresets.map(preset => { const active=labelText.trim().toLowerCase()===preset.toLowerCase(); return <button key={preset} type="button" onClick={() => setLabelText(preset)} style={{ padding: '6px 10px', borderRadius: 999, border: `1px solid ${active?'#2dd4bf':inputBdr}`, background: active?(darkMode?'rgba(45,212,191,0.1)':'#f0fdfb'):'transparent', color: active?(darkMode?'#2dd4bf':'#0d9488'):ts, fontFamily: SANS, fontSize: 13, cursor: 'pointer' }}>{preset}</button>; })}
           </div>
-          <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Style</p>
+          <p style={sectionLabel}>Style</p>
           <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>{[['plain','Plain'],['highlight','Highlight'],['tape','Tape']].map(([v,lbl]) => <button key={v} onClick={() => setStyleVar(v)} style={pillStyle(styleVariant===v)}>{lbl}</button>)}</div>
-          <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Font</p>
+          <p style={sectionLabel}>Font</p>
           <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>{[['handwritten','Caveat'],['clean','Clean'],['bold','Bold']].map(([v,lbl]) => <button key={v} onClick={() => setFontStyle(v)} style={{ ...pillStyle(fontStyle===v), fontFamily: v==='handwritten'?CAVEAT:'system-ui', fontWeight: v==='bold'?700:400 }}>{lbl}</button>)}</div>
-          <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Size</p>
+          <p style={sectionLabel}>Size</p>
           <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>{[['small','Small'],['medium','Medium'],['large','Large']].map(([v,lbl]) => <button key={v} onClick={() => setFontSize(v)} style={pillStyle(fontSize===v)}>{lbl}</button>)}</div>
-          <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Colour</p>
+          <p style={sectionLabel}>Colour</p>
           <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>{LABEL_COLORS.map(c => <button key={c} onClick={() => setTextColor(c)} style={{ width: 28, height: 28, borderRadius: '50%', background: c, border: textColor===c?'2px solid #2dd4bf':c==='#ffffff'?`1px solid ${inputBdr}`:'2px solid transparent', outline: textColor===c?`2px solid ${c}55`:'none', cursor: 'pointer' }} />)}</div>
         </>)}
         {type === 'sticker' && (<>
-          <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Pick a sticker</p>
+          <p style={sectionLabel}>Pick a sticker</p>
           <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 14 }}>{STICKERS.map(s => <button key={s} onClick={() => setSticker(s)} style={{ width: 44, height: 44, borderRadius: 12, border: `1px solid ${sticker===s?'#2dd4bf':inputBdr}`, background: sticker===s?(darkMode?'rgba(45,212,191,0.1)':'#f0fdfb'):'transparent', fontSize: 22, cursor: 'pointer' }}>{s}</button>)}</div>
-          <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Size</p>
+          <p style={sectionLabel}>Size</p>
           <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>{[['small','Small'],['medium','Medium'],['large','Large']].map(([v,lbl]) => <button key={v} onClick={() => setStickerSize(v)} style={pillStyle(stickerSize===v)}>{lbl}</button>)}</div>
         </>)}
         {(type === 'photo' || type === 'note') && (<>
-          <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Category</p>
+          <p style={sectionLabel}>Category</p>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
-            {CATEGORY_FILTERS.filter(c => c.id !== 'all').map(c => <button key={c.id} onClick={() => setCatId(c.id)} style={{ padding: '5px 11px', borderRadius: 20, border: `1px solid ${catId===c.id?'#2dd4bf':inputBdr}`, background: catId===c.id?(darkMode?'rgba(45,212,191,0.1)':'#f0fdfb'):'transparent', fontFamily: CAVEAT, fontSize: 14, color: catId===c.id?(darkMode?'#2dd4bf':'#0d9488'):ts, cursor: 'pointer' }}>{c.emoji} {c.label}</button>)}
+            {CATEGORY_FILTERS.filter(c => c.id !== 'all').map(c => <button key={c.id} onClick={() => setCatId(c.id)} style={{ padding: '5px 11px', borderRadius: 20, border: `1px solid ${catId===c.id?'#2dd4bf':inputBdr}`, background: catId===c.id?(darkMode?'rgba(45,212,191,0.1)':'#f0fdfb'):'transparent', fontFamily: SANS, fontSize: 13, color: catId===c.id?(darkMode?'#2dd4bf':'#0d9488'):ts, cursor: 'pointer' }}>{c.emoji} {c.label}</button>)}
           </div>
-          <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Pin colour</p>
+          <p style={sectionLabel}>Pin colour</p>
           <div style={{ display: 'flex', gap: 8, marginBottom: 22 }}>
             {PIN_COLOR_OPTIONS.map(k => { const col=PIN_COLORS[k][darkMode?'dark':'light']; return <button key={k} onClick={() => setPinColor(k)} style={{ width: 24, height: 24, borderRadius: '50%', background: col, border: pinColor===k?'2px solid white':'2px solid transparent', outline: pinColor===k?`2px solid ${col}`:'none', cursor: 'pointer' }} />; })}
           </div>
@@ -1056,7 +1091,7 @@ function formatTripDateRange(start, end) {
   return `${months[sm-1]} ${sd}, ${sy} – ${months[em-1]} ${ed}, ${ey}`;
 }
 
-function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, darkMode, hasLinkedTrip = false, linkedTripDates = null, onInvite, onCoverChange, onPublishChange, onAddPin }) {
+function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, darkMode, hasLinkedTrip = false, linkedTripDates = null, onInvite, onCoverChange, onPublishChange, onAddPin, onUpdatePin }) {
   const [showAddMemory, setShowAddMemory] = useState(false);
   const [memoryText, setMemoryText] = useState('');
   const [tripAlbumPhotos, setTripAlbumPhotos] = useState([]);
@@ -1321,8 +1356,43 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
         style={{ padding: '22px 16px 0' }}
       >
         <p style={{ fontSize: 10, color: ts, textTransform: 'uppercase', letterSpacing: '0.18em', margin: '0 0 14px', fontWeight: 600 }}>Pinned · {chapterPins.length} item{chapterPins.length !== 1 ? 's' : ''}</p>
+        {chapterPins.filter(p => p.type === 'checklist' || p.type === 'link').map(p => (
+          <div key={p.id} style={{ position: 'relative', marginBottom: 10 }}>
+            {p.type === 'checklist' && (
+              <div style={{ background: cardBg, borderRadius: 14, padding: '13px 14px', boxShadow: `0 1px 4px ${darkMode ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.06)'}` }}>
+                <p style={{ fontFamily: SANS, fontSize: 14, fontWeight: 700, color: tp, margin: '0 0 10px' }}>{p.label || 'Checklist'}</p>
+                {(p.meta?.items || []).length === 0 && <p style={{ fontFamily: SANS, fontSize: 13, color: ts, margin: 0, fontStyle: 'italic' }}>No items yet</p>}
+                {(p.meta?.items || []).map(item => (
+                  <label key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, cursor: 'pointer' }} onClick={e => e.stopPropagation()}>
+                    <input type="checkbox" checked={!!item.checked} onChange={e => {
+                      const updatedItems = (p.meta?.items || []).map(i => i.id === item.id ? { ...i, checked: e.target.checked } : i);
+                      onUpdatePin?.(p.id, { meta: { ...(p.meta || {}), items: updatedItems } });
+                    }} style={{ width: 16, height: 16, accentColor: '#2dd4bf', flexShrink: 0 }} />
+                    <span style={{ fontFamily: SANS, fontSize: 14, color: item.checked ? ts : tp, textDecoration: item.checked ? 'line-through' : 'none' }}>{item.text}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            {p.type === 'link' && (() => {
+              let hostname = '';
+              try { hostname = new URL(p.meta?.url || '').hostname.replace('www.', ''); } catch {}
+              return (
+                <div style={{ background: cardBg, borderRadius: 14, padding: '13px 14px', boxShadow: `0 1px 4px ${darkMode ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.06)'}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontFamily: SANS, fontSize: 14, fontWeight: 600, color: tp, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.label || p.meta?.url}</p>
+                    {hostname && <p style={{ fontFamily: SANS, fontSize: 12, color: ts, margin: '2px 0 0' }}>{hostname}</p>}
+                  </div>
+                  <a href={p.meta?.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ flexShrink: 0, fontFamily: SANS, fontSize: 13, fontWeight: 600, color: '#2dd4bf', textDecoration: 'none', whiteSpace: 'nowrap' }}>Open →</a>
+                </div>
+              );
+            })()}
+            {onRemovePin && (
+              <button onClick={e => { e.stopPropagation(); onRemovePin(p.id); }} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.08)', border: 'none', borderRadius: '50%', width: 18, height: 18, color: '#6b7280', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, zIndex: 20 }}>✕</button>
+            )}
+          </div>
+        ))}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
-          {chapterPins.map(p => (
+          {chapterPins.filter(p => p.type !== 'checklist' && p.type !== 'link').map(p => (
             <div key={p.id} style={{ transform: `rotate(${(p.rot || 0) * 0.4}deg)`, position: 'relative', cursor: 'pointer' }} onClick={() => setSelectedPin(p)}>
               {p.type === 'note' ? (
                 <div style={{ background: (NOTE_COLORS[p.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'].bg, padding: '11px 12px', width: 140, minHeight: 80, borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', position: 'relative' }}>
@@ -1341,14 +1411,11 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                 </div>
               )}
               {onRemovePin && (
-                <button
-                  onClick={e => { e.stopPropagation(); onRemovePin(p.id); }}
-                  style={{ position: 'absolute', top: 4, left: 4, background: 'rgba(0,0,0,0.10)', border: 'none', borderRadius: '50%', width: 16, height: 16, color: '#6b7280', fontSize: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, zIndex: 20 }}
-                >✕</button>
+                <button onClick={e => { e.stopPropagation(); onRemovePin(p.id); }} style={{ position: 'absolute', top: 4, left: 4, background: 'rgba(0,0,0,0.10)', border: 'none', borderRadius: '50%', width: 16, height: 16, color: '#6b7280', fontSize: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, zIndex: 20 }}>✕</button>
               )}
             </div>
           ))}
-          {chapterPins.length === 0 && <p style={{ fontFamily: CAVEAT, fontSize: 16, color: ts, fontStyle: 'italic' }}>No pins yet — add items from Someday via the detail sheet</p>}
+          {chapterPins.length === 0 && <p style={{ fontFamily: CAVEAT, fontSize: 16, color: ts, fontStyle: 'italic' }}>No pins yet — tap + to add your first pin</p>}
         </div>
       </div>
 
@@ -1463,7 +1530,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
       {onAddPin && (
         <button
           onClick={() => setShowAddSheet(true)}
-          style={{ position: 'fixed', bottom: 'calc(88px + env(safe-area-inset-bottom))', right: 20, zIndex: 40, width: 52, height: 52, borderRadius: '50%', background: darkMode ? '#2dd4bf' : '#0d9488', color: '#fff', border: 'none', fontSize: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 18px rgba(0,0,0,0.22)', fontWeight: 300, lineHeight: 1 }}
+          style={{ position: 'fixed', bottom: 'calc(88px + env(safe-area-inset-bottom))', right: 20, zIndex: 40, width: 52, height: 52, borderRadius: '50%', background: '#2dd4bf', color: '#0a1020', border: 'none', fontSize: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(45,212,191,0.4)', fontWeight: 700, lineHeight: 1 }}
         >+</button>
       )}
 
@@ -1725,6 +1792,7 @@ const SomedayPage = ({
     x: pin.x || 0,
     y: pin.y || 0,
     rot: pin.rot || 0,
+    meta: pin.meta || null,
     position,
   });
 
@@ -1743,6 +1811,7 @@ const SomedayPage = ({
       pinColor: row.pin_color || 'teal',
       noteColor: row.note_color || 'yellow',
       type: row.type || 'note',
+      meta: row.meta || null,
       x: override.x ?? row.x ?? 0,
       y: override.y ?? row.y ?? 0,
       rot: override.rot ?? row.rot ?? 0,
@@ -2266,6 +2335,14 @@ const SomedayPage = ({
     supabase.from('chapter_pins').upsert(pinToRow({ ...newPin, chapterId }, chapterId, position)).then(() => {});
   }
 
+  function updateChapterPin(pinId, updates) {
+    setPins(prev => prev.map(p => p.id === pinId ? { ...p, ...updates } : p));
+    setChapters(prev => prev.map(c => ({ ...c, pins: (c.pins || []).map(p => p.id === pinId ? { ...p, ...updates } : p) })));
+    if (updates.meta !== undefined) {
+      supabase.from('chapter_pins').update({ meta: updates.meta }).eq('id', pinId).then(() => {});
+    }
+  }
+
   function addDirectPinToChapter(chapterId, pinData) {
     const newPin = {
       id: `pin-ch-${Date.now()}`,
@@ -2354,7 +2431,7 @@ const SomedayPage = ({
       return (
         <>
           <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
-          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={chapter.owner_id === currentUser ? () => deleteChapter(activeChapterId) : undefined} onCreateTrip={chapter.owner_id === currentUser ? onCreateTripFromChapter : undefined} darkMode={darkMode} hasLinkedTrip={chaptersWithLinkedTrips.has(String(chapter.id))} linkedTripDates={chaptersWithLinkedTrips.get(String(chapter.id)) || null} onInvite={email => inviteToChapter(activeChapterId, email)} onCoverChange={({ chapterId, coverPinId }) => setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, cover_pin_id: coverPinId } : c))} onPublishChange={updateChapterPublishState} onAddPin={chapter.owner_id === currentUser ? (data) => addDirectPinToChapter(activeChapterId, data) : undefined} />
+          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={chapter.owner_id === currentUser ? () => deleteChapter(activeChapterId) : undefined} onCreateTrip={chapter.owner_id === currentUser ? onCreateTripFromChapter : undefined} darkMode={darkMode} hasLinkedTrip={chaptersWithLinkedTrips.has(String(chapter.id))} linkedTripDates={chaptersWithLinkedTrips.get(String(chapter.id)) || null} onInvite={email => inviteToChapter(activeChapterId, email)} onCoverChange={({ chapterId, coverPinId }) => setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, cover_pin_id: coverPinId } : c))} onPublishChange={updateChapterPublishState} onAddPin={chapter.owner_id === currentUser ? (data) => addDirectPinToChapter(activeChapterId, data) : undefined} onUpdatePin={updateChapterPin} />
         </>
       );
     }
