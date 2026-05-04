@@ -3226,6 +3226,7 @@ function App() {
   const layerSwipeStartXRef = useRef(0);
   const swipingLayerIdRef = useRef(null);
   const [layerOrder, setLayerOrder] = useState([]);
+  const [draggingLayerId, setDraggingLayerId] = useState(null);
   const dragLayerIdRef = useRef(null);
   const hoveredLayerDragIdRef = useRef(null);
   const layerDragScrollContainerRef = useRef(null);
@@ -28512,6 +28513,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             const fromId = dragLayerIdRef.current;
                             const toId = String(layer.id);
                             dragLayerIdRef.current = null;
+                            setDraggingLayerId(null);
                             if (!fromId || fromId === toId) return;
                             setLayerOrder(prev => {
                               const base = prev.length > 0 ? [...prev] : visibleLayerCalendars.map(l => String(l.id));
@@ -28545,12 +28547,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       ...(isActive ? { background: `${rowTheme.accent}18`, border: `1.5px solid ${rowTheme.accent}40` } : { border: '1.5px solid transparent' }),
                       transform: `translateX(${rowOffset}px)`,
                       transition: layerSwipeDrag.id === layer.id ? 'none' : 'transform 180ms ease',
+                      opacity: draggingLayerId === String(layer.id) ? 0.3 : 1,
                     }}
                   >
                     <div
                       draggable
-                      onDragStart={(e) => { dragLayerIdRef.current = String(layer.id); e.dataTransfer.effectAllowed = 'move'; e.stopPropagation(); }}
-                      onTouchStart={(e) => { e.stopPropagation(); dragLayerIdRef.current = String(layer.id); hoveredLayerDragIdRef.current = null; }}
+                      onDragStart={(e) => { dragLayerIdRef.current = String(layer.id); setDraggingLayerId(String(layer.id)); e.dataTransfer.effectAllowed = 'move'; e.stopPropagation(); }}
+                      onTouchStart={(e) => { e.stopPropagation(); dragLayerIdRef.current = String(layer.id); setDraggingLayerId(String(layer.id)); hoveredLayerDragIdRef.current = null; }}
                       onTouchMove={(e) => {
                         if (!dragLayerIdRef.current) return;
                         const touch = e.touches[0];
@@ -28563,6 +28566,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         const toId = hoveredLayerDragIdRef.current;
                         dragLayerIdRef.current = null;
                         hoveredLayerDragIdRef.current = null;
+                        setDraggingLayerId(null);
                         if (!fromId || !toId || fromId === toId) return;
                         setLayerOrder(prev => {
                           const base = prev.length > 0 ? [...prev] : visibleLayerCalendars.map(l => String(l.id));
