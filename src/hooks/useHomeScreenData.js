@@ -489,6 +489,31 @@ export default function useHomeScreenData({
       })[0] || null
   ), [homeTripsPreviewCards]);
 
+  const homeUpcomingTripCountdown = useMemo(() => {
+    const MS_PER_DAY = 24 * 60 * 60 * 1000;
+    const THRESHOLD_DAYS = 30;
+    // Use upcomingTrips (all future trips, not limited to 3) — already sorted by start date
+    const nextTrip = upcomingTrips[0] || null;
+    console.log('[countdown] upcomingTrips:', upcomingTrips.length, 'nextTrip:', nextTrip?.name || nextTrip?.id, 'start:', nextTrip ? getSubCalStartRaw(nextTrip) : null, 'todayTs:', todayTs);
+    if (!nextTrip) return null;
+    const startRaw = String(getSubCalStartRaw(nextTrip) || '').trim();
+    const startTs = toDateOnlyTs(startRaw);
+    const daysUntil = startTs !== null ? Math.round((startTs - todayTs) / MS_PER_DAY) : null;
+    console.log('[countdown] startRaw:', startRaw, 'startTs:', startTs, 'daysUntil:', daysUntil, 'threshold:', THRESHOLD_DAYS);
+    if (startTs === null) return null;
+    if (daysUntil > THRESHOLD_DAYS || daysUntil < 0) return null;
+    // Get cover from homeTripsPreviewCards if this trip is in there
+    const previewCard = homeTripsPreviewCards.find((c) => String(c?.id || '') === String(nextTrip?.id || ''));
+    const coverUrl = String(previewCard?.chapterCoverUrl || '').trim();
+    return {
+      trip: nextTrip,
+      daysUntil,
+      name: String(nextTrip?.name || nextTrip?.title || nextTrip?.tripName || 'Upcoming trip').trim(),
+      startDate: startRaw,
+      coverUrl,
+    };
+  }, [upcomingTrips, homeTripsPreviewCards, getSubCalStartRaw, todayTs, toDateOnlyTs]);
+
   const homeRecentMemory = useMemo(() => (
     [...homeResolvedMemories]
       .sort((left, right) => {
@@ -715,6 +740,7 @@ export default function useHomeScreenData({
     homeTodaySpotlightEvent,
     homeUpcomingPreviewEvents,
     homeTripSpotlight,
+    homeUpcomingTripCountdown,
     homeRecentMemory,
     homeMemoryPhotoCount,
     homeMemoryCollagePhotos,

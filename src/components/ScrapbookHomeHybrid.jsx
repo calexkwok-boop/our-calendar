@@ -167,8 +167,10 @@ const ScrapbookHomeHybrid = ({
   onAddEvent = () => {},
   onOpenUpcoming,
   tripSpotlight = null,
+  upcomingTripCountdown = null,
   onOpenTripsTab,
   onStartTrip,
+  onOpenTrip,
 
   // Quick Thoughts (NEW - scrapbook enhanced)
   quickThoughts = [],
@@ -625,6 +627,59 @@ const ScrapbookHomeHybrid = ({
             </div>
           )}
         </div>
+
+        {/* UPCOMING TRIP COUNTDOWN */}
+        {upcomingTripCountdown && (
+          <button
+            type="button"
+            onClick={() => onOpenTrip?.(upcomingTripCountdown.trip)}
+            className="w-full rounded-[24px] overflow-hidden relative text-left active:opacity-90 transition-opacity"
+            style={{ minHeight: 96 }}
+          >
+            {/* Background: cover photo or gradient */}
+            <div className="absolute inset-0">
+              {upcomingTripCountdown.coverUrl ? (
+                <img
+                  src={upcomingTripCountdown.coverUrl}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  draggable={false}
+                  loading="lazy"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-600" />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/40 to-black/20" />
+            </div>
+
+            {/* Content */}
+            <div className="relative flex items-center gap-4 px-5 py-4">
+              {/* Days badge */}
+              <div className="flex-shrink-0 flex flex-col items-center justify-center w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30">
+                <span className="text-2xl font-bold text-white leading-none">{upcomingTripCountdown.daysUntil}</span>
+                <span className="text-[10px] font-semibold text-white/80 uppercase tracking-wide mt-0.5">
+                  {upcomingTripCountdown.daysUntil === 1 ? 'day' : 'days'}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/70 mb-0.5">
+                  ✈️ Coming up
+                </div>
+                <div className="font-handwritten text-2xl text-white drop-shadow truncate">
+                  {upcomingTripCountdown.name}
+                </div>
+                <div className="text-xs text-white/75 mt-0.5">
+                  {upcomingTripCountdown.daysUntil === 0
+                    ? "It's today!"
+                    : upcomingTripCountdown.daysUntil === 1
+                    ? 'Tomorrow!'
+                    : `${formatDisplayDate(upcomingTripCountdown.startDate)}`}
+                </div>
+              </div>
+              <div className="flex-shrink-0 text-2xl">🗺️</div>
+            </div>
+          </button>
+        )}
 
         {/* YOUR NEXT ADVENTURE */}
         <button
