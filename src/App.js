@@ -3227,6 +3227,7 @@ function App() {
   const swipingLayerIdRef = useRef(null);
   const [layerOrder, setLayerOrder] = useState([]);
   const [draggingLayerId, setDraggingLayerId] = useState(null);
+  const [layerInsertBefore, setLayerInsertBefore] = useState(null);
   const dragLayerIdRef = useRef(null);
   const hoveredLayerDragIdRef = useRef(null);
   const layerDragScrollContainerRef = useRef(null);
@@ -28496,7 +28497,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             >+ New</button>
           </div>
           <div ref={layerDragScrollContainerRef} className="space-y-1 max-h-48 overflow-y-auto">
-            {visibleLayerCalendars.map(layer => {
+            {visibleLayerCalendars.map((layer, layerIdx) => {
               const isActive = String(layer.id) === String(activeLayerId);
               const rowTheme = normalizeLayerPageTheme(layer?.page_theme, layer?.title_style);
                       const isLayerOwner = String(layer?.owner_id || '') === String(user?.id || '');
@@ -28504,16 +28505,24 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       const rowOffset = layerSwipeDrag.id === layer.id ? layerSwipeDrag.offset : (swipedLayerId === layer.id ? -88 : 0);
                       const isDeleteRevealed = rowOffset < 0;
                       return (
+                        <React.Fragment key={layer.id}>
+                        {layerInsertBefore === layerIdx && draggingLayerId && draggingLayerId !== String(layer.id) && (
+                          <div className="mx-1 h-0.5 rounded-full bg-violet-400 dark:bg-violet-500" />
+                        )}
                         <div
-                          key={layer.id}
                           className="relative rounded-xl overflow-hidden"
                           data-layer-row={String(layer.id)}
-                          onDragOver={(e) => e.preventDefault()}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setLayerInsertBefore(e.clientY < rect.top + rect.height / 2 ? layerIdx : layerIdx + 1);
+                          }}
                           onDrop={() => {
                             const fromId = dragLayerIdRef.current;
                             const toId = String(layer.id);
                             dragLayerIdRef.current = null;
                             setDraggingLayerId(null);
+                            setLayerInsertBefore(null);
                             if (!fromId || fromId === toId) return;
                             setLayerOrder(prev => {
                               const base = prev.length > 0 ? [...prev] : visibleLayerCalendars.map(l => String(l.id));
@@ -28553,13 +28562,22 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     <div
                       draggable
                       onDragStart={(e) => { dragLayerIdRef.current = String(layer.id); setDraggingLayerId(String(layer.id)); e.dataTransfer.effectAllowed = 'move'; e.stopPropagation(); }}
+                      onDragEnd={() => { dragLayerIdRef.current = null; setDraggingLayerId(null); setLayerInsertBefore(null); }}
                       onTouchStart={(e) => { e.stopPropagation(); dragLayerIdRef.current = String(layer.id); setDraggingLayerId(String(layer.id)); hoveredLayerDragIdRef.current = null; }}
                       onTouchMove={(e) => {
                         if (!dragLayerIdRef.current) return;
                         const touch = e.touches[0];
                         const el = document.elementFromPoint(touch.clientX, touch.clientY);
                         const row = el?.closest('[data-layer-row]');
-                        if (row) hoveredLayerDragIdRef.current = row.getAttribute('data-layer-row');
+                        if (row) {
+                          const rowId = row.getAttribute('data-layer-row');
+                          hoveredLayerDragIdRef.current = rowId;
+                          const rowIdx = visibleLayerCalendars.findIndex((l) => String(l.id) === rowId);
+                          if (rowIdx !== -1) {
+                            const rect = row.getBoundingClientRect();
+                            setLayerInsertBefore(touch.clientY < rect.top + rect.height / 2 ? rowIdx : rowIdx + 1);
+                          }
+                        }
                       }}
                       onTouchEnd={() => {
                         const fromId = dragLayerIdRef.current;
@@ -28567,6 +28585,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         dragLayerIdRef.current = null;
                         hoveredLayerDragIdRef.current = null;
                         setDraggingLayerId(null);
+                        setLayerInsertBefore(null);
                         if (!fromId || !toId || fromId === toId) return;
                         setLayerOrder(prev => {
                           const base = prev.length > 0 ? [...prev] : visibleLayerCalendars.map(l => String(l.id));
@@ -28607,8 +28626,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     </button>
                   </div>
                 </div>
+                </React.Fragment>
               );
             })}
+            {layerInsertBefore === visibleLayerCalendars.length && draggingLayerId && (
+              <div className="mx-1 h-0.5 rounded-full bg-violet-400 dark:bg-violet-500" />
+            )}
           </div>
         </div>
       )}
