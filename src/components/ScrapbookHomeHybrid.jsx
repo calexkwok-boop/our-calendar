@@ -628,8 +628,8 @@ const ScrapbookHomeHybrid = ({
           )}
         </div>
 
-        {/* UPCOMING TRIP COUNTDOWN */}
-        {upcomingTripCountdown && (
+        {/* YOUR NEXT ADVENTURE — replaced by countdown when a trip is within 30 days */}
+        {upcomingTripCountdown ? (
           <button
             type="button"
             onClick={() => onOpenTrip?.(upcomingTripCountdown.trip)}
@@ -679,9 +679,7 @@ const ScrapbookHomeHybrid = ({
               <div className="flex-shrink-0 text-2xl">🗺️</div>
             </div>
           </button>
-        )}
-
-        {/* YOUR NEXT ADVENTURE */}
+        ) : (
         <button
           type="button"
           onClick={tripSpotlight ? onOpenTripsTab : onStartTrip}
@@ -739,6 +737,7 @@ const ScrapbookHomeHybrid = ({
             </div>
           )}
         </button>
+        )}
 
         {/* ON YOUR MIND (formerly Your Komo Book) */}
         <div className="rounded-[28px] border-2 border-emerald-900/20 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-emerald-950/30 dark:via-slate-900 dark:to-cyan-950/20 p-6 shadow-xl">
