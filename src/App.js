@@ -20748,19 +20748,29 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const runHydration = async () => {
       const tombstones = memoryPersistence.readMemoriesTombstones(user?.id);
       const filterTombstones = (list) => list.filter((m) => !tombstones.has(String(m?.id || '')));
+
+      // Show localStorage snapshot immediately — no async wait needed.
+      const localNow = filterTombstones(memoryPersistence.readMemoriesState(user?.id))
+        .map((memory) => memoryPersistence.stampMemoryOwner(memory, currentMemoriesUserId));
+      if (localNow.length > 0 && !cancelled) setMemories(localNow);
+
+      // Fetch all async sources in parallel.
+      const [remoteRows, indexedDbRows, guestIndexedDbRows] = await Promise.all([
+        memoryPersistence.readRemoteMemoriesState(user?.id),
+        memoryPersistence.readMemoriesIndexedDb(user?.id),
+        currentMemoriesUserId !== 'guest'
+          ? memoryPersistence.readMemoriesIndexedDb('guest')
+          : Promise.resolve([]),
+      ]);
+      if (cancelled) return;
+
       const savedForCurrentUser = filterTombstones(
-        memoryPersistence.mergePersistedMemories(
-          await memoryPersistence.readRemoteMemoriesState(user?.id),
-          await memoryPersistence.readMemoriesIndexedDb(user?.id),
-          memoryPersistence.readMemoriesState(user?.id)
-        )
+        memoryPersistence.mergePersistedMemories(remoteRows, indexedDbRows, memoryPersistence.readMemoriesState(user?.id))
       ).map((memory) => memoryPersistence.stampMemoryOwner(memory, currentMemoriesUserId));
+
       if (currentMemoriesUserId !== 'guest') {
         const guestMemories = filterTombstones(
-          memoryPersistence.mergePersistedMemories(
-            await memoryPersistence.readMemoriesIndexedDb('guest'),
-            memoryPersistence.readMemoriesState('guest')
-          )
+          memoryPersistence.mergePersistedMemories(guestIndexedDbRows, memoryPersistence.readMemoriesState('guest'))
         ).map((memory) => memoryPersistence.stampMemoryOwner(memory, currentMemoriesUserId));
         const merged = filterTombstones(memoryPersistence.mergePersistedMemories(savedForCurrentUser, guestMemories));
         if (cancelled) return;
