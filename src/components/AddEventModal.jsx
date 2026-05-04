@@ -206,8 +206,6 @@ const AddEventModal = ({
 
     if (!String(formData.title || '').trim()) nextErrors.title = 'What are you doing?';
     if (!String(formData.date || '').trim()) nextErrors.date = 'Pick a date';
-    if (!String(formData.time || '').trim()) nextErrors.time = 'What time?';
-    if (!String(formData.location || '').trim()) nextErrors.location = 'Where at?';
 
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length === 0) {
@@ -476,6 +474,7 @@ const AddEventModal = ({
             <label className="block text-sm font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5" />
               Time
+              <span className="normal-case tracking-normal font-normal text-xs text-gray-400 dark:text-gray-500 ml-0.5">(optional)</span>
             </label>
 
             <div className="grid grid-cols-4 gap-2 mb-2">
@@ -518,6 +517,7 @@ const AddEventModal = ({
             <label className="block text-sm font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5" />
               Location
+              <span className="normal-case tracking-normal font-normal text-xs text-gray-400 dark:text-gray-500 ml-0.5">(optional)</span>
             </label>
             <div className="flex gap-2 mb-2">
               <button
