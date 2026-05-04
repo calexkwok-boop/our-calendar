@@ -20030,6 +20030,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     homeRecentMemory,
     homeMemoryPhotoCount,
     homeMemoryCollagePhotos,
+    homeCollageMemories,
     homeYearStats,
     homeMemoryReadyCount,
     homeMemoryOpportunities,
@@ -28988,6 +28989,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             upcomingPreviewEvents={homeUpcomingPreviewEvents}
             tripSpotlight={homeTripSpotlight}
             memoryCollagePhotos={homeMemoryCollagePhotos}
+            collageMemories={homeCollageMemories}
             onShowCalendarView={openCalendarTab}
             onOpenUpcoming={handleHomeOpenUpcoming}
             onOpenTrip={openSubCalendar}

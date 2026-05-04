@@ -530,6 +530,16 @@ export default function useHomeScreenData({
       ? frozenCollageRef.current.photos
       : _rawCollagePhotos;
 
+  const homeCollageMemories = useMemo(() => (
+    homeMemoryCollagePhotos.map((url) => {
+      if (!url) return null;
+      return homeResolvedMemories.find((memory) => {
+        const memKey = String(memory?.id || memory?.date || memory?.createdAt || '');
+        return (homeMemoryPhotosByMemoryId[memKey] || []).includes(url);
+      }) || null;
+    })
+  ), [homeMemoryCollagePhotos, homeMemoryPhotosByMemoryId, homeResolvedMemories]);
+
   const homeYearStats = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const startOfYearTs = toDateOnlyTs(`${currentYear}-01-01`);
@@ -708,6 +718,7 @@ export default function useHomeScreenData({
     homeRecentMemory,
     homeMemoryPhotoCount,
     homeMemoryCollagePhotos,
+    homeCollageMemories,
     homeYearStats,
     homeMemoryReadyCount,
     homeMemoryOpportunities,

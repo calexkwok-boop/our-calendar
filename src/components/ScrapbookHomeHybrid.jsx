@@ -178,6 +178,7 @@ const ScrapbookHomeHybrid = ({
   // Memories
   recentMemory = null,
   memoryCollagePhotos = [],
+  collageMemories = [],
   memoryReadyCount = 0,
   memoryPhotoCount = 0,
   memoryOpportunities = [],
@@ -815,9 +816,10 @@ const ScrapbookHomeHybrid = ({
 
           <div className="grid grid-cols-2 gap-2">
             {memoryCollageTiles.map((url, index) => (
-              <div
+              <button
                 key={`memory-collage-${index}`}
-                className="relative h-36 sm:h-44 overflow-hidden rounded-[14px] border border-white/40 dark:border-white/10 bg-gradient-to-br from-violet-100 via-rose-50 to-amber-100 dark:from-violet-900/30 dark:via-slate-900 dark:to-amber-900/20"
+                onClick={() => url ? onOpenMemory?.(collageMemories[index] || null) : undefined}
+                className="relative h-36 sm:h-44 overflow-hidden rounded-[14px] border border-white/40 dark:border-white/10 bg-gradient-to-br from-violet-100 via-rose-50 to-amber-100 dark:from-violet-900/30 dark:via-slate-900 dark:to-amber-900/20 active:opacity-80"
               >
                 {url ? (
                   <img
@@ -839,7 +841,7 @@ const ScrapbookHomeHybrid = ({
                     }`}
                   />
                 ) : null}
-              </div>
+              </button>
             ))}
           </div>
 
