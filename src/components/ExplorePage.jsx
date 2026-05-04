@@ -973,9 +973,9 @@ function PublishedCalendarCard({ calendar, onOpen, darkMode }) {
   return (
     <button
       onClick={() => onOpen?.(calendar)}
-      className={`flex-shrink-0 w-72 rounded-[26px] overflow-hidden text-left border shadow-sm active:opacity-80 ${darkMode ? "bg-[#161f30] border-transparent shadow-none" : "bg-white border-stone-100"}`}
+      className={`flex-shrink-0 w-72 h-[228px] flex flex-col rounded-[26px] overflow-hidden text-left border shadow-sm active:opacity-80 ${darkMode ? "bg-[#161f30] border-transparent shadow-none" : "bg-white border-stone-100"}`}
     >
-      <div className={`relative h-40 overflow-hidden ${darkMode ? "bg-gradient-to-br from-teal-900/60 via-cyan-900/40 to-slate-900" : "bg-gradient-to-br from-teal-100 via-cyan-50 to-amber-50"}`}>
+      <div className={`relative h-40 flex-shrink-0 overflow-hidden ${darkMode ? "bg-gradient-to-br from-teal-900/60 via-cyan-900/40 to-slate-900" : "bg-gradient-to-br from-teal-100 via-cyan-50 to-amber-50"}`}>
         {coverUrl ? (
           <img
             src={coverUrl}
@@ -995,7 +995,7 @@ function PublishedCalendarCard({ calendar, onOpen, darkMode }) {
           />
         ) : null}
       </div>
-      <div className="px-4 pt-3.5 pb-4">
+      <div className="px-4 pt-3.5 pb-4 flex-1 overflow-hidden">
         <div className={`text-lg font-semibold leading-tight line-clamp-2 ${darkMode ? "text-white" : "text-slate-900"}`}>
           {calendar.public_title || calendar.name || "Public Calendar"}
         </div>
