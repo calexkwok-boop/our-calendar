@@ -20749,11 +20749,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const tombstones = memoryPersistence.readMemoriesTombstones(user?.id);
       const filterTombstones = (list) => list.filter((m) => !tombstones.has(String(m?.id || '')));
 
-      // Show localStorage snapshot immediately — no async wait needed.
-      const localNow = filterTombstones(memoryPersistence.readMemoriesState(user?.id))
-        .map((memory) => memoryPersistence.stampMemoryOwner(memory, currentMemoriesUserId));
-      if (localNow.length > 0 && !cancelled) setMemories(localNow);
-
       // Fetch all async sources in parallel.
       const [remoteRows, indexedDbRows, guestIndexedDbRows] = await Promise.all([
         memoryPersistence.readRemoteMemoriesState(user?.id),
