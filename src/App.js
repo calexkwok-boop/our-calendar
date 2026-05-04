@@ -1462,6 +1462,12 @@ const readSomedayChaptersState = (userId) => {
     return [];
   }
 };
+const writeSomedayChaptersState = (userId, chapters) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(getSomedayChaptersStorageKey(userId), JSON.stringify(Array.isArray(chapters) ? chapters : []));
+  } catch {}
+};
 const readTripKomoState = (userId) => {
   if (typeof window === 'undefined') return {};
   try {
@@ -9750,22 +9756,27 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       let ownerHandleById = {};
       let votesMode = 'db';
       const localVotes = readExploreVotesLocal(user?.id);
-      if (ids.length > 0) {
-        const { data: memberRows } = await supabase
-          .from('shared_access')
-          .select('layer_id')
-          .in('layer_id', ids);
-        countsMap = (memberRows || []).reduce((acc, row) => {
+      if (ids.length > 0 || ownerIds.length > 0) {
+        const [memberResult, votesResult, ownerResult] = await Promise.all([
+          ids.length > 0
+            ? supabase.from('shared_access').select('layer_id').in('layer_id', ids)
+            : Promise.resolve({ data: [] }),
+          ids.length > 0
+            ? supabase.from('public_calendar_votes').select('layer_id,user_id,vote_value').in('layer_id', ids)
+            : Promise.resolve({ data: [], error: null }),
+          ownerIds.length > 0
+            ? supabase.from(ACCOUNT_HANDLE_TABLE).select('user_id,handle').in('user_id', ownerIds)
+            : Promise.resolve({ data: [] }),
+        ]);
+
+        countsMap = (memberResult.data || []).reduce((acc, row) => {
           const key = String(row?.layer_id || '');
           if (!key) return acc;
           acc[key] = Number(acc[key] || 0) + 1;
           return acc;
         }, {});
 
-        const { data: voteRows, error: voteError } = await supabase
-          .from('public_calendar_votes')
-          .select('layer_id,user_id,vote_value')
-          .in('layer_id', ids);
+        const { data: voteRows, error: voteError } = votesResult;
         if (voteError) {
           const msg = String(voteError?.message || '');
           if (/public_calendar_votes|42P01|schema cache|does not exist/i.test(msg)) {
@@ -9809,14 +9820,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             myVotesByLayer[lid] = localVote;
           });
         }
-      }
 
-      if (ownerIds.length > 0) {
-        const { data: ownerRows } = await supabase
-          .from(ACCOUNT_HANDLE_TABLE)
-          .select('user_id,handle')
-          .in('user_id', ownerIds);
-        ownerHandleById = (ownerRows || []).reduce((acc, row) => {
+        ownerHandleById = (ownerResult.data || []).reduce((acc, row) => {
           const uid = String(row?.user_id || '').trim();
           const handle = String(row?.handle || '').trim();
           if (uid && handle) acc[uid] = handle;
@@ -15464,6 +15469,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   // Notification localStorage load/save and invite channel managed by useNotifications.
 
+  const realtimeLayerNameCacheRef = useRef(new Map());
+  const realtimeUserHandleCacheRef = useRef(new Map());
+
   useEffect(() => {
     if (!user?.id || !isAppVisible) return;
     const me = String(user.id);
@@ -15607,7 +15615,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
       return false;
     };
-    const layerNameCache = new Map();
+    const layerNameCache = realtimeLayerNameCacheRef.current;
     const getLayerNameForNotification = async (layerIdValue) => {
       const layerId = String(layerIdValue || '').trim();
       if (!layerId) return 'this calendar';
@@ -15696,14 +15704,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         });
       };
     const attachFilteredRealtime = (table, field, ids, handler) => {
-      (Array.isArray(ids) ? ids : []).forEach((id) => {
-        if (!id) return;
-        updatesChannel = updatesChannel.on('postgres_changes', {
-          event: 'INSERT',
-          schema: 'public',
-          table,
-          filter: `${field}=eq.${id}`,
-        }, handler);
+      const idSet = new Set((Array.isArray(ids) ? ids : []).filter(Boolean));
+      if (idSet.size === 0) return;
+      updatesChannel = updatesChannel.on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table,
+      }, (payload) => {
+        const row = payload?.new;
+        if (!row) return;
+        if (!idSet.has(String(row[field] || ''))) return;
+        handler(payload);
       });
     };
     if (shouldListenForCalendarActivity) {
@@ -15774,16 +15785,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         if (sharedWithId !== me && sharedRecipient !== myEmail && sharedRecipient !== myPhone) return;
         if (String(row.owner_id || '') === me) return;
 
-        let calendarName = 'a calendar';
-        if (layerId) {
-          const { data: layerRow } = await supabase
-            .from('calendar_layers')
-            .select('name')
-            .eq('id', layerId)
-            .maybeSingle();
-          const maybeName = String(layerRow?.name || '').trim();
-          if (maybeName) calendarName = `"${maybeName}"`;
-        }
+        const calendarName = layerId ? await getLayerNameForNotification(layerId) : 'a calendar';
 
         addInAppNotification({
           key: `calendar_invite:${String(row.id || '')}:${layerId}`,
@@ -15867,13 +15869,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         if (String(row.reactor_user_id) === me) return;
         let who = 'A friend';
         try {
-          const { data: handleRow } = await supabase
-            .from('user_handles')
-            .select('handle, display_name')
-            .eq('user_id', row.reactor_user_id)
-            .maybeSingle();
-          if (handleRow?.handle) who = `@${handleRow.handle}`;
-          else if (handleRow?.display_name) who = handleRow.display_name;
+          const reactorId = String(row.reactor_user_id || '');
+          if (reactorId) {
+            const handleCache = realtimeUserHandleCacheRef.current;
+            if (!handleCache.has(reactorId)) {
+              const { data: handleRow } = await supabase
+                .from('user_handles')
+                .select('handle, display_name')
+                .eq('user_id', reactorId)
+                .maybeSingle();
+              handleCache.set(reactorId, handleRow || null);
+            }
+            const cached = handleCache.get(reactorId);
+            if (cached?.handle) who = `@${cached.handle}`;
+            else if (cached?.display_name) who = cached.display_name;
+          }
         } catch {}
         const isLike = row.type === 'like';
         addInAppNotification({
@@ -17125,9 +17135,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   };
 
   // Prompt to rate ended events (in-trip)
+  const subCalendarEventsRef = useRef(subCalendarEvents);
+  subCalendarEventsRef.current = subCalendarEvents;
+  const subCalEventRatingsRef = useRef(subCalEventRatings);
+  subCalEventRatingsRef.current = subCalEventRatings;
   useEffect(() => {
     if (!activeSubCalendar?.id) return;
-    const todayKey = getDateKey(new Date());
     const toMin = (t) => {
       const parts = String(t || '').split(':');
       const H = Number(parts[0]);
@@ -17135,11 +17148,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return Number.isNaN(H) ? null : (H * 60 + M);
     };
     const check = () => {
-      const rows = (subCalendarEvents?.[todayKey] || []);
+      const todayKey = getDateKey(new Date());
+      const rows = (subCalendarEventsRef.current?.[todayKey] || []);
       const now = new Date();
       const nowMin = now.getHours() * 60 + now.getMinutes();
       rows.forEach((ev) => {
-        const rated = Number(subCalEventRatings?.[ev.id] || 0) > 0;
+        const rated = Number(subCalEventRatingsRef.current?.[ev.id] || 0) > 0;
         const endMin = (toMin(ev?.endTime) ?? toMin(ev?.time));
         if (!rated && endMin !== null && nowMin >= endMin) {
           const key = `review:${ev.id}:${activeSubCalendar.id}:${todayKey}`;
@@ -17158,7 +17172,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     check();
     const id = setInterval(check, 60000);
     return () => clearInterval(id);
-  }, [activeSubCalendar?.id, subCalendarEvents, subCalEventRatings]);
+  }, [activeSubCalendar?.id]);
 
   // Check for upcoming events and send notifications
   useEffect(() => {
@@ -20623,6 +20637,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [currentUser, user?.id]);
 
   useEffect(() => {
+    const komoOwnerKey = String(currentUser || 'guest').trim() || 'guest';
+    if (!komoOwnerKey || komoOwnerKey === 'guest' || !komoChapters?.length) return;
+    writeSomedayChaptersState(komoOwnerKey, komoChapters);
+  }, [currentUser, komoChapters]);
+
+  useEffect(() => {
     const linkedChapterIds = Array.from(new Set(
       Object.values(tripKomoState || {})
         .map((value) => String(value?.chapterId || '').trim())
@@ -21903,9 +21923,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     };
 
     if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
-      idleId = window.requestIdleCallback(scheduleRefresh, { timeout: hadFreshCache ? 1500 : 700 });
+      idleId = window.requestIdleCallback(scheduleRefresh, { timeout: hadFreshCache ? 1000 : 80 });
     } else {
-      timeoutId = window.setTimeout(scheduleRefresh, hadFreshCache ? 250 : 50);
+      timeoutId = window.setTimeout(scheduleRefresh, hadFreshCache ? 200 : 0);
     }
 
     return () => {
@@ -31125,6 +31145,7 @@ transform: translateY(0);
                 authUserId={user?.id || ''}
                 userEmail={user?.email || ''}
                 inviteRefreshToken={chapterInviteRefreshToken}
+                initialChapters={komoChapters}
                 onChaptersChange={setKomoChapters}
                 onPersistPinLayout={handleSomedayPersistPinLayout}
                 pinPositionOverrides={somedayPinPositions}

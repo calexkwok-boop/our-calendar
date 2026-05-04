@@ -1529,6 +1529,10 @@ function positionBelowLowestPin(existingPins = [], addIndex = 0) {
   return { x: (col === 0 ? 16 : 208) + (Math.random() - 0.5) * 14, y: lowestBottom + 28 + row * 240 + (Math.random() - 0.5) * 10, rot: (col === 0 ? -1 : 1) * (0.4 + Math.random() * 2.2) };
 }
 
+// Module-level cache: remember which select clause worked so retries are skipped
+let _chaptersWorkingSelect = null;
+let _pinsWorkingSelect = null;
+
 // ─── Main SomedayPage ─────────────────────────────────────────────────────────
 const SomedayPage = ({
   dreams = SAMPLE_PINS,
@@ -1549,6 +1553,7 @@ const SomedayPage = ({
   chaptersWithLinkedTrips = new Set(),
   userEmail = '',
   inviteRefreshToken = 0,
+  initialChapters = [],
 }) => {
   const [pins, setPins] = useState(() => dreams.map((d, idx) => {
     const pos = (d.x == null || d.y == null) ? gridPosition(idx) : { x: d.x, y: d.y, rot: d.rot };
@@ -1559,7 +1564,7 @@ const SomedayPage = ({
   const [detailPin, setDetailPin]         = useState(null);
   const [dragging, setDragging]           = useState(null);
   const [heroId, setHeroId]               = useState(() => { try { return localStorage.getItem('someday-hero-id') || null; } catch { return null; } });
-  const [chapters, setChapters]           = useState([]);
+  const [chapters, setChapters]           = useState(() => Array.isArray(initialChapters) && initialChapters.length > 0 ? initialChapters : []);
   const [activeChapterId, setActiveChapterId] = useState(null);
   const [showCreateChapter, setShowCreateChapter] = useState(false);
   const [chapterPromptGroup, setChapterPromptGroup] = useState(null);
@@ -1701,33 +1706,39 @@ const SomedayPage = ({
   }
 
   async function fetchChaptersWithFallback(matchMode, value) {
-    const selectAttempts = [
+    const allSelects = [
       'id, title, created_at, owner_id, cover_pin_id, is_public, public_title, public_description, public_tags, public_cover_pin_id, published_at, copy_count',
       'id, title, created_at, owner_id, cover_pin_id, is_public, public_title, public_description, public_tags, published_at',
       'id, title, created_at, owner_id, cover_pin_id',
     ];
+    const selectAttempts = _chaptersWorkingSelect
+      ? [_chaptersWorkingSelect, ...allSelects.filter(s => s !== _chaptersWorkingSelect)]
+      : allSelects;
     for (const selectClause of selectAttempts) {
       let query = supabase.from('chapters').select(selectClause);
       if (matchMode === 'eq') query = query.eq('owner_id', value);
       if (matchMode === 'in') query = query.in('id', value);
       const { data, error } = await query;
-      if (!error) return data || [];
+      if (!error) { _chaptersWorkingSelect = selectClause; return data || []; }
     }
     return [];
   }
 
   async function fetchChapterPinRows(chapterIds = []) {
     if (!Array.isArray(chapterIds) || chapterIds.length === 0) return [];
-    const selectAttempts = [
+    const allSelects = [
       'id, chapter_id, label, description, image_url, emoji, category_id, status, tip, map_query, pin_color, note_color, type, x, y, rot, position',
       'id, chapter_id, label, description, image_url, emoji, category_id, status, tip, map_query, pin_color, note_color, type, x, y, rot',
     ];
+    const selectAttempts = _pinsWorkingSelect
+      ? [_pinsWorkingSelect, ...allSelects.filter(s => s !== _pinsWorkingSelect)]
+      : allSelects;
     for (const selectClause of selectAttempts) {
       const { data, error } = await supabase
         .from('chapter_pins')
         .select(selectClause)
         .in('chapter_id', chapterIds);
-      if (!error) return data || [];
+      if (!error) { _pinsWorkingSelect = selectClause; return data || []; }
     }
     return [];
   }
@@ -1750,14 +1761,15 @@ const SomedayPage = ({
     ).filter((chapter) => String(chapter?.id || '').trim());
     const collabIds = (memberResult.data || []).map(r => r.chapter_id).filter(id => !owned.some(c => c.id === id));
 
-    let collab = [];
-    if (collabIds.length > 0) {
-      collab = await fetchChaptersWithFallback('in', collabIds);
-    }
+    // All chapter IDs are known now — fetch collab details and pins in parallel
+    const allKnownIds = [...owned.map(c => c.id), ...collabIds].filter(Boolean);
+    const [collabResult, remotePinRows] = await Promise.all([
+      collabIds.length > 0 ? fetchChaptersWithFallback('in', collabIds) : Promise.resolve([]),
+      fetchChapterPinRows(allKnownIds),
+    ]);
+    const collab = Array.isArray(collabResult) ? collabResult : [];
 
     const remote = [...owned, ...collab];
-    const remoteChapterIds = remote.map((chapter) => chapter.id).filter(Boolean);
-    const remotePinRows = await fetchChapterPinRows(remoteChapterIds);
     const remotePinsByChapterId = new Map();
     (remotePinRows || []).forEach((row) => {
       const chapterId = String(row.chapter_id || '').trim();

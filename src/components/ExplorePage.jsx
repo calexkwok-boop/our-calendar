@@ -1350,9 +1350,9 @@ export default function ExplorePage({
     };
 
     if (typeof window !== "undefined" && typeof window.requestIdleCallback === "function") {
-      idleId = window.requestIdleCallback(scheduleLoad, { timeout: hasFreshCache ? 1800 : 1200 });
+      idleId = window.requestIdleCallback(scheduleLoad, { timeout: hasFreshCache ? 1000 : 80 });
     } else {
-      timeoutId = window.setTimeout(scheduleLoad, hasFreshCache ? 300 : 250);
+      timeoutId = window.setTimeout(scheduleLoad, hasFreshCache ? 200 : 0);
     }
 
     return () => {
