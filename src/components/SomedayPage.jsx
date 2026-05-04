@@ -1218,8 +1218,8 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
       </div>
 
       {chapter.is_public && (
-        <div style={{ padding: '12px 16px 0' }}>
-          <div style={{ background: darkMode ? 'rgba(124,58,237,0.12)' : '#faf5ff', border: `1px solid ${darkMode ? 'rgba(196,181,253,0.18)' : '#e9d5ff'}`, borderRadius: 16, padding: '12px 14px' }}>
+        <div style={{ padding: '12px 16px 12px' }}>
+          <div style={{ background: darkMode ? 'rgba(124,58,237,0.12)' : '#faf5ff', border: `1px solid ${darkMode ? 'rgba(196,181,253,0.18)' : '#e9d5ff'}`, borderRadius: 16, padding: '12px 14px', textAlign: 'center' }}>
             <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: darkMode ? '#c4b5fd' : '#7c3aed' }}>Published template</p>
             <p style={{ margin: '4px 0 0', fontSize: 13, lineHeight: 1.45, color: darkMode ? '#d6d3f7' : '#5b21b6' }}>
               Other users will be able to discover this chapter and copy it into their own Komo Book.
