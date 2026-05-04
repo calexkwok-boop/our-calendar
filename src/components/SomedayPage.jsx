@@ -1056,10 +1056,11 @@ function formatTripDateRange(start, end) {
   return `${months[sm-1]} ${sd}, ${sy} – ${months[em-1]} ${ed}, ${ey}`;
 }
 
-function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, darkMode, hasLinkedTrip = false, linkedTripDates = null, onInvite, onCoverChange, onPublishChange }) {
+function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, darkMode, hasLinkedTrip = false, linkedTripDates = null, onInvite, onCoverChange, onPublishChange, onAddPin }) {
   const [showAddMemory, setShowAddMemory] = useState(false);
   const [memoryText, setMemoryText] = useState('');
   const [tripAlbumPhotos, setTripAlbumPhotos] = useState([]);
+  const [showAddSheet, setShowAddSheet] = useState(false);
   const [selectedPin, setSelectedPin] = useState(null);
   const [showInvite, setShowInvite] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -1456,6 +1457,21 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
           onRemove={id => { onRemovePin?.(id); setSelectedPin(null); }}
           darkMode={darkMode}
           hasLinkedTrip={hasLinkedTrip}
+        />
+      )}
+
+      {onAddPin && (
+        <button
+          onClick={() => setShowAddSheet(true)}
+          style={{ position: 'fixed', bottom: 'calc(88px + env(safe-area-inset-bottom))', right: 20, zIndex: 40, width: 52, height: 52, borderRadius: '50%', background: darkMode ? '#2dd4bf' : '#0d9488', color: '#fff', border: 'none', fontSize: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 18px rgba(0,0,0,0.22)', fontWeight: 300, lineHeight: 1 }}
+        >+</button>
+      )}
+
+      {showAddSheet && (
+        <AddSheet
+          onClose={() => setShowAddSheet(false)}
+          onAdd={(data) => { onAddPin?.(data); setShowAddSheet(false); }}
+          darkMode={darkMode}
         />
       )}
     </div>
@@ -2250,6 +2266,25 @@ const SomedayPage = ({
     supabase.from('chapter_pins').upsert(pinToRow({ ...newPin, chapterId }, chapterId, position)).then(() => {});
   }
 
+  function addDirectPinToChapter(chapterId, pinData) {
+    const newPin = {
+      id: `pin-ch-${Date.now()}`,
+      ...pinData,
+      chapterId,
+      status: pinData.status || 'dreaming',
+      x: 0,
+      y: 0,
+      rot: (Math.random() - 0.5) * 3,
+    };
+    setPins(prev => [...prev, newPin]);
+    onAddDream?.(newPin);
+    setChapters(prev => prev.map(c =>
+      c.id === chapterId ? { ...c, itemIds: [...new Set([...(c.itemIds || []), newPin.id])] } : c
+    ));
+    const position = (chapters.find(c => c.id === chapterId)?.itemIds || []).length;
+    supabase.from('chapter_pins').upsert(pinToRow({ ...newPin, chapterId }, chapterId, position)).then(() => {});
+  }
+
   function deleteChapter(chapterId) {
     setPins(prev => prev.map(p => {
       if (p.chapterId !== chapterId) return p;
@@ -2319,7 +2354,7 @@ const SomedayPage = ({
       return (
         <>
           <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
-          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={chapter.owner_id === currentUser ? () => deleteChapter(activeChapterId) : undefined} onCreateTrip={chapter.owner_id === currentUser ? onCreateTripFromChapter : undefined} darkMode={darkMode} hasLinkedTrip={chaptersWithLinkedTrips.has(String(chapter.id))} linkedTripDates={chaptersWithLinkedTrips.get(String(chapter.id)) || null} onInvite={email => inviteToChapter(activeChapterId, email)} onCoverChange={({ chapterId, coverPinId }) => setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, cover_pin_id: coverPinId } : c))} onPublishChange={updateChapterPublishState} />
+          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={chapter.owner_id === currentUser ? () => deleteChapter(activeChapterId) : undefined} onCreateTrip={chapter.owner_id === currentUser ? onCreateTripFromChapter : undefined} darkMode={darkMode} hasLinkedTrip={chaptersWithLinkedTrips.has(String(chapter.id))} linkedTripDates={chaptersWithLinkedTrips.get(String(chapter.id)) || null} onInvite={email => inviteToChapter(activeChapterId, email)} onCoverChange={({ chapterId, coverPinId }) => setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, cover_pin_id: coverPinId } : c))} onPublishChange={updateChapterPublishState} onAddPin={chapter.owner_id === currentUser ? (data) => addDirectPinToChapter(activeChapterId, data) : undefined} />
         </>
       );
     }
