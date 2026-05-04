@@ -7,9 +7,15 @@ import {
   Sparkles,
   Trash2,
   BookOpen,
+  SlidersHorizontal,
+  Eye,
+  EyeOff,
+  GripVertical,
+  X,
 } from 'lucide-react';
 import QuickThoughtsSection from './QuickThoughtsSection';
 import { getDestinationImageOverride } from '../data/destinationImageOverrides';
+import useHomeSectionLayout from '../hooks/useHomeSectionLayout';
 
 const TODAY_MOMENT_CACHE_KEY = 'home-today-moment-v1';
 const readCachedTodayMoment = (todayKey) => {
@@ -235,6 +241,13 @@ const ScrapbookHomeHybrid = ({
 
   const [avatarImgError, setAvatarImgError] = useState(false);
   const [loadedMemoryCollageUrls, setLoadedMemoryCollageUrls] = useState(() => new Set());
+  const [isLayoutEditOpen, setIsLayoutEditOpen] = useState(false);
+  const { sections: homeSections, toggleVisible: toggleSectionVisible, reorder: reorderSections } = useHomeSectionLayout();
+  const sectionVisible = (id) => homeSections.find((s) => s.id === id)?.visible !== false;
+  const sectionOrder = (id) => homeSections.findIndex((s) => s.id === id);
+  const [draggingId, setDraggingId] = useState(null);
+  const [insertBefore, setInsertBefore] = useState(null);
+  const layoutListRef = React.useRef(null);
 
   const todayKey = toLocalDateKey(new Date());
   const komoShuffleSeedRef = React.useRef(`komo-home-${Date.now()}-${Math.random()}`);
@@ -339,11 +352,22 @@ const ScrapbookHomeHybrid = ({
         }
       `}</style>
 
-      <div className="mx-auto max-w-5xl space-y-6 rounded-[36px] border border-black/5 dark:border-white/8 bg-white/35 dark:bg-white/[0.03] p-3 sm:p-4 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
+      <div className="mx-auto max-w-5xl flex flex-col gap-6 rounded-[36px] border border-black/5 dark:border-white/8 bg-white/35 dark:bg-white/[0.03] p-3 sm:p-4 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
 
-        {/* SCRAPBOOK HEADER */}
-        <div className="relative overflow-hidden rounded-[32px] border-2 border-amber-900/20 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 px-5 pb-5 pt-9 sm:px-10 sm:pb-8 sm:pt-10 shadow-2xl paper-texture">
+        {/* SCRAPBOOK HEADER — always pinned first */}
+        <div style={{ order: -1 }} className="relative overflow-hidden rounded-[32px] border-2 border-amber-900/20 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 px-5 pb-5 pt-9 sm:px-10 sm:pb-8 sm:pt-10 shadow-2xl paper-texture">
           {/* Profile avatar button */}
+          <div className="absolute right-3 top-3 sm:right-4 sm:top-4 z-10">
+            <button
+              type="button"
+              onClick={() => setIsLayoutEditOpen(true)}
+              className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-white/40 dark:border-white/10 bg-white/30 dark:bg-white/[0.08] text-amber-900/60 dark:text-amber-100/60 hover:bg-white/50 dark:hover:bg-white/[0.14] transition-colors"
+              title="Customize home"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+            </button>
+          </div>
+
           {typeof onOpenAccountMenu === 'function' && (
             <div className="absolute left-3 top-3 sm:left-4 sm:top-4 z-10">
               <div className="relative">
@@ -390,16 +414,24 @@ const ScrapbookHomeHybrid = ({
 
           <div className="relative">
             <h1 className="font-handwritten text-4xl sm:text-6xl text-gray-900 dark:text-white mb-2 leading-tight pl-8 sm:pl-0">
-              {greeting}, {greetingName} {greetingEmoji}
+              {greeting}, {greetingName}
             </h1>
             {todayLabel ? (
               <div className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-900/55 dark:text-amber-100/55">
-                {todayLabel}
+                {todayLabel} {greetingEmoji}
               </div>
-            ) : null}
+            ) : (
+              greetingEmoji ? (
+                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-900/55 dark:text-amber-100/55">
+                  {greetingEmoji}
+                </div>
+              ) : null
+            )}
           </div>
         </div>
 
+        {sectionVisible('whatsNext') && (
+        <div style={{ order: sectionOrder('whatsNext') }}>
         {/* WHAT'S NEXT TODAY */}
         <div
           className="w-full rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-4 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
@@ -459,7 +491,11 @@ const ScrapbookHomeHybrid = ({
             </div>
           )}
         </div>
+        </div>
+        )}
 
+        {sectionVisible('photoOfDay') && (
+        <div style={{ order: sectionOrder('photoOfDay') }}>
         {/* PHOTO OF THE DAY */}
         <div className="rounded-[28px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-purple-50/60 via-white/90 to-pink-50/60 dark:from-purple-950/30 dark:via-slate-900/80 dark:to-pink-950/20 p-5 shadow-lg">
           <div className="flex items-center justify-between mb-4">
@@ -582,7 +618,11 @@ const ScrapbookHomeHybrid = ({
             </div>
           )}
         </div>
+        </div>
+        )}
 
+        {sectionVisible('comingUpThisWeek') && (
+        <div style={{ order: sectionOrder('comingUpThisWeek') }}>
         {/* COMING UP THIS WEEK */}
         <div className="rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-4">
           <div className="flex items-center justify-between mb-3">
@@ -627,7 +667,11 @@ const ScrapbookHomeHybrid = ({
             </div>
           )}
         </div>
+        </div>
+        )}
 
+        {sectionVisible('tripSpotlight') && (
+        <div style={{ order: sectionOrder('tripSpotlight') }}>
         {/* YOUR NEXT ADVENTURE — replaced by countdown when a trip is within 30 days */}
         {upcomingTripCountdown ? (
           <button
@@ -738,7 +782,11 @@ const ScrapbookHomeHybrid = ({
           )}
         </button>
         )}
+        </div>
+        )}
 
+        {sectionVisible('onYourMind') && (
+        <div style={{ order: sectionOrder('onYourMind') }}>
         {/* ON YOUR MIND (formerly Your Komo Book) */}
         <div className="rounded-[28px] border-2 border-emerald-900/20 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-emerald-950/30 dark:via-slate-900 dark:to-cyan-950/20 p-6 shadow-xl">
           <div className="flex items-center justify-between mb-4">
@@ -838,7 +886,11 @@ const ScrapbookHomeHybrid = ({
             </div>
           )}
         </div>
+        </div>
+        )}
 
+        {sectionVisible('yearSoFar') && (
+        <div style={{ order: sectionOrder('yearSoFar') }}>
         {/* 2026 SO FAR */}
         <div className="rounded-[24px] border border-amber-900/10 bg-white/70 px-4 py-3 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-black/20 sm:px-6 sm:py-4">
           <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-900/55 dark:text-amber-100/55">
@@ -853,7 +905,11 @@ const ScrapbookHomeHybrid = ({
             </div>
           ) : null}
         </div>
+        </div>
+        )}
 
+        {sectionVisible('memories') && (
+        <div style={{ order: sectionOrder('memories') }}>
         {/* MEMORIES - Daily rotating collage 2x2 */}
         <div className="rounded-[28px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-purple-50/60 via-white/90 to-pink-50/60 dark:from-purple-950/30 dark:via-slate-900/80 dark:to-pink-950/20 p-5 shadow-lg">
           <div className="flex items-center justify-between mb-3">
@@ -939,7 +995,11 @@ const ScrapbookHomeHybrid = ({
             </div>
           )}
         </div>
+        </div>
+        )}
 
+        {sectionVisible('quickThoughts') && (
+        <div style={{ order: sectionOrder('quickThoughts') }}>
         <QuickThoughtsSection
           quickThoughts={quickThoughts}
           onAddThought={onAddThought}
@@ -947,8 +1007,104 @@ const ScrapbookHomeHybrid = ({
           onOpenSomeday={onOpenSomeday}
           darkMode={darkMode}
         />
+        </div>
+        )}
 
       </div>
+
+      {/* CUSTOMIZE HOME SHEET */}
+      {isLayoutEditOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setIsLayoutEditOpen(false)}
+          />
+          <div className="relative w-full max-w-lg rounded-t-[28px] bg-white dark:bg-slate-900 shadow-2xl max-h-[80vh] overflow-y-auto">
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-9 h-1 rounded-full bg-black/10 dark:bg-white/10" />
+            </div>
+            <div className="flex items-center justify-between px-5 pt-3 pb-1">
+              <h2 className="font-handwritten text-2xl text-gray-900 dark:text-white">Customize Home</h2>
+              <button
+                type="button"
+                onClick={() => setIsLayoutEditOpen(false)}
+                className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="px-5 pb-3 text-sm text-gray-500 dark:text-gray-400">
+              Show, hide, or reorder your home screen cards.
+            </p>
+            <div className="pb-10" ref={layoutListRef}>
+              {homeSections.map((section, idx) => (
+                <React.Fragment key={section.id}>
+                  {/* Drop indicator line */}
+                  {draggingId && draggingId !== section.id && insertBefore === idx && (
+                    <div className="mx-5 h-0.5 rounded-full bg-violet-400 dark:bg-violet-500" />
+                  )}
+                  <div
+                    data-layout-row
+                    className={`flex items-center gap-3 px-5 py-3.5 border-t border-black/[0.06] dark:border-white/[0.06] transition-opacity duration-100 ${
+                      section.id === draggingId ? 'opacity-30' : 'opacity-100'
+                    }`}
+                  >
+                    {/* Grip handle */}
+                    <button
+                      type="button"
+                      className="flex-shrink-0 cursor-grab active:cursor-grabbing touch-none text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors"
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.setPointerCapture(e.pointerId);
+                        setDraggingId(section.id);
+                        setInsertBefore(idx);
+                      }}
+                      onPointerMove={(e) => {
+                        if (!draggingId || !layoutListRef.current) return;
+                        const rows = layoutListRef.current.querySelectorAll('[data-layout-row]');
+                        let newInsert = rows.length;
+                        for (let i = 0; i < rows.length; i++) {
+                          const rect = rows[i].getBoundingClientRect();
+                          if (e.clientY < rect.top + rect.height / 2) { newInsert = i; break; }
+                        }
+                        setInsertBefore(newInsert);
+                      }}
+                      onPointerUp={() => {
+                        if (draggingId !== null && insertBefore !== null) {
+                          const fromIndex = homeSections.findIndex((s) => s.id === draggingId);
+                          const toIndex = insertBefore > fromIndex ? insertBefore - 1 : insertBefore;
+                          if (fromIndex !== toIndex) reorderSections(fromIndex, toIndex);
+                        }
+                        setDraggingId(null);
+                        setInsertBefore(null);
+                      }}
+                      onPointerCancel={() => { setDraggingId(null); setInsertBefore(null); }}
+                    >
+                      <GripVertical className="w-5 h-5" />
+                    </button>
+                    {/* Visibility toggle */}
+                    <button
+                      type="button"
+                      onClick={() => toggleSectionVisible(section.id)}
+                      className={`flex-shrink-0 transition-colors ${section.visible ? 'text-violet-500 dark:text-violet-400' : 'text-gray-300 dark:text-gray-600'}`}
+                    >
+                      {section.visible ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+                    </button>
+                    <span className={`flex-1 text-sm font-medium transition-colors select-none ${section.visible ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-600'}`}>
+                      {section.label}
+                    </span>
+                  </div>
+                </React.Fragment>
+              ))}
+              {/* Drop indicator at the very end */}
+              {draggingId && insertBefore === homeSections.length && (
+                <div className="mx-5 h-0.5 rounded-full bg-violet-400 dark:bg-violet-500" />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
