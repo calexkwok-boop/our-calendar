@@ -831,7 +831,7 @@ function ChapterSuggestionPrompt({ group, pins, onConfirm, onDismiss, darkMode }
 }
 
 // ─── Add Sheet ────────────────────────────────────────────────────────────────
-function AddSheet({ onClose, onAdd, darkMode }) {
+function AddSheet({ onClose, onAdd, darkMode, chapterOnly = false }) {
   const [type, setType]               = useState('photo');
   const [label, setLabel]             = useState('');
   const [emoji, setEmoji]             = useState('✨');
@@ -887,7 +887,7 @@ function AddSheet({ onClose, onAdd, darkMode }) {
         </div>
         <div style={{ padding: '4px 0 18px' }}><p style={{ fontFamily: CAVEAT, fontSize: 24, fontWeight: 700, color: tp, margin: 0 }}>Pin something new</p></div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
-          {[['photo','📸','Photo'],['note','📝','Note'],['checklist','✅','Checklist'],['countdown','⏳','Countdown'],['label','🏷️','Label'],['sticker','✦','Sticker']].map(([t, ic, lbl]) => (
+          {[['photo','📸','Photo'],['note','📝','Note'],['checklist','✅','Checklist'],['countdown','⏳','Countdown'],['label','🏷️','Label'],['sticker','✦','Sticker']].filter(([t]) => chapterOnly || (t !== 'checklist' && t !== 'countdown')).map(([t, ic, lbl]) => (
             <button key={t} onClick={() => setType(t)} style={{ padding: '9px 6px', borderRadius: 14, border: `1px solid ${type === t ? '#2dd4bf' : inputBdr}`, background: type === t ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', color: type === t ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, fontFamily: SANS, fontSize: 13, cursor: 'pointer', fontWeight: type === t ? 600 : 400 }}>{ic} {lbl}</button>
           ))}
         </div>
@@ -936,7 +936,7 @@ function AddSheet({ onClose, onAdd, darkMode }) {
         {type === 'countdown' && (<>
           <input value={label} onChange={e => setLabel(e.target.value)} placeholder="What are you counting down to?" style={{ ...inputStyle, marginBottom: 12 }} />
           <p style={sectionLabel}>Date</p>
-          <input type="date" value={countdownDate} onChange={e => setCountdownDate(e.target.value)} style={{ ...inputStyle, marginBottom: 14, colorScheme: darkMode ? 'dark' : 'light' }} />
+          <input type="date" value={countdownDate} onChange={e => setCountdownDate(e.target.value)} style={{ ...inputStyle, marginBottom: 14, colorScheme: darkMode ? 'dark' : 'light', display: 'block' }} />
           <p style={sectionLabel}>Emoji</p>
           <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 14 }}>
             {['✈️','🏖️','🎉','🏔️','🎂','🎵','🏰','🌸','🚀','🍣','🎬','🏄','🎪','🌮','🍕','🥂','🎠','🌍','⛷️','🛳️','🎡','🌅','🎆','🦋'].map(e => (
@@ -1260,6 +1260,63 @@ function ChecklistEditSheet({ pin, onClose, onSave, darkMode }) {
         {/* save */}
         <div style={{ padding: '24px 20px 0' }}>
           <button onClick={save} style={{ width: '100%', padding: '14px', borderRadius: 16, border: 'none', background: '#2dd4bf', color: '#0a1020', fontFamily: SANS, fontSize: 15, fontWeight: 700, cursor: 'pointer', letterSpacing: '0.01em' }}>Save list</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function CountdownEditSheet({ pin, onClose, onSave, darkMode }) {
+  const tp = darkMode ? '#e8eaf0' : '#1a1a2e';
+  const ts = darkMode ? '#4a5568' : '#9ca3af';
+  const lineBdr = darkMode ? 'rgba(255,255,255,0.09)' : '#e8e3da';
+  const inputBg = darkMode ? 'rgba(255,255,255,0.06)' : '#f0ece4';
+  const [label, setLabel] = useState(pin.label || '');
+  const [targetDate, setTargetDate] = useState(pin.meta?.targetDate || '');
+  const [emoji, setEmoji] = useState(pin.emoji || '⏳');
+  const { sheetStyle, handleProps } = useSwipeDownSheet(onClose);
+
+  function save() {
+    onSave(pin.id, { label: label.trim() || 'Countdown', emoji, meta: { ...(pin.meta || {}), targetDate } });
+    onClose();
+  }
+
+  const EMOJIS = ['✈️','🏖️','🎉','🏔️','🎂','🎵','🏰','🌸','🚀','🍣','🎬','🏄','🎪','🌮','🍕','🥂','🎠','🌍','⛷️','🛳️','🎡','🌅','🎆','🦋'];
+
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }} onClick={onClose}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
+      <div onClick={e => e.stopPropagation()} style={{ ...sheetStyle, position: 'relative', background: darkMode ? '#1a1f2e' : '#faf9f5', borderRadius: '22px 22px 0 0', maxHeight: '88vh', overflowY: 'auto', paddingBottom: 'max(36px, calc(env(safe-area-inset-bottom) + 80px))' }}>
+        <div {...handleProps}><div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.15)' : '#d1c9bc' }} /></div>
+
+        <div style={{ padding: '4px 20px 18px', borderBottom: `1px solid ${lineBdr}` }}>
+          <p style={{ fontFamily: SANS, fontSize: 11, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.14em', fontWeight: 700, margin: '0 0 6px' }}>⏳ Countdown</p>
+          <input
+            value={label}
+            onChange={e => setLabel(e.target.value)}
+            placeholder="What are you counting down to?"
+            style={{ background: 'none', border: 'none', outline: 'none', fontFamily: CAVEAT, fontSize: 28, fontWeight: 700, color: tp, width: '100%', padding: 0 }}
+          />
+        </div>
+
+        <div style={{ padding: '18px 20px 0' }}>
+          <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: ts, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px' }}>Date</p>
+          <input
+            type="date"
+            value={targetDate}
+            onChange={e => setTargetDate(e.target.value)}
+            style={{ display: 'block', width: '100%', boxSizing: 'border-box', background: inputBg, border: `1px solid ${lineBdr}`, borderRadius: 12, padding: '10px 13px', fontFamily: SANS, fontSize: 15, color: tp, outline: 'none', marginBottom: 20, colorScheme: darkMode ? 'dark' : 'light' }}
+          />
+
+          <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: ts, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 10px' }}>Emoji</p>
+          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 24 }}>
+            {EMOJIS.map(e => (
+              <button key={e} onClick={() => setEmoji(e)} style={{ width: 38, height: 38, borderRadius: 10, border: `1px solid ${emoji === e ? '#f59e0b' : lineBdr}`, background: emoji === e ? (darkMode ? 'rgba(245,158,11,0.15)' : '#fffbeb') : 'transparent', fontSize: 20, cursor: 'pointer' }}>{e}</button>
+            ))}
+          </div>
+
+          <button onClick={save} style={{ width: '100%', padding: '14px', borderRadius: 16, border: 'none', background: '#f59e0b', color: '#0a1020', fontFamily: SANS, fontSize: 15, fontWeight: 700, cursor: 'pointer', letterSpacing: '0.01em' }}>Save countdown</button>
         </div>
       </div>
     </div>,
@@ -1762,6 +1819,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
           onClose={() => setShowAddSheet(false)}
           onAdd={(data) => { onAddPin?.(data); setShowAddSheet(false); }}
           darkMode={darkMode}
+          chapterOnly
         />
       )}
       {editingChecklist && (
@@ -1928,6 +1986,7 @@ const SomedayPage = ({
   const [filter, setFilter]               = useState('all');
   const [showAdd, setShowAdd]             = useState(false);
   const [detailPin, setDetailPin]         = useState(null);
+  const [editingCountdown, setEditingCountdown] = useState(null);
   const [dragging, setDragging]           = useState(null);
   const [heroId, setHeroId]               = useState(() => { try { return localStorage.getItem('someday-hero-id') || null; } catch { return null; } });
   const [chapters, setChapters]           = useState(() => Array.isArray(initialChapters) && initialChapters.length > 0 ? initialChapters : []);
@@ -2579,8 +2638,12 @@ const SomedayPage = ({
   function updateChapterPin(pinId, updates) {
     setPins(prev => prev.map(p => p.id === pinId ? { ...p, ...updates } : p));
     setChapters(prev => prev.map(c => ({ ...c, pins: (c.pins || []).map(p => p.id === pinId ? { ...p, ...updates } : p) })));
-    if (updates.meta !== undefined) {
-      supabase.from('chapter_pins').update({ meta: updates.meta }).eq('id', pinId).then(() => {});
+    const dbUpdates = {};
+    if (updates.meta !== undefined) dbUpdates.meta = updates.meta;
+    if (updates.label !== undefined) dbUpdates.label = updates.label;
+    if (updates.emoji !== undefined) dbUpdates.emoji = updates.emoji;
+    if (Object.keys(dbUpdates).length > 0) {
+      supabase.from('chapter_pins').update(dbUpdates).eq('id', pinId).then(() => {});
     }
   }
 
@@ -2637,6 +2700,7 @@ const SomedayPage = ({
   }
 
   function addPin(data) {
+    if (data.type === 'checklist' || data.type === 'countdown') return;
     const pos = positionBelowLowestPin(pins.filter(p => !p.chapterId));
     const newPin = { id: Date.now().toString(), ...pos, ...data };
     setPins(ps => [...ps, newPin]);
@@ -2840,7 +2904,7 @@ const SomedayPage = ({
                 else                 { bg = '#f0fdf9'; accent = '#2dd4bf'; textCol = '#134e4a'; numCol = '#0d9488'; urgencyLabel = 'days away'; }
                 if (darkMode) { bg = '#1e2535'; textCol = darkMode && days === null ? '#6b7280' : textCol; }
                 return (
-                  <div key={pin.id} style={{ flexShrink: 0, background: bg, borderRadius: 20, padding: '16px 16px 20px', minWidth: 130, position: 'relative', boxShadow: '0 4px 18px rgba(0,0,0,0.10)', border: `2px solid ${accent}44`, textAlign: 'center' }}>
+                  <div key={pin.id} onClick={() => setEditingCountdown(pin)} style={{ flexShrink: 0, background: bg, borderRadius: 20, padding: '16px 16px 20px', minWidth: 130, position: 'relative', boxShadow: '0 4px 18px rgba(0,0,0,0.10)', border: `2px solid ${accent}44`, textAlign: 'center', cursor: 'pointer' }}>
                     <div style={{ fontSize: 30, marginBottom: 4 }}>{pin.emoji || '⏳'}</div>
                     {days === 0 ? (
                       <div style={{ fontFamily: CAVEAT, fontSize: 20, fontWeight: 700, color: numCol, lineHeight: 1 }}>{urgencyLabel}</div>
@@ -2852,7 +2916,7 @@ const SomedayPage = ({
                     )}
                     <div style={{ fontFamily: CAVEAT, fontSize: 14, color: textCol, marginTop: 8, lineHeight: 1.2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{pin.label}</div>
                     <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 5, borderRadius: '0 0 18px 18px', background: accent }} />
-                    <button onClick={() => deletePin(pin.id)} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.10)', border: 'none', borderRadius: '50%', width: 18, height: 18, color: '#6b7280', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>✕</button>
+                    <button onClick={e => { e.stopPropagation(); deletePin(pin.id); }} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.10)', border: 'none', borderRadius: '50%', width: 18, height: 18, color: '#6b7280', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>✕</button>
                   </div>
                 );
               })}
@@ -2915,6 +2979,13 @@ const SomedayPage = ({
       </div>
 
       {showAdd && <AddSheet onClose={() => setShowAdd(false)} onAdd={addPin} darkMode={darkMode} />}
+      {editingCountdown && (
+        <CountdownEditSheet
+          pin={editingCountdown}
+          onClose={() => setEditingCountdown(null)}
+          onSave={(pinId, updates) => { updateChapterPin(pinId, updates); setEditingCountdown(null); }}
+          darkMode={darkMode}
+        />}
       {detailPin && (
         <DetailSheet
           pin={detailPin}
