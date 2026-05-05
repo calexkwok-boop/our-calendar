@@ -25021,7 +25021,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         return;
       }
       if (pin.x != null) {
-        setSomedayPinPositions(prev => ({ ...prev, [pin.id]: { x: pin.x, y: pin.y, rot: pin.rot } }));
+        setSomedayPinPositions(prev => {
+          const next = { ...prev, [pin.id]: { x: pin.x, y: pin.y, rot: pin.rot } };
+          try { localStorage.setItem('someday-pin-positions', JSON.stringify(next)); } catch {}
+          return next;
+        });
         const chapterId = String(pin.chapterId || '').trim();
         if (chapterId) {
           supabase
@@ -25075,7 +25079,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       }
     });
     if (Object.keys(nextPositionPatch).length === 0) return;
-    setSomedayPinPositions((prev) => ({ ...prev, ...nextPositionPatch }));
+    setSomedayPinPositions((prev) => {
+      const next = { ...prev, ...nextPositionPatch };
+      try { localStorage.setItem('someday-pin-positions', JSON.stringify(next)); } catch {}
+      return next;
+    });
     if (chapterPinUpdates.length > 0) {
       const updatesByPinId = new Map(
         chapterPinUpdates.map((pin) => [
