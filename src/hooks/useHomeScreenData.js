@@ -494,12 +494,10 @@ export default function useHomeScreenData({
     const THRESHOLD_DAYS = 30;
     // Use upcomingTrips (all future trips, not limited to 3) — already sorted by start date
     const nextTrip = upcomingTrips[0] || null;
-    console.log('[countdown] upcomingTrips:', upcomingTrips.length, 'nextTrip:', nextTrip?.name || nextTrip?.id, 'start:', nextTrip ? getSubCalStartRaw(nextTrip) : null, 'todayTs:', todayTs);
     if (!nextTrip) return null;
     const startRaw = String(getSubCalStartRaw(nextTrip) || '').trim();
     const startTs = toDateOnlyTs(startRaw);
     const daysUntil = startTs !== null ? Math.round((startTs - todayTs) / MS_PER_DAY) : null;
-    console.log('[countdown] startRaw:', startRaw, 'startTs:', startTs, 'daysUntil:', daysUntil, 'threshold:', THRESHOLD_DAYS);
     if (startTs === null) return null;
     if (daysUntil > THRESHOLD_DAYS || daysUntil < 0) return null;
     // Get cover from homeTripsPreviewCards if this trip is in there

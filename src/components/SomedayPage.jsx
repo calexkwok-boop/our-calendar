@@ -665,6 +665,41 @@ function LabelPin({ pin, isDragging, onDelete, darkMode }) {
   );
 }
 
+// ─── ChecklistPin ─────────────────────────────────────────────────────────────
+function ChecklistPin({ pin, isDragging, onDelete, onTap, darkMode }) {
+  const shadow = isDragging ? '0 20px 50px rgba(0,0,0,0.5)' : '3px 5px 16px rgba(0,0,0,0.22)';
+  const bg = darkMode ? '#1e2535' : '#faf9f5';
+  const tp = darkMode ? '#e8eaf0' : '#1a1a2e';
+  const ts = darkMode ? '#4a5568' : '#9ca3af';
+  const border = darkMode ? 'rgba(255,255,255,0.07)' : '#ede8df';
+  const items = pin.meta?.items || [];
+  const doneCount = items.filter(i => i.checked).length;
+  const pct = items.length > 0 ? Math.round((doneCount / items.length) * 100) : 0;
+  const preview = items.slice(0, 4);
+  return (
+    <div onClick={onTap} style={{ background: bg, boxShadow: shadow, width: 148, borderRadius: 4, cursor: isDragging ? 'grabbing' : 'grab', position: 'relative', border: `1px solid ${border}`, padding: '10px 10px 8px', transition: isDragging ? 'none' : 'box-shadow 0.2s' }}>
+      <Pushpin colorKey={pin.pinColor || 'teal'} darkMode={darkMode} />
+      <p style={{ fontFamily: CAVEAT, fontSize: 14, fontWeight: 700, color: tp, margin: '4px 0 6px', lineHeight: 1.2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{pin.label || 'Checklist'}</p>
+      {items.length > 0 && (
+        <div style={{ height: 2, borderRadius: 99, background: darkMode ? 'rgba(255,255,255,0.08)' : '#e8e3da', marginBottom: 7, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, background: '#2dd4bf' }} />
+        </div>
+      )}
+      {preview.map(item => (
+        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+          <div style={{ flexShrink: 0, width: 12, height: 12, borderRadius: '50%', border: item.checked ? 'none' : '1.5px solid #2dd4bf', background: item.checked ? '#2dd4bf' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {item.checked && <span style={{ color: '#0a1020', fontSize: 8, fontWeight: 700, lineHeight: 1 }}>✓</span>}
+          </div>
+          <span style={{ fontFamily: CAVEAT, fontSize: 13, color: item.checked ? ts : tp, textDecoration: item.checked ? 'line-through' : 'none', lineHeight: 1.2, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', flex: 1 }}>{item.text}</span>
+        </div>
+      ))}
+      {items.length > 4 && <p style={{ fontFamily: SANS, fontSize: 9, color: ts, margin: '4px 0 0', letterSpacing: '0.04em' }}>+{items.length - 4} more</p>}
+      {items.length === 0 && <p style={{ fontFamily: CAVEAT, fontSize: 13, color: ts, margin: 0, fontStyle: 'italic' }}>Empty list</p>}
+      <button onClick={e => { e.stopPropagation(); onDelete(); }} style={{ position: 'absolute', top: 4, left: 4, background: 'rgba(0,0,0,0.10)', border: 'none', borderRadius: '50%', width: 16, height: 16, color: '#6b7280', fontSize: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>✕</button>
+    </div>
+  );
+}
+
 // ─── StickerPin ───────────────────────────────────────────────────────────────
 function StickerPin({ pin, isDragging, onDelete }) {
   const sizes = { small: 32, medium: 46, large: 62 };
@@ -1091,12 +1126,107 @@ function formatTripDateRange(start, end) {
   return `${months[sm-1]} ${sd}, ${sy} – ${months[em-1]} ${ed}, ${ey}`;
 }
 
+function ChecklistEditSheet({ pin, onClose, onSave, darkMode }) {
+  const tp  = darkMode ? '#e8eaf0' : '#1a1a2e';
+  const ts  = darkMode ? '#4a5568' : '#9ca3af';
+  const lineBdr = darkMode ? 'rgba(255,255,255,0.09)' : '#e8e3da';
+  const [title, setTitle] = useState(pin.label || '');
+  const [items, setItems] = useState(() => (pin.meta?.items || []).length > 0 ? [...pin.meta.items] : [{ id: crypto.randomUUID(), text: '', checked: false }]);
+  const { sheetStyle, handleProps } = useSwipeDownSheet(onClose);
+  const newItemRef = useRef(null);
+
+  function addItem() {
+    setItems(prev => [...prev, { id: crypto.randomUUID(), text: '', checked: false }]);
+    setTimeout(() => newItemRef.current?.focus(), 50);
+  }
+  function removeItem(id) { setItems(prev => prev.length > 1 ? prev.filter(i => i.id !== id) : prev); }
+  function updateItem(id, text) { setItems(prev => prev.map(i => i.id === id ? { ...i, text } : i)); }
+  function toggleItem(id) { setItems(prev => prev.map(i => i.id === id ? { ...i, checked: !i.checked } : i)); }
+
+  function save() {
+    const validItems = items.filter(i => i.text.trim()).map(i => ({ ...i, text: i.text.trim() }));
+    onSave(pin.id, { label: title.trim() || 'Checklist', meta: { ...(pin.meta || {}), items: validItems } });
+    onClose();
+  }
+
+  const unchecked = items.filter(i => !i.checked);
+  const checked   = items.filter(i => i.checked);
+
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }} onClick={onClose}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
+      <div onClick={e => e.stopPropagation()} style={{ ...sheetStyle, position: 'relative', background: darkMode ? '#1a1f2e' : '#faf9f5', borderRadius: '22px 22px 0 0', maxHeight: '88vh', overflowY: 'auto', paddingBottom: 36 }}>
+        {/* drag handle */}
+        <div {...handleProps}><div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.15)' : '#d1c9bc' }} /></div>
+
+        {/* header */}
+        <div style={{ padding: '4px 20px 18px', borderBottom: `1px solid ${lineBdr}` }}>
+          <p style={{ fontFamily: SANS, fontSize: 11, color: '#2dd4bf', textTransform: 'uppercase', letterSpacing: '0.14em', fontWeight: 700, margin: '0 0 6px' }}>✅ Checklist</p>
+          <input
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="Give it a name…"
+            style={{ background: 'none', border: 'none', outline: 'none', fontFamily: CAVEAT, fontSize: 28, fontWeight: 700, color: tp, width: '100%', padding: 0 }}
+          />
+        </div>
+
+        {/* unchecked items */}
+        <div style={{ padding: '10px 20px 0' }}>
+          {unchecked.map((item, idx) => (
+            <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, borderBottom: `1px solid ${lineBdr}`, padding: '4px 0' }}>
+              <button onClick={() => toggleItem(item.id)} style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', border: `2px solid #2dd4bf`, background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
+              <input
+                ref={idx === unchecked.length - 1 ? newItemRef : null}
+                value={item.text}
+                onChange={e => updateItem(item.id, e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } if (e.key === 'Backspace' && !item.text && items.length > 1) { e.preventDefault(); removeItem(item.id); } }}
+                placeholder="Add something…"
+                style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontFamily: CAVEAT, fontSize: 20, color: tp, padding: '6px 0' }}
+              />
+              {items.length > 1 && <button onClick={() => removeItem(item.id)} style={{ background: 'none', border: 'none', color: ts, fontSize: 15, cursor: 'pointer', padding: '0 2px', opacity: 0.5 }}>✕</button>}
+            </div>
+          ))}
+
+          {/* add row */}
+          <button onClick={addItem} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', background: 'none', border: 'none', padding: '12px 0', cursor: 'pointer' }}>
+            <div style={{ width: 22, height: 22, borderRadius: '50%', border: `2px dashed ${ts}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ color: ts, fontSize: 16, lineHeight: 1, marginTop: -1 }}>+</span>
+            </div>
+            <span style={{ fontFamily: CAVEAT, fontSize: 20, color: ts }}>Add an item</span>
+          </button>
+
+          {/* checked items */}
+          {checked.length > 0 && (
+            <>
+              <p style={{ fontFamily: SANS, fontSize: 11, color: ts, textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600, margin: '14px 0 4px' }}>Done {checked.length}</p>
+              {checked.map(item => (
+                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, borderBottom: `1px solid ${lineBdr}`, padding: '4px 0', opacity: 0.5 }}>
+                  <button onClick={() => toggleItem(item.id)} style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', border: 'none', background: '#2dd4bf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#0a1020' }}>✓</button>
+                  <span style={{ fontFamily: CAVEAT, fontSize: 20, color: ts, textDecoration: 'line-through', flex: 1 }}>{item.text}</span>
+                  <button onClick={() => removeItem(item.id)} style={{ background: 'none', border: 'none', color: ts, fontSize: 15, cursor: 'pointer', padding: '0 2px' }}>✕</button>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* save */}
+        <div style={{ padding: '24px 20px 0' }}>
+          <button onClick={save} style={{ width: '100%', padding: '14px', borderRadius: 16, border: 'none', background: '#2dd4bf', color: '#0a1020', fontFamily: SANS, fontSize: 15, fontWeight: 700, cursor: 'pointer', letterSpacing: '0.01em' }}>Save list</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, darkMode, hasLinkedTrip = false, linkedTripDates = null, onInvite, onCoverChange, onPublishChange, onAddPin, onUpdatePin }) {
   const [showAddMemory, setShowAddMemory] = useState(false);
   const [memoryText, setMemoryText] = useState('');
   const [tripAlbumPhotos, setTripAlbumPhotos] = useState([]);
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [selectedPin, setSelectedPin] = useState(null);
+  const [editingChecklist, setEditingChecklist] = useState(null);
   const [showInvite, setShowInvite] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showCoverPicker, setShowCoverPicker] = useState(false);
@@ -1358,21 +1488,44 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
         <p style={{ fontSize: 10, color: ts, textTransform: 'uppercase', letterSpacing: '0.18em', margin: '0 0 14px', fontWeight: 600 }}>Pinned · {chapterPins.length} item{chapterPins.length !== 1 ? 's' : ''}</p>
         {chapterPins.filter(p => p.type === 'checklist' || p.type === 'link').map(p => (
           <div key={p.id} style={{ position: 'relative', marginBottom: 10 }}>
-            {p.type === 'checklist' && (
-              <div style={{ background: cardBg, borderRadius: 14, padding: '13px 14px', boxShadow: `0 1px 4px ${darkMode ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.06)'}` }}>
-                <p style={{ fontFamily: SANS, fontSize: 14, fontWeight: 700, color: tp, margin: '0 0 10px' }}>{p.label || 'Checklist'}</p>
-                {(p.meta?.items || []).length === 0 && <p style={{ fontFamily: SANS, fontSize: 13, color: ts, margin: 0, fontStyle: 'italic' }}>No items yet</p>}
-                {(p.meta?.items || []).map(item => (
-                  <label key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, cursor: 'pointer' }} onClick={e => e.stopPropagation()}>
-                    <input type="checkbox" checked={!!item.checked} onChange={e => {
-                      const updatedItems = (p.meta?.items || []).map(i => i.id === item.id ? { ...i, checked: e.target.checked } : i);
-                      onUpdatePin?.(p.id, { meta: { ...(p.meta || {}), items: updatedItems } });
-                    }} style={{ width: 16, height: 16, accentColor: '#2dd4bf', flexShrink: 0 }} />
-                    <span style={{ fontFamily: SANS, fontSize: 14, color: item.checked ? ts : tp, textDecoration: item.checked ? 'line-through' : 'none' }}>{item.text}</span>
-                  </label>
-                ))}
-              </div>
-            )}
+            {p.type === 'checklist' && (() => {
+              const allItems = p.meta?.items || [];
+              const doneCount = allItems.filter(i => i.checked).length;
+              const pct = allItems.length > 0 ? Math.round((doneCount / allItems.length) * 100) : 0;
+              return (
+                <div onClick={() => setEditingChecklist(p)} style={{ background: darkMode ? '#1e2535' : '#faf9f5', borderRadius: 16, padding: '14px 16px', boxShadow: `0 1px 6px ${darkMode ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.07)'}`, cursor: 'pointer', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : '#ede8df'}` }}>
+                  {/* header */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <p style={{ fontFamily: CAVEAT, fontSize: 20, fontWeight: 700, color: tp, margin: 0, lineHeight: 1.2 }}>{p.label || 'Checklist'}</p>
+                    {allItems.length > 0 && <span style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: doneCount === allItems.length ? '#2dd4bf' : ts, flexShrink: 0, marginLeft: 8, marginTop: 2 }}>{doneCount}/{allItems.length}</span>}
+                  </div>
+                  {/* progress bar */}
+                  {allItems.length > 0 && (
+                    <div style={{ height: 3, borderRadius: 99, background: darkMode ? 'rgba(255,255,255,0.08)' : '#e8e3da', marginBottom: 12, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, background: '#2dd4bf', transition: 'width 0.3s ease' }} />
+                    </div>
+                  )}
+                  {/* items */}
+                  {allItems.length === 0 && <p style={{ fontFamily: CAVEAT, fontSize: 17, color: ts, margin: 0, fontStyle: 'italic' }}>Nothing here yet — tap to add</p>}
+                  {allItems.map(item => (
+                    <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }} onClick={e => e.stopPropagation()}>
+                      <div
+                        onClick={() => {
+                          const updatedItems = allItems.map(i => i.id === item.id ? { ...i, checked: !i.checked } : i);
+                          onUpdatePin?.(p.id, { meta: { ...(p.meta || {}), items: updatedItems } });
+                        }}
+                        style={{ flexShrink: 0, width: 20, height: 20, borderRadius: '50%', border: item.checked ? 'none' : `2px solid #2dd4bf`, background: item.checked ? '#2dd4bf' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.15s ease' }}
+                      >
+                        {item.checked && <span style={{ color: '#0a1020', fontSize: 11, fontWeight: 700, lineHeight: 1 }}>✓</span>}
+                      </div>
+                      <span style={{ fontFamily: CAVEAT, fontSize: 18, color: item.checked ? ts : tp, textDecoration: item.checked ? 'line-through' : 'none', lineHeight: 1.2 }}>{item.text}</span>
+                    </div>
+                  ))}
+                  {/* edit hint */}
+                  <p style={{ fontFamily: SANS, fontSize: 10, color: ts, margin: '6px 0 0', opacity: 0.7 }}>Tap to edit</p>
+                </div>
+              );
+            })()}
             {p.type === 'link' && (() => {
               let hostname = '';
               try { hostname = new URL(p.meta?.url || '').hostname.replace('www.', ''); } catch {}
@@ -1538,6 +1691,17 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
         <AddSheet
           onClose={() => setShowAddSheet(false)}
           onAdd={(data) => { onAddPin?.(data); setShowAddSheet(false); }}
+          darkMode={darkMode}
+        />
+      )}
+      {editingChecklist && (
+        <ChecklistEditSheet
+          pin={editingChecklist}
+          onClose={() => setEditingChecklist(null)}
+          onSave={(pinId, updates) => {
+            onUpdatePin?.(pinId, updates);
+            setEditingChecklist(null);
+          }}
           darkMode={darkMode}
         />
       )}
@@ -2596,12 +2760,14 @@ const SomedayPage = ({
             onTouchStart={e => startDrag(e, pin.id)}
           >
             {pin.type === 'note'
-              ? <NotePin    pin={isPinInChapter(pin) ? { ...pin, pinColor: 'purple', chapterId: getPinChapterId(pin) } : pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
+              ? <NotePin       pin={isPinInChapter(pin) ? { ...pin, pinColor: 'purple', chapterId: getPinChapterId(pin) } : pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
               : pin.type === 'label'
-              ? <LabelPin   pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} darkMode={darkMode} />
+              ? <LabelPin      pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} darkMode={darkMode} />
               : pin.type === 'sticker'
-              ? <StickerPin pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} />
-              : <PhotoPin   pin={isPinInChapter(pin) ? { ...pin, pinColor: 'purple', chapterId: getPinChapterId(pin) } : pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
+              ? <StickerPin    pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} />
+              : pin.type === 'checklist'
+              ? <ChecklistPin  pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
+              : <PhotoPin      pin={isPinInChapter(pin) ? { ...pin, pinColor: 'purple', chapterId: getPinChapterId(pin) } : pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
             }
           </div>
         ))}
