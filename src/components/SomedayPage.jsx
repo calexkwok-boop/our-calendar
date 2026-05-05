@@ -2601,11 +2601,14 @@ const SomedayPage = ({
   const stopDrag = useCallback(() => {
     if (dragging) {
       const pin = pins.find(p => p.id === dragging);
-      if (pin && didDrag.current) onUpdateDream?.({ ...pin });
+      if (pin && didDrag.current) {
+        onUpdateDream?.({ ...pin });
+        onPersistPinLayout?.([pin]);
+      }
       else if (pin && pin.type !== 'label' && pin.type !== 'sticker') handlePinClick(pin);
     }
     setDragging(null);
-  }, [dragging, pins, onUpdateDream]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dragging, pins, onPersistPinLayout, onUpdateDream]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     window.addEventListener('mousemove', onMove);

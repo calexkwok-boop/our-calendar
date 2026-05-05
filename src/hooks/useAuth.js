@@ -72,7 +72,7 @@ export function useAuth({
       }
     };
 
-    withTimeout(supabase.auth.getSession(), 4000, { data: { session: null } })
+    withTimeout(supabase.auth.getSession(), 12000, { data: { session: null } })
       .then(async (sessionResult) => {
         await hydrateAuthUser(sessionResult?.data?.session?.user ?? null);
         setIsLoading(false);
@@ -86,10 +86,10 @@ export function useAuth({
     return () => subscription.unsubscribe();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Hard cap: never show the loading screen for more than 6 seconds.
+  // Hard cap: never show the loading screen forever if auth restore stalls.
   useEffect(() => {
     if (!isLoading) return undefined;
-    const timeoutId = window.setTimeout(() => setIsLoading(false), 6000);
+    const timeoutId = window.setTimeout(() => setIsLoading(false), 15000);
     return () => window.clearTimeout(timeoutId);
   }, [isLoading]);
 
