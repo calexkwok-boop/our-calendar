@@ -25077,6 +25077,27 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     if (Object.keys(nextPositionPatch).length === 0) return;
     setSomedayPinPositions((prev) => ({ ...prev, ...nextPositionPatch }));
     if (chapterPinUpdates.length > 0) {
+      const updatesByPinId = new Map(
+        chapterPinUpdates.map((pin) => [
+          String(pin.id || ''),
+          { x: pin.x, y: pin.y, rot: pin.rot, chapterId: pin.chapterId },
+        ])
+      );
+      setKomoChapters((prev) => (
+        Array.isArray(prev)
+          ? prev.map((chapter) => {
+              const chapterId = String(chapter?.id || '').trim();
+              const nextPins = (Array.isArray(chapter?.pins) ? chapter.pins : []).map((pin) => {
+                const patch = updatesByPinId.get(String(pin?.id || ''));
+                if (!patch || String(patch.chapterId || '').trim() !== chapterId) return pin;
+                return { ...pin, x: patch.x, y: patch.y, rot: patch.rot };
+              });
+              return nextPins === chapter?.pins ? chapter : { ...chapter, pins: nextPins };
+            })
+          : prev
+      ));
+    }
+    if (chapterPinUpdates.length > 0) {
       Promise.all(
         chapterPinUpdates.map((pin) => (
           supabase
