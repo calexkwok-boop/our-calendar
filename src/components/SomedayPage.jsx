@@ -2010,6 +2010,7 @@ const SomedayPage = ({
   const draggingTypeRef = useRef(null);
   const dreamsSyncedRef = useRef(false);
   const autoSortPendingRef = useRef(false);
+  const deletedChapterPinIds = useRef(new Set());
 
   const groups = useMemo(() => detectGroups(pins), [pins]);
 
@@ -2296,10 +2297,18 @@ const SomedayPage = ({
       return [
         ...hydratedChapters.map(c => {
           const ex = prev.find(p => p.id === c.id);
-          const dbItemIds = c.itemIds || [];
-          const prevItemIds = ex?.itemIds || [];
+          const dbItemIds = (c.itemIds || []).filter(id => !deletedChapterPinIds.current.has(String(id)));
+          const prevItemIds = (ex?.itemIds || []).filter(id => !deletedChapterPinIds.current.has(String(id)));
           const itemIds = [...new Set([...dbItemIds, ...prevItemIds])];
-          return { ...c, itemIds, pins: (c.pins || []).length > 0 ? c.pins : (ex?.pins || []) };
+          // Merge DB pins with local edits — local wins; skip locally-deleted pins
+          const dbPins = (c.pins || []).filter(dbPin => !deletedChapterPinIds.current.has(String(dbPin.id)));
+          const localPins = (ex?.pins || []).filter(lp => !deletedChapterPinIds.current.has(String(lp.id)));
+          const mergedPins = dbPins.map(dbPin => {
+            const local = localPins.find(p => p.id === dbPin.id);
+            return local ? { ...dbPin, ...local } : dbPin;
+          });
+          const localOnlyPins = localPins.filter(p => !dbPins.some(dp => dp.id === p.id));
+          return { ...c, itemIds, pins: mergedPins.length > 0 ? [...mergedPins, ...localOnlyPins] : localPins, loaded: ex?.loaded };
         }),
         ...localOnly,
       ];
@@ -2311,10 +2320,16 @@ const SomedayPage = ({
         (chapter.pins || []).forEach((pin) => {
           const pinId = String(pin?.id || '').trim();
           if (!pinId) return;
-          byId.set(pinId, { ...byId.get(pinId), ...pin, chapterId: String(pin?.chapterId || '').trim() || String(chapter?.id || '').trim() });
+          if (deletedChapterPinIds.current.has(pinId)) return;
+          const chapterId = String(pin?.chapterId || '').trim() || String(chapter?.id || '').trim();
+          // Local state wins over DB — preserves edits made since last fetch
+          byId.set(pinId, { ...pin, ...(byId.get(pinId) || {}), chapterId });
         });
       });
-      return Array.from(byId.values()).filter((pin) => String(pin?.id || '').trim());
+      return Array.from(byId.values()).filter((pin) => {
+        const id = String(pin?.id || '').trim();
+        return id && !deletedChapterPinIds.current.has(id);
+      });
     });
   }
 
@@ -2352,8 +2367,17 @@ const SomedayPage = ({
 
     setChapters(prev => prev.map(c => c.id === chapterId ? {
       ...c,
-      pins: loadedPins,
-      itemIds: [...new Set([...(c.itemIds || []), ...loadedPins.map(p => p.id)])],
+      pins: (() => {
+        const filteredDb = loadedPins.filter(p => !deletedChapterPinIds.current.has(String(p.id)));
+        const localPins = (c.pins || []).filter(p => !deletedChapterPinIds.current.has(String(p.id)));
+        const merged = filteredDb.map(dbPin => {
+          const local = localPins.find(p => p.id === dbPin.id);
+          return local ? { ...dbPin, ...local } : dbPin;
+        });
+        const localOnly = localPins.filter(p => !filteredDb.some(dp => dp.id === p.id));
+        return [...merged, ...localOnly];
+      })(),
+      itemIds: [...new Set([...(c.itemIds || []), ...loadedPins.filter(p => !deletedChapterPinIds.current.has(String(p.id))).map(p => p.id)])],
       memories: loadedMemories,
       collaborators: data.chapter_collaborators || [],
       loaded: true,
@@ -2607,6 +2631,7 @@ const SomedayPage = ({
 
   function removePinFromChapter(pinId) {
     const pinType = pins.find(p => p.id === pinId)?.type;
+    deletedChapterPinIds.current.add(String(pinId));
     setChapters(prev => prev.map(c => ({
       ...c,
       itemIds: (c.itemIds || []).filter(id => id !== pinId),
@@ -2715,6 +2740,7 @@ const SomedayPage = ({
 
   function deletePin(id) {
     const pinType = pins.find(p => p.id === id)?.type;
+    if (pinType === 'checklist' || pinType === 'countdown') deletedChapterPinIds.current.add(String(id));
     setPins(ps => ps.filter(p => p.id !== id));
     setChapters(prev => prev.map(c => ({
       ...c,
