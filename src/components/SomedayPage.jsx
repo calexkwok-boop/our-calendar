@@ -554,15 +554,52 @@ const CLUSTER_PHOTO_ROW_H = 224;
 const CLUSTER_NOTE_ROW_H  = 168;
 const CLUSTER_GAP = 40;
 
+function getChapterPinsForLayout(chapter, pins) {
+  const chapterId = String(chapter?.id || '').trim();
+  const chapterItemIds = new Set((chapter?.itemIds || []).map((id) => String(id || '')));
+  return (Array.isArray(pins) ? pins : []).filter((pin) => (
+    (String(pin?.chapterId || '').trim() === chapterId || chapterItemIds.has(String(pin?.id || '')))
+    && pin?.type !== 'label'
+    && pin?.type !== 'sticker'
+  ));
+}
+
+function getChapterLayoutMetrics(chapter, pins, fallbackY = 20) {
+  const chPins = getChapterPinsForLayout(chapter, pins);
+  const rows = Math.ceil(Math.max(chPins.length, 1) / 2);
+  const rowH = chPins.some((pin) => pin.type === 'photo') ? CLUSTER_PHOTO_ROW_H : CLUSTER_NOTE_ROW_H;
+  const fallbackBottom = fallbackY + CLUSTER_LABEL_H + rows * rowH;
+  if (chPins.length === 0) {
+    return { labelY: fallbackY, nextY: fallbackBottom + CLUSTER_GAP };
+  }
+
+  const numericTops = chPins
+    .map((pin) => Number(pin?.y))
+    .filter((value) => Number.isFinite(value));
+  const numericBottoms = chPins
+    .map((pin) => {
+      const y = Number(pin?.y);
+      return Number.isFinite(y) ? y + estimatedPinHeight(pin) : null;
+    })
+    .filter((value) => Number.isFinite(value));
+
+  if (numericTops.length === 0 || numericBottoms.length === 0) {
+    return { labelY: fallbackY, nextY: fallbackBottom + CLUSTER_GAP };
+  }
+
+  const pinnedTop = Math.min(...numericTops);
+  const pinnedBottom = Math.max(...numericBottoms);
+  const inferredLabelY = Math.max(fallbackY, pinnedTop - CLUSTER_LABEL_H - 8);
+  const nextY = Math.max(fallbackBottom, pinnedBottom) + CLUSTER_GAP;
+  return { labelY: inferredLabelY, nextY };
+}
+
 function getChapterClusterY(chapters, targetChapterId, pins) {
   let y = 20;
   for (const ch of chapters) {
-    if (ch.id === targetChapterId) return y;
-    const chapterItemIds = new Set((ch.itemIds || []).map(id => String(id || '')));
-    const chPins = pins.filter(p => (p.chapterId === ch.id || chapterItemIds.has(String(p.id || ''))) && p.type !== 'label' && p.type !== 'sticker');
-    const rows = Math.ceil(Math.max(chPins.length, 1) / 2);
-    const rowH = chPins.some(p => p.type === 'photo') ? CLUSTER_PHOTO_ROW_H : CLUSTER_NOTE_ROW_H;
-    y += CLUSTER_LABEL_H + rows * rowH + CLUSTER_GAP;
+    const metrics = getChapterLayoutMetrics(ch, pins, y);
+    if (ch.id === targetChapterId) return metrics.labelY;
+    y = metrics.nextY;
   }
   return y;
 }
@@ -571,12 +608,9 @@ function computeChapterLayout(chapters, pins) {
   const layout = {};
   let y = 20;
   chapters.forEach(ch => {
-    const chapterItemIds = new Set((ch.itemIds || []).map(id => String(id || '')));
-    const chPins = pins.filter(p => (p.chapterId === ch.id || chapterItemIds.has(String(p.id || ''))) && p.type !== 'label' && p.type !== 'sticker');
-    layout[ch.id] = { labelY: y };
-    const rows = Math.ceil(Math.max(chPins.length, 1) / 2);
-    const rowH = chPins.some(p => p.type === 'photo') ? CLUSTER_PHOTO_ROW_H : CLUSTER_NOTE_ROW_H;
-    y += CLUSTER_LABEL_H + rows * rowH + CLUSTER_GAP;
+    const metrics = getChapterLayoutMetrics(ch, pins, y);
+    layout[ch.id] = { labelY: metrics.labelY };
+    y = metrics.nextY;
   });
   return { layout, totalHeight: y };
 }
