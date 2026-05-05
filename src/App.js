@@ -4154,63 +4154,59 @@ function App() {
       const sessionUserPhone = options?.userPhone || user?.phone || '';
       const ownerIdForLayer = String(options?.ownerId || activeLayerOwnerId || sessionUserId || '');
       const shareRecipientFilter = buildShareRecipientFilter(sessionUserId, sessionUserEmail, sessionUserPhone);
+      const myPhone = normalizePhoneNumber(sessionUserPhone);
+      const memberRecipientFilter = buildMemberRecipientFilter(sessionUserEmail, myPhone);
 
-      const { data: directRows, error } = await supabase
-        .from('sub_calendars')
-        .select('*')
-        .eq('layer_id', requestedLayerId);
-      if (error) {
-        console.error('Error loading sub_calendars:', error);
-        return;
-      }
-
+      // Round 1: direct trips, shared-access owners, and member links are all independent — run in parallel.
       let sharedOwnerQuery = supabase
         .from('shared_access')
         .select('owner_id')
         .eq('layer_id', requestedLayerId);
       if (shareRecipientFilter) sharedOwnerQuery = sharedOwnerQuery.or(shareRecipientFilter);
-      const { data: sharedOwnerRows } = await sharedOwnerQuery;
+
+      const [
+        { data: directRows, error },
+        { data: sharedOwnerRows },
+        { data: memberLinks },
+      ] = await Promise.all([
+        supabase.from('sub_calendars').select('*').eq('layer_id', requestedLayerId),
+        sharedOwnerQuery,
+        memberRecipientFilter
+          ? supabase.from('sub_calendar_members').select('sub_calendar_id,status').or(memberRecipientFilter)
+          : Promise.resolve({ data: [] }),
+      ]);
+      if (error) {
+        console.error('Error loading sub_calendars:', error);
+        return;
+      }
+
       const accessibleOwnerIds = Array.from(new Set([
         ownerIdForLayer,
         ...((sharedOwnerRows || []).map(row => String(row?.owner_id || '')).filter(Boolean)),
       ]));
 
-      let legacyRows = [];
-      if (accessibleOwnerIds.length > 0) {
-        const { data: legacyData } = await supabase
-          .from('sub_calendars')
-          .select('*')
-          .is('layer_id', null)
-          .in('owner_id', accessibleOwnerIds);
-        legacyRows = legacyData || [];
-      }
-
-      let memberRows = [];
       const memberTripIdSet = new Set();
-      const myPhone = normalizePhoneNumber(sessionUserPhone);
-      const memberRecipientFilter = buildMemberRecipientFilter(sessionUserEmail, myPhone);
-      if (memberRecipientFilter) {
-        const { data: memberLinks } = await supabase
-          .from('sub_calendar_members')
-          .select('sub_calendar_id,status')
-          .or(memberRecipientFilter);
-        const memberTripIds = Array.from(new Set((memberLinks || [])
-          .filter(row => {
-            const status = String(row?.status || '').toLowerCase();
-            // Legacy rows without status remain visible; new flow requires accepted.
-            return !status || status === 'accepted';
-          })
-          .map(row => String(row?.sub_calendar_id || ''))
-          .filter(Boolean)));
-        memberTripIds.forEach(id => memberTripIdSet.add(id));
-        if (memberTripIds.length > 0) {
-          const { data: memberTrips } = await supabase
-            .from('sub_calendars')
-            .select('*')
-            .in('id', memberTripIds);
-          memberRows = memberTrips || [];
-        }
-      }
+      const memberTripIds = Array.from(new Set((memberLinks || [])
+        .filter(row => {
+          const status = String(row?.status || '').toLowerCase();
+          // Legacy rows without status remain visible; new flow requires accepted.
+          return !status || status === 'accepted';
+        })
+        .map(row => String(row?.sub_calendar_id || ''))
+        .filter(Boolean)));
+      memberTripIds.forEach(id => memberTripIdSet.add(id));
+
+      // Round 2: legacy trips (needs accessibleOwnerIds) and member trips (needs memberTripIds) — run in parallel.
+      const [{ data: legacyData }, { data: memberTrips }] = await Promise.all([
+        accessibleOwnerIds.length > 0
+          ? supabase.from('sub_calendars').select('*').is('layer_id', null).in('owner_id', accessibleOwnerIds)
+          : Promise.resolve({ data: [] }),
+        memberTripIds.length > 0
+          ? supabase.from('sub_calendars').select('*').in('id', memberTripIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+      const legacyRows = legacyData || [];
+      const memberRows = memberTrips || [];
 
       const mergedRows = Array.from(new Map([...(directRows || []), ...legacyRows, ...memberRows].map(sc => [String(sc.id), sc])).values());
       const layerScopedRows = mergedRows.filter(sc => String(sc?.layer_id || '') === requestedLayerId);
@@ -4431,8 +4427,8 @@ function App() {
     }
   };
 
-  const loadMergedSubCalendarEvents = async (subCal) => {
-    const subCalIds = await getDuplicateSubCalendarIds(subCal);
+  const loadMergedSubCalendarEvents = async (subCal, preloadedSubCalIds = null) => {
+    const subCalIds = preloadedSubCalIds || await getDuplicateSubCalendarIds(subCal);
     const merged = {};
     for (const subCalId of subCalIds) {
       const grouped = await loadSubCalendarEvents(subCalId);
@@ -4454,8 +4450,8 @@ function App() {
     return merged;
   };
 
-  const loadMergedTripPhotos = async (subCal, deletedIdsOverride = null) => {
-    const subCalIds = await getDuplicateSubCalendarIds(subCal);
+  const loadMergedTripPhotos = async (subCal, deletedIdsOverride = null, preloadedSubCalIds = null) => {
+    const subCalIds = preloadedSubCalIds || await getDuplicateSubCalendarIds(subCal);
     const merged = [];
     for (const subCalId of subCalIds) {
       const rows = await loadTripPhotos(subCalId, deletedIdsOverride);
@@ -5301,15 +5297,19 @@ function App() {
     setTripCoverPhotoNoteId(null);
     setDeletedPhotoIds([]);
     setDeletedPhotosNoteId(null);
-    await loadGlobalVenmoHandles();
-    await loadGlobalCashAppHandles();
+    await Promise.all([loadGlobalVenmoHandles(), loadGlobalCashAppHandles()]);
     await ensureCurrentUserTripMembership(sc);
     await loadSubCalendarEditAccess(sc);
     await syncSubCalendarMembersFromLayer(sc);
-    const loadedEvents = await loadMergedSubCalendarEvents(sc);
-    await loadSubCalendarMembers(sc.id);
-    const noteState = await loadSubCalNotes(sc.id);
-    const loadedPhotos = await loadMergedTripPhotos(sc, noteState?.deletedPhotoIds || []);
+    // getDuplicateSubCalendarIds is shared so it only hits the DB once instead of twice.
+    const subCalIds = await getDuplicateSubCalendarIds(sc);
+    // Events, members, and notes are independent — run in parallel.
+    const [loadedEvents, , noteState] = await Promise.all([
+      loadMergedSubCalendarEvents(sc, subCalIds),
+      loadSubCalendarMembers(sc.id),
+      loadSubCalNotes(sc.id),
+    ]);
+    const loadedPhotos = await loadMergedTripPhotos(sc, noteState?.deletedPhotoIds || [], subCalIds);
     if (openingSubCalendarRequestRef.current === openRequestId) {
       skipInitialTripPhotoReloadRef.current = '';
     }
