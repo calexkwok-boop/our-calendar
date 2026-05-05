@@ -24928,8 +24928,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
   // Called when a pin is added from within SomedayPage's own AddSheet
   const handleSomedayAddDream = (pin) => {
-    if (pin.type === 'label' || pin.type === 'sticker') {
-      // Store the full pin data so type + style fields survive page navigation
+    if (pin.type === 'label' || pin.type === 'sticker' || pin.type === 'checklist' || pin.type === 'countdown') {
+      // Store the full pin data so type + style + meta fields survive page navigation
       setSomedayDecorPins((prev) => [...(Array.isArray(prev) ? prev : []), pin]);
     } else if (pin.type === 'note') {
       const colors = ['yellow', 'pink', 'blue', 'green'];
@@ -24963,6 +24963,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         setSomedayDecorPins(prev =>
           (Array.isArray(prev) ? prev : []).map(p =>
             p.id === pin.id ? { ...p, x: pin.x, y: pin.y, rot: pin.rot } : p
+          )
+        );
+        return;
+      }
+      if (pin.type === 'checklist' || pin.type === 'countdown') {
+        setSomedayDecorPins(prev =>
+          (Array.isArray(prev) ? prev : []).map(p =>
+            p.id === pin.id ? { ...p, ...pin } : p
           )
         );
         return;

@@ -887,13 +887,10 @@ function AddSheet({ onClose, onAdd, darkMode, chapterOnly = false }) {
         </div>
         <div style={{ padding: '4px 0 18px' }}><p style={{ fontFamily: CAVEAT, fontSize: 24, fontWeight: 700, color: tp, margin: 0 }}>Pin something new</p></div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
-          {[['photo','📸','Photo'],['note','📝','Note'],['checklist','✅','Checklist'],['countdown','⏳','Countdown'],['label','🏷️','Label'],['sticker','✦','Sticker']].filter(([t]) => chapterOnly || (t !== 'checklist' && t !== 'countdown')).map(([t, ic, lbl]) => (
+          {[['photo','📸','Photo'],['note','📝','Note'],['checklist','✅','Checklist'],['countdown','⏳','Countdown'],['label','🏷️','Label'],['sticker','✦','Sticker']].map(([t, ic, lbl]) => (
             <button key={t} onClick={() => setType(t)} style={{ padding: '9px 6px', borderRadius: 14, border: `1px solid ${type === t ? '#2dd4bf' : inputBdr}`, background: type === t ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', color: type === t ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, fontFamily: SANS, fontSize: 13, cursor: 'pointer', fontWeight: type === t ? 600 : 400 }}>{ic} {lbl}</button>
           ))}
         </div>
-        {!chapterOnly && (
-          <p style={{ fontFamily: SANS, fontSize: 12, color: ts, margin: '-8px 0 16px', textAlign: 'center' }}>✅ Checklists and ⏳ Countdowns can be added inside a chapter</p>
-        )}
         {type === 'photo' && (<>
           <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Label (e.g. Visit Boston)" style={{ ...inputStyle, marginBottom: 10 }} />
           <p style={sectionLabel}>Photo</p>
@@ -2731,7 +2728,6 @@ const SomedayPage = ({
   }
 
   function addPin(data) {
-    if (data.type === 'checklist' || data.type === 'countdown') return;
     const pos = positionBelowLowestPin(pins.filter(p => !p.chapterId));
     const newPin = { id: Date.now().toString(), ...pos, ...data };
     setPins(ps => [...ps, newPin]);
@@ -2739,18 +2735,22 @@ const SomedayPage = ({
   }
 
   function deletePin(id) {
-    const pinType = pins.find(p => p.id === id)?.type;
-    if (pinType === 'checklist' || pinType === 'countdown') deletedChapterPinIds.current.add(String(id));
+    const pin = pins.find(p => p.id === id);
+    const pinType = pin?.type;
+    const isChapterPin = Boolean(pin?.chapterId);
+    if (isChapterPin && (pinType === 'checklist' || pinType === 'countdown')) {
+      deletedChapterPinIds.current.add(String(id));
+    }
     setPins(ps => ps.filter(p => p.id !== id));
     setChapters(prev => prev.map(c => ({
       ...c,
       itemIds: (c.itemIds || []).filter(i => i !== id),
       pins: (c.pins || []).filter(p => p.id !== id),
     })));
-    if (pinType !== 'checklist' && pinType !== 'countdown') {
-      onDeleteDream?.(id);
-    } else {
+    if (isChapterPin && (pinType === 'checklist' || pinType === 'countdown')) {
       supabase.from('chapter_pins').delete().eq('id', id).then(({ error }) => { if (error) console.error('chapter_pins delete failed:', error); });
+    } else {
+      onDeleteDream?.(id);
     }
   }
 
@@ -2912,7 +2912,7 @@ const SomedayPage = ({
 
       {/* Countdowns */}
       {(() => {
-        const countdownPins = pins.filter(p => p.type === 'countdown');
+        const countdownPins = pins.filter(p => p.type === 'countdown' && !p.chapterId);
         if (countdownPins.length === 0) return null;
         return (
           <div style={{ padding: '20px 16px 0' }}>
@@ -3015,14 +3015,32 @@ const SomedayPage = ({
         <CountdownEditSheet
           pin={editingCountdown}
           onClose={() => setEditingCountdown(null)}
-          onSave={(pinId, updates) => { updateChapterPin(pinId, updates); setEditingCountdown(null); }}
+          onSave={(pinId, updates) => {
+            const pin = pins.find(p => p.id === pinId);
+            if (pin?.chapterId) {
+              updateChapterPin(pinId, updates);
+            } else {
+              setPins(prev => prev.map(p => p.id === pinId ? { ...p, ...updates } : p));
+              onUpdateDream?.({ ...pin, ...updates });
+            }
+            setEditingCountdown(null);
+          }}
           darkMode={darkMode}
         />)}
       {editingChecklist && (
         <ChecklistEditSheet
           pin={editingChecklist}
           onClose={() => setEditingChecklist(null)}
-          onSave={(pinId, updates) => { updateChapterPin(pinId, updates); setEditingChecklist(null); }}
+          onSave={(pinId, updates) => {
+            const pin = pins.find(p => p.id === pinId);
+            if (pin?.chapterId) {
+              updateChapterPin(pinId, updates);
+            } else {
+              setPins(prev => prev.map(p => p.id === pinId ? { ...p, ...updates } : p));
+              onUpdateDream?.({ ...pin, ...updates });
+            }
+            setEditingChecklist(null);
+          }}
           darkMode={darkMode}
         />)}
       {detailPin && (
