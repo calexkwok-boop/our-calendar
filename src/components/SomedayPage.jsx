@@ -891,6 +891,9 @@ function AddSheet({ onClose, onAdd, darkMode, chapterOnly = false }) {
             <button key={t} onClick={() => setType(t)} style={{ padding: '9px 6px', borderRadius: 14, border: `1px solid ${type === t ? '#2dd4bf' : inputBdr}`, background: type === t ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', color: type === t ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, fontFamily: SANS, fontSize: 13, cursor: 'pointer', fontWeight: type === t ? 600 : 400 }}>{ic} {lbl}</button>
           ))}
         </div>
+        {!chapterOnly && (
+          <p style={{ fontFamily: SANS, fontSize: 12, color: ts, margin: '-8px 0 16px', textAlign: 'center' }}>✅ Checklists and ⏳ Countdowns can be added inside a chapter</p>
+        )}
         {type === 'photo' && (<>
           <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Label (e.g. Visit Boston)" style={{ ...inputStyle, marginBottom: 10 }} />
           <p style={sectionLabel}>Photo</p>
@@ -2454,9 +2457,9 @@ const SomedayPage = ({
   const isPinInChapter = (pin) => Boolean(getPinChapterId(pin));
 
   // Chapter pins excluded from category filter pills; only show in 'all'
-  // Countdown + checklist pins are lifted into their own dedicated sections above the board
+  // Countdown pins are lifted into their own dedicated section above the board
   const visiblePins = (
-    filter === 'all'  ? pins.filter(p => p.type !== 'countdown' && p.type !== 'checklist') :
+    filter === 'all'  ? pins.filter(p => p.type !== 'countdown') :
     filter === 'done' ? pins.filter(p => p.status === 'done' && !isPinInChapter(p)) :
                         pins.filter(p => p.categoryId === filter && p.status !== 'done' && !isPinInChapter(p))
   ).filter(p => p.id !== heroId);
@@ -2644,7 +2647,9 @@ const SomedayPage = ({
     if (updates.label !== undefined) dbUpdates.label = updates.label;
     if (updates.emoji !== undefined) dbUpdates.emoji = updates.emoji;
     if (Object.keys(dbUpdates).length > 0) {
-      supabase.from('chapter_pins').update(dbUpdates).eq('id', pinId).then(() => {});
+      supabase.from('chapter_pins').update(dbUpdates).eq('id', pinId).then(({ error }) => {
+        if (error) console.error('chapter_pins update failed:', pinId, error);
+      });
     }
   }
 
@@ -2871,51 +2876,6 @@ const SomedayPage = ({
                         </div>
                       </div>
                     )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Checklists */}
-      {(() => {
-        const checklistPins = pins.filter(p => p.type === 'checklist');
-        if (checklistPins.length === 0) return null;
-        return (
-          <div style={{ padding: '20px 16px 0' }}>
-            <p style={{ fontSize: 10, color: darkMode ? '#fbbf24' : '#92400e', textTransform: 'uppercase', letterSpacing: '0.2em', margin: '0 0 12px', fontWeight: 700 }}>✅ Checklists</p>
-            <div style={{ display: 'flex', gap: 12, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 4 }}>
-              {checklistPins.map(pin => {
-                const items = pin.meta?.items || [];
-                const doneCount = items.filter(i => i.checked).length;
-                const pct = items.length > 0 ? Math.round((doneCount / items.length) * 100) : 0;
-                const preview = items.filter(i => !i.checked).slice(0, 3);
-                const bg = darkMode ? '#1e2535' : '#faf9f5';
-                const tp2 = darkMode ? '#e8eaf0' : '#1a1a2e';
-                const ts2 = darkMode ? '#4a5568' : '#9ca3af';
-                return (
-                  <div key={pin.id} onClick={() => setEditingChecklist(pin)} style={{ flexShrink: 0, background: bg, borderRadius: 20, padding: '14px 14px 18px', minWidth: 150, maxWidth: 190, position: 'relative', boxShadow: '0 4px 18px rgba(0,0,0,0.10)', border: `2px solid ${darkMode ? 'rgba(45,212,191,0.2)' : '#e8e3da'}`, cursor: 'pointer' }}>
-                    <p style={{ fontFamily: CAVEAT, fontSize: 17, fontWeight: 700, color: tp2, margin: '0 0 8px', lineHeight: 1.2, paddingRight: 16 }}>{pin.label || 'Checklist'}</p>
-                    {items.length > 0 && (
-                      <>
-                        <div style={{ height: 3, borderRadius: 99, background: darkMode ? 'rgba(255,255,255,0.08)' : '#e8e3da', marginBottom: 8, overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, background: '#2dd4bf' }} />
-                        </div>
-                        <p style={{ fontFamily: SANS, fontSize: 10, color: ts2, margin: '0 0 8px', letterSpacing: '0.04em' }}>{doneCount}/{items.length} done</p>
-                      </>
-                    )}
-                    {preview.map(item => (
-                      <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
-                        <div style={{ flexShrink: 0, width: 13, height: 13, borderRadius: '50%', border: '1.5px solid #2dd4bf' }} />
-                        <span style={{ fontFamily: CAVEAT, fontSize: 14, color: tp2, lineHeight: 1.2, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', flex: 1 }}>{item.text}</span>
-                      </div>
-                    ))}
-                    {items.filter(i => !i.checked).length > 3 && <p style={{ fontFamily: SANS, fontSize: 9, color: ts2, margin: '4px 0 0', letterSpacing: '0.04em' }}>+{items.filter(i => !i.checked).length - 3} more</p>}
-                    {items.length === 0 && <p style={{ fontFamily: CAVEAT, fontSize: 13, color: ts2, margin: 0, fontStyle: 'italic' }}>Empty — tap to add</p>}
-                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 5, borderRadius: '0 0 18px 18px', background: '#2dd4bf', opacity: 0.5 }} />
-                    <button onClick={e => { e.stopPropagation(); deletePin(pin.id); }} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.10)', border: 'none', borderRadius: '50%', width: 18, height: 18, color: '#6b7280', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>✕</button>
                   </div>
                 );
               })}
