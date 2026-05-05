@@ -1945,14 +1945,16 @@ function estimatedPinHeight(pin = {}) {
   return 210;
 }
 
-function normalizeBoardPin(pin, index = 0, forcedChapterId = '') {
+function normalizeBoardPin(pin, index = 0, forcedChapterId = '', pinPositionOverrides = {}) {
   const pos = (pin?.x == null || pin?.y == null)
     ? gridPosition(index)
     : { x: pin.x, y: pin.y, rot: pin.rot };
+  const override = pinPositionOverrides?.[pin?.id] || {};
   return {
     ...pin,
     ...pos,
-    rot: pos.rot ?? pin?.rot ?? (Math.random() * 6 - 3),
+    ...override,
+    rot: override.rot ?? pos.rot ?? pin?.rot ?? (Math.random() * 6 - 3),
     chapterId: String(forcedChapterId || pin?.chapterId || '').trim() || undefined,
     pinColor: pin?.pinColor ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)],
     noteColor: pin?.noteColor ?? 'yellow',
@@ -1960,17 +1962,17 @@ function normalizeBoardPin(pin, index = 0, forcedChapterId = '') {
   };
 }
 
-function mergeBoardPinsWithChapterPins(basePins = [], sourceChapters = []) {
+function mergeBoardPinsWithChapterPins(basePins = [], sourceChapters = [], pinPositionOverrides = {}) {
   const byId = new Map();
   (Array.isArray(basePins) ? basePins : []).forEach((pin, index) => {
-    const normalized = normalizeBoardPin(pin, index);
+    const normalized = normalizeBoardPin(pin, index, '', pinPositionOverrides);
     const pinId = String(normalized?.id || '').trim();
     if (pinId) byId.set(pinId, normalized);
   });
   (Array.isArray(sourceChapters) ? sourceChapters : []).forEach((chapter, chapterIndex) => {
     const chapterId = String(chapter?.id || '').trim();
     (Array.isArray(chapter?.pins) ? chapter.pins : []).forEach((pin, pinIndex) => {
-      const normalized = normalizeBoardPin(pin, chapterIndex + pinIndex, chapterId);
+      const normalized = normalizeBoardPin(pin, chapterIndex + pinIndex, chapterId, pinPositionOverrides);
       const pinId = String(normalized?.id || '').trim();
       if (!pinId) return;
       const existing = byId.get(pinId);
@@ -2030,7 +2032,8 @@ const SomedayPage = ({
         type: d.type ?? (d.imageUrl || d.emoji ? 'photo' : 'note'),
       };
     }),
-    initialChapters
+    initialChapters,
+    pinPositionOverrides
   ));
   const [filter, setFilter]               = useState('all');
   const [showAdd, setShowAdd]             = useState(false);
@@ -2120,8 +2123,8 @@ const SomedayPage = ({
 
   useEffect(() => {
     if (!Array.isArray(initialChapters) || initialChapters.length === 0) return;
-    setPins((prev) => mergeBoardPinsWithChapterPins(prev, initialChapters));
-  }, [initialChapters]);
+    setPins((prev) => mergeBoardPinsWithChapterPins(prev, initialChapters, pinPositionOverrides));
+  }, [initialChapters, pinPositionOverrides]);
 
   // Auto-sort board whenever a new chapter is created so all items land in the
   // right zones without requiring the user to manually press the wand.
