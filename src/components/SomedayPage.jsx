@@ -700,6 +700,46 @@ function ChecklistPin({ pin, isDragging, onDelete, onTap, darkMode }) {
   );
 }
 
+// ─── CountdownPin ────────────────────────────────────────────────────────────
+function CountdownPin({ pin, isDragging, onDelete, onTap }) {
+  const targetDate = pin.meta?.targetDate || '';
+  const days = React.useMemo(() => {
+    if (!targetDate) return null;
+    const [y, m, d] = targetDate.split('-').map(Number);
+    const target = new Date(y, m - 1, d);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return Math.round((target - today) / 86400000);
+  }, [targetDate]);
+
+  const shadow = isDragging ? '0 20px 50px rgba(0,0,0,0.5)' : '3px 5px 16px rgba(0,0,0,0.22)';
+
+  let bg, accent, textCol, numCol, label;
+  if (days === null)       { bg = '#f3f4f6'; accent = '#9ca3af'; textCol = '#6b7280'; numCol = '#9ca3af'; label = '—'; }
+  else if (days < 0)       { bg = '#f3f4f6'; accent = '#d1d5db'; textCol = '#9ca3af'; numCol = '#d1d5db'; label = 'passed'; }
+  else if (days === 0)     { bg = '#fffbeb'; accent = '#f59e0b'; textCol = '#92400e'; numCol = '#f59e0b'; label = 'TODAY! 🎉'; }
+  else if (days <= 7)      { bg = '#fff0f5'; accent = '#f472b6'; textCol = '#831843'; numCol = '#ec4899'; label = days === 1 ? 'day to go!' : 'days to go!'; }
+  else if (days <= 30)     { bg = '#fffbeb'; accent = '#fbbf24'; textCol = '#78350f'; numCol = '#f59e0b'; label = 'days away'; }
+  else                     { bg = '#f0fdf9'; accent = '#2dd4bf'; textCol = '#134e4a'; numCol = '#0d9488'; label = 'days away'; }
+
+  return (
+    <div onClick={onTap} style={{ background: bg, boxShadow: shadow, width: 148, borderRadius: 4, cursor: isDragging ? 'grabbing' : 'grab', position: 'relative', padding: '10px 10px 10px', transition: isDragging ? 'none' : 'box-shadow 0.2s', textAlign: 'center' }}>
+      <Pushpin colorKey="teal" darkMode={false} />
+      <div style={{ fontSize: 30, marginBottom: 2, marginTop: 4 }}>{pin.emoji || '⏳'}</div>
+      {days === 0 ? (
+        <div style={{ fontFamily: CAVEAT, fontSize: 22, fontWeight: 700, color: numCol, lineHeight: 1 }}>{label}</div>
+      ) : (
+        <>
+          <div style={{ fontFamily: CAVEAT, fontSize: 48, fontWeight: 700, color: numCol, lineHeight: 1 }}>{days < 0 ? Math.abs(days) : days}</div>
+          <div style={{ fontFamily: SANS, fontSize: 10, color: textCol, letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 2 }}>{label}</div>
+        </>
+      )}
+      <div style={{ fontFamily: CAVEAT, fontSize: 13, color: textCol, marginTop: 4, lineHeight: 1.2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{pin.label}</div>
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, borderRadius: '0 0 4px 4px', background: accent, opacity: 0.5 }} />
+      <button onClick={e => { e.stopPropagation(); onDelete(); }} style={{ position: 'absolute', top: 4, left: 4, background: 'rgba(0,0,0,0.10)', border: 'none', borderRadius: '50%', width: 16, height: 16, color: '#6b7280', fontSize: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>✕</button>
+    </div>
+  );
+}
+
 // ─── StickerPin ───────────────────────────────────────────────────────────────
 function StickerPin({ pin, isDragging, onDelete }) {
   const sizes = { small: 32, medium: 46, large: 62 };
@@ -809,8 +849,8 @@ function AddSheet({ onClose, onAdd, darkMode }) {
   const [stickerSize, setStickerSize] = useState('medium');
   const [checklistTitle, setChecklistTitle] = useState('');
   const [checklistItems, setChecklistItems] = useState([{ id: '1', text: '' }]);
-  const [linkUrl, setLinkUrl]         = useState('');
-  const [linkTitle, setLinkTitle]     = useState('');
+  const [countdownDate, setCountdownDate] = useState('');
+  const [countdownEmoji, setCountdownEmoji] = useState('✈️');
   const labelPresets = ['MOVIES', 'My Wishlist', 'Date Night', 'Trips'];
   const sheetBg  = darkMode ? '#131c2e' : '#ffffff';
   const inputBg  = darkMode ? 'rgba(255,255,255,0.06)' : '#f8f7f2';
@@ -829,14 +869,14 @@ function AddSheet({ onClose, onAdd, darkMode }) {
     if (type === 'note' && !text.trim()) return;
     if (type === 'label' && !labelText.trim()) return;
     if (type === 'checklist' && !checklistTitle.trim() && !checklistItems.some(i => i.text.trim())) return;
-    if (type === 'link' && !linkUrl.trim()) return;
+    if (type === 'countdown' && !countdownDate) return;
     let data = { type, status: 'dreaming' };
     if (type === 'photo')     data = { ...data, label: label.trim(), emoji, pinColor, categoryId: catId, imageUrl };
     if (type === 'note')      data = { ...data, text: text.trim(), noteColor, pinColor, categoryId: catId };
     if (type === 'label')     data = { ...data, text: labelText.trim(), fontStyle, fontSize, textColor, styleVariant };
     if (type === 'sticker')   data = { ...data, sticker, size: stickerSize };
     if (type === 'checklist') data = { ...data, label: checklistTitle.trim() || 'Checklist', meta: { items: checklistItems.filter(i => i.text.trim()).map(i => ({ id: i.id, text: i.text.trim(), checked: false })) } };
-    if (type === 'link')      data = { ...data, label: linkTitle.trim() || linkUrl.trim(), meta: { url: linkUrl.trim(), title: linkTitle.trim() } };
+    if (type === 'countdown') data = { ...data, label: label.trim() || 'Countdown', emoji: countdownEmoji, meta: { targetDate: countdownDate } };
     onAdd(data); onClose();
   }
   return (
@@ -847,7 +887,7 @@ function AddSheet({ onClose, onAdd, darkMode }) {
         </div>
         <div style={{ padding: '4px 0 18px' }}><p style={{ fontFamily: CAVEAT, fontSize: 24, fontWeight: 700, color: tp, margin: 0 }}>Pin something new</p></div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
-          {[['photo','📸','Photo'],['note','📝','Note'],['checklist','✅','Checklist'],['link','🔗','Link'],['label','🏷️','Label'],['sticker','✦','Sticker']].map(([t, ic, lbl]) => (
+          {[['photo','📸','Photo'],['note','📝','Note'],['checklist','✅','Checklist'],['countdown','⏳','Countdown'],['label','🏷️','Label'],['sticker','✦','Sticker']].map(([t, ic, lbl]) => (
             <button key={t} onClick={() => setType(t)} style={{ padding: '9px 6px', borderRadius: 14, border: `1px solid ${type === t ? '#2dd4bf' : inputBdr}`, background: type === t ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', color: type === t ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, fontFamily: SANS, fontSize: 13, cursor: 'pointer', fontWeight: type === t ? 600 : 400 }}>{ic} {lbl}</button>
           ))}
         </div>
@@ -893,9 +933,16 @@ function AddSheet({ onClose, onAdd, darkMode }) {
           </div>
           <button onClick={() => setChecklistItems(prev => [...prev, { id: Date.now().toString(), text: '' }])} style={{ width: '100%', padding: '9px', borderRadius: 12, border: `1px dashed ${inputBdr}`, background: 'transparent', color: ts, fontFamily: SANS, fontSize: 13, cursor: 'pointer', marginBottom: 14 }}>+ Add item</button>
         </>)}
-        {type === 'link' && (<>
-          <input value={linkUrl} onChange={e => setLinkUrl(e.target.value)} placeholder="https://..." style={{ ...inputStyle, marginBottom: 10 }} />
-          <input value={linkTitle} onChange={e => setLinkTitle(e.target.value)} placeholder="Display name (optional)" style={{ ...inputStyle, marginBottom: 14 }} />
+        {type === 'countdown' && (<>
+          <input value={label} onChange={e => setLabel(e.target.value)} placeholder="What are you counting down to?" style={{ ...inputStyle, marginBottom: 12 }} />
+          <p style={sectionLabel}>Date</p>
+          <input type="date" value={countdownDate} onChange={e => setCountdownDate(e.target.value)} style={{ ...inputStyle, marginBottom: 14, colorScheme: darkMode ? 'dark' : 'light' }} />
+          <p style={sectionLabel}>Emoji</p>
+          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 14 }}>
+            {['✈️','🏖️','🎉','🏔️','🎂','🎵','🏰','🌸','🚀','🍣','🎬','🏄','🎪','🌮','🍕','🥂','🎠','🌍','⛷️','🛳️','🎡','🌅','🎆','🦋'].map(e => (
+              <button key={e} onClick={() => setCountdownEmoji(e)} style={{ width: 36, height: 36, borderRadius: 10, border: `1px solid ${countdownEmoji===e?'#2dd4bf':inputBdr}`, background: countdownEmoji===e?(darkMode?'rgba(45,212,191,0.1)':'#f0fdfb'):'transparent', fontSize: 18, cursor: 'pointer' }}>{e}</button>
+            ))}
+          </div>
         </>)}
         {type === 'label' && (<>
           <input value={labelText} onChange={e => setLabelText(e.target.value)} placeholder="MOVIES · My Wishlist · Date Night" style={{ ...inputStyle, marginBottom: 12 }} />
@@ -1486,7 +1533,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
         style={{ padding: '22px 16px 0' }}
       >
         <p style={{ fontSize: 10, color: ts, textTransform: 'uppercase', letterSpacing: '0.18em', margin: '0 0 14px', fontWeight: 600 }}>Pinned · {chapterPins.length} item{chapterPins.length !== 1 ? 's' : ''}</p>
-        {chapterPins.filter(p => p.type === 'checklist' || p.type === 'link').map(p => (
+        {chapterPins.filter(p => p.type === 'checklist' || p.type === 'countdown').map(p => (
           <div key={p.id} style={{ position: 'relative', marginBottom: 10 }}>
             {p.type === 'checklist' && (() => {
               const allItems = p.meta?.items || [];
@@ -1526,16 +1573,39 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                 </div>
               );
             })()}
-            {p.type === 'link' && (() => {
-              let hostname = '';
-              try { hostname = new URL(p.meta?.url || '').hostname.replace('www.', ''); } catch {}
+            {p.type === 'countdown' && (() => {
+              const targetDate = p.meta?.targetDate || '';
+              const days = (() => {
+                if (!targetDate) return null;
+                const [y, m, d] = targetDate.split('-').map(Number);
+                const target = new Date(y, m - 1, d);
+                const today = new Date(); today.setHours(0, 0, 0, 0);
+                return Math.round((target - today) / 86400000);
+              })();
+              let bg, accent, textCol, numCol, sublabel;
+              if (days === null)   { bg = darkMode ? '#1e2535' : '#f3f4f6'; accent = '#9ca3af'; textCol = '#9ca3af'; numCol = '#9ca3af'; sublabel = '—'; }
+              else if (days < 0)   { bg = darkMode ? '#1e2535' : '#f3f4f6'; accent = '#d1d5db'; textCol = '#9ca3af'; numCol = '#d1d5db'; sublabel = 'days ago'; }
+              else if (days === 0) { bg = darkMode ? '#2d2510' : '#fffbeb'; accent = '#f59e0b'; textCol = darkMode ? '#fcd34d' : '#92400e'; numCol = '#f59e0b'; sublabel = 'TODAY! 🎉'; }
+              else if (days <= 7)  { bg = darkMode ? '#2d1020' : '#fff0f5'; accent = '#f472b6'; textCol = darkMode ? '#f9a8d4' : '#831843'; numCol = '#ec4899'; sublabel = days === 1 ? 'day to go! 🔥' : 'days to go! 🔥'; }
+              else if (days <= 30) { bg = darkMode ? '#2d2010' : '#fffbeb'; accent = '#fbbf24'; textCol = darkMode ? '#fde68a' : '#78350f'; numCol = '#f59e0b'; sublabel = 'days away ✨'; }
+              else                 { bg = darkMode ? '#0f2520' : '#f0fdf9'; accent = '#2dd4bf'; textCol = darkMode ? '#99f6e4' : '#134e4a'; numCol = '#0d9488'; sublabel = 'days away'; }
               return (
-                <div style={{ background: cardBg, borderRadius: 14, padding: '13px 14px', boxShadow: `0 1px 4px ${darkMode ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.06)'}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                  <div style={{ minWidth: 0 }}>
-                    <p style={{ fontFamily: SANS, fontSize: 14, fontWeight: 600, color: tp, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.label || p.meta?.url}</p>
-                    {hostname && <p style={{ fontFamily: SANS, fontSize: 12, color: ts, margin: '2px 0 0' }}>{hostname}</p>}
+                <div style={{ background: bg, borderRadius: 16, padding: '18px 20px', border: `1px solid ${accent}33`, position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: accent }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div style={{ fontSize: 44, lineHeight: 1, flexShrink: 0 }}>{p.emoji || '⏳'}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontFamily: CAVEAT, fontSize: 17, fontWeight: 700, color: textCol, margin: '0 0 2px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{p.label}</p>
+                      {days === 0 ? (
+                        <p style={{ fontFamily: CAVEAT, fontSize: 26, fontWeight: 700, color: numCol, margin: 0, lineHeight: 1 }}>{sublabel}</p>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                          <span style={{ fontFamily: CAVEAT, fontSize: 48, fontWeight: 700, color: numCol, lineHeight: 1 }}>{Math.abs(days)}</span>
+                          <span style={{ fontFamily: SANS, fontSize: 11, color: textCol, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{sublabel}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <a href={p.meta?.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ flexShrink: 0, fontFamily: SANS, fontSize: 13, fontWeight: 600, color: '#2dd4bf', textDecoration: 'none', whiteSpace: 'nowrap' }}>Open →</a>
                 </div>
               );
             })()}
@@ -1545,7 +1615,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
           </div>
         ))}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
-          {chapterPins.filter(p => p.type !== 'checklist' && p.type !== 'link').map(p => (
+          {chapterPins.filter(p => p.type !== 'checklist' && p.type !== 'countdown').map(p => (
             <div key={p.id} style={{ transform: `rotate(${(p.rot || 0) * 0.4}deg)`, position: 'relative', cursor: 'pointer' }} onClick={() => setSelectedPin(p)}>
               {p.type === 'note' ? (
                 <div style={{ background: (NOTE_COLORS[p.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'].bg, padding: '11px 12px', width: 140, minHeight: 80, borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', position: 'relative' }}>
@@ -2519,7 +2589,7 @@ const SomedayPage = ({
       rot: (Math.random() - 0.5) * 3,
     };
     setPins(prev => [...prev, newPin]);
-    if (newPin.type !== 'checklist' && newPin.type !== 'link') onAddDream?.(newPin);
+    if (newPin.type !== 'checklist' && newPin.type !== 'countdown') onAddDream?.(newPin);
     setChapters(prev => prev.map(c =>
       c.id === chapterId ? { ...c, itemIds: [...new Set([...(c.itemIds || []), newPin.id])] } : c
     ));
@@ -2767,6 +2837,8 @@ const SomedayPage = ({
               ? <StickerPin    pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} />
               : pin.type === 'checklist'
               ? <ChecklistPin  pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
+              : pin.type === 'countdown'
+              ? <CountdownPin  pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} />
               : <PhotoPin      pin={isPinInChapter(pin) ? { ...pin, pinColor: 'purple', chapterId: getPinChapterId(pin) } : pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
             }
           </div>
