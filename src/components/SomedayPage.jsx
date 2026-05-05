@@ -1202,7 +1202,7 @@ function ChecklistEditSheet({ pin, onClose, onSave, darkMode }) {
   return createPortal(
     <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }} onClick={onClose}>
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
-      <div onClick={e => e.stopPropagation()} style={{ ...sheetStyle, position: 'relative', background: darkMode ? '#1a1f2e' : '#faf9f5', borderRadius: '22px 22px 0 0', maxHeight: '88vh', overflowY: 'auto', paddingBottom: 36 }}>
+      <div onClick={e => e.stopPropagation()} style={{ ...sheetStyle, position: 'relative', background: darkMode ? '#1a1f2e' : '#faf9f5', borderRadius: '22px 22px 0 0', maxHeight: '88vh', overflowY: 'auto', paddingBottom: 'max(36px, calc(env(safe-area-inset-bottom) + 80px))' }}>
         {/* drag handle */}
         <div {...handleProps}><div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.15)' : '#d1c9bc' }} /></div>
 
@@ -2542,10 +2542,15 @@ const SomedayPage = ({
   }
 
   function removePinFromChapter(pinId) {
-    setChapters(prev => prev.map(c => ({ ...c, itemIds: c.itemIds.filter(id => id !== pinId), pins: (c.pins || []).filter(p => p.id !== pinId) })));
+    const pinType = pins.find(p => p.id === pinId)?.type;
+    setChapters(prev => prev.map(c => ({
+      ...c,
+      itemIds: (c.itemIds || []).filter(id => id !== pinId),
+      pins: (c.pins || []).filter(p => p.id !== pinId),
+    })));
     setPins(prev => prev.filter(p => p.id !== pinId));
-    onDeleteDream?.(pinId);
-    supabase.from('chapter_pins').delete().eq('id', pinId).then(() => {});
+    if (pinType !== 'checklist' && pinType !== 'countdown') onDeleteDream?.(pinId);
+    supabase.from('chapter_pins').delete().eq('id', pinId).then(({ error }) => { if (error) console.error('chapter_pins delete failed:', error); });
   }
 
   function addSuggestionToChapter(suggestion, chapterId) {
