@@ -1945,6 +1945,43 @@ function estimatedPinHeight(pin = {}) {
   return 210;
 }
 
+function normalizeBoardPin(pin, index = 0, forcedChapterId = '') {
+  const pos = (pin?.x == null || pin?.y == null)
+    ? gridPosition(index)
+    : { x: pin.x, y: pin.y, rot: pin.rot };
+  return {
+    ...pin,
+    ...pos,
+    rot: pos.rot ?? pin?.rot ?? (Math.random() * 6 - 3),
+    chapterId: String(forcedChapterId || pin?.chapterId || '').trim() || undefined,
+    pinColor: pin?.pinColor ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)],
+    noteColor: pin?.noteColor ?? 'yellow',
+    type: pin?.type ?? (pin?.imageUrl || pin?.emoji ? 'photo' : 'note'),
+  };
+}
+
+function mergeBoardPinsWithChapterPins(basePins = [], sourceChapters = []) {
+  const byId = new Map();
+  (Array.isArray(basePins) ? basePins : []).forEach((pin, index) => {
+    const normalized = normalizeBoardPin(pin, index);
+    const pinId = String(normalized?.id || '').trim();
+    if (pinId) byId.set(pinId, normalized);
+  });
+  (Array.isArray(sourceChapters) ? sourceChapters : []).forEach((chapter, chapterIndex) => {
+    const chapterId = String(chapter?.id || '').trim();
+    (Array.isArray(chapter?.pins) ? chapter.pins : []).forEach((pin, pinIndex) => {
+      const normalized = normalizeBoardPin(pin, chapterIndex + pinIndex, chapterId);
+      const pinId = String(normalized?.id || '').trim();
+      if (!pinId) return;
+      const existing = byId.get(pinId);
+      byId.set(pinId, existing
+        ? { ...normalized, ...existing, chapterId: existing.chapterId || normalized.chapterId }
+        : normalized);
+    });
+  });
+  return Array.from(byId.values()).filter((pin) => String(pin?.id || '').trim());
+}
+
 function positionBelowLowestPin(existingPins = [], addIndex = 0) {
   const pinned = (Array.isArray(existingPins) ? existingPins : []).filter(pin => pin && pin.type !== 'label' && pin.type !== 'sticker');
   if (!pinned.length) return gridPosition(addIndex);
@@ -1979,10 +2016,22 @@ const SomedayPage = ({
   inviteRefreshToken = 0,
   initialChapters = [],
 }) => {
-  const [pins, setPins] = useState(() => dreams.map((d, idx) => {
-    const pos = (d.x == null || d.y == null) ? gridPosition(idx) : { x: d.x, y: d.y, rot: d.rot };
-    return { ...d, ...pos, rot: pos.rot ?? d.rot ?? (Math.random() * 6 - 3), pinColor: d.status === 'planning' ? 'purple' : (d.pinColor ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)]), noteColor: d.noteColor ?? 'yellow', type: d.type ?? (d.imageUrl || d.emoji ? 'photo' : 'note') };
-  }));
+  const [pins, setPins] = useState(() => mergeBoardPinsWithChapterPins(
+    dreams.map((d, idx) => {
+      const pos = (d.x == null || d.y == null) ? gridPosition(idx) : { x: d.x, y: d.y, rot: d.rot };
+      return {
+        ...d,
+        ...pos,
+        rot: pos.rot ?? d.rot ?? (Math.random() * 6 - 3),
+        pinColor: d.status === 'planning'
+          ? 'purple'
+          : (d.pinColor ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)]),
+        noteColor: d.noteColor ?? 'yellow',
+        type: d.type ?? (d.imageUrl || d.emoji ? 'photo' : 'note'),
+      };
+    }),
+    initialChapters
+  ));
   const [filter, setFilter]               = useState('all');
   const [showAdd, setShowAdd]             = useState(false);
   const [detailPin, setDetailPin]         = useState(null);
@@ -2068,6 +2117,11 @@ const SomedayPage = ({
   useEffect(() => {
     onChaptersChange?.(chapters);
   }, [chapters, onChaptersChange]);
+
+  useEffect(() => {
+    if (!Array.isArray(initialChapters) || initialChapters.length === 0) return;
+    setPins((prev) => mergeBoardPinsWithChapterPins(prev, initialChapters));
+  }, [initialChapters]);
 
   // Auto-sort board whenever a new chapter is created so all items land in the
   // right zones without requiring the user to manually press the wand.
