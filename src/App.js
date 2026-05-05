@@ -1391,6 +1391,8 @@ const getQuickThoughtsStorageKey = (userId) => `quick-thoughts-${String(userId |
 const getBucketListStorageKey = (userId) => `bucket-list-${String(userId || 'guest').trim() || 'guest'}`;
 const getSomedayChaptersStorageKey = (userId) => `someday-chapters-${String(userId || 'guest').trim() || 'guest'}`;
 const getTripKomoStorageKey = (userId) => `trip-komo-links-${String(userId || 'guest').trim() || 'guest'}`;
+const LOCAL_PERSIST_DEBOUNCE_MS = 350;
+const REMOTE_PERSIST_DEBOUNCE_MS = 900;
 const readQuickThoughtsState = (userId) => {
   if (typeof window === 'undefined') return [];
   try {
@@ -20369,8 +20371,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return;
     }
     if (quickThoughtsHydratedUserId !== currentQuickThoughtsUserId) return;
-    writeQuickThoughtsState(user?.id, quickThoughts);
-    void memoryPersistence.persistRemoteQuickThoughtsState(user?.id, quickThoughts);
+    const localTimeoutId = window.setTimeout(() => {
+      writeQuickThoughtsState(user?.id, quickThoughts);
+    }, LOCAL_PERSIST_DEBOUNCE_MS);
+    const remoteTimeoutId = window.setTimeout(() => {
+      void memoryPersistence.persistRemoteQuickThoughtsState(user?.id, quickThoughts);
+    }, REMOTE_PERSIST_DEBOUNCE_MS);
+    return () => {
+      window.clearTimeout(localTimeoutId);
+      window.clearTimeout(remoteTimeoutId);
+    };
   }, [user?.id, quickThoughts, quickThoughtsHydratedUserId]);
 
   // ─── Friends' daily photos for home screen strip
@@ -20570,8 +20580,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return;
     }
     if (bucketListHydratedUserId !== currentBucketListUserId) return;
-    writeBucketListState(user?.id, bucketList);
-    void memoryPersistence.persistRemoteBucketListState(user?.id, bucketList);
+    const localTimeoutId = window.setTimeout(() => {
+      writeBucketListState(user?.id, bucketList);
+    }, LOCAL_PERSIST_DEBOUNCE_MS);
+    const remoteTimeoutId = window.setTimeout(() => {
+      void memoryPersistence.persistRemoteBucketListState(user?.id, bucketList);
+    }, REMOTE_PERSIST_DEBOUNCE_MS);
+    return () => {
+      window.clearTimeout(localTimeoutId);
+      window.clearTimeout(remoteTimeoutId);
+    };
   }, [user?.id, bucketList, bucketListHydratedUserId]);
 
   useEffect(() => {
@@ -20627,11 +20645,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, bottomNavTab]);
 
   useEffect(() => {
-    try { localStorage.setItem('someday-pin-positions', JSON.stringify(somedayPinPositions)); } catch {}
+    const timeoutId = window.setTimeout(() => {
+      try { localStorage.setItem('someday-pin-positions', JSON.stringify(somedayPinPositions)); } catch {}
+    }, LOCAL_PERSIST_DEBOUNCE_MS);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [somedayPinPositions]);
 
   useEffect(() => {
-    try { localStorage.setItem('someday-decor-pins', JSON.stringify(somedayDecorPins)); } catch {}
+    const timeoutId = window.setTimeout(() => {
+      try { localStorage.setItem('someday-decor-pins', JSON.stringify(somedayDecorPins)); } catch {}
+    }, LOCAL_PERSIST_DEBOUNCE_MS);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [somedayDecorPins]);
 
   useEffect(() => {
@@ -20644,7 +20672,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   useEffect(() => {
     if (!user?.id || layerOrder.length === 0) return;
-    try { localStorage.setItem(`layer-order-${user.id}`, JSON.stringify(layerOrder)); } catch {}
+    const timeoutId = window.setTimeout(() => {
+      try { localStorage.setItem(`layer-order-${user.id}`, JSON.stringify(layerOrder)); } catch {}
+    }, LOCAL_PERSIST_DEBOUNCE_MS);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [user?.id, layerOrder]);
 
   useEffect(() => {
@@ -20816,8 +20849,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
     if (memoriesHydratedUserId !== currentMemoriesUserId) return;
-    memoryPersistence.persistMemoriesState(user?.id, memories);
-    void memoryPersistence.persistRemoteMemoriesState(user?.id, memories);
+    const localTimeoutId = window.setTimeout(() => {
+      memoryPersistence.persistMemoriesState(user?.id, memories);
+    }, LOCAL_PERSIST_DEBOUNCE_MS);
+    const remoteTimeoutId = window.setTimeout(() => {
+      void memoryPersistence.persistRemoteMemoriesState(user?.id, memories);
+    }, REMOTE_PERSIST_DEBOUNCE_MS);
+    return () => {
+      window.clearTimeout(localTimeoutId);
+      window.clearTimeout(remoteTimeoutId);
+    };
   }, [user?.id, memories, memoriesHydratedUserId]);
 
   const eligibleMemoryTripSyncEntries = useMemo(() => (
