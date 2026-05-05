@@ -24929,8 +24929,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   // Called when a pin is added from within SomedayPage's own AddSheet
   const handleSomedayAddDream = (pin) => {
     if (pin.type === 'label' || pin.type === 'sticker' || pin.type === 'checklist' || pin.type === 'countdown') {
-      // Store the full pin data so type + style + meta fields survive page navigation
-      setSomedayDecorPins((prev) => [...(Array.isArray(prev) ? prev : []), pin]);
+      // Store the full pin data so type + style + meta fields survive page navigation.
+      // Write to localStorage synchronously so a fast app-close doesn't lose the add.
+      const nextDecorPins = [...(Array.isArray(somedayDecorPins) ? somedayDecorPins : []), pin];
+      setSomedayDecorPins(nextDecorPins);
+      try { localStorage.setItem('someday-decor-pins', JSON.stringify(nextDecorPins)); } catch {}
     } else if (pin.type === 'note') {
       const colors = ['yellow', 'pink', 'blue', 'green'];
       const color = colors.includes(pin.noteColor) ? pin.noteColor : 'yellow';
@@ -24968,11 +24971,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         return;
       }
       if (pin.type === 'checklist' || pin.type === 'countdown') {
-        setSomedayDecorPins(prev =>
-          (Array.isArray(prev) ? prev : []).map(p =>
-            p.id === pin.id ? { ...p, ...pin } : p
-          )
+        const nextDecorPins = (Array.isArray(somedayDecorPins) ? somedayDecorPins : []).map(p =>
+          p.id === pin.id ? { ...p, ...pin } : p
         );
+        setSomedayDecorPins(nextDecorPins);
+        try { localStorage.setItem('someday-decor-pins', JSON.stringify(nextDecorPins)); } catch {}
         return;
       }
       if (pin.x != null) {
@@ -25046,7 +25049,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
   // Called when a pin is deleted from SomedayPage — remove from whichever list owns it
   const handleSomedayDeleteDream = (id) => {
-    setSomedayDecorPins((prev) => (Array.isArray(prev) ? prev : []).filter((p) => String(p?.id || '') !== id));
+    // Compute next value and write to localStorage synchronously before setState,
+    // so a fast app-close between action and the next render doesn't lose the delete.
+    const nextDecorPins = (Array.isArray(somedayDecorPins) ? somedayDecorPins : []).filter((p) => String(p?.id || '') !== id);
+    setSomedayDecorPins(nextDecorPins);
+    try { localStorage.setItem('someday-decor-pins', JSON.stringify(nextDecorPins)); } catch {}
     addBucketListTombstone(user?.id, id);
     setBucketList((prev) => (Array.isArray(prev) ? prev : []).filter((item) => String(item?.id || '') !== id));
     addQuickThoughtTombstone(user?.id, id);
