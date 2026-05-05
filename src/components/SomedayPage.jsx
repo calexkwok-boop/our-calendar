@@ -2643,9 +2643,18 @@ const SomedayPage = ({
   }
 
   function deletePin(id) {
+    const pinType = pins.find(p => p.id === id)?.type;
     setPins(ps => ps.filter(p => p.id !== id));
-    onDeleteDream?.(id);
-    setChapters(prev => prev.map(c => ({ ...c, itemIds: c.itemIds.filter(i => i !== id) })));
+    setChapters(prev => prev.map(c => ({
+      ...c,
+      itemIds: (c.itemIds || []).filter(i => i !== id),
+      pins: (c.pins || []).filter(p => p.id !== id),
+    })));
+    if (pinType !== 'checklist' && pinType !== 'countdown') {
+      onDeleteDream?.(id);
+    } else {
+      supabase.from('chapter_pins').delete().eq('id', id).then(({ error }) => { if (error) console.error('chapter_pins delete failed:', error); });
+    }
   }
 
   function markDone(pin) {
