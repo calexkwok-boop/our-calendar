@@ -2007,7 +2007,22 @@ const SomedayPage = ({
   const draggingTypeRef = useRef(null);
   const dreamsSyncedRef = useRef(false);
   const autoSortPendingRef = useRef(false);
-  const deletedChapterPinIds = useRef(new Set());
+  const deletedChapterPinIds = useRef((() => {
+    try {
+      const raw = localStorage.getItem('chapter-pins-deleted');
+      const parsed = JSON.parse(raw || '[]');
+      return new Set(Array.isArray(parsed) ? parsed : []);
+    } catch { return new Set(); }
+  })());
+  const markPinDeleted = useCallback((pinId) => {
+    const id = String(pinId);
+    deletedChapterPinIds.current.add(id);
+    try {
+      // Cap at 500 to prevent unbounded growth
+      const arr = [...deletedChapterPinIds.current].slice(-500);
+      localStorage.setItem('chapter-pins-deleted', JSON.stringify(arr));
+    } catch {}
+  }, []);
 
   const groups = useMemo(() => detectGroups(pins), [pins]);
 
@@ -2628,7 +2643,7 @@ const SomedayPage = ({
 
   function removePinFromChapter(pinId) {
     const pinType = pins.find(p => p.id === pinId)?.type;
-    deletedChapterPinIds.current.add(String(pinId));
+    markPinDeleted(pinId);
     setChapters(prev => prev.map(c => ({
       ...c,
       itemIds: (c.itemIds || []).filter(id => id !== pinId),
@@ -2739,7 +2754,7 @@ const SomedayPage = ({
     const pinType = pin?.type;
     const isChapterPin = Boolean(pin?.chapterId);
     if (isChapterPin && (pinType === 'checklist' || pinType === 'countdown')) {
-      deletedChapterPinIds.current.add(String(id));
+      markPinDeleted(id);
     }
     setPins(ps => ps.filter(p => p.id !== id));
     setChapters(prev => prev.map(c => ({
