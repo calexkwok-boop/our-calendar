@@ -2394,8 +2394,9 @@ const SomedayPage = ({
   const isPinInChapter = (pin) => Boolean(getPinChapterId(pin));
 
   // Chapter pins excluded from category filter pills; only show in 'all'
+  // Countdown pins are lifted out into their own dedicated section above the board
   const visiblePins = (
-    filter === 'all'  ? pins :
+    filter === 'all'  ? pins.filter(p => p.type !== 'countdown') :
     filter === 'done' ? pins.filter(p => p.status === 'done' && !isPinInChapter(p)) :
                         pins.filter(p => p.categoryId === filter && p.status !== 'done' && !isPinInChapter(p))
   ).filter(p => p.id !== heroId);
@@ -2805,6 +2806,53 @@ const SomedayPage = ({
                         </div>
                       </div>
                     )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Countdowns */}
+      {(() => {
+        const countdownPins = pins.filter(p => p.type === 'countdown');
+        if (countdownPins.length === 0) return null;
+        return (
+          <div style={{ padding: '20px 16px 0' }}>
+            <p style={{ fontSize: 10, color: darkMode ? '#fbbf24' : '#92400e', textTransform: 'uppercase', letterSpacing: '0.2em', margin: '0 0 12px', fontWeight: 700 }}>⏳ Countdowns</p>
+            <div style={{ display: 'flex', gap: 12, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 4 }}>
+              {countdownPins.map(pin => {
+                const targetDate = pin.meta?.targetDate || '';
+                let days = null;
+                if (targetDate) {
+                  const [y, m, d] = targetDate.split('-').map(Number);
+                  const target = new Date(y, m - 1, d);
+                  const today = new Date(); today.setHours(0, 0, 0, 0);
+                  days = Math.round((target - today) / 86400000);
+                }
+                let bg, accent, textCol, numCol, urgencyLabel;
+                if (days === null)   { bg = '#f3f4f6'; accent = '#9ca3af'; textCol = '#6b7280'; numCol = '#9ca3af'; urgencyLabel = '—'; }
+                else if (days < 0)   { bg = '#f3f4f6'; accent = '#d1d5db'; textCol = '#9ca3af'; numCol = '#d1d5db'; urgencyLabel = 'passed'; }
+                else if (days === 0) { bg = '#fffbeb'; accent = '#f59e0b'; textCol = '#92400e'; numCol = '#f59e0b'; urgencyLabel = 'TODAY! 🎉'; }
+                else if (days <= 7)  { bg = '#fff0f5'; accent = '#f472b6'; textCol = '#831843'; numCol = '#ec4899'; urgencyLabel = days === 1 ? 'day to go! 🔥' : 'days to go! 🔥'; }
+                else if (days <= 30) { bg = '#fffbeb'; accent = '#fbbf24'; textCol = '#78350f'; numCol = '#f59e0b'; urgencyLabel = 'days away'; }
+                else                 { bg = '#f0fdf9'; accent = '#2dd4bf'; textCol = '#134e4a'; numCol = '#0d9488'; urgencyLabel = 'days away'; }
+                if (darkMode) { bg = '#1e2535'; textCol = darkMode && days === null ? '#6b7280' : textCol; }
+                return (
+                  <div key={pin.id} style={{ flexShrink: 0, background: bg, borderRadius: 20, padding: '16px 16px 20px', minWidth: 130, position: 'relative', boxShadow: '0 4px 18px rgba(0,0,0,0.10)', border: `2px solid ${accent}44`, textAlign: 'center' }}>
+                    <div style={{ fontSize: 30, marginBottom: 4 }}>{pin.emoji || '⏳'}</div>
+                    {days === 0 ? (
+                      <div style={{ fontFamily: CAVEAT, fontSize: 20, fontWeight: 700, color: numCol, lineHeight: 1 }}>{urgencyLabel}</div>
+                    ) : (
+                      <>
+                        <div style={{ fontFamily: CAVEAT, fontSize: 46, fontWeight: 700, color: numCol, lineHeight: 1 }}>{days === null || days < 0 ? Math.abs(days ?? 0) : days}</div>
+                        <div style={{ fontFamily: SANS, fontSize: 9, color: textCol, letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 2 }}>{urgencyLabel}</div>
+                      </>
+                    )}
+                    <div style={{ fontFamily: CAVEAT, fontSize: 14, color: textCol, marginTop: 8, lineHeight: 1.2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{pin.label}</div>
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 5, borderRadius: '0 0 18px 18px', background: accent }} />
+                    <button onClick={() => deletePin(pin.id)} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.10)', border: 'none', borderRadius: '50%', width: 18, height: 18, color: '#6b7280', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>✕</button>
                   </div>
                 );
               })}
