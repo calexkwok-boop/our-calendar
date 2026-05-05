@@ -15437,16 +15437,25 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   useEffect(() => {
     if (!activeLayerId || !user?.id) return;
+    let refreshTimer = null;
+    const schedulePopupEventReload = () => {
+      if (refreshTimer) window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(() => {
+        refreshTimer = null;
+        loadPopupEventData();
+      }, 200);
+    };
     const channel = supabase
       .channel(`popup-events-${activeLayerId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_events', filter: `layer_id=eq.${activeLayerId}` }, () => {
-        loadPopupEventData();
+        schedulePopupEventReload();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `layer_id=eq.${activeLayerId}` }, () => {
-        loadPopupEventData();
+        schedulePopupEventReload();
       })
       .subscribe();
     return () => {
+      if (refreshTimer) window.clearTimeout(refreshTimer);
       channel.unsubscribe();
     };
   }, [activeLayerId, user?.id]);
@@ -15480,6 +15489,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   const realtimeLayerNameCacheRef = useRef(new Map());
   const realtimeUserHandleCacheRef = useRef(new Map());
+  const sharedAccessTripCrewRefreshTimersRef = useRef(new Map());
 
   useEffect(() => {
     if (!user?.id || !isAppVisible) return;
@@ -15658,8 +15668,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const activeTrip = snapshot.activeSubCalendar;
       const activeTripLayerId = String(activeTrip?.layer_id || activeTrip?.calendar_id || '').trim();
       if (!activeTrip?.id || !activeTripLayerId || activeTripLayerId !== rowLayerId) return;
-      await syncSubCalendarMembersFromLayer(activeTrip);
-      await loadSubCalendarMembers(activeTrip.id);
+      const timers = sharedAccessTripCrewRefreshTimersRef.current;
+      const existingTimer = timers.get(rowLayerId);
+      if (existingTimer) window.clearTimeout(existingTimer);
+      const timerId = window.setTimeout(async () => {
+        timers.delete(rowLayerId);
+        await syncSubCalendarMembersFromLayer(activeTrip);
+        await loadSubCalendarMembers(activeTrip.id);
+      }, 200);
+      timers.set(rowLayerId, timerId);
     };
 
     const filteredLayerIds = Array.from(new Set(
@@ -15941,6 +15958,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     updatesChannel.subscribe();
 
     return () => {
+      for (const timerId of sharedAccessTripCrewRefreshTimersRef.current.values()) {
+        window.clearTimeout(timerId);
+      }
+      sharedAccessTripCrewRefreshTimersRef.current.clear();
       updatesChannel.unsubscribe();
     };
   }, [user?.id, user?.email, user?.phone, realtimeLayerIdsSignature, realtimeSubCalendarIdsSignature, isAppVisible, bottomNavTab]);

@@ -133,6 +133,20 @@ const ConnectionPill = ({ emoji, label, darkMode }) => (
   </div>
 );
 
+const normalizeFriendList = (friends = []) => (
+  (Array.isArray(friends) ? friends : [])
+    .map((friend, index) => ({
+      ...friend,
+      identityKey: String(friend?.identityKey || friend?.userId || friend?.email || friend?.handle || `friend-${index}`).trim(),
+      displayName: String(friend?.displayName || friend?.handle || friend?.email || 'Friend').trim() || 'Friend',
+      connectionSummary: String(friend?.connectionSummary || 'Connected')
+        .replace(/\sÂ·\s/g, ' · ')
+        .replace(/\s+/g, ' ')
+        .trim(),
+    }))
+    .sort((a, b) => String(a.displayName || '').toLowerCase().localeCompare(String(b.displayName || '').toLowerCase()))
+);
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 const ProfilePage = ({
   viewedUserEmail = null,
@@ -335,7 +349,7 @@ const ProfilePage = ({
     // like shared event relationships.
     let hadPrefetchedFriends = false;
     if (prefetchedFriendsList !== null) {
-      setFriendsList(prefetchedFriendsList);
+      setFriendsList(normalizeFriendList(prefetchedFriendsList));
       setLoading(false);
       hadPrefetchedFriends = true;
     }
@@ -348,7 +362,7 @@ const ProfilePage = ({
     try {
       const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
       if (cached?.friends && Array.isArray(cached.friends) && Date.now() - (cached.ts || 0) < CACHE_TTL) {
-        setFriendsList(cached.friends);
+        setFriendsList(normalizeFriendList(cached.friends));
         setLoading(false);
         hadCache = true;
       }
@@ -705,8 +719,9 @@ const ProfilePage = ({
           });
         }
 
-        setFriendsList(friends);
-        try { localStorage.setItem(CACHE_KEY, JSON.stringify({ friends, ts: Date.now() })); } catch {}
+        const normalizedFriends = normalizeFriendList(friends);
+        setFriendsList(normalizedFriends);
+        try { localStorage.setItem(CACHE_KEY, JSON.stringify({ friends: normalizedFriends, ts: Date.now() })); } catch {}
       } finally {
         setLoading(false);
       }
@@ -1091,9 +1106,9 @@ const ProfilePage = ({
                 </p>
               ) : (
                 <div className="flex flex-col gap-2">
-                  {friendsList.map(friend => (
+                  {friendsList.map((friend, index) => (
                     <FriendCard
-                      key={friend.email}
+                      key={friend.identityKey || friend.userId || friend.email || friend.handle || `friend-${index}`}
                       friend={friend}
                       onTap={() => onOpenProfile?.({ email: friend.email, userId: friend.userId })}
                       darkMode={darkMode}
@@ -1132,7 +1147,18 @@ const ProfilePage = ({
                     <ConnectionPill emoji="✈️" label={`${connectionContext.trips.length} trips together`} darkMode={darkMode} />
                   )}
                   {(connectionContext?.sharedCalendarCount || 0) > 0 && (
-                    <ConnectionPill emoji="📅" label="Shared calendar" darkMode={darkMode} />
+                    <ConnectionPill
+                      emoji="📅"
+                      label={connectionContext.sharedCalendarCount > 1 ? `${connectionContext.sharedCalendarCount} shared calendars` : 'Shared calendar'}
+                      darkMode={darkMode}
+                    />
+                  )}
+                  {(connectionContext?.sharedChapterCount || 0) > 0 && (
+                    <ConnectionPill
+                      emoji="📖"
+                      label={connectionContext.sharedChapterCount > 1 ? `${connectionContext.sharedChapterCount} shared chapters` : 'Shared chapter'}
+                      darkMode={darkMode}
+                    />
                   )}
                   {(connectionContext?.sharedEventCount || 0) > 0 && (
                     <ConnectionPill
@@ -1141,7 +1167,7 @@ const ProfilePage = ({
                       darkMode={darkMode}
                     />
                   )}
-                  {!loading && !(connectionContext?.trips?.length) && !(connectionContext?.sharedCalendarCount) && !(connectionContext?.sharedEventCount) && (
+                  {!loading && !(connectionContext?.trips?.length) && !(connectionContext?.sharedCalendarCount) && !(connectionContext?.sharedChapterCount) && !(connectionContext?.sharedEventCount) && (
                     <p className="text-sm" style={{ color: mutedColor }}>Connected</p>
                   )}
                 </div>
