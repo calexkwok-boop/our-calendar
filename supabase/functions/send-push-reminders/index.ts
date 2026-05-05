@@ -57,12 +57,27 @@ Deno.serve(async (req) => {
       .from("events")
       .select("id,date,time,title,layer_id,user_id,is_private,is_urgent")
       .gte("date", fmtDate(start))
-      .lte("date", fmtDate(end));
+      .lte("date", fmtDate(end))
+      .limit(2000);
     if (eventsErr) throw eventsErr;
 
-    const { data: shares, error: sharesErr } = await supabase
-      .from("shared_access")
-      .select("owner_id,layer_id,shared_with_id");
+    if (!events || events.length === 0) {
+      return new Response(JSON.stringify({ ok: true, sent: 0, skipped: 0, disabledSubs: 0 }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Scope shared_access to only the layer_ids that appear in the events window.
+    // Previously this was an unbounded full table scan on every invocation.
+    const uniqueLayerIds = Array.from(new Set(
+      events.map((ev) => String(ev.layer_id || "")).filter(Boolean)
+    ));
+    const { data: shares, error: sharesErr } = uniqueLayerIds.length > 0
+      ? await supabase
+          .from("shared_access")
+          .select("owner_id,layer_id,shared_with_id")
+          .in("layer_id", uniqueLayerIds)
+      : { data: [], error: null };
     if (sharesErr) throw sharesErr;
 
     const shareRecipients = new Map<string, Set<string>>();
@@ -76,7 +91,8 @@ Deno.serve(async (req) => {
     const { data: subs, error: subsErr } = await supabase
       .from("push_subscriptions")
       .select("id,user_id,endpoint,p256dh,auth,enabled")
-      .eq("enabled", true);
+      .eq("enabled", true)
+      .limit(5000);
     if (subsErr) throw subsErr;
 
     const subsByUser = new Map<string, Array<any>>();
@@ -86,6 +102,18 @@ Deno.serve(async (req) => {
       if (!subsByUser.has(uid)) subsByUser.set(uid, []);
       subsByUser.get(uid)!.push(sub);
     }
+
+    // Pre-fetch all already-sent log entries for these events in one query
+    // instead of doing individual INSERTs (and eating duplicate errors) per combination.
+    const eventIds = events.map((ev) => String(ev.id)).filter(Boolean);
+    const { data: existingLogRows } = await supabase
+      .from("push_notification_log")
+      .select("user_id,event_id,date_key,window_key")
+      .in("event_id", eventIds)
+      .limit(50000);
+    const sentKeys = new Set<string>(
+      (existingLogRows || []).map((r) => `${r.user_id}|${r.event_id}|${r.date_key}|${r.window_key}`)
+    );
 
     const windows = [
       { key: "week", leadMs: 7 * 24 * 60 * 60 * 1000, title: "Event in 1 Week" },
@@ -98,8 +126,10 @@ Deno.serve(async (req) => {
     let skipped = 0;
     let disabledSubs = 0;
     const graceMs = 5 * 60 * 1000;
+    const newLogEntries: Array<{ user_id: string; event_id: string; date_key: string; window_key: string }> = [];
+    const disabledSubIds: string[] = [];
 
-    for (const ev of events || []) {
+    for (const ev of events) {
       const eventDateTime = toEventDateTime(ev.date, ev.time);
       if (!eventDateTime) continue;
       const diffMs = eventDateTime.getTime() - now.getTime();
@@ -120,22 +150,18 @@ Deno.serve(async (req) => {
           if (diffMs > windowDef.leadMs) continue;
           if (diffMs < -graceMs) continue;
 
-          const { error: logErr } = await supabase
-            .from("push_notification_log")
-            .insert({
-              user_id: recipientId,
-              event_id: String(ev.id),
-              date_key: String(ev.date),
-              window_key: windowDef.key,
-            });
-
-          if (logErr) {
-            if (String(logErr.message || "").toLowerCase().includes("duplicate")) {
-              skipped += 1;
-              continue;
-            }
-            throw logErr;
+          const logKey = `${recipientId}|${String(ev.id)}|${String(ev.date)}|${windowDef.key}`;
+          if (sentKeys.has(logKey)) {
+            skipped += 1;
+            continue;
           }
+          sentKeys.add(logKey);
+          newLogEntries.push({
+            user_id: recipientId,
+            event_id: String(ev.id),
+            date_key: String(ev.date),
+            window_key: windowDef.key,
+          });
 
           const payload = JSON.stringify({
             title: windowDef.title,
@@ -147,10 +173,7 @@ Deno.serve(async (req) => {
           for (const sub of userSubs) {
             const subscription = {
               endpoint: sub.endpoint,
-              keys: {
-                p256dh: sub.p256dh,
-                auth: sub.auth,
-              },
+              keys: { p256dh: sub.p256dh, auth: sub.auth },
             };
             try {
               await webpush.sendNotification(subscription as any, payload);
@@ -158,7 +181,7 @@ Deno.serve(async (req) => {
             } catch (err: any) {
               const statusCode = Number(err?.statusCode || 0);
               if (statusCode === 404 || statusCode === 410) {
-                await supabase.from("push_subscriptions").update({ enabled: false }).eq("id", sub.id);
+                disabledSubIds.push(sub.id);
                 disabledSubs += 1;
               } else {
                 console.error("Push send failed", err);
@@ -169,6 +192,16 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Batch insert new log entries instead of one INSERT per notification
+    if (newLogEntries.length > 0) {
+      await supabase.from("push_notification_log").insert(newLogEntries);
+    }
+
+    // Batch disable expired subscriptions
+    for (const subId of disabledSubIds) {
+      await supabase.from("push_subscriptions").update({ enabled: false }).eq("id", subId);
+    }
+
     return new Response(
       JSON.stringify({ ok: true, sent, skipped, disabledSubs }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -177,7 +210,7 @@ Deno.serve(async (req) => {
     console.error(err);
     return new Response(JSON.stringify({ ok: false, error: err?.message || "Unknown error" }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+      headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 });
