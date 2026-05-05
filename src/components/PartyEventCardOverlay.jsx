@@ -94,12 +94,12 @@ export default function PartyEventCardOverlay({
       const [{ data: ev }, { data: mems }, { data: myMember }, { data: signups }] = await Promise.all([
         supabase.from('popup_event_details').select('*').eq('id', id).single(),
         includeMembers
-          ? supabase.from('popup_event_members').select('*').eq('event_id', id).order('joined_at')
+          ? supabase.from('popup_event_members').select('*').eq('event_id', id).order('joined_at').limit(500)
           : Promise.resolve({ data: [] }),
         !includeMembers && currentUserId
           ? supabase.from('popup_event_members').select('*').eq('event_id', id).eq('user_id', currentUserId).maybeSingle()
           : Promise.resolve({ data: null }),
-        supabase.from('popup_event_signups').select('*').eq('event_id', id).order('created_at'),
+        supabase.from('popup_event_signups').select('*').eq('event_id', id).order('created_at').limit(500),
       ]);
 
       const normalizedEv = ev ? normalizeEvent(ev, fallbackRef.current || {}) : null;

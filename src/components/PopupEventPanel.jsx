@@ -819,7 +819,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
   // Load + realtime locations
   const loadLocations = useCallback(async () => {
     if (!event?.id || !supabase) return;
-    const { data } = await supabase.from('popup_event_locations').select('*').eq('event_id', event.id);
+    const { data } = await supabase.from('popup_event_locations').select('*').eq('event_id', event.id).limit(200);
     if (data) setLocations(data);
   }, [event?.id, supabase]);
 
@@ -1449,12 +1449,12 @@ export default function PopupEventPanel({
         const [{ data: ev }, { data: mems }, { data: myMemberRow }, { data: signups }] = await Promise.all([
           supabase.from('popup_event_details').select('*').eq('id', id).maybeSingle(),
           includeMembers
-            ? supabase.from('popup_event_members').select('*').eq('event_id', id).order('joined_at')
+            ? supabase.from('popup_event_members').select('*').eq('event_id', id).order('joined_at').limit(500)
             : Promise.resolve({ data: [] }),
           !includeMembers && currentUserId
             ? supabase.from('popup_event_members').select('*').eq('event_id', id).eq('user_id', currentUserId).maybeSingle()
             : Promise.resolve({ data: null }),
-          supabase.from('popup_event_signups').select('*').eq('event_id', id).order('created_at'),
+          supabase.from('popup_event_signups').select('*').eq('event_id', id).order('created_at').limit(500),
         ]);
         let normalizedEv = null;
         if (ev) {

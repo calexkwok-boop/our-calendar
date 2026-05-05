@@ -5718,7 +5718,8 @@ function App() {
         .from('sub_calendar_notes')
         .select('*')
         .eq('sub_calendar_id', subCalId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .limit(500);
       if (error) { console.error('Error loading notes:', error); return; }
       const visibleNotes = [];
       let loadedExpenses = [];
@@ -5842,7 +5843,8 @@ function App() {
         .from('trip_photos')
         .select('*')
         .eq('sub_calendar_id', subCalId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .limit(500);
       if (error) { console.error('Error loading photos:', error); return []; }
       const deletedSet = new Set(((deletedIdsOverride ?? deletedPhotoIds) || []).map(id => String(id)));
       const filtered = (data || [])
@@ -9071,7 +9073,8 @@ useEffect(() => {
       .from('calendar_layers')
       .select('*')
       .eq('owner_id', userId)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: true })
+      .limit(100);
     if (ownedErr) throw ownedErr;
 
     if (!ownedLayers || ownedLayers.length === 0) {
@@ -9079,7 +9082,8 @@ useEffect(() => {
         .from('calendar_layers')
         .select('*')
         .eq('owner_id', userId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .limit(100);
       if (recheck.error) throw recheck.error;
       ownedLayers = recheck.data || [];
     }
@@ -9117,7 +9121,8 @@ useEffect(() => {
           .from('calendar_layers')
           .select('*')
           .eq('owner_id', userId)
-          .order('created_at', { ascending: true });
+          .order('created_at', { ascending: true })
+          .limit(100);
         if (reloadErr) throw reloadErr;
         ownedLayers = reloadedOwned || [];
       } else {
