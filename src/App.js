@@ -1391,6 +1391,7 @@ const getQuickThoughtsStorageKey = (userId) => `quick-thoughts-${String(userId |
 const getBucketListStorageKey = (userId) => `bucket-list-${String(userId || 'guest').trim() || 'guest'}`;
 const getSomedayChaptersStorageKey = (userId) => `someday-chapters-${String(userId || 'guest').trim() || 'guest'}`;
 const getTripKomoStorageKey = (userId) => `trip-komo-links-${String(userId || 'guest').trim() || 'guest'}`;
+const TRIP_KOMO_LAST_STORAGE_KEY = 'trip-komo-links-last';
 const LOCAL_PERSIST_DEBOUNCE_MS = 350;
 const REMOTE_PERSIST_DEBOUNCE_MS = 900;
 const readQuickThoughtsState = (userId) => {
@@ -1476,6 +1477,23 @@ const readTripKomoState = (userId) => {
     const normalizeStoredState = (raw) => (
       raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}
     );
+    const mergeSlotCardArrays = (baseCards, overrideCards) => {
+      const safeBase = Array.isArray(baseCards) ? baseCards : [];
+      const safeOverride = Array.isArray(overrideCards) ? overrideCards : [];
+      const merged = [];
+      const seenPlacementIds = new Set();
+      const pushCard = (card) => {
+        if (!card || typeof card !== 'object') return;
+        const placementId = String(card?.placementId || '').trim();
+        const dedupeKey = placementId || JSON.stringify(card);
+        if (!dedupeKey || seenPlacementIds.has(dedupeKey)) return;
+        seenPlacementIds.add(dedupeKey);
+        merged.push(card);
+      };
+      safeOverride.forEach(pushCard);
+      safeBase.forEach(pushCard);
+      return merged;
+    };
     const mergeTripKomoStates = (baseState, overrideState) => {
       const safeBase = normalizeStoredState(baseState);
       const safeOverride = normalizeStoredState(overrideState);
@@ -1483,23 +1501,37 @@ const readTripKomoState = (userId) => {
       for (const [tripId, tripValue] of Object.entries(safeOverride)) {
         const baseTrip = merged[tripId] && typeof merged[tripId] === 'object' ? merged[tripId] : {};
         const overrideTrip = tripValue && typeof tripValue === 'object' ? tripValue : {};
+        const baseSlots = (baseTrip && typeof baseTrip.slots === 'object' && !Array.isArray(baseTrip.slots)) ? baseTrip.slots : {};
+        const overrideSlots = (overrideTrip && typeof overrideTrip.slots === 'object' && !Array.isArray(overrideTrip.slots)) ? overrideTrip.slots : {};
+        const mergedSlots = { ...baseSlots };
+        for (const [dateKey, overrideDay] of Object.entries(overrideSlots)) {
+          const safeBaseDay = mergedSlots[dateKey] && typeof mergedSlots[dateKey] === 'object' && !Array.isArray(mergedSlots[dateKey])
+            ? mergedSlots[dateKey]
+            : {};
+          const safeOverrideDay = overrideDay && typeof overrideDay === 'object' && !Array.isArray(overrideDay)
+            ? overrideDay
+            : {};
+          const mergedDay = { ...safeBaseDay };
+          for (const [slotKey, overrideCards] of Object.entries(safeOverrideDay)) {
+            mergedDay[slotKey] = mergeSlotCardArrays(safeBaseDay[slotKey], overrideCards);
+          }
+          mergedSlots[dateKey] = mergedDay;
+        }
         merged[tripId] = {
           ...baseTrip,
           ...overrideTrip,
-          slots: {
-            ...((baseTrip && typeof baseTrip.slots === 'object' && !Array.isArray(baseTrip.slots)) ? baseTrip.slots : {}),
-            ...((overrideTrip && typeof overrideTrip.slots === 'object' && !Array.isArray(overrideTrip.slots)) ? overrideTrip.slots : {}),
-          },
+          slots: mergedSlots,
         };
       }
       return merged;
     };
     const primaryKey = getTripKomoStorageKey(userId);
     const primaryParsed = normalizeStoredState(JSON.parse(window.localStorage.getItem(primaryKey) || '{}'));
+    const lastParsed = normalizeStoredState(JSON.parse(window.localStorage.getItem(TRIP_KOMO_LAST_STORAGE_KEY) || '{}'));
     const normalizedUserId = String(userId || 'guest').trim() || 'guest';
-    if (normalizedUserId === 'guest') return primaryParsed;
     const guestParsed = normalizeStoredState(JSON.parse(window.localStorage.getItem(getTripKomoStorageKey('guest')) || '{}'));
-    return mergeTripKomoStates(guestParsed, primaryParsed);
+    if (normalizedUserId === 'guest') return mergeTripKomoStates(guestParsed, lastParsed);
+    return mergeTripKomoStates(mergeTripKomoStates(guestParsed, lastParsed), primaryParsed);
   } catch {
     return {};
   }
@@ -1510,6 +1542,7 @@ const writeTripKomoState = (userId, state) => {
     const safeState = state && typeof state === 'object' ? state : {};
     const normalizedUserId = String(userId || 'guest').trim() || 'guest';
     window.localStorage.setItem(getTripKomoStorageKey(normalizedUserId), JSON.stringify(safeState));
+    window.localStorage.setItem(TRIP_KOMO_LAST_STORAGE_KEY, JSON.stringify(safeState));
     if (normalizedUserId !== 'guest') {
       window.localStorage.setItem(getTripKomoStorageKey('guest'), JSON.stringify(safeState));
     }
