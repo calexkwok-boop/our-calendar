@@ -3162,6 +3162,7 @@ function App() {
   });
   const [quickThoughtsHydratedUserId, setQuickThoughtsHydratedUserId] = useState(null);
   const [bucketListHydratedUserId, setBucketListHydratedUserId] = useState(null);
+  const [tripKomoHydratedUserId, setTripKomoHydratedUserId] = useState(null);
   const bucketListRemoteSyncRef = useRef(false);
   const quickThoughtsRemoteSyncRef = useRef(false);
   const [memories, setMemories] = useState([]);
@@ -20869,8 +20870,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   useEffect(() => {
     const komoOwnerKey = String(currentUser || 'guest').trim() || 'guest';
+    const tripKomoOwnerKey = String(user?.id || 'guest').trim() || 'guest';
     setKomoChapters(readSomedayChaptersState(komoOwnerKey));
     setTripKomoState(readTripKomoState(user?.id));
+    setTripKomoHydratedUserId(tripKomoOwnerKey);
   }, [currentUser, user?.id]);
 
   useEffect(() => {
@@ -20974,8 +20977,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [komoChapters, tripKomoState]);
 
   useEffect(() => {
+    const tripKomoOwnerKey = String(user?.id || 'guest').trim() || 'guest';
+    if (tripKomoHydratedUserId !== tripKomoOwnerKey) return;
     writeTripKomoState(user?.id, tripKomoState);
-  }, [user?.id, tripKomoState]);
+  }, [user?.id, tripKomoState, tripKomoHydratedUserId]);
 
   useEffect(() => {
     const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
