@@ -1473,8 +1473,15 @@ const writeSomedayChaptersState = (userId, chapters) => {
 const readTripKomoState = (userId) => {
   if (typeof window === 'undefined') return {};
   try {
-    const parsed = JSON.parse(window.localStorage.getItem(getTripKomoStorageKey(userId)) || '{}');
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    const normalizeStoredState = (raw) => (
+      raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}
+    );
+    const primaryKey = getTripKomoStorageKey(userId);
+    const primaryParsed = normalizeStoredState(JSON.parse(window.localStorage.getItem(primaryKey) || '{}'));
+    const normalizedUserId = String(userId || 'guest').trim() || 'guest';
+    if (normalizedUserId === 'guest') return primaryParsed;
+    const guestParsed = normalizeStoredState(JSON.parse(window.localStorage.getItem(getTripKomoStorageKey('guest')) || '{}'));
+    return { ...guestParsed, ...primaryParsed };
   } catch {
     return {};
   }
@@ -1482,7 +1489,12 @@ const readTripKomoState = (userId) => {
 const writeTripKomoState = (userId, state) => {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(getTripKomoStorageKey(userId), JSON.stringify(state && typeof state === 'object' ? state : {}));
+    const safeState = state && typeof state === 'object' ? state : {};
+    const normalizedUserId = String(userId || 'guest').trim() || 'guest';
+    window.localStorage.setItem(getTripKomoStorageKey(normalizedUserId), JSON.stringify(safeState));
+    if (normalizedUserId !== 'guest') {
+      window.localStorage.setItem(getTripKomoStorageKey('guest'), JSON.stringify(safeState));
+    }
   } catch {}
 };
 const mergePersistedBucketList = (...dreamLists) => {

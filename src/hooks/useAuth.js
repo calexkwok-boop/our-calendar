@@ -6,7 +6,7 @@ const readCachedSupabaseSessionUser = () => {
   try {
     for (let i = 0; i < window.localStorage.length; i += 1) {
       const key = window.localStorage.key(i);
-      if (!key || !key.startsWith('sb-') || !key.includes('-auth-token')) continue;
+      if (!key || (!(key.startsWith('sb-') && key.includes('-auth-token')) && key !== 'komo-supabase-auth')) continue;
       const raw = window.localStorage.getItem(key);
       if (!raw) continue;
       const parsed = JSON.parse(raw);
