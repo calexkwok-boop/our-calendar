@@ -3144,6 +3144,7 @@ function App() {
   const [komoChapters, setKomoChapters] = useState(() => readSomedayChaptersState('guest'));
   const [tripKomoState, setTripKomoState] = useState(() => readTripKomoState('guest'));
   const [tripKomoTouchDrag, setTripKomoTouchDrag] = useState(null);
+  const [tripKomoNativeDragActive, setTripKomoNativeDragActive] = useState(false);
   const [showAddDreamSheet, setShowAddDreamSheet] = useState(false);
   const [makeItHappenItem, setMakeItHappenItem] = useState(null);
   const [friendsDailyPhotos, setFriendsDailyPhotos] = useState([]);
@@ -3211,6 +3212,7 @@ function App() {
   const tripSwipeStartXRef = useRef(0);
   const swipingTripIdRef = useRef(null);
   const tripKomoTouchDragRef = useRef(null);
+  const tripKomoNativeDragActiveRef = useRef(false);
   const tripKomoTouchMoveHandlerRef = useRef(null);
   const tripKomoTouchEndHandlerRef = useRef(null);
   const tripKomoTouchScrollRafRef = useRef(null);
@@ -8177,6 +8179,10 @@ function App() {
   }, [tripKomoTouchDrag]);
 
   useEffect(() => {
+    tripKomoNativeDragActiveRef.current = tripKomoNativeDragActive;
+  }, [tripKomoNativeDragActive]);
+
+  useEffect(() => {
     if (subCalTab !== 'itinerary' || !subCalSelectedDate) {
       setTripKomoTouchDrag(null);
     }
@@ -8206,6 +8212,39 @@ function App() {
       }
     };
   }, [tripKomoTouchDrag]);
+
+  useEffect(() => {
+    if (!tripKomoNativeDragActive) return undefined;
+    const handleDragOver = (event) => {
+      if (tripKomoTouchScrollRafRef.current) return;
+      const clientY = Number(event.clientY || 0);
+      tripKomoTouchScrollRafRef.current = window.requestAnimationFrame(() => {
+        tripKomoTouchScrollRafRef.current = null;
+        const edgePadding = 120;
+        const step = 18;
+        if (clientY < edgePadding) {
+          window.scrollBy({ top: -step, behavior: 'auto' });
+        } else if (clientY > window.innerHeight - edgePadding) {
+          window.scrollBy({ top: step, behavior: 'auto' });
+        }
+      });
+    };
+    const handleDragStop = () => {
+      setTripKomoNativeDragActive(false);
+    };
+    window.addEventListener('dragover', handleDragOver);
+    window.addEventListener('dragend', handleDragStop);
+    window.addEventListener('drop', handleDragStop);
+    return () => {
+      window.removeEventListener('dragover', handleDragOver);
+      window.removeEventListener('dragend', handleDragStop);
+      window.removeEventListener('drop', handleDragStop);
+      if (tripKomoTouchScrollRafRef.current) {
+        window.cancelAnimationFrame(tripKomoTouchScrollRafRef.current);
+        tripKomoTouchScrollRafRef.current = null;
+      }
+    };
+  }, [tripKomoNativeDragActive]);
   const realtimeLayerIdsSignature = ((layers || [])
     .map((layer) => String(layer?.id || '').trim())
     .filter(Boolean)
@@ -33122,6 +33161,7 @@ transform: translateY(0);
               if (payload?.type === 'komo-source') addKomoCardToSlot(payload.card, dateKey, slotKey);
               if (payload?.type === 'komo-slot') addKomoCardToSlot(payload.card, dateKey, slotKey, payload.from);
             } catch {}
+            setTripKomoNativeDragActive(false);
           };
           const beginKomoTouchDrag = (touchEvent, payload) => {
             const touch = touchEvent.touches?.[0];
@@ -33557,32 +33597,14 @@ transform: translateY(0);
                                 className="group relative shrink-0 cursor-grab touch-none"
                                 draggable
                                 onDragStart={(event) => {
+                                  setTripKomoNativeDragActive(true);
                                   event.dataTransfer.setData('application/json', JSON.stringify({ type: 'komo-source', card }));
                                   event.dataTransfer.effectAllowed = 'copy';
                                 }}
+                                onDragEnd={() => setTripKomoNativeDragActive(false)}
                                 onTouchStart={(event) => beginKomoTouchDrag(event, { card, compact: true })}
                               >
                                 {renderKomoPolaroid(card, { compact: true })}
-                                <div className="mt-1 flex items-center justify-center gap-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => addKomoCardToSlot(card, dk, firstOpenSlotKey)}
-                                    className="rounded-full border border-white bg-emerald-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm"
-                                  >
-                                    Add
-                                  </button>
-                                  {tripKomoSlotOptions.map((slotOption) => (
-                                    <button
-                                      key={`${card.id}-${slotOption.key}`}
-                                      type="button"
-                                      onClick={() => addKomoCardToSlot(card, dk, slotOption.key)}
-                                      className="rounded-full border border-emerald-200 bg-white/95 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 shadow-sm dark:border-emerald-300/20 dark:bg-slate-900 dark:text-emerald-200"
-                                      title={`Add to ${slotOption.label}`}
-                                    >
-                                      {slotOption.label.charAt(0)}
-                                    </button>
-                                  ))}
-                                </div>
                               </div>
                             ))}
                           </div>
@@ -33594,6 +33616,11 @@ transform: translateY(0);
                       ) : (
                         <div className="mt-3 rounded-2xl border border-dashed border-emerald-200 bg-white/65 px-4 py-3 text-sm text-emerald-900/70 dark:border-emerald-300/15 dark:bg-white/5 dark:text-emerald-100/70">
                           Pick a Komo Book chapter to plan from its saved polaroids.
+                        </div>
+                      )}
+                      {linkedChapter && linkedChapterCards.length > 0 && (
+                        <div className="mt-3 rounded-2xl border border-dashed border-emerald-200/80 bg-white/60 px-4 py-3 text-xs text-emerald-900/75 dark:border-emerald-300/15 dark:bg-white/[0.03] dark:text-emerald-100/75">
+                          Drag and drop polaroids into Morning, Afternoon, or Evening below.
                         </div>
                       )}
                     </div>
@@ -33659,6 +33686,7 @@ transform: translateY(0);
                                   className="group relative cursor-grab touch-none"
                                   draggable
                                   onDragStart={(event) => {
+                                    setTripKomoNativeDragActive(true);
                                     event.dataTransfer.setData('application/json', JSON.stringify({
                                       type: 'komo-slot',
                                       card,
@@ -33666,6 +33694,7 @@ transform: translateY(0);
                                     }));
                                     event.dataTransfer.effectAllowed = 'move';
                                   }}
+                                  onDragEnd={() => setTripKomoNativeDragActive(false)}
                                   onTouchStart={(event) => beginKomoTouchDrag(event, {
                                     card,
                                     from: { dateKey: dk, slotKey: section.key },
