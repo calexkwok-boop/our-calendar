@@ -197,6 +197,12 @@ Deno.serve(async (req) => {
       await supabase.from("push_notification_log").insert(newLogEntries);
     }
 
+    // Prune log entries older than 10 days — they can never match future events.
+    await supabase
+      .from("push_notification_log")
+      .delete()
+      .lt("created_at", new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString());
+
     // Batch disable expired subscriptions
     for (const subId of disabledSubIds) {
       await supabase.from("push_subscriptions").update({ enabled: false }).eq("id", subId);

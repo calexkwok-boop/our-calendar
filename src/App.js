@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense } from 'react';
 import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare, MapPin, ThumbsUp, ThumbsDown, Share2, Trophy, Home, Compass, Sparkles, GripVertical } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { supabase } from './supabaseClient';
@@ -12,9 +12,9 @@ import InvitePicker from "./components/InvitePicker";
 import ExpenseTrackerPanel from "./components/ExpenseTrackerPanel";
 import RoundRobinPanel from "./components/RoundRobinPanel";
 import ScramblePanel from "./components/ScramblePanel";
-import PopupEventPanel from "./components/PopupEventPanel";
-import SportsEventCardOverlay from "./components/SportsEventCardOverlay";
-import PartyEventCardOverlay from "./components/PartyEventCardOverlay";
+const PopupEventPanel = React.lazy(() => import("./components/PopupEventPanel"));
+const SportsEventCardOverlay = React.lazy(() => import("./components/SportsEventCardOverlay"));
+const PartyEventCardOverlay = React.lazy(() => import("./components/PartyEventCardOverlay"));
 import AddEventModal from "./components/AddEventModal";
 import DateDetailsCard from "./components/DateDetailsCard_Enhanced";
 import WhatTimeModal from "./components/WhatTimeModal";
@@ -28,7 +28,7 @@ import NewCalendarLook from "./components/Newcalendarlook";
 import SharedListPanel from "./components/SharedListPanel";
 import MemorySystem, { MemoryCreator as ImportedMemoryCreator } from "./components/MemorySystem";
 import ScrapbookHomeHybrid from "./components/ScrapbookHomeHybrid";
-import SomedayPage from "./components/SomedayPage";
+const SomedayPage = React.lazy(() => import("./components/SomedayPage"));
 import AddDreamSheet from "./components/AddDreamSheet";
 import MakeItHappenSheet from "./components/MakeItHappenSheet";
 import useHomeScreenData from "./hooks/useHomeScreenData";
@@ -37,7 +37,7 @@ import { useNotifications } from "./hooks/useNotifications";
 import TripsTab from "./components/TripsTab";
 import TripRatingSystem from "./components/TripRatingSystem";
 import TripHighlightReel from "./components/TripHighlightReel";
-import ProfilePage from "./components/ProfilePage";
+const ProfilePage = React.lazy(() => import("./components/ProfilePage"));
 import FriendPhotoModal from "./components/FriendPhotoModal";
 import JOURNEY_QUOTES from "./data/journeyQuotes";
 import { getDestinationImageOverride } from "./data/destinationImageOverrides";
@@ -29118,6 +29118,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         }}
         onClick={(e) => e.stopPropagation()}
       >
+        <Suspense fallback={null}>
         {isSelectedSportsPopup ? (
           <SportsEventCardOverlay
             activeLayerPageTheme={activeLayerPageTheme}
@@ -29173,6 +29174,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             onLaunchScramble={launchScrambleFromPopup}
           />
         )}
+        </Suspense>
       </div>
     </div>
   );
@@ -31445,6 +31447,7 @@ transform: translateY(0);
               ...(Array.isArray(somedayDecorPins) ? somedayDecorPins : []),
             ];
             return (
+              <Suspense fallback={null}>
               <SomedayPage
                 key="someday-page"
                 dreams={somedayDreams}
@@ -31466,6 +31469,7 @@ transform: translateY(0);
                 onCreateTripFromChapter={startTripFromKomoChapter}
                 chaptersWithLinkedTrips={chaptersWithLinkedTrips}
               />
+              </Suspense>
             );
           })()}
 
@@ -36813,6 +36817,7 @@ transform: translateY(0);
 
     {/* Profile view overlay */}
     {profileViewState.open && (
+      <Suspense fallback={null}>
       <ProfilePage
         viewedUserEmail={profileViewState.email}
         viewedUserId={profileViewState.userId}
@@ -36838,6 +36843,7 @@ transform: translateY(0);
         onSavePaymentHandles={saveAccountPaymentHandles}
         onLogout={handleLogout}
       />
+      </Suspense>
     )}
 
       <style>{`
