@@ -3213,9 +3213,11 @@ function App() {
   const swipingTripIdRef = useRef(null);
   const tripKomoTouchDragRef = useRef(null);
   const tripKomoNativeDragActiveRef = useRef(false);
+  const tripKomoTouchPendingRef = useRef(null);
   const tripKomoTouchMoveHandlerRef = useRef(null);
   const tripKomoTouchEndHandlerRef = useRef(null);
   const tripKomoTouchScrollRafRef = useRef(null);
+  const tripKomoAutoScrollYRef = useRef(null);
   const [swipedSharedListItemId, setSwipedSharedListItemId] = useState(null);
   const [sharedListItemSwipeDrag, setSharedListItemSwipeDrag] = useState({ id: null, offset: 0 });
   const sharedListItemSwipeStartXRef = useRef(0);
@@ -8182,21 +8184,76 @@ function App() {
     tripKomoNativeDragActiveRef.current = tripKomoNativeDragActive;
   }, [tripKomoNativeDragActive]);
 
+  const startTripKomoAutoScrollLoop = () => {
+    if (tripKomoTouchScrollRafRef.current) return;
+    const tick = () => {
+      const pointerY = Number(tripKomoAutoScrollYRef.current);
+      const touchActive = Boolean(tripKomoTouchDragRef.current);
+      const nativeActive = Boolean(tripKomoNativeDragActiveRef.current);
+      if (!touchActive && !nativeActive) {
+        tripKomoTouchScrollRafRef.current = null;
+        return;
+      }
+      const edgePadding = 140;
+      const maxStep = 26;
+      let delta = 0;
+      if (Number.isFinite(pointerY)) {
+        if (pointerY < edgePadding) {
+          const intensity = Math.max(0, (edgePadding - pointerY) / edgePadding);
+          delta = -Math.max(8, Math.round(maxStep * intensity));
+        } else if (pointerY > window.innerHeight - edgePadding) {
+          const intensity = Math.max(0, (pointerY - (window.innerHeight - edgePadding)) / edgePadding);
+          delta = Math.max(8, Math.round(maxStep * intensity));
+        }
+      }
+      if (delta !== 0) {
+        window.scrollBy({ top: delta, behavior: 'auto' });
+      }
+      tripKomoTouchScrollRafRef.current = window.requestAnimationFrame(tick);
+    };
+    tripKomoTouchScrollRafRef.current = window.requestAnimationFrame(tick);
+  };
+
   useEffect(() => {
     if (subCalTab !== 'itinerary' || !subCalSelectedDate) {
       setTripKomoTouchDrag(null);
+      tripKomoTouchPendingRef.current = null;
     }
   }, [subCalTab, subCalSelectedDate]);
 
   useEffect(() => {
-    if (!tripKomoTouchDrag) return undefined;
+    if (subCalTab !== 'itinerary' || !subCalSelectedDate) return undefined;
     const handleTouchMove = (event) => {
       const touch = event.touches?.[0];
       if (!touch) return;
+      const pending = tripKomoTouchPendingRef.current;
+      if (pending && !tripKomoTouchDragRef.current) {
+        const dx = Number(touch.clientX || 0) - Number(pending.startX || 0);
+        const dy = Number(touch.clientY || 0) - Number(pending.startY || 0);
+        const distance = Math.hypot(dx, dy);
+        if (distance >= 10) {
+          setTripKomoTouchDrag({
+            card: pending.card,
+            from: pending.from || null,
+            x: touch.clientX,
+            y: touch.clientY,
+            overDateKey: '',
+            overSlotKey: '',
+            compact: pending.compact !== false,
+          });
+        } else {
+          return;
+        }
+      }
+      if (!tripKomoTouchDragRef.current) return;
       event.preventDefault();
+      tripKomoAutoScrollYRef.current = touch.clientY;
+      startTripKomoAutoScrollLoop();
       tripKomoTouchMoveHandlerRef.current?.(touch);
     };
     const handleTouchEnd = () => {
+      tripKomoAutoScrollYRef.current = null;
+      tripKomoTouchPendingRef.current = null;
       tripKomoTouchEndHandlerRef.current?.();
     };
     window.addEventListener('touchmove', handleTouchMove, { passive: false });
@@ -8210,26 +8267,19 @@ function App() {
         window.cancelAnimationFrame(tripKomoTouchScrollRafRef.current);
         tripKomoTouchScrollRafRef.current = null;
       }
+      tripKomoAutoScrollYRef.current = null;
+      tripKomoTouchPendingRef.current = null;
     };
-  }, [tripKomoTouchDrag]);
+  }, [subCalTab, subCalSelectedDate]);
 
   useEffect(() => {
     if (!tripKomoNativeDragActive) return undefined;
     const handleDragOver = (event) => {
-      if (tripKomoTouchScrollRafRef.current) return;
-      const clientY = Number(event.clientY || 0);
-      tripKomoTouchScrollRafRef.current = window.requestAnimationFrame(() => {
-        tripKomoTouchScrollRafRef.current = null;
-        const edgePadding = 120;
-        const step = 18;
-        if (clientY < edgePadding) {
-          window.scrollBy({ top: -step, behavior: 'auto' });
-        } else if (clientY > window.innerHeight - edgePadding) {
-          window.scrollBy({ top: step, behavior: 'auto' });
-        }
-      });
+      tripKomoAutoScrollYRef.current = Number(event.clientY || 0);
+      startTripKomoAutoScrollLoop();
     };
     const handleDragStop = () => {
+      tripKomoAutoScrollYRef.current = null;
       setTripKomoNativeDragActive(false);
     };
     window.addEventListener('dragover', handleDragOver);
@@ -8243,6 +8293,7 @@ function App() {
         window.cancelAnimationFrame(tripKomoTouchScrollRafRef.current);
         tripKomoTouchScrollRafRef.current = null;
       }
+      tripKomoAutoScrollYRef.current = null;
     };
   }, [tripKomoNativeDragActive]);
   const realtimeLayerIdsSignature = ((layers || [])
@@ -33104,11 +33155,18 @@ transform: translateY(0);
             Array.isArray(tripKomo?.slots?.[dateKey]?.[slotKey]) ? tripKomo.slots[dateKey][slotKey] : []
           );
           const tripKomoSlotOptions = TRIP_DAY_SECTIONS.filter((section) => section.key !== 'anytime');
-          const addKomoCardToSlot = (card, dateKey, slotKey, moveFrom = null) => {
+          const addKomoCardToSlot = (card, dateKey, slotKey, moveFrom = null, insertBeforePlacementId = null) => {
             const normalized = {
               ...normalizeKomoCard(card),
               placementId: card.placementId || `komo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
             };
+            if (
+              moveFrom?.dateKey === dateKey &&
+              moveFrom?.slotKey === slotKey &&
+              String(insertBeforePlacementId || '') === String(normalized.placementId || '')
+            ) {
+              return;
+            }
             updateTripKomo((current) => {
               const slots = { ...(current.slots || {}) };
               if (moveFrom?.dateKey && moveFrom?.slotKey) {
@@ -33117,7 +33175,14 @@ transform: translateY(0);
                 slots[moveFrom.dateKey] = fromDay;
               }
               const day = { ...(slots[dateKey] || {}) };
-              day[slotKey] = [...(Array.isArray(day[slotKey]) ? day[slotKey] : []), normalized];
+              const existingCards = Array.isArray(day[slotKey]) ? [...day[slotKey]] : [];
+              const insertIndex = existingCards.findIndex((item) => String(item?.placementId || '') === String(insertBeforePlacementId || ''));
+              if (insertIndex >= 0) {
+                existingCards.splice(insertIndex, 0, normalized);
+              } else {
+                existingCards.push(normalized);
+              }
+              day[slotKey] = existingCards;
               slots[dateKey] = day;
               return { ...current, slots };
             });
@@ -33154,40 +33219,46 @@ transform: translateY(0);
               return { ...current, slots };
             });
           };
-          const handleKomoDrop = (event, dateKey, slotKey) => {
+          const handleKomoDrop = (event, dateKey, slotKey, insertBeforePlacementId = null) => {
             event.preventDefault();
             try {
               const payload = JSON.parse(event.dataTransfer.getData('application/json') || '{}');
-              if (payload?.type === 'komo-source') addKomoCardToSlot(payload.card, dateKey, slotKey);
-              if (payload?.type === 'komo-slot') addKomoCardToSlot(payload.card, dateKey, slotKey, payload.from);
+              if (payload?.type === 'komo-source') addKomoCardToSlot(payload.card, dateKey, slotKey, null, insertBeforePlacementId);
+              if (payload?.type === 'komo-slot') addKomoCardToSlot(payload.card, dateKey, slotKey, payload.from, insertBeforePlacementId);
             } catch {}
             setTripKomoNativeDragActive(false);
           };
           const beginKomoTouchDrag = (touchEvent, payload) => {
             const touch = touchEvent.touches?.[0];
             if (!touch || !payload?.card) return;
-            touchEvent.preventDefault();
-            const normalizedCard = normalizeKomoCard(payload.card);
-            setTripKomoTouchDrag({
-              card: normalizedCard,
+            const target = touchEvent.target;
+            if (target && typeof target.closest === 'function' && target.closest('button, select, input, textarea, option, [data-komo-no-touch-drag="true"]')) {
+              return;
+            }
+            tripKomoTouchPendingRef.current = {
+              card: normalizeKomoCard(payload.card),
               from: payload.from || null,
-              x: touch.clientX,
-              y: touch.clientY,
-              overDateKey: '',
-              overSlotKey: '',
               compact: payload.compact !== false,
-            });
+              startX: touch.clientX,
+              startY: touch.clientY,
+            };
           };
           tripKomoTouchMoveHandlerRef.current = (touch) => {
             const target = document.elementFromPoint(touch.clientX, touch.clientY);
             const dropZone = target && typeof target.closest === 'function'
               ? target.closest('[data-komo-slot-key][data-komo-date-key]')
               : null;
+            const placementTarget = target && typeof target.closest === 'function'
+              ? target.closest('[data-komo-placement-id]')
+              : null;
             const overSlotKey = String(dropZone?.getAttribute?.('data-komo-slot-key') || '').trim();
             const overDateKey = String(dropZone?.getAttribute?.('data-komo-date-key') || '').trim();
+            const overPlacementId = overSlotKey && overDateKey
+              ? String(placementTarget?.getAttribute?.('data-komo-placement-id') || '').trim()
+              : '';
             setTripKomoTouchDrag((prev) => (
               prev
-                ? { ...prev, x: touch.clientX, y: touch.clientY, overSlotKey, overDateKey }
+                ? { ...prev, x: touch.clientX, y: touch.clientY, overSlotKey, overDateKey, overPlacementId }
                 : prev
             ));
             if (!tripKomoTouchScrollRafRef.current) {
@@ -33206,7 +33277,13 @@ transform: translateY(0);
           tripKomoTouchEndHandlerRef.current = () => {
             const activeDrag = tripKomoTouchDragRef.current;
             if (activeDrag?.card && activeDrag?.overDateKey && activeDrag?.overSlotKey) {
-              addKomoCardToSlot(activeDrag.card, activeDrag.overDateKey, activeDrag.overSlotKey, activeDrag.from || null);
+              addKomoCardToSlot(
+                activeDrag.card,
+                activeDrag.overDateKey,
+                activeDrag.overSlotKey,
+                activeDrag.from || null,
+                activeDrag.overPlacementId || null,
+              );
             }
             setTripKomoTouchDrag(null);
           };
@@ -33684,6 +33761,7 @@ transform: translateY(0);
                                 <div
                                   key={card.placementId}
                                   className="group relative cursor-grab touch-none"
+                                  data-komo-placement-id={card.placementId}
                                   draggable
                                   onDragStart={(event) => {
                                     setTripKomoNativeDragActive(true);
@@ -33695,11 +33773,31 @@ transform: translateY(0);
                                     event.dataTransfer.effectAllowed = 'move';
                                   }}
                                   onDragEnd={() => setTripKomoNativeDragActive(false)}
+                                  onDragOver={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    event.dataTransfer.dropEffect = 'move';
+                                  }}
+                                  onDrop={(event) => {
+                                    event.stopPropagation();
+                                    handleKomoDrop(event, dk, section.key, card.placementId);
+                                  }}
                                   onTouchStart={(event) => beginKomoTouchDrag(event, {
                                     card,
                                     from: { dateKey: dk, slotKey: section.key },
                                     compact: false,
                                   })}
+                                  style={
+                                    tripKomoTouchDrag?.overDateKey === dk &&
+                                    tripKomoTouchDrag?.overSlotKey === section.key &&
+                                    tripKomoTouchDrag?.overPlacementId === String(card.placementId || '')
+                                      ? {
+                                          outline: darkMode ? '2px solid rgba(110, 231, 183, 0.75)' : '2px solid rgba(16, 185, 129, 0.8)',
+                                          outlineOffset: '6px',
+                                          borderRadius: '18px',
+                                        }
+                                      : undefined
+                                  }
                                 >
                                   {renderKomoPolaroid(card)}
                                   <select
