@@ -3217,6 +3217,7 @@ function App() {
   const tripKomoTouchMoveHandlerRef = useRef(null);
   const tripKomoTouchEndHandlerRef = useRef(null);
   const tripKomoTouchScrollRafRef = useRef(null);
+  const tripKomoAutoScrollXRef = useRef(null);
   const tripKomoAutoScrollYRef = useRef(null);
   const [swipedSharedListItemId, setSwipedSharedListItemId] = useState(null);
   const [sharedListItemSwipeDrag, setSharedListItemSwipeDrag] = useState({ id: null, offset: 0 });
@@ -8186,7 +8187,19 @@ function App() {
 
   const startTripKomoAutoScrollLoop = () => {
     if (tripKomoTouchScrollRafRef.current) return;
+    const findScrollableContainer = (element) => {
+      let node = element instanceof Element ? element : null;
+      while (node && node !== document.body && node !== document.documentElement) {
+        const style = window.getComputedStyle(node);
+        const overflowY = String(style?.overflowY || '').toLowerCase();
+        const canScroll = (overflowY.includes('auto') || overflowY.includes('scroll')) && node.scrollHeight > node.clientHeight + 4;
+        if (canScroll) return node;
+        node = node.parentElement;
+      }
+      return null;
+    };
     const tick = () => {
+      const pointerX = Number(tripKomoAutoScrollXRef.current);
       const pointerY = Number(tripKomoAutoScrollYRef.current);
       const touchActive = Boolean(tripKomoTouchDragRef.current);
       const nativeActive = Boolean(tripKomoNativeDragActiveRef.current);
@@ -8207,7 +8220,15 @@ function App() {
         }
       }
       if (delta !== 0) {
-        window.scrollBy({ top: delta, behavior: 'auto' });
+        const pointerTarget = Number.isFinite(pointerX) && Number.isFinite(pointerY)
+          ? document.elementFromPoint(pointerX, pointerY)
+          : null;
+        const scrollContainer = findScrollableContainer(pointerTarget);
+        if (scrollContainer) {
+          scrollContainer.scrollTop += delta;
+        } else {
+          window.scrollBy({ top: delta, behavior: 'auto' });
+        }
       }
       tripKomoTouchScrollRafRef.current = window.requestAnimationFrame(tick);
     };
@@ -8247,11 +8268,13 @@ function App() {
       }
       if (!tripKomoTouchDragRef.current) return;
       event.preventDefault();
+      tripKomoAutoScrollXRef.current = touch.clientX;
       tripKomoAutoScrollYRef.current = touch.clientY;
       startTripKomoAutoScrollLoop();
       tripKomoTouchMoveHandlerRef.current?.(touch);
     };
     const handleTouchEnd = () => {
+      tripKomoAutoScrollXRef.current = null;
       tripKomoAutoScrollYRef.current = null;
       tripKomoTouchPendingRef.current = null;
       tripKomoTouchEndHandlerRef.current?.();
@@ -8267,6 +8290,7 @@ function App() {
         window.cancelAnimationFrame(tripKomoTouchScrollRafRef.current);
         tripKomoTouchScrollRafRef.current = null;
       }
+      tripKomoAutoScrollXRef.current = null;
       tripKomoAutoScrollYRef.current = null;
       tripKomoTouchPendingRef.current = null;
     };
@@ -8275,10 +8299,12 @@ function App() {
   useEffect(() => {
     if (!tripKomoNativeDragActive) return undefined;
     const handleDragOver = (event) => {
+      tripKomoAutoScrollXRef.current = Number(event.clientX || 0);
       tripKomoAutoScrollYRef.current = Number(event.clientY || 0);
       startTripKomoAutoScrollLoop();
     };
     const handleDragStop = () => {
+      tripKomoAutoScrollXRef.current = null;
       tripKomoAutoScrollYRef.current = null;
       setTripKomoNativeDragActive(false);
     };
@@ -8293,6 +8319,7 @@ function App() {
         window.cancelAnimationFrame(tripKomoTouchScrollRafRef.current);
         tripKomoTouchScrollRafRef.current = null;
       }
+      tripKomoAutoScrollXRef.current = null;
       tripKomoAutoScrollYRef.current = null;
     };
   }, [tripKomoNativeDragActive]);
