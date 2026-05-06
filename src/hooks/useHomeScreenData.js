@@ -77,7 +77,13 @@ export default function useHomeScreenData({
       upcomingCandidates.push({ ...event, date: dateKey });
     };
 
-    (userTabEvents || []).forEach((event) => {
+    // When userTabEvents hasn't been loaded yet (home tab only), fall back to the
+    // events state that's already fetched on startup for the active layer.
+    const baseEvents = (userTabEvents && userTabEvents.length > 0)
+      ? userTabEvents
+      : Object.values(events || {}).flat();
+
+    baseEvents.forEach((event) => {
       const baseDateKey = String(event?.date || event?.dateKey || '').trim();
       const baseTs = toDateOnlyTs(baseDateKey);
       if (baseTs !== null && baseTs >= todayTs) addUpcomingEvent(event);
@@ -158,6 +164,7 @@ export default function useHomeScreenData({
     normalizeHolidayLikeTitle,
     popupEventsByEventId,
     popupSignupsByEventId,
+    events,
     toDateOnlyTs,
     todayTs,
     upcomingPopupEvents,
