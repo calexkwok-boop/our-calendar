@@ -33257,6 +33257,24 @@ transform: translateY(0);
               return { ...current, slots };
             });
           };
+          const moveKomoCardBeforePlacement = (dateKey, slotKey, placementId, beforePlacementId) => {
+            if (!dateKey || !slotKey || !placementId || !beforePlacementId) return;
+            if (String(placementId) === String(beforePlacementId)) return;
+            updateTripKomo((current) => {
+              const slots = { ...(current.slots || {}) };
+              const day = { ...(slots[dateKey] || {}) };
+              const cards = Array.isArray(day[slotKey]) ? [...day[slotKey]] : [];
+              const sourceIndex = cards.findIndex((item) => String(item?.placementId || '') === String(placementId || ''));
+              const targetIndex = cards.findIndex((item) => String(item?.placementId || '') === String(beforePlacementId || ''));
+              if (sourceIndex < 0 || targetIndex < 0) return current;
+              const [moved] = cards.splice(sourceIndex, 1);
+              const adjustedTargetIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+              cards.splice(adjustedTargetIndex, 0, moved);
+              day[slotKey] = cards;
+              slots[dateKey] = day;
+              return { ...current, slots };
+            });
+          };
           const removeKomoCardFromSlot = (dateKey, slotKey, placementId) => {
             updateTripKomo((current) => {
               const slots = { ...(current.slots || {}) };
@@ -33270,8 +33288,22 @@ transform: translateY(0);
             event.preventDefault();
             try {
               const payload = JSON.parse(event.dataTransfer.getData('application/json') || '{}');
-              if (payload?.type === 'komo-source') addKomoCardToSlot(payload.card, dateKey, slotKey, null, insertBeforePlacementId);
-              if (payload?.type === 'komo-slot') addKomoCardToSlot(payload.card, dateKey, slotKey, payload.from, insertBeforePlacementId);
+              if (payload?.type === 'komo-source') {
+                addKomoCardToSlot(payload.card, dateKey, slotKey, null, insertBeforePlacementId);
+              }
+              if (payload?.type === 'komo-slot') {
+                const movingPlacementId = String(payload?.card?.placementId || '').trim();
+                if (
+                  payload?.from?.dateKey === dateKey &&
+                  payload?.from?.slotKey === slotKey &&
+                  insertBeforePlacementId &&
+                  movingPlacementId
+                ) {
+                  moveKomoCardBeforePlacement(dateKey, slotKey, movingPlacementId, insertBeforePlacementId);
+                } else {
+                  addKomoCardToSlot(payload.card, dateKey, slotKey, payload.from, insertBeforePlacementId);
+                }
+              }
             } catch {}
             setTripKomoNativeDragActive(false);
           };
@@ -33324,13 +33356,28 @@ transform: translateY(0);
           tripKomoTouchEndHandlerRef.current = () => {
             const activeDrag = tripKomoTouchDragRef.current;
             if (activeDrag?.card && activeDrag?.overDateKey && activeDrag?.overSlotKey) {
-              addKomoCardToSlot(
-                activeDrag.card,
-                activeDrag.overDateKey,
-                activeDrag.overSlotKey,
-                activeDrag.from || null,
-                activeDrag.overPlacementId || null,
-              );
+              const movingPlacementId = String(activeDrag?.card?.placementId || '').trim();
+              if (
+                activeDrag?.from?.dateKey === activeDrag.overDateKey &&
+                activeDrag?.from?.slotKey === activeDrag.overSlotKey &&
+                activeDrag?.overPlacementId &&
+                movingPlacementId
+              ) {
+                moveKomoCardBeforePlacement(
+                  activeDrag.overDateKey,
+                  activeDrag.overSlotKey,
+                  movingPlacementId,
+                  activeDrag.overPlacementId,
+                );
+              } else {
+                addKomoCardToSlot(
+                  activeDrag.card,
+                  activeDrag.overDateKey,
+                  activeDrag.overSlotKey,
+                  activeDrag.from || null,
+                  activeDrag.overPlacementId || null,
+                );
+              }
             }
             setTripKomoTouchDrag(null);
           };
