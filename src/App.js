@@ -3143,6 +3143,7 @@ function App() {
   const [bucketList, setBucketList] = useState(() => readBucketListState('guest'));
   const [komoChapters, setKomoChapters] = useState(() => readSomedayChaptersState('guest'));
   const [tripKomoState, setTripKomoState] = useState(() => readTripKomoState('guest'));
+  const [tripKomoTouchDrag, setTripKomoTouchDrag] = useState(null);
   const [showAddDreamSheet, setShowAddDreamSheet] = useState(false);
   const [makeItHappenItem, setMakeItHappenItem] = useState(null);
   const [friendsDailyPhotos, setFriendsDailyPhotos] = useState([]);
@@ -3209,6 +3210,10 @@ function App() {
   const [tripSwipeDrag, setTripSwipeDrag] = useState({ id: null, offset: 0 });
   const tripSwipeStartXRef = useRef(0);
   const swipingTripIdRef = useRef(null);
+  const tripKomoTouchDragRef = useRef(null);
+  const tripKomoTouchMoveHandlerRef = useRef(null);
+  const tripKomoTouchEndHandlerRef = useRef(null);
+  const tripKomoTouchScrollRafRef = useRef(null);
   const [swipedSharedListItemId, setSwipedSharedListItemId] = useState(null);
   const [sharedListItemSwipeDrag, setSharedListItemSwipeDrag] = useState({ id: null, offset: 0 });
   const sharedListItemSwipeStartXRef = useRef(0);
@@ -8166,6 +8171,41 @@ function App() {
   useEffect(() => {
     activeLayerIdRef.current = activeLayerId;
   }, [activeLayerId]);
+
+  useEffect(() => {
+    tripKomoTouchDragRef.current = tripKomoTouchDrag;
+  }, [tripKomoTouchDrag]);
+
+  useEffect(() => {
+    if (subCalTab !== 'itinerary' || !subCalSelectedDate) {
+      setTripKomoTouchDrag(null);
+    }
+  }, [subCalTab, subCalSelectedDate]);
+
+  useEffect(() => {
+    if (!tripKomoTouchDrag) return undefined;
+    const handleTouchMove = (event) => {
+      const touch = event.touches?.[0];
+      if (!touch) return;
+      event.preventDefault();
+      tripKomoTouchMoveHandlerRef.current?.(touch);
+    };
+    const handleTouchEnd = () => {
+      tripKomoTouchEndHandlerRef.current?.();
+    };
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd);
+    window.addEventListener('touchcancel', handleTouchEnd);
+    return () => {
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('touchcancel', handleTouchEnd);
+      if (tripKomoTouchScrollRafRef.current) {
+        window.cancelAnimationFrame(tripKomoTouchScrollRafRef.current);
+        tripKomoTouchScrollRafRef.current = null;
+      }
+    };
+  }, [tripKomoTouchDrag]);
   const realtimeLayerIdsSignature = ((layers || [])
     .map((layer) => String(layer?.id || '').trim())
     .filter(Boolean)
@@ -33024,6 +33064,7 @@ transform: translateY(0);
           const getSlotCards = (dateKey, slotKey) => (
             Array.isArray(tripKomo?.slots?.[dateKey]?.[slotKey]) ? tripKomo.slots[dateKey][slotKey] : []
           );
+          const tripKomoSlotOptions = TRIP_DAY_SECTIONS.filter((section) => section.key !== 'anytime');
           const addKomoCardToSlot = (card, dateKey, slotKey, moveFrom = null) => {
             const normalized = {
               ...normalizeKomoCard(card),
@@ -33038,6 +33079,29 @@ transform: translateY(0);
               }
               const day = { ...(slots[dateKey] || {}) };
               day[slotKey] = [...(Array.isArray(day[slotKey]) ? day[slotKey] : []), normalized];
+              slots[dateKey] = day;
+              return { ...current, slots };
+            });
+          };
+          const moveKomoCardToSlot = (dateKey, fromSlotKey, placementId, toSlotKey) => {
+            if (!dateKey || !fromSlotKey || !toSlotKey || fromSlotKey === toSlotKey) return;
+            const existingCard = getSlotCards(dateKey, fromSlotKey).find((item) => String(item?.placementId || '') === String(placementId || ''));
+            if (!existingCard) return;
+            addKomoCardToSlot(existingCard, dateKey, toSlotKey, { dateKey, slotKey: fromSlotKey });
+          };
+          const moveKomoCardWithinSlot = (dateKey, slotKey, placementId, direction) => {
+            if (!dateKey || !slotKey || !placementId || !direction) return;
+            updateTripKomo((current) => {
+              const slots = { ...(current.slots || {}) };
+              const day = { ...(slots[dateKey] || {}) };
+              const cards = Array.isArray(day[slotKey]) ? [...day[slotKey]] : [];
+              const index = cards.findIndex((item) => String(item?.placementId || '') === String(placementId || ''));
+              if (index < 0) return current;
+              const targetIndex = direction === 'up' ? index - 1 : index + 1;
+              if (targetIndex < 0 || targetIndex >= cards.length) return current;
+              const [moved] = cards.splice(index, 1);
+              cards.splice(targetIndex, 0, moved);
+              day[slotKey] = cards;
               slots[dateKey] = day;
               return { ...current, slots };
             });
@@ -33058,6 +33122,53 @@ transform: translateY(0);
               if (payload?.type === 'komo-source') addKomoCardToSlot(payload.card, dateKey, slotKey);
               if (payload?.type === 'komo-slot') addKomoCardToSlot(payload.card, dateKey, slotKey, payload.from);
             } catch {}
+          };
+          const beginKomoTouchDrag = (touchEvent, payload) => {
+            const touch = touchEvent.touches?.[0];
+            if (!touch || !payload?.card) return;
+            touchEvent.preventDefault();
+            const normalizedCard = normalizeKomoCard(payload.card);
+            setTripKomoTouchDrag({
+              card: normalizedCard,
+              from: payload.from || null,
+              x: touch.clientX,
+              y: touch.clientY,
+              overDateKey: '',
+              overSlotKey: '',
+              compact: payload.compact !== false,
+            });
+          };
+          tripKomoTouchMoveHandlerRef.current = (touch) => {
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+            const dropZone = target && typeof target.closest === 'function'
+              ? target.closest('[data-komo-slot-key][data-komo-date-key]')
+              : null;
+            const overSlotKey = String(dropZone?.getAttribute?.('data-komo-slot-key') || '').trim();
+            const overDateKey = String(dropZone?.getAttribute?.('data-komo-date-key') || '').trim();
+            setTripKomoTouchDrag((prev) => (
+              prev
+                ? { ...prev, x: touch.clientX, y: touch.clientY, overSlotKey, overDateKey }
+                : prev
+            ));
+            if (!tripKomoTouchScrollRafRef.current) {
+              tripKomoTouchScrollRafRef.current = window.requestAnimationFrame(() => {
+                tripKomoTouchScrollRafRef.current = null;
+                const edgePadding = 120;
+                const step = 18;
+                if (touch.clientY < edgePadding) {
+                  window.scrollBy({ top: -step, behavior: 'auto' });
+                } else if (touch.clientY > window.innerHeight - edgePadding) {
+                  window.scrollBy({ top: step, behavior: 'auto' });
+                }
+              });
+            }
+          };
+          tripKomoTouchEndHandlerRef.current = () => {
+            const activeDrag = tripKomoTouchDragRef.current;
+            if (activeDrag?.card && activeDrag?.overDateKey && activeDrag?.overSlotKey) {
+              addKomoCardToSlot(activeDrag.card, activeDrag.overDateKey, activeDrag.overSlotKey, activeDrag.from || null);
+            }
+            setTripKomoTouchDrag(null);
           };
           const firstOpenSlotKey = TRIP_DAY_SECTIONS
             .filter((section) => section.key !== 'anytime')
@@ -33443,21 +33554,35 @@ transform: translateY(0);
                             {linkedChapterCards.map((card) => (
                               <div
                                 key={card.id}
-                                className="group relative shrink-0 cursor-grab"
+                                className="group relative shrink-0 cursor-grab touch-none"
                                 draggable
                                 onDragStart={(event) => {
                                   event.dataTransfer.setData('application/json', JSON.stringify({ type: 'komo-source', card }));
                                   event.dataTransfer.effectAllowed = 'copy';
                                 }}
+                                onTouchStart={(event) => beginKomoTouchDrag(event, { card, compact: true })}
                               >
                                 {renderKomoPolaroid(card, { compact: true })}
-                                <button
-                                  type="button"
-                                  onClick={() => addKomoCardToSlot(card, dk, firstOpenSlotKey)}
-                                  className="absolute -bottom-1 -right-1 rounded-full border border-white bg-emerald-500 px-2 py-0.5 text-[10px] font-semibold text-white opacity-100 shadow-sm"
-                                >
-                                  Add
-                                </button>
+                                <div className="mt-1 flex items-center justify-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => addKomoCardToSlot(card, dk, firstOpenSlotKey)}
+                                    className="rounded-full border border-white bg-emerald-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm"
+                                  >
+                                    Add
+                                  </button>
+                                  {tripKomoSlotOptions.map((slotOption) => (
+                                    <button
+                                      key={`${card.id}-${slotOption.key}`}
+                                      type="button"
+                                      onClick={() => addKomoCardToSlot(card, dk, slotOption.key)}
+                                      className="rounded-full border border-emerald-200 bg-white/95 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 shadow-sm dark:border-emerald-300/20 dark:bg-slate-900 dark:text-emerald-200"
+                                      title={`Add to ${slotOption.label}`}
+                                    >
+                                      {slotOption.label.charAt(0)}
+                                    </button>
+                                  ))}
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -33472,6 +33597,15 @@ transform: translateY(0);
                         </div>
                       )}
                     </div>
+
+                    {tripKomoTouchDrag?.card && (
+                      <div
+                        className="pointer-events-none fixed z-[120] -translate-x-1/2 -translate-y-1/2 opacity-95"
+                        style={{ left: tripKomoTouchDrag.x, top: tripKomoTouchDrag.y }}
+                      >
+                        {renderKomoPolaroid(tripKomoTouchDrag.card, { compact: tripKomoTouchDrag.compact !== false })}
+                      </div>
+                    )}
 
                     {groupedSections.filter((section) => section.key !== 'anytime').map((section) => (
                       <div key={section.key} className="rounded-[28px] border border-white/10 bg-white/72 p-4 shadow-sm dark:bg-slate-900/68">
@@ -33500,19 +33634,29 @@ transform: translateY(0);
                         {subCalAddingSlot === section.slotValue && renderSectionAddForm(section.slotValue)}
 
                         <div
-                          className="mt-4 min-h-[92px] rounded-3xl border border-dashed border-emerald-200/80 bg-white/45 px-3 py-3 dark:border-emerald-300/15 dark:bg-white/[0.03]"
+                          className="mt-4 min-h-[92px] rounded-3xl border border-dashed border-emerald-200/80 bg-white/45 px-3 py-3 transition-colors dark:border-emerald-300/15 dark:bg-white/[0.03]"
+                          data-komo-slot-key={section.key}
+                          data-komo-date-key={dk}
                           onDragOver={(event) => {
                             event.preventDefault();
                             event.dataTransfer.dropEffect = 'copy';
                           }}
                           onDrop={(event) => handleKomoDrop(event, dk, section.key)}
+                          style={
+                            tripKomoTouchDrag?.overDateKey === dk && tripKomoTouchDrag?.overSlotKey === section.key
+                              ? {
+                                  borderColor: darkMode ? 'rgba(110, 231, 183, 0.55)' : 'rgba(16, 185, 129, 0.75)',
+                                  backgroundColor: darkMode ? 'rgba(16, 185, 129, 0.10)' : 'rgba(16, 185, 129, 0.08)',
+                                }
+                              : undefined
+                          }
                         >
                           {getSlotCards(dk, section.key).length > 0 ? (
                             <div className="flex flex-wrap gap-3">
                               {getSlotCards(dk, section.key).map((card) => (
                                 <div
                                   key={card.placementId}
-                                  className="group relative cursor-grab"
+                                  className="group relative cursor-grab touch-none"
                                   draggable
                                   onDragStart={(event) => {
                                     event.dataTransfer.setData('application/json', JSON.stringify({
@@ -33522,6 +33666,11 @@ transform: translateY(0);
                                     }));
                                     event.dataTransfer.effectAllowed = 'move';
                                   }}
+                                  onTouchStart={(event) => beginKomoTouchDrag(event, {
+                                    card,
+                                    from: { dateKey: dk, slotKey: section.key },
+                                    compact: false,
+                                  })}
                                 >
                                   {renderKomoPolaroid(card)}
                                   <select
@@ -33539,6 +33688,42 @@ transform: translateY(0);
                                       );
                                     })}
                                   </select>
+                                  <select
+                                    value={section.key}
+                                    onChange={(event) => moveKomoCardToSlot(dk, section.key, card.placementId, event.target.value)}
+                                    onClick={(event) => event.stopPropagation()}
+                                    className="mt-1 ml-1 w-28 rounded-xl border border-gray-200 bg-white px-2 py-1 text-[11px] text-gray-600 shadow-sm dark:border-white/10 dark:bg-slate-900 dark:text-gray-200"
+                                  >
+                                    {tripKomoSlotOptions.map((slotOption) => (
+                                      <option key={`${card.placementId}-${slotOption.key}`} value={slotOption.key}>
+                                        {slotOption.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <div className="mt-1 ml-1 flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        moveKomoCardWithinSlot(dk, section.key, card.placementId, 'up');
+                                      }}
+                                      className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white text-[11px] text-gray-600 shadow-sm dark:border-white/10 dark:bg-slate-900 dark:text-gray-200"
+                                      title="Move earlier in this section"
+                                    >
+                                      ↑
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        moveKomoCardWithinSlot(dk, section.key, card.placementId, 'down');
+                                      }}
+                                      className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white text-[11px] text-gray-600 shadow-sm dark:border-white/10 dark:bg-slate-900 dark:text-gray-200"
+                                      title="Move later in this section"
+                                    >
+                                      ↓
+                                    </button>
+                                  </div>
                                   <button
                                     type="button"
                                     onClick={() => removeKomoCardFromSlot(dk, section.key, card.placementId)}
