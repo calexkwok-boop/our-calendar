@@ -57,6 +57,24 @@ export default function useHomeScreenData({
       .sort((a, b) => toDateOnlyTs(getSubCalStartRaw(a)) - toDateOnlyTs(getSubCalStartRaw(b)))
   ), [getSubCalStartRaw, tabTrips, toDateOnlyTs, todayTs]);
 
+  // When userTabEvents hasn't been loaded yet (home tab), derive a lightweight
+  // flat array from the events state for just today + 14 days so the expensive
+  // upcomingUserTabEvents memo below doesn't iterate the full event history.
+  const eventsHomeFallback = useMemo(() => {
+    if (userTabEvents && userTabEvents.length > 0) return null;
+    if (!events || Object.keys(events).length === 0) return null;
+    const result = [];
+    const now = new Date();
+    for (let i = 0; i <= 14; i += 1) {
+      const d = new Date(now);
+      d.setHours(0, 0, 0, 0);
+      d.setDate(now.getDate() + i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (events[key]) result.push(...events[key]);
+    }
+    return result;
+  }, [events, userTabEvents]);
+
   const upcomingUserTabEvents = useMemo(() => {
     // Home only consumes today's events plus a short upcoming window.
     const horizonDays = 14;
@@ -77,11 +95,9 @@ export default function useHomeScreenData({
       upcomingCandidates.push({ ...event, date: dateKey });
     };
 
-    // When userTabEvents hasn't been loaded yet (home tab only), fall back to the
-    // events state that's already fetched on startup for the active layer.
-    const baseEvents = (userTabEvents && userTabEvents.length > 0)
+    const baseEvents = userTabEvents && userTabEvents.length > 0
       ? userTabEvents
-      : Object.values(events || {}).flat();
+      : (eventsHomeFallback || []);
 
     baseEvents.forEach((event) => {
       const baseDateKey = String(event?.date || event?.dateKey || '').trim();
@@ -164,7 +180,7 @@ export default function useHomeScreenData({
     normalizeHolidayLikeTitle,
     popupEventsByEventId,
     popupSignupsByEventId,
-    events,
+    eventsHomeFallback,
     toDateOnlyTs,
     todayTs,
     upcomingPopupEvents,
