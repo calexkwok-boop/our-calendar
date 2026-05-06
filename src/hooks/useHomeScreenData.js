@@ -226,15 +226,14 @@ export default function useHomeScreenData({
 
   const uniqueEvents = useMemo(() => {
     const seenEventIds = new Set();
-    return Object.values(events || {})
-      .flat()
+    return (Array.isArray(userTabEvents) ? userTabEvents : [])
       .filter((event) => {
         const eventId = String(event?.id || '').trim();
         if (!eventId || seenEventIds.has(eventId)) return false;
         seenEventIds.add(eventId);
         return true;
       });
-  }, [events]);
+  }, [userTabEvents]);
 
   const eligibleMemoryEvents = useMemo(() => (
     uniqueEvents
