@@ -3180,6 +3180,7 @@ function App() {
   const [friendsDailyPhotos, setFriendsDailyPhotos] = useState([]);
   const [openFriendPhoto, setOpenFriendPhoto] = useState(null);
   const [prefetchedFriendsList, setPrefetchedFriendsList] = useState(null);
+  const [prefetchedMyContext, setPrefetchedMyContext] = useState(null);
   const knownHandlesByEmailRef = useRef({});
   const knownHandlesByUserIdRef = useRef({});
   const [somedayPinPositions, setSomedayPinPositions] = useState(() => {
@@ -20717,7 +20718,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       if (cancelled) return;
       if (document.visibilityState !== 'visible') return;
       try {
-        const friends = await loadFriendsListLib({
+        const result = await loadFriendsListLib({
           userId,
           userEmail,
           ownerIdentity: String(currentUser || '').trim(),
@@ -20726,7 +20727,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           includeSharedEvents: false,
         });
         if (cancelled) return;
+        const friends = result?.friends || [];
+        const myContext = result?.myContext || null;
         setPrefetchedFriendsList(friends);
+        setPrefetchedMyContext(myContext);
         try { localStorage.setItem(CACHE_KEY, JSON.stringify({ friends, ts: Date.now() })); } catch {}
       } catch {}
     };
@@ -36916,6 +36920,7 @@ transform: translateY(0);
         viewedUserId={profileViewState.userId}
         currentUser={user}
         prefetchedFriendsList={prefetchedFriendsList}
+        prefetchedMyContext={prefetchedMyContext}
         accountHandle={currentUser}
         profilePhotoUrl={currentUserProfilePhotoUrl}
         darkMode={darkMode}

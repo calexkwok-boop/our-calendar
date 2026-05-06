@@ -248,6 +248,17 @@ export async function loadFriendsList({
     friendMap.set(mapKey, entry);
   }
 
+  const myContext = {
+    myOwnedTripIds: Object.keys(ownedTripNameById),
+    myMemberTripIds: memberTripIds,
+    myAllTripIds: allTripIds,
+    myReceivedLayerIds: receivedLayerIds,
+    myOwnedLayerIds: ownedLayerIds,
+    myAllLayerIds: uniqueLayerIds,
+    myOwnedChapterIds: ownedChapterIds,
+    myMemberChapterIds: memberChapterIds,
+  };
+
   const friends = [];
   for (const [key, context] of friendMap.entries()) {
     const actualEmail = String(context?.email || '').toLowerCase().trim();
@@ -285,5 +296,5 @@ export async function loadFriendsList({
       connectionSummary: parts.join(' · ') || 'Connected',
     });
   }
-  return friends;
+  return { friends, myContext };
 }

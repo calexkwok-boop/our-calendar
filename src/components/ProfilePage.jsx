@@ -153,6 +153,7 @@ const ProfilePage = ({
   viewedUserId = null,
   currentUser,
   prefetchedFriendsList = null,
+  prefetchedMyContext = null,
   accountHandle = '',
   profilePhotoUrl = '',
   darkMode = false,
@@ -738,15 +739,24 @@ const ProfilePage = ({
       setLoading(true);
       setFriendSharedPhoto(null);
       try {
-        // If opened by userId only, resolve email from user_handles so email-based queries still work
+        // Resolve email — check prefetched friends list first to avoid a sequential DB round trip
         let email = viewedUserEmail ? viewedUserEmail.toLowerCase().trim() : null;
+        if (!email && viewedUserId) {
+          const cached = (prefetchedFriendsList || []).find(f => f.userId === viewedUserId);
+          email = cached?.email?.toLowerCase().trim() || null;
+        }
         if (!email && viewedUserId) {
           const { data: ehRow } = await supabase
             .from('user_handles').select('email').eq('user_id', viewedUserId).maybeSingle();
           email = ehRow?.email?.toLowerCase().trim() || null;
         }
 
-        // Batch 1: all queries independent of each other — run in parallel
+        // Use pre-computed "my" sets from the friends list prefetch when available,
+        // falling back to live DB queries for any that are missing.
+        const ctx = prefetchedMyContext || {};
+        const hasPrefetch = Boolean(prefetchedMyContext);
+
+        // Batch 1: friend-side queries always run; "my" queries skipped when prefetched
         const [
           handleRowRes,
           myMemberTripIdsRes,
@@ -768,28 +778,38 @@ const ProfilePage = ({
           email
             ? supabase.from('user_handles').select('handle').ilike('email', email).maybeSingle()
             : supabase.from('user_handles').select('handle').eq('user_id', viewedUserId).maybeSingle(),
-          userEmail
-            ? supabase.from('sub_calendar_members').select('sub_calendar_id').ilike('email', userEmail)
-            : Promise.resolve({ data: [] }),
-          currentUser?.id
-            ? supabase.from('sub_calendars').select('id').eq('owner_id', currentUser.id)
-            : Promise.resolve({ data: [] }),
+          hasPrefetch ? Promise.resolve({ data: [] }) : (
+            userEmail
+              ? supabase.from('sub_calendar_members').select('sub_calendar_id').ilike('email', userEmail)
+              : Promise.resolve({ data: [] })
+          ),
+          hasPrefetch ? Promise.resolve({ data: [] }) : (
+            currentUser?.id
+              ? supabase.from('sub_calendars').select('id').eq('owner_id', currentUser.id)
+              : Promise.resolve({ data: [] })
+          ),
           email
             ? supabase.from('sub_calendar_members').select('sub_calendar_id').ilike('email', email)
             : Promise.resolve({ data: [] }),
           viewedUserId
             ? supabase.from('sub_calendars').select('id').eq('owner_id', viewedUserId)
             : Promise.resolve({ data: [] }),
-          supabase.from('shared_access').select('layer_id').eq('shared_with_email', userEmail),
-          currentUser?.id
-            ? supabase.from('calendar_layers').select('id').eq('owner_id', currentUser.id)
-            : Promise.resolve({ data: [] }),
-          currentUser?.id
-            ? supabase.from('chapters').select('id').eq('owner_id', currentUser.id)
-            : Promise.resolve({ data: [] }),
-          userEmail
-            ? supabase.from('chapter_collaborators').select('chapter_id, status').ilike('email', userEmail)
-            : Promise.resolve({ data: [] }),
+          hasPrefetch ? Promise.resolve({ data: [] }) : supabase.from('shared_access').select('layer_id').eq('shared_with_email', userEmail),
+          hasPrefetch ? Promise.resolve({ data: [] }) : (
+            currentUser?.id
+              ? supabase.from('calendar_layers').select('id').eq('owner_id', currentUser.id)
+              : Promise.resolve({ data: [] })
+          ),
+          hasPrefetch ? Promise.resolve({ data: [] }) : (
+            currentUser?.id
+              ? supabase.from('chapters').select('id').eq('owner_id', currentUser.id)
+              : Promise.resolve({ data: [] })
+          ),
+          hasPrefetch ? Promise.resolve({ data: [] }) : (
+            userEmail
+              ? supabase.from('chapter_collaborators').select('chapter_id, status').ilike('email', userEmail)
+              : Promise.resolve({ data: [] })
+          ),
           viewedUserId
             ? supabase.from('chapters').select('id').eq('owner_id', viewedUserId)
             : Promise.resolve({ data: [] }),
@@ -827,19 +847,24 @@ const ProfilePage = ({
           shareChapters: false,
         });
 
-        const allMyTripIdSet = new Set([
-          ...(myMemberTripIdsRes.data || []).map(m => m.sub_calendar_id),
-          ...(myOwnedTripsRes.data || []).map(t => t.id),
-        ].filter(Boolean));
+        // Build "my" sets — use prefetched context when available, otherwise derive from live query results
+        const allMyTripIdSet = hasPrefetch
+          ? new Set((ctx.myAllTripIds || []).filter(Boolean))
+          : new Set([
+              ...(myMemberTripIdsRes.data || []).map(m => m.sub_calendar_id),
+              ...(myOwnedTripsRes.data || []).map(t => t.id),
+            ].filter(Boolean));
         const friendMemberIds = new Set([
           ...(friendTripMembershipsRes.data || []).map(m => m.sub_calendar_id),
           ...(friendOwnedTripsRes.data || []).map(t => t.id),
         ].filter(Boolean));
         const sharedTripIds = [...allMyTripIdSet].filter(id => friendMemberIds.has(id));
-        const allMyChapterIdSet = new Set([
-          ...(myOwnedChapterIdsRes.data || []).map(row => row.id),
-          ...(myMemberChapterIdsRes.data || []).filter(isAcceptedChapterCollaborator).map(row => row.chapter_id),
-        ].filter(Boolean));
+        const allMyChapterIdSet = hasPrefetch
+          ? new Set([...(ctx.myOwnedChapterIds || []), ...(ctx.myMemberChapterIds || [])].filter(Boolean))
+          : new Set([
+              ...(myOwnedChapterIdsRes.data || []).map(row => row.id),
+              ...(myMemberChapterIdsRes.data || []).filter(isAcceptedChapterCollaborator).map(row => row.chapter_id),
+            ].filter(Boolean));
         const friendChapterIdSet = new Set([
           ...(friendOwnedChapterIdsRes.data || []).map(row => row.id),
           ...(friendMemberChapterIdsRes.data || []).filter(isAcceptedChapterCollaborator).map(row => row.chapter_id),
@@ -857,9 +882,15 @@ const ProfilePage = ({
         ].filter(Boolean));
         const sharedEventCount = [...myEventIdSet].filter(id => friendEventIdSet.has(id)).length;
 
-        const receivedLayerIds = (myLayerAccessRes.data || []).map(a => a.layer_id).filter(Boolean);
-        const ownedLayerIds = (ownedLayersRes.data || []).map(l => l.id).filter(Boolean);
-        const allMyLayerIds = [...new Set([...receivedLayerIds, ...ownedLayerIds])];
+        const receivedLayerIds = hasPrefetch
+          ? (ctx.myReceivedLayerIds || [])
+          : (myLayerAccessRes.data || []).map(a => a.layer_id).filter(Boolean);
+        const ownedLayerIds = hasPrefetch
+          ? (ctx.myOwnedLayerIds || [])
+          : (ownedLayersRes.data || []).map(l => l.id).filter(Boolean);
+        const allMyLayerIds = hasPrefetch
+          ? (ctx.myAllLayerIds || [])
+          : [...new Set([...receivedLayerIds, ...ownedLayerIds])];
 
         const friendPrefs = userProfilesRes.data || {};
 
