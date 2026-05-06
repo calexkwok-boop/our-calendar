@@ -3219,6 +3219,7 @@ function App() {
   const tripKomoTouchScrollRafRef = useRef(null);
   const tripKomoAutoScrollXRef = useRef(null);
   const tripKomoAutoScrollYRef = useRef(null);
+  const tripKomoAutoScrollContainerRef = useRef(null);
   const [swipedSharedListItemId, setSwipedSharedListItemId] = useState(null);
   const [sharedListItemSwipeDrag, setSharedListItemSwipeDrag] = useState({ id: null, offset: 0 });
   const sharedListItemSwipeStartXRef = useRef(0);
@@ -8223,7 +8224,11 @@ function App() {
         const pointerTarget = Number.isFinite(pointerX) && Number.isFinite(pointerY)
           ? document.elementFromPoint(pointerX, pointerY)
           : null;
-        const scrollContainer = findScrollableContainer(pointerTarget);
+        const detectedContainer = findScrollableContainer(pointerTarget);
+        if (detectedContainer) {
+          tripKomoAutoScrollContainerRef.current = detectedContainer;
+        }
+        const scrollContainer = detectedContainer || tripKomoAutoScrollContainerRef.current || null;
         if (scrollContainer) {
           scrollContainer.scrollTop += delta;
         } else {
@@ -8276,6 +8281,7 @@ function App() {
     const handleTouchEnd = () => {
       tripKomoAutoScrollXRef.current = null;
       tripKomoAutoScrollYRef.current = null;
+      tripKomoAutoScrollContainerRef.current = null;
       tripKomoTouchPendingRef.current = null;
       tripKomoTouchEndHandlerRef.current?.();
     };
@@ -8292,6 +8298,7 @@ function App() {
       }
       tripKomoAutoScrollXRef.current = null;
       tripKomoAutoScrollYRef.current = null;
+      tripKomoAutoScrollContainerRef.current = null;
       tripKomoTouchPendingRef.current = null;
     };
   }, [subCalTab, subCalSelectedDate]);
@@ -8306,6 +8313,7 @@ function App() {
     const handleDragStop = () => {
       tripKomoAutoScrollXRef.current = null;
       tripKomoAutoScrollYRef.current = null;
+      tripKomoAutoScrollContainerRef.current = null;
       setTripKomoNativeDragActive(false);
     };
     window.addEventListener('dragover', handleDragOver);
@@ -8321,6 +8329,7 @@ function App() {
       }
       tripKomoAutoScrollXRef.current = null;
       tripKomoAutoScrollYRef.current = null;
+      tripKomoAutoScrollContainerRef.current = null;
     };
   }, [tripKomoNativeDragActive]);
   const realtimeLayerIdsSignature = ((layers || [])
@@ -33176,7 +33185,9 @@ transform: translateY(0);
             setTripKomoState((prev) => {
               const safePrev = prev && typeof prev === 'object' ? prev : {};
               const current = safePrev[tripId] && typeof safePrev[tripId] === 'object' ? safePrev[tripId] : {};
-              return { ...safePrev, [tripId]: updater(current) };
+              const nextState = { ...safePrev, [tripId]: updater(current) };
+              writeTripKomoState(user?.id, nextState);
+              return nextState;
             });
           };
           const setLinkedKomoChapter = (chapterId) => {
