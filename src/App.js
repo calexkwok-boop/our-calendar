@@ -1476,12 +1476,30 @@ const readTripKomoState = (userId) => {
     const normalizeStoredState = (raw) => (
       raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}
     );
+    const mergeTripKomoStates = (baseState, overrideState) => {
+      const safeBase = normalizeStoredState(baseState);
+      const safeOverride = normalizeStoredState(overrideState);
+      const merged = { ...safeBase };
+      for (const [tripId, tripValue] of Object.entries(safeOverride)) {
+        const baseTrip = merged[tripId] && typeof merged[tripId] === 'object' ? merged[tripId] : {};
+        const overrideTrip = tripValue && typeof tripValue === 'object' ? tripValue : {};
+        merged[tripId] = {
+          ...baseTrip,
+          ...overrideTrip,
+          slots: {
+            ...((baseTrip && typeof baseTrip.slots === 'object' && !Array.isArray(baseTrip.slots)) ? baseTrip.slots : {}),
+            ...((overrideTrip && typeof overrideTrip.slots === 'object' && !Array.isArray(overrideTrip.slots)) ? overrideTrip.slots : {}),
+          },
+        };
+      }
+      return merged;
+    };
     const primaryKey = getTripKomoStorageKey(userId);
     const primaryParsed = normalizeStoredState(JSON.parse(window.localStorage.getItem(primaryKey) || '{}'));
     const normalizedUserId = String(userId || 'guest').trim() || 'guest';
     if (normalizedUserId === 'guest') return primaryParsed;
     const guestParsed = normalizeStoredState(JSON.parse(window.localStorage.getItem(getTripKomoStorageKey('guest')) || '{}'));
-    return { ...guestParsed, ...primaryParsed };
+    return mergeTripKomoStates(guestParsed, primaryParsed);
   } catch {
     return {};
   }
