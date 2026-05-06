@@ -409,7 +409,7 @@ const ProfilePage = ({
             return query.eq('shared_with_email', userEmail);
           })(),
           currentUser?.id
-            ? supabase.from('categories').select('id').eq('owner_id', currentUser.id)
+            ? supabase.from('calendar_layers').select('id').eq('owner_id', currentUser.id)
             : Promise.resolve({ data: [] }),
           currentUser?.id
             ? supabase.from('popup_event_members').select('event_id').eq('user_id', currentUser.id)
@@ -782,7 +782,7 @@ const ProfilePage = ({
             : Promise.resolve({ data: [] }),
           supabase.from('shared_access').select('layer_id').eq('shared_with_email', userEmail),
           currentUser?.id
-            ? supabase.from('categories').select('id').eq('owner_id', currentUser.id)
+            ? supabase.from('calendar_layers').select('id').eq('owner_id', currentUser.id)
             : Promise.resolve({ data: [] }),
           currentUser?.id
             ? supabase.from('chapters').select('id').eq('owner_id', currentUser.id)

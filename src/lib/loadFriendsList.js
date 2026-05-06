@@ -48,7 +48,7 @@ export async function loadFriendsList({
           return query.eq('shared_with_email', userEmail);
         })()
       : Promise.resolve({ data: [] }),
-    userId ? supabase.from('categories').select('id').eq('owner_id', userId) : Promise.resolve({ data: [] }),
+    userId ? supabase.from('calendar_layers').select('id').eq('owner_id', userId) : Promise.resolve({ data: [] }),
     includeSharedEvents && userId
       ? supabase.from('popup_event_members').select('event_id').eq('user_id', userId)
       : Promise.resolve({ data: [] }),
