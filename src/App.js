@@ -3149,6 +3149,7 @@ function App() {
     showAuth, setShowAuth,
     authError, setAuthError,
     authBusy, setAuthBusy,
+    authDebugInfo,
     preservedProfilePhotoUrlRef,
   } = useAuth({
     readCachedProfilePhotoUrl,
@@ -5488,16 +5489,34 @@ function App() {
     await syncSubCalendarMembersFromLayer(sc);
     // getDuplicateSubCalendarIds is shared so it only hits the DB once instead of twice.
     const subCalIds = await getDuplicateSubCalendarIds(sc);
-    // Events, members, and notes are independent — run in parallel.
-    const [loadedEvents, , noteState] = await Promise.all([
+    // Events, members, notes, and komo state are independent — run in parallel.
+    const [loadedEvents, , noteState, freshKomoRow] = await Promise.all([
       loadMergedSubCalendarEvents(sc, subCalIds),
       loadSubCalendarMembers(sc.id),
       loadSubCalNotes(sc.id),
+      supabase.from('sub_calendars').select('komo_state').eq('id', subCalId).single().then((r) => r.data).catch(() => null),
     ]);
     const loadedPhotos = await loadMergedTripPhotos(sc, noteState?.deletedPhotoIds || [], subCalIds);
     if (openingSubCalendarRequestRef.current === openRequestId) {
       skipInitialTripPhotoReloadRef.current = '';
     }
+    // Use freshly-fetched komo state so cards survive a hard close that clears localStorage.
+    const freshKomoState = freshKomoRow?.komo_state;
+    if (freshKomoState && typeof freshKomoState === 'object' && Object.keys(freshKomoState).length > 0) {
+      setTripKomoState((prev) => {
+        const localSlots = (prev?.[subCalId] || {}).slots || {};
+        const localHasCards = Object.values(localSlots).some(
+          (day) => typeof day === 'object' && Object.values(day).some((arr) => Array.isArray(arr) && arr.length > 0)
+        );
+        if (localHasCards) return prev;
+        return { ...(prev || {}), [subCalId]: freshKomoState };
+      });
+    }
+    const freshKomoSlots = (freshKomoState || {}).slots || {};
+    const freshKomoDateKeys = Object.keys(freshKomoSlots).filter((dk) => {
+      const day = freshKomoSlots[dk];
+      return day && typeof day === 'object' && Object.values(day).some((arr) => Array.isArray(arr) && arr.length > 0);
+    }).sort();
     const itineraryDateKeys = Object.keys(loadedEvents || {}).filter(Boolean).sort();
     const photoDateKeys = Array.from(new Set(
       (loadedPhotos || []).map((photo) => String(photo?.date || '').trim()).filter(Boolean)
@@ -5507,7 +5526,8 @@ function App() {
       : todayWithinTrip
         ? todayKey
         : (
-          komoDateKeys[0]
+          freshKomoDateKeys[0]
+          || komoDateKeys[0]
           || itineraryDateKeys[0]
           || photoDateKeys[0]
           || getSubCalStartRaw(sc)
@@ -23287,6 +23307,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           {authError && (
             <p className="text-red-600 text-sm text-center mb-4">{authError}</p>
           )}
+          <div className="mb-4 rounded-xl border border-black/5 bg-black/[0.03] px-3 py-2 text-[11px] leading-5 text-gray-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-gray-400">
+            <div>Auth debug: {String(authDebugInfo?.sessionStatus || 'unknown')}</div>
+            <div>Origin: {String(authDebugInfo?.origin || 'unknown')}</div>
+            <div>Token keys: {Number(authDebugInfo?.tokenKeyCount || 0)}</div>
+            <div>Cached user: {String(authDebugInfo?.cachedUserId || 'none') || 'none'}</div>
+            <div>Last event: {String(authDebugInfo?.authEvent || 'none')}</div>
+          </div>
           <button
             onClick={handleGoogleSignIn}
             disabled={authBusy}
