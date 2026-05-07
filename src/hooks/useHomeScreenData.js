@@ -57,20 +57,30 @@ export default function useHomeScreenData({
       .sort((a, b) => toDateOnlyTs(getSubCalStartRaw(a)) - toDateOnlyTs(getSubCalStartRaw(b)))
   ), [getSubCalStartRaw, tabTrips, toDateOnlyTs, todayTs]);
 
-  // When userTabEvents hasn't been loaded yet (home tab), derive a lightweight
-  // flat array from the events state for just today + 14 days so the expensive
-  // upcomingUserTabEvents memo below doesn't iterate the full event history.
+  // When userTabEvents hasn't been loaded yet (home tab), derive a flat array
+  // from the events state. We include today + 14 days of direct events AND any
+  // recurring events from past dates so their virtual occurrences can be generated.
   const eventsHomeFallback = useMemo(() => {
     if (userTabEvents && userTabEvents.length > 0) return null;
     if (!events || Object.keys(events).length === 0) return null;
     const result = [];
     const now = new Date();
+    const upcomingKeys = new Set();
     for (let i = 0; i <= 14; i += 1) {
       const d = new Date(now);
       d.setHours(0, 0, 0, 0);
       d.setDate(now.getDate() + i);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      upcomingKeys.add(key);
       if (events[key]) result.push(...events[key]);
+    }
+    // Include recurring events from past dates so virtual occurrences for today/future are generated
+    for (const [dateKey, dayEvents] of Object.entries(events)) {
+      if (upcomingKeys.has(dateKey)) continue;
+      for (const ev of dayEvents) {
+        const rec = String(ev?.recurrence || (ev?.isAnnual ? 'annual' : 'once')).trim().toLowerCase();
+        if (rec !== 'once') result.push(ev);
+      }
     }
     return result;
   }, [events, userTabEvents]);
@@ -249,14 +259,16 @@ export default function useHomeScreenData({
 
   const uniqueEvents = useMemo(() => {
     const seenEventIds = new Set();
-    return (Array.isArray(userTabEvents) ? userTabEvents : [])
-      .filter((event) => {
-        const eventId = String(event?.id || '').trim();
-        if (!eventId || seenEventIds.has(eventId)) return false;
-        seenEventIds.add(eventId);
-        return true;
-      });
-  }, [userTabEvents]);
+    const base = (userTabEvents && userTabEvents.length > 0)
+      ? userTabEvents
+      : Object.values(events || {}).flat();
+    return base.filter((event) => {
+      const eventId = String(event?.id || '').trim();
+      if (!eventId || seenEventIds.has(eventId)) return false;
+      seenEventIds.add(eventId);
+      return true;
+    });
+  }, [events, userTabEvents]);
 
   const eligibleMemoryEvents = useMemo(() => (
     uniqueEvents
