@@ -23310,7 +23310,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           <div className="mb-4 rounded-xl border border-black/5 bg-black/[0.03] px-3 py-2 text-[11px] leading-5 text-gray-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-gray-400">
             <div>Auth debug: {String(authDebugInfo?.sessionStatus || 'unknown')}</div>
             <div>Origin: {String(authDebugInfo?.origin || 'unknown')}</div>
+            <div>Expected key: {String(authDebugInfo?.currentStorageKey || 'unknown')}</div>
             <div>Token keys: {Number(authDebugInfo?.tokenKeyCount || 0)}</div>
+            <div>Found key: {String((authDebugInfo?.tokenKeys || [])[0] || 'none')}</div>
+            <div>Supabase URL: {String(authDebugInfo?.supabaseUrl || 'unknown')}</div>
             <div>Cached user: {String(authDebugInfo?.cachedUserId || 'none') || 'none'}</div>
             <div>Last event: {String(authDebugInfo?.authEvent || 'none')}</div>
             <div>Stored session: {authDebugInfo?.hasCurrentSession ? 'yes' : 'no'}</div>

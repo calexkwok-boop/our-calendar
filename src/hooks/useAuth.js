@@ -1,6 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 
+const CURRENT_SUPABASE_AUTH_STORAGE_KEY = (() => {
+  try {
+    const url = String(supabase?.supabaseUrl || '').trim();
+    const match = url.match(/^https:\/\/([^.]+)\.supabase\.co/i);
+    const projectRef = String(match?.[1] || '').trim();
+    return projectRef ? `sb-${projectRef}-auth-token` : '';
+  } catch {
+    return '';
+  }
+})();
+
 const readCachedSupabaseSessionUser = () => {
   if (typeof window === 'undefined' || !window.localStorage) return null;
   try {
@@ -29,6 +40,8 @@ const getSupabaseAuthDebugSnapshot = () => {
       origin: '',
       tokenKeyCount: 0,
       tokenKeys: [],
+      currentStorageKey: CURRENT_SUPABASE_AUTH_STORAGE_KEY,
+      supabaseUrl: String(supabase?.supabaseUrl || ''),
       cachedUserId: '',
       hasCurrentSession: false,
       hasRefreshToken: false,
@@ -75,6 +88,8 @@ const getSupabaseAuthDebugSnapshot = () => {
     origin: String(window.location?.origin || ''),
     tokenKeyCount: tokenKeys.length,
     tokenKeys,
+    currentStorageKey: CURRENT_SUPABASE_AUTH_STORAGE_KEY,
+    supabaseUrl: String(supabase?.supabaseUrl || ''),
     cachedUserId: String(readCachedSupabaseSessionUser()?.id || ''),
     hasCurrentSession,
     hasRefreshToken,
