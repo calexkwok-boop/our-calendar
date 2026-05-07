@@ -33537,17 +33537,13 @@ transform: translateY(0);
           });
           const updateTripKomo = (updater) => {
             if (!tripId) return;
-            let nextTripKomo;
-            setTripKomoState((prev) => {
-              const safePrev = prev && typeof prev === 'object' ? prev : {};
-              const current = safePrev[tripId] && typeof safePrev[tripId] === 'object' ? safePrev[tripId] : {};
-              nextTripKomo = updater(current);
-              const nextState = { ...safePrev, [tripId]: nextTripKomo };
-              writeTripKomoState(user?.id, nextState);
-              return nextState;
-            });
-            // Write to Supabase immediately — don't wait for a timer so a hard close can't lose it.
-            if (nextTripKomo !== undefined && user?.id) {
+            const safePrev = tripKomoState && typeof tripKomoState === 'object' ? tripKomoState : {};
+            const current = safePrev[tripId] && typeof safePrev[tripId] === 'object' ? safePrev[tripId] : {};
+            const nextTripKomo = updater(current);
+            const nextState = { ...safePrev, [tripId]: nextTripKomo };
+            writeTripKomoState(user?.id, nextState);
+            setTripKomoState(nextState);
+            if (user?.id) {
               supabase.from('sub_calendars').update({ komo_state: nextTripKomo }).eq('id', tripId)
                 .then(({ error }) => { if (error) console.warn('[komo] save failed:', error.message); });
             }
