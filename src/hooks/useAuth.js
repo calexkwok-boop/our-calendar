@@ -32,6 +32,8 @@ const getSupabaseAuthDebugSnapshot = () => {
       cachedUserId: '',
       hasCurrentSession: false,
       hasRefreshToken: false,
+      hasAccessToken: false,
+      hasSessionUser: false,
       expiresAt: '',
       expiresInPast: false,
     };
@@ -39,6 +41,8 @@ const getSupabaseAuthDebugSnapshot = () => {
   const tokenKeys = [];
   let hasCurrentSession = false;
   let hasRefreshToken = false;
+  let hasAccessToken = false;
+  let hasSessionUser = false;
   let expiresAt = '';
   let expiresInPast = false;
   for (let i = 0; i < window.localStorage.length; i += 1) {
@@ -55,12 +59,14 @@ const getSupabaseAuthDebugSnapshot = () => {
           const sessionLike = candidate?.currentSession || candidate?.session || candidate;
           if (candidate?.currentSession || candidate?.session) hasCurrentSession = true;
           if (sessionLike?.refresh_token) hasRefreshToken = true;
+          if (sessionLike?.access_token) hasAccessToken = true;
+          if (sessionLike?.user?.id) hasSessionUser = true;
           const expiresAtValue = Number(sessionLike?.expires_at || 0);
           if (Number.isFinite(expiresAtValue) && expiresAtValue > 0) {
             expiresAt = new Date(expiresAtValue * 1000).toISOString();
             expiresInPast = (expiresAtValue * 1000) <= Date.now();
           }
-          if (hasCurrentSession || hasRefreshToken || expiresAt) break;
+          if (hasCurrentSession || hasRefreshToken || hasAccessToken || hasSessionUser || expiresAt) break;
         }
       } catch {}
     }
@@ -72,6 +78,8 @@ const getSupabaseAuthDebugSnapshot = () => {
     cachedUserId: String(readCachedSupabaseSessionUser()?.id || ''),
     hasCurrentSession,
     hasRefreshToken,
+    hasAccessToken,
+    hasSessionUser,
     expiresAt,
     expiresInPast,
   };

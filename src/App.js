@@ -23315,6 +23315,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             <div>Last event: {String(authDebugInfo?.authEvent || 'none')}</div>
             <div>Stored session: {authDebugInfo?.hasCurrentSession ? 'yes' : 'no'}</div>
             <div>Refresh token: {authDebugInfo?.hasRefreshToken ? 'yes' : 'no'}</div>
+            <div>Access token: {authDebugInfo?.hasAccessToken ? 'yes' : 'no'}</div>
+            <div>User in blob: {authDebugInfo?.hasSessionUser ? 'yes' : 'no'}</div>
             <div>Expires at: {String(authDebugInfo?.expiresAt || 'unknown')}</div>
             <div>Expired: {authDebugInfo?.expiresInPast ? 'yes' : 'no'}</div>
           </div>
