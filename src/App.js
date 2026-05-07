@@ -5423,11 +5423,16 @@ function App() {
     const storedDateWithinTrip = storedDateTs !== null && startTs !== null && endTs !== null
       && storedDateTs >= startTs
       && storedDateTs <= endTs;
+    const komoSlots = (tripKomoState?.[String(sc.id || '').trim()] || {}).slots || {};
+    const komoDateKeys = Object.keys(komoSlots).filter((dk) => {
+      const day = komoSlots[dk];
+      return day && typeof day === 'object' && Object.values(day).some((arr) => Array.isArray(arr) && arr.length > 0);
+    }).sort();
     const immediateDateKey = storedDateWithinTrip
       ? storedDateKey
       : todayWithinTrip
         ? todayKey
-        : getSubCalStartRaw(sc);
+        : (komoDateKeys[0] || getSubCalStartRaw(sc));
     if (immediateDateKey) setSubCalSelectedDate(new Date(`${immediateDateKey}T00:00:00`));
     if (sc.weather_location && sc.weather_lat && sc.weather_lon) {
       setSubCalWeatherLocation(sc.weather_location);
@@ -5502,7 +5507,8 @@ function App() {
       : todayWithinTrip
         ? todayKey
         : (
-          itineraryDateKeys[0]
+          komoDateKeys[0]
+          || itineraryDateKeys[0]
           || photoDateKeys[0]
           || getSubCalStartRaw(sc)
         );
