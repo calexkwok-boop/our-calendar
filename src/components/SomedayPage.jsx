@@ -2174,8 +2174,11 @@ const SomedayPage = ({
     const startY = chapterTotalHeight > 20 ? chapterTotalHeight + 32 : 20;
     const nextPinsSnapshot = buildAutoSortedPins(pins, onAddDream, onDeleteDream, onUpdateDream, startY, chapters);
     setPins(nextPinsSnapshot);
-    if (nextPinsSnapshot.length > 0) onPersistPinLayout?.(nextPinsSnapshot);
-  }, [chapters, chapterTotalHeight, onAddDream, onDeleteDream, onPersistPinLayout, onUpdateDream, pins]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (nextPinsSnapshot.length > 0) {
+      onPersistPinLayout?.(nextPinsSnapshot);
+      onPersistBoardSnapshot?.(nextPinsSnapshot);
+    }
+  }, [chapters, chapterTotalHeight, onAddDream, onDeleteDream, onPersistBoardSnapshot, onPersistPinLayout, onUpdateDream, pins]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Supabase helpers ────────────────────────────────────────────────────────
   const pinToRow = (pin, chapterId, position = 0) => ({
@@ -2643,11 +2646,12 @@ const SomedayPage = ({
       if (pin && didDrag.current) {
         onUpdateDream?.({ ...pin });
         onPersistPinLayout?.([pin]);
+        onPersistBoardSnapshot?.(pins);
       }
       else if (pin && pin.type !== 'label' && pin.type !== 'sticker') handlePinClick(pin);
     }
     setDragging(null);
-  }, [dragging, pins, onPersistPinLayout, onUpdateDream]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dragging, pins, onPersistBoardSnapshot, onPersistPinLayout, onUpdateDream]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     window.addEventListener('mousemove', onMove);
@@ -2831,7 +2835,10 @@ const SomedayPage = ({
     const startY = chapterTotalHeight > 20 ? chapterTotalHeight + 32 : 20;
     const nextPinsSnapshot = buildAutoSortedPins(pins, onAddDream, onDeleteDream, onUpdateDream, startY, chapters);
     setPins(nextPinsSnapshot);
-    if (nextPinsSnapshot.length > 0) onPersistPinLayout?.(nextPinsSnapshot);
+    if (nextPinsSnapshot.length > 0) {
+      onPersistPinLayout?.(nextPinsSnapshot);
+      onPersistBoardSnapshot?.(nextPinsSnapshot);
+    }
   }
 
   function addPin(data) {
