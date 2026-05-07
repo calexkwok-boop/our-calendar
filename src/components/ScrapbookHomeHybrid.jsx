@@ -766,7 +766,7 @@ const ScrapbookHomeHybrid = ({
           ) : (
             <div className="flex min-h-[152px] flex-col items-start justify-between rounded-[18px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-sky-100 via-cyan-50 to-emerald-100 p-4 dark:from-sky-900/30 dark:via-slate-900 dark:to-emerald-900/20">
               <div>
-                <div className="text-sm font-semibold text-gray-900 dark:text-white">Where do you want to go?</div>
+                <div className="font-handwritten text-xl font-bold text-gray-900 dark:text-white">Where do you want to go?</div>
                 <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   Plan a trip and it will show up here as your next adventure.
                 </div>

@@ -1391,6 +1391,7 @@ const getQuickThoughtsStorageKey = (userId) => `quick-thoughts-${String(userId |
 const getBucketListStorageKey = (userId) => `bucket-list-${String(userId || 'guest').trim() || 'guest'}`;
 const getSomedayChaptersStorageKey = (userId) => `someday-chapters-${String(userId || 'guest').trim() || 'guest'}`;
 const getTripKomoStorageKey = (userId) => `trip-komo-links-${String(userId || 'guest').trim() || 'guest'}`;
+const getTripKomoTripStorageKey = (userId, tripId) => `trip-komo-trip:${String(userId || 'guest').trim() || 'guest'}:${String(tripId || '').trim()}`;
 const TRIP_KOMO_LAST_STORAGE_KEY = 'trip-komo-links-last';
 const LOCAL_PERSIST_DEBOUNCE_MS = 350;
 const REMOTE_PERSIST_DEBOUNCE_MS = 900;
@@ -1525,13 +1526,40 @@ const readTripKomoState = (userId) => {
       }
       return merged;
     };
+    const readPerTripState = (ownerKey) => {
+      const result = {};
+      const prefix = `trip-komo-trip:${String(ownerKey || 'guest').trim() || 'guest'}:`;
+      for (let index = 0; index < window.localStorage.length; index += 1) {
+        const key = window.localStorage.key(index);
+        if (!key || !key.startsWith(prefix)) continue;
+        const tripId = String(key.slice(prefix.length) || '').trim();
+        if (!tripId) continue;
+        try {
+          const parsed = normalizeStoredState(JSON.parse(window.localStorage.getItem(key) || '{}'));
+          if (Object.keys(parsed).length > 0) {
+            result[tripId] = parsed;
+          }
+        } catch {}
+      }
+      return result;
+    };
     const primaryKey = getTripKomoStorageKey(userId);
     const primaryParsed = normalizeStoredState(JSON.parse(window.localStorage.getItem(primaryKey) || '{}'));
     const lastParsed = normalizeStoredState(JSON.parse(window.localStorage.getItem(TRIP_KOMO_LAST_STORAGE_KEY) || '{}'));
     const normalizedUserId = String(userId || 'guest').trim() || 'guest';
     const guestParsed = normalizeStoredState(JSON.parse(window.localStorage.getItem(getTripKomoStorageKey('guest')) || '{}'));
-    if (normalizedUserId === 'guest') return mergeTripKomoStates(guestParsed, lastParsed);
-    return mergeTripKomoStates(mergeTripKomoStates(guestParsed, lastParsed), primaryParsed);
+    const guestPerTrip = readPerTripState('guest');
+    const userPerTrip = normalizedUserId === 'guest' ? {} : readPerTripState(normalizedUserId);
+    if (normalizedUserId === 'guest') {
+      return mergeTripKomoStates(mergeTripKomoStates(guestParsed, guestPerTrip), lastParsed);
+    }
+    return mergeTripKomoStates(
+      mergeTripKomoStates(
+        mergeTripKomoStates(guestParsed, guestPerTrip),
+        lastParsed
+      ),
+      mergeTripKomoStates(primaryParsed, userPerTrip)
+    );
   } catch {
     return {};
   }
@@ -1543,8 +1571,26 @@ const writeTripKomoState = (userId, state) => {
     const normalizedUserId = String(userId || 'guest').trim() || 'guest';
     window.localStorage.setItem(getTripKomoStorageKey(normalizedUserId), JSON.stringify(safeState));
     window.localStorage.setItem(TRIP_KOMO_LAST_STORAGE_KEY, JSON.stringify(safeState));
+    Object.entries(safeState).forEach(([tripId, tripValue]) => {
+      const normalizedTripId = String(tripId || '').trim();
+      if (!normalizedTripId) return;
+      const safeTripValue = tripValue && typeof tripValue === 'object' && !Array.isArray(tripValue) ? tripValue : {};
+      window.localStorage.setItem(
+        getTripKomoTripStorageKey(normalizedUserId, normalizedTripId),
+        JSON.stringify(safeTripValue)
+      );
+    });
     if (normalizedUserId !== 'guest') {
       window.localStorage.setItem(getTripKomoStorageKey('guest'), JSON.stringify(safeState));
+      Object.entries(safeState).forEach(([tripId, tripValue]) => {
+        const normalizedTripId = String(tripId || '').trim();
+        if (!normalizedTripId) return;
+        const safeTripValue = tripValue && typeof tripValue === 'object' && !Array.isArray(tripValue) ? tripValue : {};
+        window.localStorage.setItem(
+          getTripKomoTripStorageKey('guest', normalizedTripId),
+          JSON.stringify(safeTripValue)
+        );
+      });
     }
   } catch {}
 };
