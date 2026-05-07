@@ -25406,6 +25406,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     const nextPositionPatch = {};
     const chapterPinUpdates = [];
     const chapterPositionById = new Map();
+    const chapterUpdatesById = new Map();
     (Array.isArray(pins) ? pins : []).forEach((pin) => {
       if (!pin || pin.type === 'label' || pin.type === 'sticker') return;
       if (pin.x == null || pin.y == null) return;
@@ -25422,6 +25423,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           rot: pin.rot ?? 0,
           position: nextPosition,
         });
+        chapterUpdatesById.set(String(pin.id || ''), {
+          x: pin.x,
+          y: pin.y,
+          rot: pin.rot ?? 0,
+          chapterId,
+          position: nextPosition,
+        });
       }
     });
     if (Object.keys(nextPositionPatch).length === 0) return;
@@ -25431,25 +25439,44 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       return next;
     });
     if (chapterPinUpdates.length > 0) {
-      const updatesByPinId = new Map(
-        chapterPinUpdates.map((pin) => [
-          String(pin.id || ''),
-          { x: pin.x, y: pin.y, rot: pin.rot, chapterId: pin.chapterId },
-        ])
-      );
-      setKomoChapters((prev) => (
-        Array.isArray(prev)
-          ? prev.map((chapter) => {
-              const chapterId = String(chapter?.id || '').trim();
-              const nextPins = (Array.isArray(chapter?.pins) ? chapter.pins : []).map((pin) => {
-                const patch = updatesByPinId.get(String(pin?.id || ''));
-                if (!patch || String(patch.chapterId || '').trim() !== chapterId) return pin;
-                return { ...pin, x: patch.x, y: patch.y, rot: patch.rot };
-              });
-              return nextPins === chapter?.pins ? chapter : { ...chapter, pins: nextPins };
-            })
-          : prev
-      ));
+      const komoOwnerKey = String(currentUser || 'guest').trim() || 'guest';
+      setKomoChapters((prev) => {
+        const nextChapters = (
+          Array.isArray(prev)
+            ? prev.map((chapter) => {
+                const chapterId = String(chapter?.id || '').trim();
+                const nextPins = (Array.isArray(chapter?.pins) ? chapter.pins : [])
+                  .map((pin) => {
+                    const patch = chapterUpdatesById.get(String(pin?.id || ''));
+                    if (!patch || String(patch.chapterId || '').trim() !== chapterId) return pin;
+                    return {
+                      ...pin,
+                      x: patch.x,
+                      y: patch.y,
+                      rot: patch.rot,
+                      position: patch.position,
+                    };
+                  })
+                  .sort((a, b) => {
+                    const posA = Number.isFinite(Number(a?.position)) ? Number(a.position) : Number.MAX_SAFE_INTEGER;
+                    const posB = Number.isFinite(Number(b?.position)) ? Number(b.position) : Number.MAX_SAFE_INTEGER;
+                    if (posA !== posB) return posA - posB;
+                    const yA = Number.isFinite(Number(a?.y)) ? Number(a.y) : Number.MAX_SAFE_INTEGER;
+                    const yB = Number.isFinite(Number(b?.y)) ? Number(b.y) : Number.MAX_SAFE_INTEGER;
+                    if (yA !== yB) return yA - yB;
+                    const xA = Number.isFinite(Number(a?.x)) ? Number(a.x) : Number.MAX_SAFE_INTEGER;
+                    const xB = Number.isFinite(Number(b?.x)) ? Number(b.x) : Number.MAX_SAFE_INTEGER;
+                    return xA - xB;
+                  });
+                return nextPins === chapter?.pins ? chapter : { ...chapter, pins: nextPins };
+              })
+            : prev
+        );
+        if (komoOwnerKey && komoOwnerKey !== 'guest') {
+          writeSomedayChaptersState(komoOwnerKey, nextChapters);
+        }
+        return nextChapters;
+      });
     }
     if (chapterPinUpdates.length > 0) {
       Promise.all(

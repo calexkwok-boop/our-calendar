@@ -57,7 +57,7 @@ export const DESTINATION_IMAGE_OVERRIDES = {
   'pacific-coast-highway': 'https://media.timeout.com/images/105766941/1920/1440/image.webp',
   'route-66': 'https://roads.porsche.com/wp-content/uploads/2022/11/route-66-road-trip-straight-road-1920x1245.webp',
   'ring-road': 'https://theloverspassport.com/wp-content/uploads/2025/07/The-Ring-Road-in-Iceland.jpg',
-  'the-garden-route': 'https://cdn-echfg.nitrocdn.com/nyOciWJIUKdTKvcoEGnjDPgxDGoCaawL/assets/images/optimized/rev-e049a23/africasafaritrips.com/wp-content/uploads/2024/07/South-Africa_Images-for-Landing-Pages-3-1536x1044.png',
+  'the-garden-route': 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Tsitsikamma_Park.JPG/500px-Tsitsikamma_Park.JPG',
   'amalfi-coast-drive': 'https://duespaghetti.com/wp-content/uploads/2023/07/1-1-1024x683.jpg',
   'the-icefields-parkway': 'https://www.travelandleisure.com/thmb/clAPBgePJldJA7iOgkI8fYFxdIA=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/TAL-icefields-parkway-canada-GLACIERHGWAY0225-f736d5daa8d64ac6abe49df5dc283823.jpg',
   'tuscany-road-trip': 'https://www.happy.rentals/admin/uploads/The-iconic-cypress-lined-road-in-Asciano-Province-of-Siena-Crete-Senesi-11041.jpg',
