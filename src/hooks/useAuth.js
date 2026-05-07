@@ -30,14 +30,39 @@ const getSupabaseAuthDebugSnapshot = () => {
       tokenKeyCount: 0,
       tokenKeys: [],
       cachedUserId: '',
+      hasCurrentSession: false,
+      hasRefreshToken: false,
+      expiresAt: '',
+      expiresInPast: false,
     };
   }
   const tokenKeys = [];
+  let hasCurrentSession = false;
+  let hasRefreshToken = false;
+  let expiresAt = '';
+  let expiresInPast = false;
   for (let i = 0; i < window.localStorage.length; i += 1) {
     const key = window.localStorage.key(i);
     if (!key) continue;
     if ((key.startsWith('sb-') && key.includes('-auth-token')) || key === 'komo-supabase-auth') {
       tokenKeys.push(key);
+      try {
+        const raw = window.localStorage.getItem(key);
+        if (!raw) continue;
+        const parsed = JSON.parse(raw);
+        const candidates = Array.isArray(parsed) ? parsed : [parsed];
+        for (const candidate of candidates) {
+          const sessionLike = candidate?.currentSession || candidate?.session || candidate;
+          if (candidate?.currentSession || candidate?.session) hasCurrentSession = true;
+          if (sessionLike?.refresh_token) hasRefreshToken = true;
+          const expiresAtValue = Number(sessionLike?.expires_at || 0);
+          if (Number.isFinite(expiresAtValue) && expiresAtValue > 0) {
+            expiresAt = new Date(expiresAtValue * 1000).toISOString();
+            expiresInPast = (expiresAtValue * 1000) <= Date.now();
+          }
+          if (hasCurrentSession || hasRefreshToken || expiresAt) break;
+        }
+      } catch {}
     }
   }
   return {
@@ -45,6 +70,10 @@ const getSupabaseAuthDebugSnapshot = () => {
     tokenKeyCount: tokenKeys.length,
     tokenKeys,
     cachedUserId: String(readCachedSupabaseSessionUser()?.id || ''),
+    hasCurrentSession,
+    hasRefreshToken,
+    expiresAt,
+    expiresInPast,
   };
 };
 

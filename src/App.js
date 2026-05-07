@@ -23313,6 +23313,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             <div>Token keys: {Number(authDebugInfo?.tokenKeyCount || 0)}</div>
             <div>Cached user: {String(authDebugInfo?.cachedUserId || 'none') || 'none'}</div>
             <div>Last event: {String(authDebugInfo?.authEvent || 'none')}</div>
+            <div>Stored session: {authDebugInfo?.hasCurrentSession ? 'yes' : 'no'}</div>
+            <div>Refresh token: {authDebugInfo?.hasRefreshToken ? 'yes' : 'no'}</div>
+            <div>Expires at: {String(authDebugInfo?.expiresAt || 'unknown')}</div>
+            <div>Expired: {authDebugInfo?.expiresInPast ? 'yes' : 'no'}</div>
           </div>
           <button
             onClick={handleGoogleSignIn}
