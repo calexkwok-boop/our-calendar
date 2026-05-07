@@ -1391,6 +1391,9 @@ const getQuickThoughtsStorageKey = (userId) => `quick-thoughts-${String(userId |
 const getBucketListStorageKey = (userId) => `bucket-list-${String(userId || 'guest').trim() || 'guest'}`;
 const getSomedayChaptersStorageKey = (userId) => `someday-chapters-${String(userId || 'guest').trim() || 'guest'}`;
 const getSomedayBoardPinsStorageKey = (userId) => `someday-board-pins-${String(userId || 'guest').trim() || 'guest'}`;
+const getKomoStorageOwnerKey = (authUserId, fallbackIdentity = '') => (
+  String(authUserId || fallbackIdentity || 'guest').trim() || 'guest'
+);
 const getTripKomoStorageKey = (userId) => `trip-komo-links-${String(userId || 'guest').trim() || 'guest'}`;
 const getTripKomoTripStorageKey = (userId, tripId) => `trip-komo-trip:${String(userId || 'guest').trim() || 'guest'}:${String(tripId || '').trim()}`;
 const TRIP_KOMO_LAST_STORAGE_KEY = 'trip-komo-links-last';
@@ -21040,19 +21043,34 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, layerOrder]);
 
   useEffect(() => {
-    const komoOwnerKey = String(currentUser || 'guest').trim() || 'guest';
+    const komoOwnerKey = getKomoStorageOwnerKey(user?.id, currentUser);
+    const legacyKomoOwnerKey = String(currentUser || 'guest').trim() || 'guest';
     const tripKomoOwnerKey = String(user?.id || 'guest').trim() || 'guest';
-    setKomoChapters(readSomedayChaptersState(komoOwnerKey));
-    setSomedayBoardPinsSnapshot(readSomedayBoardPinsState(komoOwnerKey));
+    const hydratedChapters = readSomedayChaptersState(komoOwnerKey);
+    const hydratedBoardPins = readSomedayBoardPinsState(komoOwnerKey);
+    setKomoChapters(
+      hydratedChapters.length > 0 || legacyKomoOwnerKey === komoOwnerKey
+        ? hydratedChapters
+        : readSomedayChaptersState(legacyKomoOwnerKey)
+    );
+    setSomedayBoardPinsSnapshot(
+      hydratedBoardPins.length > 0 || legacyKomoOwnerKey === komoOwnerKey
+        ? hydratedBoardPins
+        : readSomedayBoardPinsState(legacyKomoOwnerKey)
+    );
     setTripKomoState(readTripKomoState(user?.id));
     setTripKomoHydratedUserId(tripKomoOwnerKey);
   }, [currentUser, user?.id]);
 
   useEffect(() => {
-    const komoOwnerKey = String(currentUser || 'guest').trim() || 'guest';
+    const komoOwnerKey = getKomoStorageOwnerKey(user?.id, currentUser);
+    const legacyKomoOwnerKey = String(currentUser || 'guest').trim() || 'guest';
     if (!komoOwnerKey || komoOwnerKey === 'guest' || !komoChapters?.length) return;
     writeSomedayChaptersState(komoOwnerKey, komoChapters);
-  }, [currentUser, komoChapters]);
+    if (legacyKomoOwnerKey && legacyKomoOwnerKey !== 'guest' && legacyKomoOwnerKey !== komoOwnerKey) {
+      writeSomedayChaptersState(legacyKomoOwnerKey, komoChapters);
+    }
+  }, [currentUser, user?.id, komoChapters]);
 
   useEffect(() => {
     const linkedChapterIds = Array.from(new Set(
@@ -25495,7 +25513,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       return next;
     });
     if (chapterPinUpdates.length > 0) {
-      const komoOwnerKey = String(currentUser || 'guest').trim() || 'guest';
+      const komoOwnerKey = getKomoStorageOwnerKey(user?.id, currentUser);
       setKomoChapters((prev) => {
         const nextChapters = (
           Array.isArray(prev)
@@ -25548,10 +25566,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   };
 
   const handleSomedayPersistBoardSnapshot = (pins = []) => {
-    const komoOwnerKey = String(currentUser || 'guest').trim() || 'guest';
+    const komoOwnerKey = getKomoStorageOwnerKey(user?.id, currentUser);
+    const legacyKomoOwnerKey = String(currentUser || 'guest').trim() || 'guest';
     const nextPins = Array.isArray(pins) ? pins : [];
     setSomedayBoardPinsSnapshot(nextPins);
     writeSomedayBoardPinsState(komoOwnerKey, nextPins);
+    if (legacyKomoOwnerKey && legacyKomoOwnerKey !== 'guest' && legacyKomoOwnerKey !== komoOwnerKey) {
+      writeSomedayBoardPinsState(legacyKomoOwnerKey, nextPins);
+    }
   };
 
   // Called when a pin is deleted from SomedayPage — remove from whichever list owns it
