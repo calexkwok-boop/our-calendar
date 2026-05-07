@@ -3306,6 +3306,8 @@ function App() {
   const [tripKomoHydratedUserId, setTripKomoHydratedUserId] = useState(null);
   const bucketListRemoteSyncRef = useRef(false);
   const quickThoughtsRemoteSyncRef = useRef(false);
+  const tripKomoRemoteWriteTimerRef = useRef(null);
+  const tripKomoPrevStateRef = useRef(null);
   const [memories, setMemories] = useState([]);
   const [memoriesHydratedUserId, setMemoriesHydratedUserId] = useState(null);
   const [memoryTripRosterById, setMemoryTripRosterById] = useState({});
@@ -4408,6 +4410,28 @@ function App() {
       const dedupedRows = Array.from(dedupedMap.values());
       if (String(activeLayerIdRef.current || '') !== requestedLayerId) return dedupedRows;
       setSubCalendars(dedupedRows);
+
+      // Restore komo/itinerary state from Supabase for any trip where localStorage is empty
+      // (happens after a hard close on iOS which wipes WKWebView localStorage).
+      const rowsWithKomo = dedupedRows.filter(
+        (sc) => sc.komo_state && typeof sc.komo_state === 'object' && Object.keys(sc.komo_state).length > 0
+      );
+      if (rowsWithKomo.length > 0) {
+        setTripKomoState((prev) => {
+          const next = { ...(prev || {}) };
+          rowsWithKomo.forEach((sc) => {
+            const tid = String(sc.id || '').trim();
+            if (!tid) return;
+            const localSlots = prev?.[tid]?.slots || {};
+            const localHasCards = Object.values(localSlots).some(
+              (day) => typeof day === 'object' && Object.values(day).some((arr) => Array.isArray(arr) && arr.length > 0)
+            );
+            if (!localHasCards) next[tid] = sc.komo_state;
+          });
+          return next;
+        });
+      }
+
       setActiveSubCalendar((prev) => {
         if (!prev?.id) return prev;
         const prevLayerId = String(prev?.layer_id || prev?.calendar_id || '').trim();
@@ -15292,13 +15316,24 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (loadDataRetryTimerRef2.current) { clearTimeout(loadDataRetryTimerRef2.current); loadDataRetryTimerRef2.current = null; }
     const loadData = async () => {
       try {
-        const sessionResult = await withTimeout(supabase.auth.getSession(), 4000, { data: { session: null } });
+        const sessionResult = await withTimeout(supabase.auth.getSession(), 12000, { timedOut: true });
+        if (sessionResult?.timedOut) {
+          loadDataFailedRef.current = true;
+          if (!loadDataRetryTimerRef2.current) {
+            loadDataRetryTimerRef2.current = setTimeout(() => {
+              setLayerRefreshToken((p) => p + 1);
+            }, 3000);
+          }
+          return;
+        }
         const session = sessionResult?.data?.session || null;
         let authUser = session?.user || null;
         try {
-          const userResult = await withTimeout(supabase.auth.getUser(), 4000, { data: { user: null } });
+          const userResult = await withTimeout(supabase.auth.getUser(), 12000, { timedOut: true });
+          if (!userResult?.timedOut) {
           const userData = userResult?.data || null;
           if (userData?.user?.id) authUser = userData.user;
+          }
         } catch (authLookupError) {
           console.warn('Could not verify auth user before loading calendars:', authLookupError);
         }
@@ -21209,6 +21244,26 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (tripKomoHydratedUserId !== tripKomoOwnerKey) return;
     writeTripKomoState(user?.id, tripKomoState);
   }, [user?.id, tripKomoState, tripKomoHydratedUserId]);
+
+  // Debounce-write changed trip komo states to Supabase so they survive a hard close.
+  useEffect(() => {
+    if (!user?.id || !tripKomoHydratedUserId) return;
+    const prev = tripKomoPrevStateRef.current;
+    tripKomoPrevStateRef.current = tripKomoState;
+    if (!prev) return;
+    const changedIds = Object.keys(tripKomoState).filter((id) => tripKomoState[id] !== prev[id]);
+    if (changedIds.length === 0) return;
+    if (tripKomoRemoteWriteTimerRef.current) clearTimeout(tripKomoRemoteWriteTimerRef.current);
+    tripKomoRemoteWriteTimerRef.current = setTimeout(async () => {
+      for (const tripId of changedIds) {
+        const komoData = tripKomoState[tripId];
+        if (!komoData) continue;
+        try {
+          await supabase.from('sub_calendars').update({ komo_state: komoData }).eq('id', tripId);
+        } catch {}
+      }
+    }, REMOTE_PERSIST_DEBOUNCE_MS);
+  }, [tripKomoState, user?.id, tripKomoHydratedUserId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
