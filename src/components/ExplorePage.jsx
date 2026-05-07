@@ -1433,7 +1433,8 @@ export default function ExplorePage({
   return (
     <div className="min-h-screen bg-[#faf8f3] dark:bg-[#0e1520] pb-28">
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap'); .font-handwritten { font-family: 'Caveat', cursive; }`}</style>
-      <div className="bg-white dark:bg-[#131c2e] border-b border-stone-200 dark:border-white/[0.05] px-4 pt-5 pb-3 sticky top-0 z-30">
+      <div className="sticky top-0 z-30 border-b border-stone-200 bg-white/92 px-4 pt-5 pb-3 backdrop-blur-sm dark:border-white/[0.05] dark:bg-[#131c2e]/92">
+        <div className="mx-auto w-full max-w-5xl">
         <h1 className="font-handwritten text-4xl font-bold text-gray-900 dark:text-gray-100 mb-3">Explore</h1>
         <div className="flex gap-2">
           <div className="flex-1 flex items-center gap-2 bg-stone-100 dark:bg-white/[0.06] rounded-2xl px-3.5 py-2.5">
@@ -1458,9 +1459,11 @@ export default function ExplorePage({
             Filter
           </button>
         </div>
+        </div>
       </div>
 
       {/* ── Search results ─────────────────────────────────────────────────── */}
+      <div className="mx-auto w-full max-w-5xl px-3 pt-2 sm:px-4">
       {search.trim() && (
         <>
           <p className="text-[10px] font-medium tracking-widest uppercase text-gray-400 dark:text-gray-600 px-4 pt-5 pb-3">
@@ -1588,6 +1591,8 @@ export default function ExplorePage({
           )}
         </>
       )}
+
+      </div>
 
       <FilterDrawer open={drawerOpen} sources={sources} onToggle={toggleSource} onClose={() => setDrawerOpen(false)} />
 

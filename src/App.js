@@ -2075,6 +2075,17 @@ const readHeaderModuleLayoutFromPageTheme = (raw) => {
   );
 };
 
+const LAYER_CACHE_KEY = (uid) => `layer-cache-v1:${uid}`;
+const readLayerCache = (uid) => {
+  try {
+    const raw = localStorage.getItem(LAYER_CACHE_KEY(uid));
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+};
+const writeLayerCache = (uid, layers) => {
+  try { localStorage.setItem(LAYER_CACHE_KEY(uid), JSON.stringify(layers)); } catch {}
+};
+
 // Source: ESPN Warriors 2025-26 schedule (remaining regular season), captured Mar 12, 2026.
 // Times are set in Pacific Time for this app's event time fields.
 const WARRIORS_REMAINING_2026_EVENTS_PT = Object.freeze([
@@ -15253,9 +15264,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   };
 
   const loadDataInFlightRef = useRef(false);
+  const loadDataFailedRef = useRef(false);
+  const loadDataRetryTimerRef2 = useRef(null);
   useEffect(() => {
     if (loadDataInFlightRef.current) return;
     loadDataInFlightRef.current = true;
+    if (loadDataRetryTimerRef2.current) { clearTimeout(loadDataRetryTimerRef2.current); loadDataRetryTimerRef2.current = null; }
     const loadData = async () => {
       try {
         const sessionResult = await withTimeout(supabase.auth.getSession(), 4000, { data: { session: null } });
@@ -15271,7 +15285,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         const userId = authUser?.id;
         const userEmail = authUser?.email;
         const userPhone = authUser?.phone;
-        if (!userId) return;
+        if (!userId) { loadDataFailedRef.current = true; return; }
+
+        // Restore cached layers immediately so UI isn't blank while the DB loads
+        const cachedLayers = readLayerCache(userId);
+        if (cachedLayers?.length > 0) setLayers(cachedLayers);
+
         let loadedLayers = await loadLayersForUser(userId, userEmail, userPhone);
         if (!loadedLayers || loadedLayers.length === 0) {
           // Retry once; loadLayersForUser already contains bootstrap logic.
@@ -15279,15 +15298,26 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         }
 
         if (!loadedLayers || loadedLayers.length === 0) {
-          setLayers([]);
-          setActiveLayerId(null);
-          setEvents({});
-          setSharedCalendars([]);
-          setMyShares([]);
-          setSharedListGroups([]);
-          setSharedListItems([]);
+          loadDataFailedRef.current = true;
+          // Don't wipe cached layers — keep last known state visible while retrying.
+          // If we have nothing cached either, clear to show empty state.
+          if (!cachedLayers?.length) {
+            setLayers([]);
+            setActiveLayerId(null);
+            setEvents({});
+            setSharedCalendars([]);
+            setMyShares([]);
+            setSharedListGroups([]);
+            setSharedListItems([]);
+          }
+          // Auto-retry after 8 s in case Supabase just had a blip
+          loadDataRetryTimerRef2.current = setTimeout(() => {
+            setLayerRefreshToken((p) => p + 1);
+          }, 8000);
           return;
         }
+        loadDataFailedRef.current = false;
+        writeLayerCache(userId, loadedLayers);
         const persistedLayerId = localStorage.getItem(`active-layer-${userId}`);
         const selectedLayerId = (
           activeLayerId && loadedLayers.some(layer => String(layer.id) === String(activeLayerId))
@@ -15435,6 +15465,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     return undefined;
   }, [activeLayerId, layerRefreshToken]);
+
+  // When the app becomes visible again or auth resolves while layers are empty due to a prior failure, retry.
+  useEffect(() => {
+    if (!user?.id || !isAppVisible || layers.length > 0 || !loadDataFailedRef.current) return;
+    setLayerRefreshToken((p) => p + 1);
+  }, [user?.id, isAppVisible, layers.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auth session lifecycle is managed by useAuth (see hooks/useAuth.js).
 
