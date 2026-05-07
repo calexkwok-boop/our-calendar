@@ -23,6 +23,31 @@ const readCachedSupabaseSessionUser = () => {
   return null;
 };
 
+const getSupabaseAuthDebugSnapshot = () => {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return {
+      origin: '',
+      tokenKeyCount: 0,
+      tokenKeys: [],
+      cachedUserId: '',
+    };
+  }
+  const tokenKeys = [];
+  for (let i = 0; i < window.localStorage.length; i += 1) {
+    const key = window.localStorage.key(i);
+    if (!key) continue;
+    if ((key.startsWith('sb-') && key.includes('-auth-token')) || key === 'komo-supabase-auth') {
+      tokenKeys.push(key);
+    }
+  }
+  return {
+    origin: String(window.location?.origin || ''),
+    tokenKeyCount: tokenKeys.length,
+    tokenKeys,
+    cachedUserId: String(readCachedSupabaseSessionUser()?.id || ''),
+  };
+};
+
 const withTimeout = async (promise, timeoutMs, fallbackValue = null) => {
   let timeoutId = null;
   try {
@@ -54,6 +79,11 @@ export function useAuth({
   const [showAuth, setShowAuth] = useState(false);
   const [authError, setAuthError] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
+  const [authDebugInfo, setAuthDebugInfo] = useState(() => ({
+    ...getSupabaseAuthDebugSnapshot(),
+    sessionStatus: 'boot',
+    authEvent: '',
+  }));
   const preservedProfilePhotoUrlRef = useRef('');
 
   // Keep onUserHydrated in a ref so the auth effect (which runs once) always
@@ -77,6 +107,11 @@ export function useAuth({
       ));
       setShowAuth(!sessionUser);
       onUserHydratedRef.current?.(sessionUser ?? null);
+      setAuthDebugInfo((prev) => ({
+        ...prev,
+        ...getSupabaseAuthDebugSnapshot(),
+        sessionStatus: sessionUser?.id ? 'session-user' : 'no-session-user',
+      }));
 
       // Refresh full user object in background for updated metadata / avatar only.
       if (sessionUserId) {
@@ -96,21 +131,55 @@ export function useAuth({
 
     const cachedSessionUser = readCachedSupabaseSessionUser();
     if (cachedSessionUser?.id) {
+      setAuthDebugInfo((prev) => ({
+        ...prev,
+        ...getSupabaseAuthDebugSnapshot(),
+        sessionStatus: 'cached-session-user',
+      }));
       void hydrateAuthUser(cachedSessionUser);
+    } else {
+      setAuthDebugInfo((prev) => ({
+        ...prev,
+        ...getSupabaseAuthDebugSnapshot(),
+        sessionStatus: 'no-cached-session-user',
+      }));
     }
 
     withTimeout(supabase.auth.getSession(), 12000, { timedOut: true })
       .then(async (sessionResult) => {
         if (sessionResult?.timedOut) {
+          setAuthDebugInfo((prev) => ({
+            ...prev,
+            ...getSupabaseAuthDebugSnapshot(),
+            sessionStatus: 'getSession-timeout',
+          }));
           setIsLoading(false);
           return;
         }
+        setAuthDebugInfo((prev) => ({
+          ...prev,
+          ...getSupabaseAuthDebugSnapshot(),
+          sessionStatus: sessionResult?.data?.session?.user?.id ? 'getSession-user' : 'getSession-null',
+        }));
         await hydrateAuthUser(sessionResult?.data?.session?.user ?? null);
         setIsLoading(false);
       })
-      .catch(() => setIsLoading(false));
+      .catch(() => {
+        setAuthDebugInfo((prev) => ({
+          ...prev,
+          ...getSupabaseAuthDebugSnapshot(),
+          sessionStatus: 'getSession-error',
+        }));
+        setIsLoading(false);
+      });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setAuthDebugInfo((prev) => ({
+        ...prev,
+        ...getSupabaseAuthDebugSnapshot(),
+        authEvent: String(event || ''),
+        sessionStatus: session?.user?.id ? `auth:${String(event || '').toLowerCase() || 'session'}` : `auth:${String(event || 'signed_out').toLowerCase()}`,
+      }));
       void hydrateAuthUser(session?.user ?? null);
     });
 
@@ -135,6 +204,7 @@ export function useAuth({
     setAuthError,
     authBusy,
     setAuthBusy,
+    authDebugInfo,
     preservedProfilePhotoUrlRef,
   };
 }
