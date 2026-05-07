@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 const HOME_DAY_SECTIONS = [
   { key: 'morning', label: 'Morning', emptyTitle: 'Ease into the day', emptyCopy: 'Add breakfast, a workout, or one clear priority.' },
@@ -581,7 +581,26 @@ export default function useHomeScreenData({
   const collageDayKey = `${todayKey}:${String(user?.id || 'guest').trim()}`;
   if (_rawCollagePhotos.length > 0 && frozenCollageRef.current?.dayKey !== collageDayKey) {
     frozenCollageRef.current = { dayKey: collageDayKey, photos: _rawCollagePhotos };
+    // Persist so the next visit can preload before Supabase data arrives.
+    try { localStorage.setItem(`collage-v1:${collageDayKey}`, JSON.stringify(_rawCollagePhotos)); } catch {}
   }
+
+  // On mount (and whenever auth/day changes), kick off image preloads for yesterday's cached URLs
+  // so they're already in the browser cache by the time the collage renders.
+  useEffect(() => {
+    const uid = String(user?.id || '').trim();
+    if (!uid) return;
+    try {
+      const cached = JSON.parse(localStorage.getItem(`collage-v1:${todayKey}:${uid}`) || '[]');
+      if (!Array.isArray(cached) || cached.length === 0) return;
+      cached.forEach((url) => {
+        if (!url) return;
+        const img = new Image();
+        img.decoding = 'async';
+        img.src = url;
+      });
+    } catch {}
+  }, [user?.id, todayKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const homeMemoryCollagePhotos =
     frozenCollageRef.current?.dayKey === collageDayKey && frozenCollageRef.current.photos.length > 0
       ? frozenCollageRef.current.photos
