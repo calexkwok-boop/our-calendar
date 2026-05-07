@@ -3308,6 +3308,7 @@ function App() {
   const quickThoughtsRemoteSyncRef = useRef(false);
   const tripKomoRemoteWriteTimerRef = useRef(null);
   const tripKomoPrevStateRef = useRef(null);
+  const pendingKomoWriteRef = useRef({});
   const [memories, setMemories] = useState([]);
   const [memoriesHydratedUserId, setMemoriesHydratedUserId] = useState(null);
   const [memoryTripRosterById, setMemoryTripRosterById] = useState({});
@@ -21093,7 +21094,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         ? hydratedBoardPins
         : readSomedayBoardPinsState(legacyKomoOwnerKey)
     );
-    setTripKomoState(readTripKomoState(user?.id));
+    // Merge localStorage on top of existing state (which may already have Supabase-restored data).
+    // After a hard close localStorage is empty, so stored = {} and prev is preserved.
+    const stored = readTripKomoState(user?.id);
+    setTripKomoState((prev) => ({ ...prev, ...stored }));
     setTripKomoHydratedUserId(tripKomoOwnerKey);
   }, [currentUser, user?.id]);
 
@@ -21245,7 +21249,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     writeTripKomoState(user?.id, tripKomoState);
   }, [user?.id, tripKomoState, tripKomoHydratedUserId]);
 
-  // Debounce-write changed trip komo states to Supabase so they survive a hard close.
+  // Write changed trip komo states to Supabase. Debounced at 200ms; also flushed on visibilitychange
+  // so a hard close doesn't lose the last drop.
   useEffect(() => {
     if (!user?.id || !tripKomoHydratedUserId) return;
     const prev = tripKomoPrevStateRef.current;
@@ -21253,17 +21258,33 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (!prev) return;
     const changedIds = Object.keys(tripKomoState).filter((id) => tripKomoState[id] !== prev[id]);
     if (changedIds.length === 0) return;
+    changedIds.forEach((id) => { pendingKomoWriteRef.current[id] = tripKomoState[id]; });
     if (tripKomoRemoteWriteTimerRef.current) clearTimeout(tripKomoRemoteWriteTimerRef.current);
-    tripKomoRemoteWriteTimerRef.current = setTimeout(async () => {
-      for (const tripId of changedIds) {
-        const komoData = tripKomoState[tripId];
-        if (!komoData) continue;
-        try {
-          await supabase.from('sub_calendars').update({ komo_state: komoData }).eq('id', tripId);
-        } catch {}
-      }
-    }, REMOTE_PERSIST_DEBOUNCE_MS);
+    tripKomoRemoteWriteTimerRef.current = setTimeout(() => {
+      const toWrite = { ...pendingKomoWriteRef.current };
+      pendingKomoWriteRef.current = {};
+      Object.entries(toWrite).forEach(([tid, komoData]) => {
+        if (!komoData) return;
+        supabase.from('sub_calendars').update({ komo_state: komoData }).eq('id', tid).catch(() => {});
+      });
+    }, 200);
   }, [tripKomoState, user?.id, tripKomoHydratedUserId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Flush any pending komo write immediately when the app goes to background (before iOS kills it).
+  useEffect(() => {
+    const flush = () => {
+      if (!document.hidden) return;
+      if (tripKomoRemoteWriteTimerRef.current) { clearTimeout(tripKomoRemoteWriteTimerRef.current); tripKomoRemoteWriteTimerRef.current = null; }
+      const toWrite = { ...pendingKomoWriteRef.current };
+      pendingKomoWriteRef.current = {};
+      Object.entries(toWrite).forEach(([tid, komoData]) => {
+        if (!komoData) return;
+        supabase.from('sub_calendars').update({ komo_state: komoData }).eq('id', tid).catch(() => {});
+      });
+    };
+    document.addEventListener('visibilitychange', flush);
+    return () => document.removeEventListener('visibilitychange', flush);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
