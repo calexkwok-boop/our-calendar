@@ -2044,6 +2044,7 @@ const SomedayPage = ({
   ownerName,
   onChaptersChange,
   onPersistPinLayout,
+  onPersistBoardSnapshot,
   pinPositionOverrides = {},
   onCreateTripFromChapter,
   darkMode = false,
@@ -2051,9 +2052,10 @@ const SomedayPage = ({
   userEmail = '',
   inviteRefreshToken = 0,
   initialChapters = [],
+  boardPinsSnapshot = [],
 }) => {
   const [pins, setPins] = useState(() => mergeBoardPinsWithChapterPins(
-    dreams.map((d, idx) => {
+    (Array.isArray(boardPinsSnapshot) && boardPinsSnapshot.length > 0 ? boardPinsSnapshot : dreams.map((d, idx) => {
       const pos = (d.x == null || d.y == null) ? gridPosition(idx) : { x: d.x, y: d.y, rot: d.rot };
       return {
         ...d,
@@ -2065,7 +2067,7 @@ const SomedayPage = ({
         noteColor: d.noteColor ?? 'yellow',
         type: d.type ?? (d.imageUrl || d.emoji ? 'photo' : 'note'),
       };
-    }),
+    })),
     initialChapters,
     pinPositionOverrides
   ));
@@ -2154,6 +2156,10 @@ const SomedayPage = ({
   useEffect(() => {
     onChaptersChange?.(chapters);
   }, [chapters, onChaptersChange]);
+
+  useEffect(() => {
+    onPersistBoardSnapshot?.(pins);
+  }, [pins, onPersistBoardSnapshot]);
 
   useEffect(() => {
     if (!Array.isArray(initialChapters) || initialChapters.length === 0) return;

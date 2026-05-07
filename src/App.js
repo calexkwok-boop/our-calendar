@@ -1390,6 +1390,7 @@ const getMemoriesStorageKey = (userId) => `saved-memories-${String(userId || 'gu
 const getQuickThoughtsStorageKey = (userId) => `quick-thoughts-${String(userId || 'guest').trim() || 'guest'}`;
 const getBucketListStorageKey = (userId) => `bucket-list-${String(userId || 'guest').trim() || 'guest'}`;
 const getSomedayChaptersStorageKey = (userId) => `someday-chapters-${String(userId || 'guest').trim() || 'guest'}`;
+const getSomedayBoardPinsStorageKey = (userId) => `someday-board-pins-${String(userId || 'guest').trim() || 'guest'}`;
 const getTripKomoStorageKey = (userId) => `trip-komo-links-${String(userId || 'guest').trim() || 'guest'}`;
 const getTripKomoTripStorageKey = (userId, tripId) => `trip-komo-trip:${String(userId || 'guest').trim() || 'guest'}:${String(tripId || '').trim()}`;
 const TRIP_KOMO_LAST_STORAGE_KEY = 'trip-komo-links-last';
@@ -1470,6 +1471,21 @@ const writeSomedayChaptersState = (userId, chapters) => {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(getSomedayChaptersStorageKey(userId), JSON.stringify(Array.isArray(chapters) ? chapters : []));
+  } catch {}
+};
+const readSomedayBoardPinsState = (userId) => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(getSomedayBoardPinsStorageKey(userId)) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+const writeSomedayBoardPinsState = (userId, pins) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(getSomedayBoardPinsStorageKey(userId), JSON.stringify(Array.isArray(pins) ? pins : []));
   } catch {}
 };
 const readTripKomoState = (userId) => {
@@ -3262,6 +3278,7 @@ function App() {
   const [quickThoughts, setQuickThoughts] = useState(() => readQuickThoughtsState('guest'));
   const [bucketList, setBucketList] = useState(() => readBucketListState('guest'));
   const [komoChapters, setKomoChapters] = useState(() => readSomedayChaptersState('guest'));
+  const [somedayBoardPinsSnapshot, setSomedayBoardPinsSnapshot] = useState(() => readSomedayBoardPinsState('guest'));
   const [tripKomoState, setTripKomoState] = useState(() => readTripKomoState('guest'));
   const [tripKomoTouchDrag, setTripKomoTouchDrag] = useState(null);
   const [tripKomoNativeDragActive, setTripKomoNativeDragActive] = useState(false);
@@ -21026,6 +21043,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const komoOwnerKey = String(currentUser || 'guest').trim() || 'guest';
     const tripKomoOwnerKey = String(user?.id || 'guest').trim() || 'guest';
     setKomoChapters(readSomedayChaptersState(komoOwnerKey));
+    setSomedayBoardPinsSnapshot(readSomedayBoardPinsState(komoOwnerKey));
     setTripKomoState(readTripKomoState(user?.id));
     setTripKomoHydratedUserId(tripKomoOwnerKey);
   }, [currentUser, user?.id]);
@@ -25527,6 +25545,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         ))
       ).catch(() => {});
     }
+  };
+
+  const handleSomedayPersistBoardSnapshot = (pins = []) => {
+    const komoOwnerKey = String(currentUser || 'guest').trim() || 'guest';
+    const nextPins = Array.isArray(pins) ? pins : [];
+    setSomedayBoardPinsSnapshot(nextPins);
+    writeSomedayBoardPinsState(komoOwnerKey, nextPins);
   };
 
   // Called when a pin is deleted from SomedayPage — remove from whichever list owns it
@@ -31696,8 +31721,10 @@ transform: translateY(0);
                 userEmail={user?.email || ''}
                 inviteRefreshToken={chapterInviteRefreshToken}
                 initialChapters={komoChapters}
+                boardPinsSnapshot={somedayBoardPinsSnapshot}
                 onChaptersChange={setKomoChapters}
                 onPersistPinLayout={handleSomedayPersistPinLayout}
+                onPersistBoardSnapshot={handleSomedayPersistBoardSnapshot}
                 pinPositionOverrides={somedayPinPositions}
                 onCreateTripFromChapter={startTripFromKomoChapter}
                 chaptersWithLinkedTrips={chaptersWithLinkedTrips}
