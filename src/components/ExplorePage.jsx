@@ -1253,14 +1253,19 @@ export default function ExplorePage({
     return () => { cancelled = true; };
   }, [sources.movies, moviesRetry]);
 
+  const currentUserId = String(currentUser?.id || '').trim();
+
   useEffect(() => {
     let cancelled = false;
     let timeoutId = null;
     let idleId = null;
     const cached = readPublishedChaptersCache();
+    // Only use the cache if it has rows — don't use an empty-array cache
+    // (empty could mean a previous failed/anon request, not "no chapters exist")
     const hasFreshCache = Boolean(
       cached
       && Array.isArray(cached.rows)
+      && cached.rows.length > 0
       && Date.now() - Number(cached.ts || 0) < PUBLISHED_CHAPTERS_CACHE_TTL
     );
     if (hasFreshCache) {
@@ -1333,7 +1338,8 @@ export default function ExplorePage({
           };
         });
         setPublishedChapters(normalized);
-        writePublishedChaptersCache(normalized);
+        // Only cache non-empty results so a failed/anon request doesn't poison the cache
+        if (normalized.length > 0) writePublishedChaptersCache(normalized);
       } catch (err) {
         if (!cancelled) {
           console.error("Failed to load published chapters:", err);
@@ -1362,7 +1368,7 @@ export default function ExplorePage({
       }
       if (timeoutId !== null) window.clearTimeout(timeoutId);
     };
-  }, []);
+  }, [currentUserId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (activePage === "movies") {
     return <MoviesPage onBack={() => setActivePage(null)} onAddToSomeday={onAddToSomeday} onPlanEvent={onPlanEvent} />;

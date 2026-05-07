@@ -9957,8 +9957,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const cached = readPublicCalendarsCache(userId);
     if (!cached) return false;
     if (Date.now() - Number(cached.ts || 0) > PUBLIC_CALENDARS_CACHE_TTL) return false;
+    // Don't serve an empty-array cache — it could be from a failed/anon request
+    if (!Array.isArray(cached.rows) || cached.rows.length === 0) return false;
     setExploreVotesMode(String(cached.votesMode || 'db').trim() || 'db');
-    setPublicCalendars(Array.isArray(cached.rows) ? cached.rows : []);
+    setPublicCalendars(cached.rows);
     setExploreError('');
     return true;
   };
@@ -10105,7 +10107,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       });
       setExploreVotesMode(votesMode);
       setPublicCalendars(normalizedWithLocalOverrides);
-      writePublicCalendarsCache(user?.id, normalizedWithLocalOverrides, votesMode);
+      // Only cache non-empty results so a failed/anon query doesn't poison the cache
+      if (normalizedWithLocalOverrides.length > 0) {
+        writePublicCalendarsCache(user?.id, normalizedWithLocalOverrides, votesMode);
+      }
       setExpandedExploreDescriptions({});
     } catch (err) {
       console.error('Error loading public calendars:', err);
@@ -22258,7 +22263,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }
       if (timeoutId !== null) window.clearTimeout(timeoutId);
     };
-  }, [bottomNavTab, user?.id]);
+  }, [bottomNavTab, user?.id, isAppVisible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setSubCalMembersCollapsed(true);
