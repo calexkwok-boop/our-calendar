@@ -21092,6 +21092,40 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           pinsByChapterId.set(chapterId, pins);
         });
 
+        const mergeFetchedPinsWithCurrentPins = (fetchedPins = [], currentPins = []) => {
+          const currentById = new Map(
+            (Array.isArray(currentPins) ? currentPins : []).map((pin) => [String(pin?.id || '').trim(), pin])
+          );
+          const merged = [];
+          const seenIds = new Set();
+
+          (Array.isArray(fetchedPins) ? fetchedPins : []).forEach((pin) => {
+            const pinId = String(pin?.id || '').trim();
+            if (!pinId) return;
+            seenIds.add(pinId);
+            const current = currentById.get(pinId);
+            merged.push(current ? { ...pin, ...current } : pin);
+          });
+
+          (Array.isArray(currentPins) ? currentPins : []).forEach((pin) => {
+            const pinId = String(pin?.id || '').trim();
+            if (!pinId || seenIds.has(pinId)) return;
+            merged.push(pin);
+          });
+
+          return merged.sort((a, b) => {
+            const posA = Number.isFinite(Number(a?.position)) ? Number(a.position) : Number.MAX_SAFE_INTEGER;
+            const posB = Number.isFinite(Number(b?.position)) ? Number(b.position) : Number.MAX_SAFE_INTEGER;
+            if (posA !== posB) return posA - posB;
+            const yA = Number.isFinite(Number(a?.y)) ? Number(a.y) : Number.MAX_SAFE_INTEGER;
+            const yB = Number.isFinite(Number(b?.y)) ? Number(b.y) : Number.MAX_SAFE_INTEGER;
+            if (yA !== yB) return yA - yB;
+            const xA = Number.isFinite(Number(a?.x)) ? Number(a.x) : Number.MAX_SAFE_INTEGER;
+            const xB = Number.isFinite(Number(b?.x)) ? Number(b.x) : Number.MAX_SAFE_INTEGER;
+            return xA - xB;
+          });
+        };
+
         setKomoChapters((prev) => {
           const existing = Array.isArray(prev) ? prev : [];
           const byId = new Map(existing.map((chapter) => [String(chapter?.id || '').trim(), chapter]));
@@ -21100,7 +21134,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             const chapterId = String(row?.id || '').trim();
             if (!chapterId) return;
             const current = byId.get(chapterId) || {};
-            const pins = pinsByChapterId.get(chapterId) || current?.pins || [];
+            const pins = mergeFetchedPinsWithCurrentPins(
+              pinsByChapterId.get(chapterId) || [],
+              current?.pins || []
+            );
             byId.set(chapterId, {
               ...current,
               ...row,
@@ -21111,10 +21148,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
           pinsByChapterId.forEach((pins, chapterId) => {
             const current = byId.get(chapterId) || { id: chapterId };
+            const mergedPins = mergeFetchedPinsWithCurrentPins(pins, current?.pins || []);
             byId.set(chapterId, {
               ...current,
-              pins,
-              itemIds: pins.map((pin) => pin.id),
+              pins: mergedPins,
+              itemIds: mergedPins.map((pin) => pin.id),
             });
           });
 
