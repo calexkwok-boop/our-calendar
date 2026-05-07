@@ -2166,14 +2166,10 @@ const SomedayPage = ({
     if (!autoSortPendingRef.current) return;
     autoSortPendingRef.current = false;
     const startY = chapterTotalHeight > 20 ? chapterTotalHeight + 32 : 20;
-    let nextPinsSnapshot = [];
-    setPins(prev => {
-      const nextPins = buildAutoSortedPins(prev, onAddDream, onDeleteDream, onUpdateDream, startY, chapters);
-      nextPinsSnapshot = nextPins;
-      return nextPins;
-    });
+    const nextPinsSnapshot = buildAutoSortedPins(pins, onAddDream, onDeleteDream, onUpdateDream, startY, chapters);
+    setPins(nextPinsSnapshot);
     if (nextPinsSnapshot.length > 0) onPersistPinLayout?.(nextPinsSnapshot);
-  }, [chapters]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chapters, chapterTotalHeight, onAddDream, onDeleteDream, onPersistPinLayout, onUpdateDream, pins]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Supabase helpers ────────────────────────────────────────────────────────
   const pinToRow = (pin, chapterId, position = 0) => ({
@@ -2827,12 +2823,8 @@ const SomedayPage = ({
 
   function autoSort() {
     const startY = chapterTotalHeight > 20 ? chapterTotalHeight + 32 : 20;
-    let nextPinsSnapshot = [];
-    setPins(prev => {
-      const nextPins = buildAutoSortedPins(prev, onAddDream, onDeleteDream, onUpdateDream, startY, chapters);
-      nextPinsSnapshot = nextPins;
-      return nextPins;
-    });
+    const nextPinsSnapshot = buildAutoSortedPins(pins, onAddDream, onDeleteDream, onUpdateDream, startY, chapters);
+    setPins(nextPinsSnapshot);
     if (nextPinsSnapshot.length > 0) onPersistPinLayout?.(nextPinsSnapshot);
   }
 
