@@ -7933,6 +7933,8 @@ function App() {
   const coverWidgetLastDragRef = useRef({ widgetId: '', at: 0 });
   const [sharedListGroups, setSharedListGroups] = useState([]);
   const [sharedListItems, setSharedListItems] = useState([]);
+  const [sharedListItemsByListId, setSharedListItemsByListId] = useState({});
+  const [sharedListItemsLoading, setSharedListItemsLoading] = useState(false);
   const [calendarChatMessages, setCalendarChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [chatError, setChatError] = useState('');
@@ -13578,6 +13580,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   };
 
   const primaryListOwnerId = activeLayerOwnerId;
+  const normalizeSharedListItems = (rows) => (Array.isArray(rows) ? rows : []).map(item => ({ ...item, done: !!item.done }));
 
   const loadSharedListGroups = async (ownerId) => {
     if (!activeLayerId) return;
@@ -13627,7 +13630,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const loadSharedListItems = async (ownerId, listId) => {
     if (!listId || !activeLayerId) {
       setSharedListItems([]);
+      setSharedListItemsLoading(false);
       return;
+    }
+    const normalizedListId = String(listId || '').trim();
+    const cachedItems = Array.isArray(sharedListItemsByListId[normalizedListId]) ? sharedListItemsByListId[normalizedListId] : null;
+    if (cachedItems) {
+      setSharedListItems(cachedItems);
+      setSharedListItemsLoading(false);
+    } else {
+      setSharedListItemsLoading(true);
     }
     let { data, error } = await supabase
       .from('shared_lists')
@@ -13653,6 +13665,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     if (error) {
       console.error('Error loading shared list items:', error);
+      setSharedListItemsLoading(false);
       if (error.code === '42P01') {
         setListError('List feature needs DB setup (shared_list_groups/shared_lists tables are missing).');
       } else {
@@ -13662,7 +13675,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
 
     setListError('');
-    setSharedListItems((data || []).map(item => ({ ...item, done: !!item.done })));
+    const normalizedItems = normalizeSharedListItems(data || []);
+    setSharedListItems(normalizedItems);
+    setSharedListItemsByListId((prev) => ({ ...prev, [normalizedListId]: normalizedItems }));
+    setSharedListItemsLoading(false);
   };
 
   const createSharedList = async () => {
@@ -13695,6 +13711,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const created = data || payload;
     setSharedListGroups(prev => [...prev, created]);
     setSelectedSharedListId(created.id);
+    setSharedListItemsByListId((prev) => ({ ...prev, [String(created.id || '')]: [] }));
     setSwipedSharedListItemId(null);
     setSharedListItemSwipeDrag({ id: null, offset: 0 });
     swipingSharedListItemIdRef.current = null;
@@ -13734,6 +13751,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const remaining = sharedListGroups.filter(g => g.id !== listId);
     setSharedListGroups(remaining);
     setSelectedSharedListId(remaining.length > 0 ? remaining[0].id : null);
+    setSharedListItemsByListId((prev) => {
+      const next = { ...(prev || {}) };
+      delete next[String(listId || '')];
+      return next;
+    });
     setSwipedSharedListItemId(null);
     setSharedListItemSwipeDrag({ id: null, offset: 0 });
     swipingSharedListItemIdRef.current = null;
@@ -13909,7 +13931,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
 
     setListError('');
-    setSharedListItems(prev => [...prev, { ...(data || payload), done: false }]);
+    const createdItem = { ...(data || payload), done: false };
+    setSharedListItems(prev => [...prev, createdItem]);
+    setSharedListItemsByListId((prev) => {
+      const key = String(selectedSharedListId || '').trim();
+      const existing = Array.isArray(prev?.[key]) ? prev[key] : [];
+      return { ...prev, [key]: [...existing, createdItem] };
+    });
     setNewListItemText('');
     const who = String(currentUser || user?.email || user?.phone || 'Someone');
     const selectedList = (sharedListGroups || []).find((g) => String(g?.id || '') === String(selectedSharedListId || ''));
@@ -13942,24 +13970,50 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   const toggleSharedListItem = async (item) => {
     if (!assertCanEditActiveLayer('edit list items')) return;
+    const nextDone = !item.done;
+    setSharedListItems(prev => prev.map(i => i.id === item.id ? { ...i, done: nextDone } : i));
+    setSharedListItemsByListId((prev) => {
+      const key = String(selectedSharedListId || item?.list_id || '').trim();
+      const existing = Array.isArray(prev?.[key]) ? prev[key] : [];
+      return {
+        ...prev,
+        [key]: existing.map(i => i.id === item.id ? { ...i, done: nextDone } : i),
+      };
+    });
     const { error } = await supabase
       .from('shared_lists')
-      .update({ done: !item.done })
+      .update({ done: nextDone })
       .eq('layer_id', activeLayerId)
       .eq('id', item.id);
 
     if (error) {
       console.error('Error updating list item:', error);
+      setSharedListItems(prev => prev.map(i => i.id === item.id ? { ...i, done: item.done } : i));
+      setSharedListItemsByListId((prev) => {
+        const key = String(selectedSharedListId || item?.list_id || '').trim();
+        const existing = Array.isArray(prev?.[key]) ? prev[key] : [];
+        return {
+          ...prev,
+          [key]: existing.map(i => i.id === item.id ? { ...i, done: item.done } : i),
+        };
+      });
       setListError(`Could not update item: ${error.message}`);
       return;
     }
 
     setListError('');
-    setSharedListItems(prev => prev.map(i => i.id === item.id ? { ...i, done: !i.done } : i));
   };
 
   const removeSharedListItem = async (itemId) => {
     if (!assertCanEditActiveLayer('delete list items')) return;
+    const removedItem = (sharedListItems || []).find((i) => String(i?.id || '') === String(itemId || '')) || null;
+    const removedIndex = (sharedListItems || []).findIndex((i) => String(i?.id || '') === String(itemId || ''));
+    setSharedListItems(prev => prev.filter(i => i.id !== itemId));
+    setSharedListItemsByListId((prev) => {
+      const key = String(selectedSharedListId || removedItem?.list_id || '').trim();
+      const existing = Array.isArray(prev?.[key]) ? prev[key] : [];
+      return { ...prev, [key]: existing.filter(i => i.id !== itemId) };
+    });
     const { data, error } = await supabase
       .from('shared_lists')
       .delete()
@@ -13969,16 +14023,45 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     if (error) {
       console.error('Error deleting list item:', error);
+      if (removedItem) {
+        setSharedListItems(prev => {
+          const next = [...prev];
+          const insertAt = removedIndex >= 0 ? removedIndex : next.length;
+          next.splice(insertAt, 0, removedItem);
+          return next;
+        });
+        setSharedListItemsByListId((prev) => {
+          const key = String(selectedSharedListId || removedItem?.list_id || '').trim();
+          const existing = Array.isArray(prev?.[key]) ? [...prev[key]] : [];
+          const insertAt = removedIndex >= 0 ? removedIndex : existing.length;
+          existing.splice(insertAt, 0, removedItem);
+          return { ...prev, [key]: existing };
+        });
+      }
       setListError(`Could not delete item: ${error.message}`);
       return;
     }
     if (!data || data.length === 0) {
+      if (removedItem) {
+        setSharedListItems(prev => {
+          const next = [...prev];
+          const insertAt = removedIndex >= 0 ? removedIndex : next.length;
+          next.splice(insertAt, 0, removedItem);
+          return next;
+        });
+        setSharedListItemsByListId((prev) => {
+          const key = String(selectedSharedListId || removedItem?.list_id || '').trim();
+          const existing = Array.isArray(prev?.[key]) ? [...prev[key]] : [];
+          const insertAt = removedIndex >= 0 ? removedIndex : existing.length;
+          existing.splice(insertAt, 0, removedItem);
+          return { ...prev, [key]: existing };
+        });
+      }
       setListError('Could not delete item (no rows affected). Check DB permissions.');
       return;
     }
 
     setListError('');
-    setSharedListItems(prev => prev.filter(i => i.id !== itemId));
     if (String(swipedSharedListItemId || '') === String(itemId || '')) {
       setSwipedSharedListItemId(null);
       setSharedListItemSwipeDrag({ id: null, offset: 0 });
@@ -14004,6 +14087,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return;
     }
 
+    setSharedListItems(prev => prev.map(i => i.id === item.id ? { ...i, text: nextText } : i));
+    setSharedListItemsByListId((prev) => {
+      const key = String(selectedSharedListId || item?.list_id || '').trim();
+      const existing = Array.isArray(prev?.[key]) ? prev[key] : [];
+      return {
+        ...prev,
+        [key]: existing.map(i => i.id === item.id ? { ...i, text: nextText } : i),
+      };
+    });
     const { error } = await supabase
       .from('shared_lists')
       .update({ text: nextText })
@@ -14012,12 +14104,20 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     if (error) {
       console.error('Error editing list item:', error);
+      setSharedListItems(prev => prev.map(i => i.id === item.id ? { ...i, text: item.text } : i));
+      setSharedListItemsByListId((prev) => {
+        const key = String(selectedSharedListId || item?.list_id || '').trim();
+        const existing = Array.isArray(prev?.[key]) ? prev[key] : [];
+        return {
+          ...prev,
+          [key]: existing.map(i => i.id === item.id ? { ...i, text: item.text } : i),
+        };
+      });
       setListError(`Could not edit item: ${error.message}`);
       return;
     }
 
     setListError('');
-    setSharedListItems(prev => prev.map(i => i.id === item.id ? { ...i, text: nextText } : i));
     setEditingListItemId(null);
     setEditingListText('');
   };
@@ -28733,6 +28833,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           addSharedListItem={addSharedListItem}
           listError={listError}
           sharedListItems={sharedListItems}
+          sharedListItemsLoading={sharedListItemsLoading}
           toggleSharedListItem={toggleSharedListItem}
           editingListItemId={editingListItemId}
           editingListText={editingListText}

@@ -16,6 +16,7 @@ export default function SharedListPanel({
   addSharedListItem,
   listError,
   sharedListItems,
+  sharedListItemsLoading,
   toggleSharedListItem,
   editingListItemId,
   editingListText,
@@ -121,7 +122,10 @@ export default function SharedListPanel({
         {sharedListGroups.length === 0 && (
           <p className="text-lg text-gray-400 dark:text-gray-500 italic">Create your first list to get started.</p>
         )}
-        {sharedListItems.length === 0 && selectedSharedListId && (
+        {sharedListItemsLoading && selectedSharedListId && (
+          <p className="text-lg text-gray-400 dark:text-gray-500 italic">Loading list...</p>
+        )}
+        {!sharedListItemsLoading && sharedListItems.length === 0 && selectedSharedListId && (
           <p className="text-lg text-gray-400 dark:text-gray-500 italic">No items yet.</p>
         )}
         {sharedListItems.map(item => (
