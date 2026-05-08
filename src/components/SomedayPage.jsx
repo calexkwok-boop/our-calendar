@@ -1366,6 +1366,15 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
   const [tripAlbumPhotos, setTripAlbumPhotos] = useState([]);
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [selectedPin, setSelectedPin] = useState(null);
+  const [flippedPinId, setFlippedPinId] = useState(null);
+  const [pinNotes, setPinNotes] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('komo-chapter-notes') || '{}'); } catch { return {}; }
+  });
+  const savePinNote = (id, note) => {
+    const next = { ...pinNotes, [id]: note };
+    setPinNotes(next);
+    try { localStorage.setItem('komo-chapter-notes', JSON.stringify(next)); } catch {}
+  };
   const [editingChecklist, setEditingChecklist] = useState(null);
   const [showInvite, setShowInvite] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -1708,29 +1717,77 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
           </div>
         ))}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
-          {chapterPins.filter(p => p.type !== 'checklist' && p.type !== 'countdown').map(p => (
-            <div key={p.id} style={{ transform: `rotate(${(p.rot || 0) * 0.4}deg)`, position: 'relative', cursor: 'pointer' }} onClick={() => setSelectedPin(p)}>
-              {p.type === 'note' ? (
-                <div style={{ background: (NOTE_COLORS[p.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'].bg, padding: '11px 12px', width: 140, minHeight: 80, borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', position: 'relative' }}>
-                  <Pushpin colorKey="purple" darkMode={darkMode} />
-                  <p style={{ fontFamily: CAVEAT, fontSize: 13, color: (NOTE_COLORS[p.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'].text, margin: 0, lineHeight: 1.45 }}>{p.text}</p>
-                  {p.status === 'done' && <SharpieX size={118} />}
+          {chapterPins.filter(p => p.type !== 'checklist' && p.type !== 'countdown').map(p => {
+            const isFlipped = flippedPinId === p.id;
+            const cardW = p.type === 'note' ? 140 : 130;
+            return (
+            <div key={p.id} style={{ transform: `rotate(${(p.rot || 0) * 0.4}deg)`, position: 'relative', perspective: '600px' }}>
+              <div
+                style={{
+                  transformStyle: 'preserve-3d',
+                  transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                  transition: 'transform 0.5s',
+                  cursor: isFlipped ? 'default' : 'pointer',
+                  position: 'relative',
+                }}
+                onClick={(e) => { if (isFlipped) return; e.stopPropagation(); setFlippedPinId(p.id); }}
+              >
+                {/* Front */}
+                <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+                  {p.type === 'note' ? (
+                    <div style={{ background: (NOTE_COLORS[p.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'].bg, padding: '11px 12px', width: cardW, minHeight: 80, borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', position: 'relative' }}>
+                      <Pushpin colorKey="purple" darkMode={darkMode} />
+                      <p style={{ fontFamily: CAVEAT, fontSize: 13, color: (NOTE_COLORS[p.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'].text, margin: 0, lineHeight: 1.45 }}>{p.text}</p>
+                      {p.status === 'done' && <SharpieX size={118} />}
+                    </div>
+                  ) : (
+                    <div style={{ background: darkMode ? '#e2e8f0' : '#fff', padding: '5px 5px 0', width: cardW, borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', position: 'relative' }}>
+                      <Pushpin colorKey="purple" darkMode={darkMode} />
+                      <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 1, position: 'relative' }}>
+                        {p.imageUrl ? <img src={p.imageUrl} alt={p.label} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: p.status === 'done' ? 'grayscale(40%) brightness(0.85)' : 'none' }} /> : <div style={{ width: '100%', height: '100%', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30 }}>{p.emoji || '📌'}</div>}
+                        {p.status === 'done' && <SharpieX size={120} />}
+                      </div>
+                      <div style={{ padding: '5px 2px 6px', textAlign: 'center', fontFamily: CAVEAT, fontSize: 11, color: p.status === 'done' ? '#9ca3af' : '#374151', textDecoration: p.status === 'done' ? 'line-through' : 'none', lineHeight: 1.3 }}>{p.emoji ? `${p.emoji} ${p.label}` : p.label}</div>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div style={{ background: darkMode ? '#e2e8f0' : '#fff', padding: '5px 5px 0', width: 130, borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', position: 'relative' }}>
-                  <Pushpin colorKey="purple" darkMode={darkMode} />
-                  <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 1, position: 'relative' }}>
-                    {p.imageUrl ? <img src={p.imageUrl} alt={p.label} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: p.status === 'done' ? 'grayscale(40%) brightness(0.85)' : 'none' }} /> : <div style={{ width: '100%', height: '100%', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30 }}>{p.emoji || '📌'}</div>}
-                    {p.status === 'done' && <SharpieX size={120} />}
+                {/* Back */}
+                <div
+                  style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', position: 'absolute', inset: 0, background: '#fefce8', borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', padding: '8px', display: 'flex', flexDirection: 'column', width: cardW, minHeight: p.type === 'note' ? 80 : cardW + 22 }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontFamily: CAVEAT, fontSize: 11, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: 4 }}>{p.label || p.text}</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setFlippedPinId(null); }}
+                      style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: 'none', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}
+                    >↩</button>
                   </div>
-                  <div style={{ padding: '5px 2px 6px', textAlign: 'center', fontFamily: CAVEAT, fontSize: 11, color: p.status === 'done' ? '#9ca3af' : '#374151', textDecoration: p.status === 'done' ? 'line-through' : 'none', lineHeight: 1.3 }}>{p.emoji ? `${p.emoji} ${p.label}` : p.label}</div>
+                  <textarea
+                    value={pinNotes[p.id] || ''}
+                    onChange={(e) => savePinNote(p.id, e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    placeholder="notes..."
+                    style={{ flex: 1, width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontFamily: CAVEAT, fontSize: 13, color: '#374151', lineHeight: 1.45, padding: 0 }}
+                    maxLength={500}
+                  />
+                  <div style={{ display: 'flex', gap: 4, paddingTop: 4, justifyContent: 'space-between' }}>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.label || p.text || '')}`, '_blank'); }}
+                      style={{ borderRadius: 999, background: 'rgba(255,255,255,0.7)', border: 'none', padding: '2px 7px', fontSize: 10, color: '#6b7280', cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }}
+                    >📍 Maps</button>
+                    {onRemovePin && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onRemovePin(p.id); setFlippedPinId(null); }}
+                        style={{ borderRadius: 999, background: '#fff1f2', border: 'none', padding: '2px 7px', fontSize: 10, color: '#f43f5e', cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }}
+                      >Remove</button>
+                    )}
+                  </div>
                 </div>
-              )}
-              {onRemovePin && (
-                <button onClick={e => { e.stopPropagation(); onRemovePin(p.id); }} style={{ position: 'absolute', top: 4, left: 4, background: 'rgba(0,0,0,0.10)', border: 'none', borderRadius: '50%', width: 16, height: 16, color: '#6b7280', fontSize: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, zIndex: 20 }}>✕</button>
-              )}
+              </div>
             </div>
-          ))}
+            );
+          })}
           {chapterPins.length === 0 && <p style={{ fontFamily: CAVEAT, fontSize: 16, color: ts, fontStyle: 'italic' }}>No pins yet — tap + to add your first pin</p>}
         </div>
       </div>

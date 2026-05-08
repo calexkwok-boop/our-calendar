@@ -34354,7 +34354,7 @@ transform: translateY(0);
                                       <button
                                         type="button"
                                         onClick={(e) => { e.stopPropagation(); setFlippedKomoCardId(null); }}
-                                        className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white/80 text-[11px] text-gray-500 shadow-sm"
+                                        className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-[14px] text-gray-500 shadow-sm"
                                         title="Flip back"
                                       >
                                         ↩

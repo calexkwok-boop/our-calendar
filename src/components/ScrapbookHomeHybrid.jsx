@@ -240,6 +240,15 @@ const ScrapbookHomeHybrid = ({
   const tripSpotlightImage = String(tripSpotlight?.chapterCoverUrl || '').trim();
 
   const [avatarImgError, setAvatarImgError] = useState(false);
+  const [flippedCardId, setFlippedCardId] = useState(null);
+  const [cardNotes, setCardNotes] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('komo-home-notes') || '{}'); } catch { return {}; }
+  });
+  const saveCardNote = (id, note) => {
+    const next = { ...cardNotes, [id]: note };
+    setCardNotes(next);
+    try { localStorage.setItem('komo-home-notes', JSON.stringify(next)); } catch {}
+  };
   const [loadedMemoryCollageUrls, setLoadedMemoryCollageUrls] = useState(() => new Set());
   const [isLayoutEditOpen, setIsLayoutEditOpen] = useState(false);
   const { sections: homeSections, toggleVisible: toggleSectionVisible, reorder: reorderSections } = useHomeSectionLayout();
@@ -809,55 +818,98 @@ const ScrapbookHomeHybrid = ({
 
           {shuffledBucketList.length > 0 ? (
             <div className="flex gap-4 overflow-x-auto overflow-y-hidden pb-2 pl-0.5 pr-5 scrollbar-hide snap-x snap-mandatory [touch-action:pan-x]">
-              {shuffledBucketList.slice(0, 4).map((dream, idx) => (
-                (() => {
+              {shuffledBucketList.slice(0, 4).map((dream, idx) => {
                   const dreamImageUrl = getOnYourMindImageUrl(dream);
+                  const isFlipped = flippedCardId === (dream.id || idx);
                   return (
                 <div
                   key={dream.id || idx}
-                  className="group flex-shrink-0 snap-start w-40 sm:w-48 cursor-pointer"
-                  style={{ rotate: `${idx % 2 === 0 ? '-1.4deg' : '1.1deg'}` }}
-                  onClick={onOpenSomeday}
+                  className="group flex-shrink-0 snap-start w-40 sm:w-48"
+                  style={{ rotate: `${idx % 2 === 0 ? '-1.4deg' : '1.1deg'}`, perspective: '800px' }}
                 >
-                  {dreamImageUrl ? (
-                    <div className="bg-white dark:bg-slate-100 rounded-sm shadow-lg p-2 pb-0 transition-all group-hover:shadow-xl group-hover:-translate-y-0.5">
-                      <div className="aspect-square w-full overflow-hidden rounded-[3px]">
-                        <img
-                          src={dreamImageUrl}
-                          alt={dream.text}
-                          className="h-full w-full object-cover"
-                          loading="lazy"
-                        />
-                      </div>
-                      <div className="px-1 py-3 text-center">
-                        <div className="font-handwritten text-base leading-tight text-gray-600 line-clamp-2">
-                          {dream.emoji} {dream.text}
+                  <div
+                    className="relative transition-transform duration-500"
+                    style={{
+                      transformStyle: 'preserve-3d',
+                      transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                      cursor: isFlipped ? 'default' : 'pointer',
+                    }}
+                    onClick={(e) => {
+                      if (isFlipped) return;
+                      e.stopPropagation();
+                      setFlippedCardId(dream.id || idx);
+                    }}
+                  >
+                    {/* Front */}
+                    <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+                      {dreamImageUrl ? (
+                        <div className="bg-white dark:bg-slate-100 rounded-sm shadow-lg p-2 pb-0">
+                          <div className="aspect-square w-full overflow-hidden rounded-[3px]">
+                            <img src={dreamImageUrl} alt={dream.text} className="h-full w-full object-cover" loading="lazy" />
+                          </div>
+                          <div className="px-1 py-3 text-center">
+                            <div className="font-handwritten text-base leading-tight text-gray-600 line-clamp-2">
+                              {dream.emoji} {dream.text}
+                            </div>
+                          </div>
                         </div>
+                      ) : (
+                        <div className="flex min-h-[216px] flex-col justify-between rounded-[22px] border border-emerald-900/10 bg-white/70 p-4 text-left shadow-lg dark:border-white/10 dark:bg-black/20">
+                          <span className="text-4xl">{dream.emoji}</span>
+                          <span className="font-handwritten text-2xl leading-tight text-gray-900 dark:text-white line-clamp-4">
+                            {dream.text}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Back */}
+                    <div
+                      className="absolute inset-0 flex flex-col overflow-hidden rounded-sm bg-amber-50 p-3 shadow-lg dark:bg-slate-200"
+                      style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-handwritten text-xs text-gray-500 truncate pr-1">{dream.text}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setFlippedCardId(null); }}
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/90 text-[14px] text-gray-500 shadow-sm"
+                        >
+                          ↩
+                        </button>
+                      </div>
+                      <textarea
+                        value={cardNotes[dream.id] || ''}
+                        onChange={(e) => saveCardNote(dream.id, e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        placeholder="notes..."
+                        className="flex-1 w-full resize-none bg-transparent text-gray-700 placeholder-gray-400/60 outline-none dark:text-gray-800"
+                        style={{ fontFamily: "'Caveat', cursive", fontSize: '14px', lineHeight: '1.45' }}
+                        maxLength={500}
+                      />
+                      <div className="flex items-center justify-between pt-2">
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dream.text)}`, '_blank'); }}
+                          className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] text-gray-500 shadow-sm"
+                        >
+                          📍 Maps
+                        </button>
+                        {onDeleteDream && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); onDeleteDream(dream); setFlippedCardId(null); }}
+                            className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] text-rose-500 shadow-sm"
+                          >
+                            Remove
+                          </button>
+                        )}
                       </div>
                     </div>
-                  ) : (
-                    <div className="flex min-h-[216px] flex-col justify-between rounded-[22px] border border-emerald-900/10 bg-white/70 p-4 text-left shadow-lg transition-all group-hover:-translate-y-0.5 group-hover:bg-white/90 group-hover:shadow-xl dark:border-white/10 dark:bg-black/20 dark:group-hover:bg-black/40">
-                      <span className="text-4xl">{dream.emoji}</span>
-                      <span className="font-handwritten text-2xl leading-tight text-gray-900 dark:text-white line-clamp-4">
-                        {dream.text}
-                      </span>
-                    </div>
-                  )}
-                  {onDeleteDream && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteDream(dream);
-                      }}
-                      className="mx-auto mt-2 flex rounded-full bg-white/80 p-1 opacity-0 transition-all hover:bg-red-50 group-hover:opacity-100 dark:bg-black/40 dark:hover:bg-red-900/50"
-                    >
-                      <Trash2 className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
-                      </button>
-                    )}
+                  </div>
                 </div>
                   );
-                })()
-              ))}
+              })}
               {/* Discover more polaroid */}
               <div
                 className="flex-shrink-0 snap-start w-40 sm:w-48 cursor-pointer"
