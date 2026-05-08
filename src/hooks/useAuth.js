@@ -1,17 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 
-const CURRENT_SUPABASE_AUTH_STORAGE_KEY = (() => {
-  try {
-    const url = String(supabase?.supabaseUrl || '').trim();
-    const match = url.match(/^https:\/\/([^.]+)\.supabase\.co/i);
-    const projectRef = String(match?.[1] || '').trim();
-    return projectRef ? `sb-${projectRef}-auth-token` : '';
-  } catch {
-    return '';
-  }
-})();
-
 const readCachedSupabaseSessionUser = () => {
   if (typeof window === 'undefined' || !window.localStorage) return null;
   try {
@@ -32,72 +21,6 @@ const readCachedSupabaseSessionUser = () => {
     console.warn('Could not read cached Supabase auth session:', error);
   }
   return null;
-};
-
-const getSupabaseAuthDebugSnapshot = () => {
-  if (typeof window === 'undefined' || !window.localStorage) {
-    return {
-      origin: '',
-      tokenKeyCount: 0,
-      tokenKeys: [],
-      currentStorageKey: CURRENT_SUPABASE_AUTH_STORAGE_KEY,
-      supabaseUrl: String(supabase?.supabaseUrl || ''),
-      cachedUserId: '',
-      hasCurrentSession: false,
-      hasRefreshToken: false,
-      hasAccessToken: false,
-      hasSessionUser: false,
-      expiresAt: '',
-      expiresInPast: false,
-    };
-  }
-  const tokenKeys = [];
-  let hasCurrentSession = false;
-  let hasRefreshToken = false;
-  let hasAccessToken = false;
-  let hasSessionUser = false;
-  let expiresAt = '';
-  let expiresInPast = false;
-  for (let i = 0; i < window.localStorage.length; i += 1) {
-    const key = window.localStorage.key(i);
-    if (!key) continue;
-    if ((key.startsWith('sb-') && key.includes('-auth-token')) || key === 'komo-supabase-auth') {
-      tokenKeys.push(key);
-      try {
-        const raw = window.localStorage.getItem(key);
-        if (!raw) continue;
-        const parsed = JSON.parse(raw);
-        const candidates = Array.isArray(parsed) ? parsed : [parsed];
-        for (const candidate of candidates) {
-          const sessionLike = candidate?.currentSession || candidate?.session || candidate;
-          if (candidate?.currentSession || candidate?.session) hasCurrentSession = true;
-          if (sessionLike?.refresh_token) hasRefreshToken = true;
-          if (sessionLike?.access_token) hasAccessToken = true;
-          if (sessionLike?.user?.id) hasSessionUser = true;
-          const expiresAtValue = Number(sessionLike?.expires_at || 0);
-          if (Number.isFinite(expiresAtValue) && expiresAtValue > 0) {
-            expiresAt = new Date(expiresAtValue * 1000).toISOString();
-            expiresInPast = (expiresAtValue * 1000) <= Date.now();
-          }
-          if (hasCurrentSession || hasRefreshToken || hasAccessToken || hasSessionUser || expiresAt) break;
-        }
-      } catch {}
-    }
-  }
-  return {
-    origin: String(window.location?.origin || ''),
-    tokenKeyCount: tokenKeys.length,
-    tokenKeys,
-    currentStorageKey: CURRENT_SUPABASE_AUTH_STORAGE_KEY,
-    supabaseUrl: String(supabase?.supabaseUrl || ''),
-    cachedUserId: String(readCachedSupabaseSessionUser()?.id || ''),
-    hasCurrentSession,
-    hasRefreshToken,
-    hasAccessToken,
-    hasSessionUser,
-    expiresAt,
-    expiresInPast,
-  };
 };
 
 const withTimeout = async (promise, timeoutMs, fallbackValue = null) => {
@@ -131,11 +54,6 @@ export function useAuth({
   const [showAuth, setShowAuth] = useState(false);
   const [authError, setAuthError] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
-  const [authDebugInfo, setAuthDebugInfo] = useState(() => ({
-    ...getSupabaseAuthDebugSnapshot(),
-    sessionStatus: 'boot',
-    authEvent: '',
-  }));
   const preservedProfilePhotoUrlRef = useRef('');
 
   // Keep onUserHydrated in a ref so the auth effect (which runs once) always
@@ -159,11 +77,6 @@ export function useAuth({
       ));
       setShowAuth(!sessionUser);
       onUserHydratedRef.current?.(sessionUser ?? null);
-      setAuthDebugInfo((prev) => ({
-        ...prev,
-        ...getSupabaseAuthDebugSnapshot(),
-        sessionStatus: sessionUser?.id ? 'session-user' : 'no-session-user',
-      }));
 
       // Refresh full user object in background for updated metadata / avatar only.
       if (sessionUserId) {
@@ -183,55 +96,23 @@ export function useAuth({
 
     const cachedSessionUser = readCachedSupabaseSessionUser();
     if (cachedSessionUser?.id) {
-      setAuthDebugInfo((prev) => ({
-        ...prev,
-        ...getSupabaseAuthDebugSnapshot(),
-        sessionStatus: 'cached-session-user',
-      }));
       void hydrateAuthUser(cachedSessionUser);
-    } else {
-      setAuthDebugInfo((prev) => ({
-        ...prev,
-        ...getSupabaseAuthDebugSnapshot(),
-        sessionStatus: 'no-cached-session-user',
-      }));
     }
 
     withTimeout(supabase.auth.getSession(), 12000, { timedOut: true })
       .then(async (sessionResult) => {
         if (sessionResult?.timedOut) {
-          setAuthDebugInfo((prev) => ({
-            ...prev,
-            ...getSupabaseAuthDebugSnapshot(),
-            sessionStatus: 'getSession-timeout',
-          }));
           setIsLoading(false);
           return;
         }
-        setAuthDebugInfo((prev) => ({
-          ...prev,
-          ...getSupabaseAuthDebugSnapshot(),
-          sessionStatus: sessionResult?.data?.session?.user?.id ? 'getSession-user' : 'getSession-null',
-        }));
         await hydrateAuthUser(sessionResult?.data?.session?.user ?? null);
         setIsLoading(false);
       })
       .catch(() => {
-        setAuthDebugInfo((prev) => ({
-          ...prev,
-          ...getSupabaseAuthDebugSnapshot(),
-          sessionStatus: 'getSession-error',
-        }));
         setIsLoading(false);
       });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setAuthDebugInfo((prev) => ({
-        ...prev,
-        ...getSupabaseAuthDebugSnapshot(),
-        authEvent: String(event || ''),
-        sessionStatus: session?.user?.id ? `auth:${String(event || '').toLowerCase() || 'session'}` : `auth:${String(event || 'signed_out').toLowerCase()}`,
-      }));
       void hydrateAuthUser(session?.user ?? null);
     });
 
@@ -256,7 +137,6 @@ export function useAuth({
     setAuthError,
     authBusy,
     setAuthBusy,
-    authDebugInfo,
     preservedProfilePhotoUrlRef,
   };
 }
