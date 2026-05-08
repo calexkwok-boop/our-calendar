@@ -24922,8 +24922,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         }}
       >
         <div
-          className="w-full max-w-lg rounded-2xl border border-gray-200 dark:border-gray-600 bg-white/95 dark:bg-gray-800/95 shadow-2xl p-3 sm:p-4 flex flex-col"
-          style={{ maxHeight: 'calc(100dvh - 2rem)' }}
+          className="mb-20 sm:mb-0 w-full max-w-lg rounded-2xl border border-gray-200 dark:border-gray-600 bg-white/95 dark:bg-gray-800/95 shadow-2xl p-3 sm:p-4 flex max-h-[calc(100dvh-7rem)] sm:max-h-[calc(100dvh-2rem)] flex-col"
           onClick={(e) => e.stopPropagation()}
           onPointerDownCapture={bumpCoverControlsInteraction}
         >
@@ -24958,7 +24957,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               All Off
             </button>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain -mx-3 sm:-mx-4 px-3 sm:px-4" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain -mx-3 px-3 pb-24 sm:-mx-4 sm:px-4 sm:pb-6" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
             {CONTROL_WIDGET_IDS.map((widgetId) => {
               const meta = getControlWidgetMeta(widgetId);
@@ -34497,8 +34496,10 @@ transform: translateY(0);
                                               const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
                                               const uploadPath = `komo-attachments/${tripId}/${card.placementId}-${Date.now()}.${ext}`;
                                               try {
-                                                const { url } = await uploadTripPhotoFileToR2(uploadPath, file);
-                                                updateKomoCardAttachment(dk, section.key, card.placementId, url);
+                                                await uploadTripPhotoFileToR2(uploadPath, file);
+                                                const readTargets = await requestR2TripPhotoReadUrls([uploadPath]);
+                                                const signedUrl = String(readTargets?.[0]?.url || readTargets?.[0]?.signedUrl || '').trim();
+                                                if (signedUrl) updateKomoCardAttachment(dk, section.key, card.placementId, signedUrl);
                                               } catch (err) {
                                                 console.warn('[komo] attachment upload failed:', err);
                                               }
