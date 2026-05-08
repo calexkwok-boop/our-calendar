@@ -588,9 +588,11 @@ function getChapterLayoutMetrics(chapter, pins, fallbackY = 20) {
   }
 
   const pinnedTop = Math.min(...numericTops);
-  const pinnedBottom = Math.max(...numericBottoms);
-  const inferredLabelY = Math.max(fallbackY, pinnedTop - CLUSTER_LABEL_H - 8);
-  const nextY = Math.max(fallbackBottom, pinnedBottom) + CLUSTER_GAP;
+  const inferredLabelY = Math.min(
+    fallbackY + 12,
+    Math.max(fallbackY, pinnedTop - CLUSTER_LABEL_H - 8)
+  );
+  const nextY = fallbackBottom + CLUSTER_GAP;
   return { labelY: inferredLabelY, nextY };
 }
 
