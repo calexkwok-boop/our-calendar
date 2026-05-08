@@ -15580,7 +15580,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           setEvents(eventsObj);
           if (typeof window !== 'undefined') window.events = eventsObj;
 
-          // Fire-and-forget: also load events joined from other users' layers so they show on the calendar
+          // Fire-and-forget: load joined popup events only when they belong to the
+          // currently selected layer, so one calendar does not start showing another
+          // calendar's popup events.
           void (async () => {
             try {
               const { data: memberships } = await supabase
@@ -15601,6 +15603,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 let changed = false;
                 const next = { ...prev };
                 details.forEach((det) => {
+                  const popupLayerId = String(
+                    det?.event_data?.layer_id
+                    || det?.event_data?.layerId
+                    || det?.event_data?.calendar_id
+                    || ''
+                  ).trim();
+                  if (popupLayerId !== String(selectedLayerId || '').trim()) return;
                   if (!det?.id || !det?.date || existingIds.has(String(det.id))) return;
                   const dateKey = String(det.date);
                   if (!next[dateKey]) next[dateKey] = [];
@@ -15762,8 +15771,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     loadPopupEventData();
   }, [activeLayerId, layerIdsKey, layerRefreshToken, bottomNavTab, selectedPopupEventPanelId]);
 
-  // Merge joined popup events (events from other users' layers) into the calendar grid state.
-  // userTabPopupEvents already contains these after loadPopupEventData; we just need to reflect them in `events`.
+  // Merge popup events into the calendar grid only when they belong to the active layer.
   useEffect(() => {
     if (!userTabPopupEvents?.length) return;
     setEvents((prev) => {
@@ -15773,6 +15781,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       let changed = false;
       const next = { ...prev };
       userTabPopupEvents.forEach((upe) => {
+        const popupLayerId = String(
+          upe?.layerId
+          || upe?.layer_id
+          || popupEventsByEventId?.[String(upe?.id || '').trim()]?.layerId
+          || popupEventsByEventId?.[String(upe?.id || '').trim()]?.layer_id
+          || popupEventsByEventId?.[String(upe?.id || '').trim()]?.calendar_id
+          || ''
+        ).trim();
+        if (popupLayerId !== String(activeLayerId || '').trim()) return;
         if (!upe?.id || !upe?.date || existingIds.has(String(upe.id))) return;
         const dateKey = String(upe.date);
         if (!next[dateKey]) next[dateKey] = [];
@@ -15796,7 +15813,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       });
       return changed ? next : prev;
     });
-  }, [userTabPopupEvents]);
+  }, [userTabPopupEvents, popupEventsByEventId, activeLayerId]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
