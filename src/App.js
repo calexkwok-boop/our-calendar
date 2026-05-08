@@ -33545,6 +33545,7 @@ transform: translateY(0);
             : [];
           const normalizeKomoCard = (card = {}) => ({
             sourceId: String(card.sourceId || card.id || '').trim(),
+            placementId: String(card.placementId || '').trim(),
             label: String(card.label || card.text || 'Komo Book idea').trim(),
             imageUrl: String(card.imageUrl || '').trim(),
             emoji: String(card.emoji || '*').trim(),
@@ -34283,7 +34284,8 @@ transform: translateY(0);
                                 >
                                   {renderKomoPolaroid(card)}
                                   <div className="mt-2 flex items-center justify-center gap-1 rounded-full bg-amber-50/60 px-2.5 py-0.5 text-amber-800/60 shadow-sm ring-1 ring-amber-200/40 dark:bg-white/[0.06] dark:text-amber-200/50 dark:ring-white/[0.08]">
-                                    <Clock className="h-3 w-3 shrink-0" />
+                                    <div className="flex w-[122px] items-center justify-center gap-1">
+                                      <Clock className="h-3 w-3 shrink-0" />
                                     <input
                                       type="time"
                                       value={String(card?.time || '')}
@@ -34294,11 +34296,11 @@ transform: translateY(0);
                                         updateKomoCardTime(dk, section.key, card.placementId, nextValue);
                                       }}
                                       onClick={(event) => event.stopPropagation()}
-                                      className="min-w-[68px] bg-transparent text-center outline-none"
+                                      className="w-[68px] bg-transparent text-center outline-none"
                                       style={{ fontFamily: "'Caveat', cursive", fontSize: '13px' }}
                                       aria-label={`Time for ${card?.label || 'trip polaroid'}`}
                                     />
-                                    {card?.time ? (
+                                      {card?.time ? (
                                       <button
                                         type="button"
                                         onClick={(event) => {
@@ -34309,7 +34311,10 @@ transform: translateY(0);
                                       >
                                         Reset
                                       </button>
-                                    ) : null}
+                                      ) : (
+                                        <span className="inline-block w-[32px]" aria-hidden="true" />
+                                      )}
+                                    </div>
                                   </div>
                                   <select
                                     value={dk}
