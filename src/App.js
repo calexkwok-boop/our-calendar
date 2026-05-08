@@ -12,9 +12,6 @@ import InvitePicker from "./components/InvitePicker";
 import ExpenseTrackerPanel from "./components/ExpenseTrackerPanel";
 import RoundRobinPanel from "./components/RoundRobinPanel";
 import ScramblePanel from "./components/ScramblePanel";
-const PopupEventPanel = React.lazy(() => import("./components/PopupEventPanel"));
-const SportsEventCardOverlay = React.lazy(() => import("./components/SportsEventCardOverlay"));
-const PartyEventCardOverlay = React.lazy(() => import("./components/PartyEventCardOverlay"));
 import AddEventModal from "./components/AddEventModal";
 import DateDetailsCard from "./components/DateDetailsCard_Enhanced";
 import WhatTimeModal from "./components/WhatTimeModal";
@@ -28,7 +25,6 @@ import NewCalendarLook from "./components/Newcalendarlook";
 import SharedListPanel from "./components/SharedListPanel";
 import MemorySystem, { MemoryCreator as ImportedMemoryCreator } from "./components/MemorySystem";
 import ScrapbookHomeHybrid from "./components/ScrapbookHomeHybrid";
-const SomedayPage = React.lazy(() => import("./components/SomedayPage"));
 import AddDreamSheet from "./components/AddDreamSheet";
 import MakeItHappenSheet from "./components/MakeItHappenSheet";
 import useHomeScreenData from "./hooks/useHomeScreenData";
@@ -37,12 +33,17 @@ import { useNotifications } from "./hooks/useNotifications";
 import TripsTab from "./components/TripsTab";
 import TripRatingSystem from "./components/TripRatingSystem";
 import TripHighlightReel from "./components/TripHighlightReel";
-const ProfilePage = React.lazy(() => import("./components/ProfilePage"));
 import FriendPhotoModal from "./components/FriendPhotoModal";
 import JOURNEY_QUOTES from "./data/journeyQuotes";
 import { getDestinationImageOverride } from "./data/destinationImageOverrides";
 import { loadFriendsList as loadFriendsListLib } from "./lib/loadFriendsList";
 import * as memoryPersistence from "./lib/memoryPersistence";
+
+const PopupEventPanel = React.lazy(() => import("./components/PopupEventPanel"));
+const SportsEventCardOverlay = React.lazy(() => import("./components/SportsEventCardOverlay"));
+const PartyEventCardOverlay = React.lazy(() => import("./components/PartyEventCardOverlay"));
+const SomedayPage = React.lazy(() => import("./components/SomedayPage"));
+const ProfilePage = React.lazy(() => import("./components/ProfilePage"));
 
 const MemoryCreator = ImportedMemoryCreator || (() => null);
 
@@ -1481,6 +1482,21 @@ const readTripKomoState = (userId) => {
     const normalizeStoredState = (raw) => (
       raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}
     );
+    const hasAnyTripKomoCards = (state) => {
+      const safeState = normalizeStoredState(state);
+      return Object.values(safeState).some((tripValue) => {
+        const slots = tripValue && typeof tripValue === 'object' && !Array.isArray(tripValue)
+          ? tripValue.slots
+          : null;
+        if (!slots || typeof slots !== 'object' || Array.isArray(slots)) return false;
+        return Object.values(slots).some((dayValue) => (
+          dayValue
+          && typeof dayValue === 'object'
+          && !Array.isArray(dayValue)
+          && Object.values(dayValue).some((cards) => Array.isArray(cards) && cards.length > 0)
+        ));
+      });
+    };
     const mergeSlotCardArrays = (baseCards, overrideCards) => {
       const safeBase = Array.isArray(baseCards) ? baseCards : [];
       const safeOverride = Array.isArray(overrideCards) ? overrideCards : [];
@@ -1551,6 +1567,15 @@ const readTripKomoState = (userId) => {
     const lastParsed = normalizeStoredState(JSON.parse(window.localStorage.getItem(TRIP_KOMO_LAST_STORAGE_KEY) || '{}'));
     const normalizedUserId = String(userId || 'guest').trim() || 'guest';
     const guestParsed = normalizeStoredState(JSON.parse(window.localStorage.getItem(getTripKomoStorageKey('guest')) || '{}'));
+    const baseMergedState = normalizedUserId === 'guest'
+      ? mergeTripKomoStates(guestParsed, lastParsed)
+      : mergeTripKomoStates(
+        mergeTripKomoStates(guestParsed, lastParsed),
+        primaryParsed
+      );
+    // The per-trip fallback scans every localStorage key, so only do it when the
+    // normal owner/global snapshots do not already contain itinerary cards.
+    if (hasAnyTripKomoCards(baseMergedState)) return baseMergedState;
     const guestPerTrip = readPerTripState('guest');
     const userPerTrip = normalizedUserId === 'guest' ? {} : readPerTripState(normalizedUserId);
     if (normalizedUserId === 'guest') {
@@ -3133,7 +3158,6 @@ function App() {
     showAuth, setShowAuth,
     authError, setAuthError,
     authBusy, setAuthBusy,
-    authDebugInfo,
     preservedProfilePhotoUrlRef,
   } = useAuth({
     readCachedProfilePhotoUrl,
@@ -21268,7 +21292,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       pendingKomoWriteRef.current = {};
       Object.entries(toWrite).forEach(([tid, komoData]) => {
         if (!komoData) return;
-        supabase.from('sub_calendars').update({ komo_state: komoData }).eq('id', tid).catch(() => {});
+        supabase
+          .from('sub_calendars')
+          .update({ komo_state: komoData })
+          .eq('id', tid)
+          .then(({ error }) => { if (error) console.warn('[komo] background save failed:', error.message); });
       });
     }, 200);
   }, [tripKomoState, user?.id, tripKomoHydratedUserId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -21282,7 +21310,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       pendingKomoWriteRef.current = {};
       Object.entries(toWrite).forEach(([tid, komoData]) => {
         if (!komoData) return;
-        supabase.from('sub_calendars').update({ komo_state: komoData }).eq('id', tid).catch(() => {});
+        supabase
+          .from('sub_calendars')
+          .update({ komo_state: komoData })
+          .eq('id', tid)
+          .then(({ error }) => { if (error) console.warn('[komo] visibility flush save failed:', error.message); });
       });
     };
     document.addEventListener('visibilitychange', flush);
@@ -23284,22 +23316,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           {authError && (
             <p className="text-red-600 text-sm text-center mb-4">{authError}</p>
           )}
-          <div className="mb-4 rounded-xl border border-black/5 bg-black/[0.03] px-3 py-2 text-[11px] leading-5 text-gray-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-gray-400">
-            <div>Auth debug: {String(authDebugInfo?.sessionStatus || 'unknown')}</div>
-            <div>Origin: {String(authDebugInfo?.origin || 'unknown')}</div>
-            <div>Expected key: {String(authDebugInfo?.currentStorageKey || 'unknown')}</div>
-            <div>Token keys: {Number(authDebugInfo?.tokenKeyCount || 0)}</div>
-            <div>Found key: {String((authDebugInfo?.tokenKeys || [])[0] || 'none')}</div>
-            <div>Supabase URL: {String(authDebugInfo?.supabaseUrl || 'unknown')}</div>
-            <div>Cached user: {String(authDebugInfo?.cachedUserId || 'none') || 'none'}</div>
-            <div>Last event: {String(authDebugInfo?.authEvent || 'none')}</div>
-            <div>Stored session: {authDebugInfo?.hasCurrentSession ? 'yes' : 'no'}</div>
-            <div>Refresh token: {authDebugInfo?.hasRefreshToken ? 'yes' : 'no'}</div>
-            <div>Access token: {authDebugInfo?.hasAccessToken ? 'yes' : 'no'}</div>
-            <div>User in blob: {authDebugInfo?.hasSessionUser ? 'yes' : 'no'}</div>
-            <div>Expires at: {String(authDebugInfo?.expiresAt || 'unknown')}</div>
-            <div>Expired: {authDebugInfo?.expiresInPast ? 'yes' : 'no'}</div>
-          </div>
           <button
             onClick={handleGoogleSignIn}
             disabled={authBusy}
@@ -33534,6 +33550,7 @@ transform: translateY(0);
             emoji: String(card.emoji || '*').trim(),
             type: String(card.type || 'photo').trim(),
             rot: Number(card.rot || 0),
+            time: String(card.time || '').trim(),
           });
           const updateTripKomo = (updater) => {
             if (!tripId) return;
@@ -33623,6 +33640,23 @@ transform: translateY(0);
               const [moved] = cards.splice(sourceIndex, 1);
               const adjustedTargetIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
               cards.splice(adjustedTargetIndex, 0, moved);
+              day[slotKey] = cards;
+              slots[dateKey] = day;
+              return { ...current, slots };
+            });
+          };
+          const updateKomoCardTime = (dateKey, slotKey, placementId, timeValue) => {
+            if (!dateKey || !slotKey || !placementId) return;
+            updateTripKomo((current) => {
+              const slots = { ...(current.slots || {}) };
+              const day = { ...(slots[dateKey] || {}) };
+              const cards = Array.isArray(day[slotKey]) ? [...day[slotKey]] : [];
+              const index = cards.findIndex((item) => String(item?.placementId || '') === String(placementId || ''));
+              if (index < 0) return current;
+              cards[index] = {
+                ...cards[index],
+                time: String(timeValue || '').trim(),
+              };
               day[slotKey] = cards;
               slots[dateKey] = day;
               return { ...current, slots };
@@ -34185,7 +34219,7 @@ transform: translateY(0);
                         {subCalAddingSlot === section.slotValue && renderSectionAddForm(section.slotValue)}
 
                         <div
-                          className="mt-4 min-h-[92px] rounded-3xl border border-dashed border-emerald-200/80 bg-white/45 px-3 py-3 transition-colors dark:border-emerald-300/15 dark:bg-white/[0.03]"
+                          className="mt-4 min-h-[80px] rounded-2xl border border-dashed border-emerald-300/25 bg-gradient-to-b from-amber-50/25 to-white/5 px-3 py-3 transition-all dark:border-white/[0.05] dark:from-white/[0.015] dark:to-transparent"
                           data-komo-slot-key={section.key}
                           data-komo-date-key={dk}
                           onDragOver={(event) => {
@@ -34247,11 +34281,23 @@ transform: translateY(0);
                                   }
                                 >
                                   {renderKomoPolaroid(card)}
+                                  <div className="mt-1.5 flex items-center justify-center gap-0.5 text-gray-400/60 dark:text-gray-500/50">
+                                    <Clock className="h-2.5 w-2.5 shrink-0" />
+                                    <input
+                                      type="time"
+                                      value={String(card?.time || '')}
+                                      onChange={(event) => updateKomoCardTime(dk, section.key, card.placementId, event.target.value)}
+                                      onClick={(event) => event.stopPropagation()}
+                                      className="min-w-[64px] bg-transparent text-center outline-none text-gray-400/70 dark:text-gray-500/60"
+                                      style={{ fontFamily: "'Caveat', cursive", fontSize: '12px' }}
+                                      aria-label={`Time for ${card?.label || 'trip polaroid'}`}
+                                    />
+                                  </div>
                                   <select
                                     value={dk}
                                     onChange={(event) => addKomoCardToSlot(card, event.target.value, section.key, { dateKey: dk, slotKey: section.key })}
                                     onClick={(event) => event.stopPropagation()}
-                                    className="mt-1 w-32 rounded-xl border border-gray-200 bg-white px-2 py-1 text-[11px] text-gray-600 shadow-sm dark:border-white/10 dark:bg-slate-900 dark:text-gray-200"
+                                    className="mt-1.5 w-28 rounded-xl border border-gray-200/50 bg-white/80 px-2 py-0.5 text-[10px] text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 dark:border-white/[0.08] dark:bg-slate-900/80 dark:text-gray-400"
                                   >
                                     {itineraryDates.map((date) => {
                                       const dateKey = getDateKey(date);
@@ -34266,7 +34312,7 @@ transform: translateY(0);
                                     value={section.key}
                                     onChange={(event) => moveKomoCardToSlot(dk, section.key, card.placementId, event.target.value)}
                                     onClick={(event) => event.stopPropagation()}
-                                    className="mt-1 ml-1 w-28 rounded-xl border border-gray-200 bg-white px-2 py-1 text-[11px] text-gray-600 shadow-sm dark:border-white/10 dark:bg-slate-900 dark:text-gray-200"
+                                    className="mt-1.5 ml-1 w-24 rounded-xl border border-gray-200/50 bg-white/80 px-2 py-0.5 text-[10px] text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 dark:border-white/[0.08] dark:bg-slate-900/80 dark:text-gray-400"
                                   >
                                     {tripKomoSlotOptions.map((slotOption) => (
                                       <option key={`${card.placementId}-${slotOption.key}`} value={slotOption.key}>
@@ -34274,7 +34320,7 @@ transform: translateY(0);
                                       </option>
                                     ))}
                                   </select>
-                                  <div className="mt-1 ml-1 flex items-center gap-1">
+                                  <div className="mt-1.5 ml-1 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                                     <button
                                       type="button"
                                       onClick={(event) => {
@@ -34301,7 +34347,7 @@ transform: translateY(0);
                                   <button
                                     type="button"
                                     onClick={() => removeKomoCardFromSlot(dk, section.key, card.placementId)}
-                                    className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border border-white bg-red-500 text-xs font-bold text-white shadow-sm opacity-100"
+                                    className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-white/60 bg-rose-400 text-[10px] font-semibold text-white shadow-sm opacity-0 transition-opacity group-hover:opacity-100"
                                     aria-label="Remove Komo Book polaroid"
                                   >
                                     x
@@ -34310,8 +34356,8 @@ transform: translateY(0);
                               ))}
                             </div>
                           ) : (
-                            <div className="flex h-full min-h-[68px] items-center justify-center text-center text-sm text-emerald-900/50 dark:text-emerald-100/50">
-                              Drop Komo Book polaroids here.
+                            <div className="flex h-full min-h-[68px] items-center justify-center text-center text-[14px] text-emerald-700/30 dark:text-emerald-300/20" style={{ fontFamily: "'Caveat', cursive" }}>
+                              drop polaroids here
                             </div>
                           )}
                         </div>
