@@ -34267,7 +34267,7 @@ transform: translateY(0);
                                 >
                                   {renderKomoPolaroid(card)}
                                   <div className="mt-2 flex items-center justify-center rounded-full bg-amber-50/60 px-2.5 py-0.5 text-amber-800/60 shadow-sm ring-1 ring-amber-200/40 dark:bg-white/[0.06] dark:text-amber-200/50 dark:ring-white/[0.08]">
-                                    <div className="grid w-[126px] grid-cols-[14px_68px_36px] items-center justify-items-center gap-1">
+                                    <div className={card?.time ? "grid w-[126px] grid-cols-[14px_68px_36px] items-center justify-items-center gap-1" : "flex min-w-[96px] items-center justify-center gap-1"}>
                                       <Clock className="h-3 w-3 shrink-0" />
                                     <input
                                       type="time"
@@ -34283,7 +34283,7 @@ transform: translateY(0);
                                       style={{ fontFamily: "'Caveat', cursive", fontSize: '13px' }}
                                       aria-label={`Time for ${card?.label || 'trip polaroid'}`}
                                     />
-                                      {card?.time ? (
+                                      {card?.time && (
                                       <button
                                         type="button"
                                         onClick={(event) => {
@@ -34294,8 +34294,6 @@ transform: translateY(0);
                                       >
                                         Reset
                                       </button>
-                                      ) : (
-                                        <span className="inline-block h-4 w-[36px]" aria-hidden="true" />
                                       )}
                                     </div>
                                   </div>
