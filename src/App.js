@@ -33592,7 +33592,8 @@ transform: translateY(0);
                 slots[moveFrom.dateKey] = fromDay;
               }
               const day = { ...(slots[dateKey] || {}) };
-              const existingCards = Array.isArray(day[slotKey]) ? [...day[slotKey]] : [];
+              const existingCards = (Array.isArray(day[slotKey]) ? [...day[slotKey]] : [])
+                .filter((item) => String(item?.placementId || '') !== String(normalized.placementId || ''));
               const insertIndex = existingCards.findIndex((item) => String(item?.placementId || '') === String(insertBeforePlacementId || ''));
               if (insertIndex >= 0) {
                 existingCards.splice(insertIndex, 0, normalized);
@@ -34282,20 +34283,33 @@ transform: translateY(0);
                                 >
                                   {renderKomoPolaroid(card)}
                                   <div className="mt-2 flex items-center justify-center gap-1 rounded-full bg-amber-50/60 px-2.5 py-0.5 text-amber-800/60 shadow-sm ring-1 ring-amber-200/40 dark:bg-white/[0.06] dark:text-amber-200/50 dark:ring-white/[0.08]">
-                                    <Clock
-                                      className="h-3 w-3 shrink-0 cursor-pointer"
-                                      onClick={(event) => { event.stopPropagation(); updateKomoCardTime(dk, section.key, card.placementId, ''); }}
-                                      title="Clear time"
-                                    />
+                                    <Clock className="h-3 w-3 shrink-0" />
                                     <input
                                       type="time"
                                       value={String(card?.time || '')}
-                                      onChange={(event) => updateKomoCardTime(dk, section.key, card.placementId, event.target.value)}
+                                      onChange={(event) => {
+                                        const nextValue = String(event.target.value || '').trim();
+                                        const currentValue = String(card?.time || '').trim();
+                                        if (!nextValue && currentValue) return;
+                                        updateKomoCardTime(dk, section.key, card.placementId, nextValue);
+                                      }}
                                       onClick={(event) => event.stopPropagation()}
                                       className="min-w-[68px] bg-transparent text-center outline-none"
                                       style={{ fontFamily: "'Caveat', cursive", fontSize: '13px' }}
                                       aria-label={`Time for ${card?.label || 'trip polaroid'}`}
                                     />
+                                    {card?.time ? (
+                                      <button
+                                        type="button"
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          updateKomoCardTime(dk, section.key, card.placementId, '');
+                                        }}
+                                        className="rounded-full px-1.5 py-0.5 text-[10px] text-amber-700/80 underline underline-offset-2 dark:text-amber-200/70"
+                                      >
+                                        Reset
+                                      </button>
+                                    ) : null}
                                   </div>
                                   <select
                                     value={dk}
