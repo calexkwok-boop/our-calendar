@@ -1390,7 +1390,6 @@ const getMemoriesStorageKey = (userId) => `saved-memories-${String(userId || 'gu
 const getQuickThoughtsStorageKey = (userId) => `quick-thoughts-${String(userId || 'guest').trim() || 'guest'}`;
 const getBucketListStorageKey = (userId) => `bucket-list-${String(userId || 'guest').trim() || 'guest'}`;
 const getSomedayChaptersStorageKey = (userId) => `someday-chapters-${String(userId || 'guest').trim() || 'guest'}`;
-const getSomedayBoardPinsStorageKey = (userId) => `someday-board-pins-${String(userId || 'guest').trim() || 'guest'}`;
 const getKomoStorageOwnerKey = (authUserId, fallbackIdentity = '') => (
   String(authUserId || fallbackIdentity || 'guest').trim() || 'guest'
 );
@@ -1474,21 +1473,6 @@ const writeSomedayChaptersState = (userId, chapters) => {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(getSomedayChaptersStorageKey(userId), JSON.stringify(Array.isArray(chapters) ? chapters : []));
-  } catch {}
-};
-const readSomedayBoardPinsState = (userId) => {
-  if (typeof window === 'undefined') return [];
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(getSomedayBoardPinsStorageKey(userId)) || '[]');
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
-const writeSomedayBoardPinsState = (userId, pins) => {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(getSomedayBoardPinsStorageKey(userId), JSON.stringify(Array.isArray(pins) ? pins : []));
   } catch {}
 };
 const readTripKomoState = (userId) => {
@@ -3282,7 +3266,6 @@ function App() {
   const [quickThoughts, setQuickThoughts] = useState(() => readQuickThoughtsState('guest'));
   const [bucketList, setBucketList] = useState(() => readBucketListState('guest'));
   const [komoChapters, setKomoChapters] = useState(() => readSomedayChaptersState('guest'));
-  const [somedayBoardPinsSnapshot, setSomedayBoardPinsSnapshot] = useState(() => readSomedayBoardPinsState('guest'));
   const [tripKomoState, setTripKomoState] = useState(() => readTripKomoState('guest'));
   const [tripKomoTouchDrag, setTripKomoTouchDrag] = useState(null);
   const [tripKomoNativeDragActive, setTripKomoNativeDragActive] = useState(false);
@@ -21109,16 +21092,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const legacyKomoOwnerKey = String(currentUser || 'guest').trim() || 'guest';
     const tripKomoOwnerKey = String(user?.id || 'guest').trim() || 'guest';
     const hydratedChapters = readSomedayChaptersState(komoOwnerKey);
-    const hydratedBoardPins = readSomedayBoardPinsState(komoOwnerKey);
     setKomoChapters(
       hydratedChapters.length > 0 || legacyKomoOwnerKey === komoOwnerKey
         ? hydratedChapters
         : readSomedayChaptersState(legacyKomoOwnerKey)
-    );
-    setSomedayBoardPinsSnapshot(
-      hydratedBoardPins.length > 0 || legacyKomoOwnerKey === komoOwnerKey
-        ? hydratedBoardPins
-        : readSomedayBoardPinsState(legacyKomoOwnerKey)
     );
     // Merge localStorage on top of existing state (which may already have Supabase-restored data).
     // After a hard close localStorage is empty, so stored = {} and prev is preserved.
@@ -25680,17 +25657,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             .eq('chapter_id', pin.chapterId)
         ))
       ).catch(() => {});
-    }
-  };
-
-  const handleSomedayPersistBoardSnapshot = (pins = []) => {
-    const komoOwnerKey = getKomoStorageOwnerKey(user?.id, currentUser);
-    const legacyKomoOwnerKey = String(currentUser || 'guest').trim() || 'guest';
-    const nextPins = Array.isArray(pins) ? pins : [];
-    setSomedayBoardPinsSnapshot(nextPins);
-    writeSomedayBoardPinsState(komoOwnerKey, nextPins);
-    if (legacyKomoOwnerKey && legacyKomoOwnerKey !== 'guest' && legacyKomoOwnerKey !== komoOwnerKey) {
-      writeSomedayBoardPinsState(legacyKomoOwnerKey, nextPins);
     }
   };
 
@@ -31861,10 +31827,8 @@ transform: translateY(0);
                 userEmail={user?.email || ''}
                 inviteRefreshToken={chapterInviteRefreshToken}
                 initialChapters={komoChapters}
-                boardPinsSnapshot={somedayBoardPinsSnapshot}
                 onChaptersChange={setKomoChapters}
                 onPersistPinLayout={handleSomedayPersistPinLayout}
-                onPersistBoardSnapshot={handleSomedayPersistBoardSnapshot}
                 pinPositionOverrides={somedayPinPositions}
                 onCreateTripFromChapter={startTripFromKomoChapter}
                 chaptersWithLinkedTrips={chaptersWithLinkedTrips}
