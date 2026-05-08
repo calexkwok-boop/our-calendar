@@ -33629,24 +33629,6 @@ transform: translateY(0);
               return { ...current, slots };
             });
           };
-          const moveKomoCardBeforePlacement = (dateKey, slotKey, placementId, beforePlacementId) => {
-            if (!dateKey || !slotKey || !placementId || !beforePlacementId) return;
-            if (String(placementId) === String(beforePlacementId)) return;
-            updateTripKomo((current) => {
-              const slots = { ...(current.slots || {}) };
-              const day = { ...(slots[dateKey] || {}) };
-              const cards = Array.isArray(day[slotKey]) ? [...day[slotKey]] : [];
-              const sourceIndex = cards.findIndex((item) => String(item?.placementId || '') === String(placementId || ''));
-              const targetIndex = cards.findIndex((item) => String(item?.placementId || '') === String(beforePlacementId || ''));
-              if (sourceIndex < 0 || targetIndex < 0) return current;
-              const [moved] = cards.splice(sourceIndex, 1);
-              const adjustedTargetIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
-              cards.splice(adjustedTargetIndex, 0, moved);
-              day[slotKey] = cards;
-              slots[dateKey] = day;
-              return { ...current, slots };
-            });
-          };
           const updateKomoCardTime = (dateKey, slotKey, placementId, timeValue) => {
             if (!dateKey || !slotKey || !placementId) return;
             updateTripKomo((current) => {
@@ -33688,7 +33670,7 @@ transform: translateY(0);
                   insertBeforePlacementId &&
                   movingPlacementId
                 ) {
-                  moveKomoCardBeforePlacement(dateKey, slotKey, movingPlacementId, insertBeforePlacementId);
+                  addKomoCardToSlot(payload.card, dateKey, slotKey, payload.from, insertBeforePlacementId);
                 } else {
                   addKomoCardToSlot(payload.card, dateKey, slotKey, payload.from, insertBeforePlacementId);
                 }
@@ -33752,10 +33734,11 @@ transform: translateY(0);
                 activeDrag?.overPlacementId &&
                 movingPlacementId
               ) {
-                moveKomoCardBeforePlacement(
+                addKomoCardToSlot(
+                  activeDrag.card,
                   activeDrag.overDateKey,
                   activeDrag.overSlotKey,
-                  movingPlacementId,
+                  activeDrag.from || null,
                   activeDrag.overPlacementId,
                 );
               } else {
@@ -34283,8 +34266,8 @@ transform: translateY(0);
                                   }
                                 >
                                   {renderKomoPolaroid(card)}
-                                  <div className="mt-2 flex items-center justify-center gap-1 rounded-full bg-amber-50/60 px-2.5 py-0.5 text-amber-800/60 shadow-sm ring-1 ring-amber-200/40 dark:bg-white/[0.06] dark:text-amber-200/50 dark:ring-white/[0.08]">
-                                    <div className="flex w-[122px] items-center justify-center gap-1">
+                                  <div className="mt-2 flex items-center justify-center rounded-full bg-amber-50/60 px-2.5 py-0.5 text-amber-800/60 shadow-sm ring-1 ring-amber-200/40 dark:bg-white/[0.06] dark:text-amber-200/50 dark:ring-white/[0.08]">
+                                    <div className="grid w-[126px] grid-cols-[14px_68px_36px] items-center justify-items-center gap-1">
                                       <Clock className="h-3 w-3 shrink-0" />
                                     <input
                                       type="time"
@@ -34312,7 +34295,7 @@ transform: translateY(0);
                                         Reset
                                       </button>
                                       ) : (
-                                        <span className="inline-block w-[32px]" aria-hidden="true" />
+                                        <span className="inline-block h-4 w-[36px]" aria-hidden="true" />
                                       )}
                                     </div>
                                   </div>
