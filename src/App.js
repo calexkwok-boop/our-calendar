@@ -3293,6 +3293,7 @@ function App() {
   const [tripKomoState, setTripKomoState] = useState(() => readTripKomoState('guest'));
   const [tripKomoTouchDrag, setTripKomoTouchDrag] = useState(null);
   const [tripKomoNativeDragActive, setTripKomoNativeDragActive] = useState(false);
+  const [flippedKomoCardId, setFlippedKomoCardId] = useState(null);
   const [showAddDreamSheet, setShowAddDreamSheet] = useState(false);
   const [makeItHappenItem, setMakeItHappenItem] = useState(null);
   const [friendsDailyPhotos, setFriendsDailyPhotos] = useState([]);
@@ -33552,6 +33553,8 @@ transform: translateY(0);
             type: String(card.type || 'photo').trim(),
             rot: Number(card.rot || 0),
             time: String(card.time || '').trim(),
+            notes: String(card.notes || ''),
+            attachmentUrl: String(card.attachmentUrl || ''),
           });
           const updateTripKomo = (updater) => {
             if (!tripId) return;
@@ -33655,6 +33658,24 @@ transform: translateY(0);
               return { ...current, slots };
             });
           };
+          const updateKomoCardField = (dateKey, slotKey, placementId, patch) => {
+            if (!dateKey || !slotKey || !placementId) return;
+            updateTripKomo((current) => {
+              const slots = { ...(current.slots || {}) };
+              const day = { ...(slots[dateKey] || {}) };
+              const cards = Array.isArray(day[slotKey]) ? [...day[slotKey]] : [];
+              const index = cards.findIndex((item) => String(item?.placementId || '') === String(placementId || ''));
+              if (index < 0) return current;
+              cards[index] = { ...cards[index], ...patch };
+              day[slotKey] = cards;
+              slots[dateKey] = day;
+              return { ...current, slots };
+            });
+          };
+          const updateKomoCardNotes = (dateKey, slotKey, placementId, notes) =>
+            updateKomoCardField(dateKey, slotKey, placementId, { notes: String(notes || '') });
+          const updateKomoCardAttachment = (dateKey, slotKey, placementId, url) =>
+            updateKomoCardField(dateKey, slotKey, placementId, { attachmentUrl: String(url || '') });
           const handleKomoDrop = (event, dateKey, slotKey, insertBeforePlacementId = null) => {
             event.preventDefault();
             try {
@@ -34137,17 +34158,57 @@ transform: translateY(0);
                             {linkedChapterCards.map((card) => (
                               <div
                                 key={card.id}
-                                className="group relative shrink-0 cursor-grab touch-none"
-                                draggable
-                                onDragStart={(event) => {
+                                className="group relative shrink-0 touch-none"
+                                style={{ perspective: '600px' }}
+                                draggable={flippedKomoCardId !== card.id}
+                                onDragStart={flippedKomoCardId !== card.id ? (event) => {
                                   setTripKomoNativeDragActive(true);
                                   event.dataTransfer.setData('application/json', JSON.stringify({ type: 'komo-source', card }));
                                   event.dataTransfer.effectAllowed = 'copy';
-                                }}
+                                } : undefined}
                                 onDragEnd={() => setTripKomoNativeDragActive(false)}
-                                onTouchStart={(event) => beginKomoTouchDrag(event, { card, compact: true })}
+                                onTouchStart={flippedKomoCardId !== card.id ? (event) => beginKomoTouchDrag(event, { card, compact: true }) : undefined}
                               >
-                                {renderKomoPolaroid(card, { compact: true })}
+                                <div
+                                  className="relative transition-transform duration-500"
+                                  style={{
+                                    transformStyle: 'preserve-3d',
+                                    transform: flippedKomoCardId === card.id ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                                    cursor: flippedKomoCardId === card.id ? 'default' : 'grab',
+                                  }}
+                                  onClick={(e) => {
+                                    if (flippedKomoCardId === card.id) return;
+                                    e.stopPropagation();
+                                    setFlippedKomoCardId(card.id);
+                                  }}
+                                >
+                                  <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+                                    {renderKomoPolaroid(card, { compact: true })}
+                                  </div>
+                                  <div
+                                    className="absolute inset-0 flex flex-col items-center justify-between overflow-hidden rounded-[3px] bg-amber-50 p-1.5 shadow-md dark:bg-slate-200"
+                                    style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); setFlippedKomoCardId(null); }}
+                                      className="self-end flex h-4 w-4 items-center justify-center rounded-full bg-white/80 text-[9px] text-gray-500 shadow-sm"
+                                    >
+                                      ↩
+                                    </button>
+                                    <p className="w-full text-center text-gray-700 dark:text-gray-800" style={{ fontFamily: "'Caveat', cursive", fontSize: '12px', lineHeight: '1.3' }}>
+                                      {String(card?.label || card?.text || '')}
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); openLocationActionChooser(card?.label || card?.text || ''); }}
+                                      className="rounded-full bg-white/70 px-1.5 py-0.5 text-[9px] text-gray-500 shadow-sm"
+                                    >
+                                      📍 Maps
+                                    </button>
+                                  </div>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -34226,10 +34287,10 @@ transform: translateY(0);
                               {getSlotCards(dk, section.key).map((card) => (
                                 <div
                                   key={card.placementId}
-                                  className="group relative cursor-grab touch-none"
+                                  className="group relative touch-none"
                                   data-komo-placement-id={card.placementId}
-                                  draggable
-                                  onDragStart={(event) => {
+                                  draggable={flippedKomoCardId !== card.placementId}
+                                  onDragStart={flippedKomoCardId !== card.placementId ? (event) => {
                                     setTripKomoNativeDragActive(true);
                                     event.dataTransfer.setData('application/json', JSON.stringify({
                                       type: 'komo-slot',
@@ -34237,7 +34298,7 @@ transform: translateY(0);
                                       from: { dateKey: dk, slotKey: section.key },
                                     }));
                                     event.dataTransfer.effectAllowed = 'move';
-                                  }}
+                                  } : undefined}
                                   onDragEnd={() => setTripKomoNativeDragActive(false)}
                                   onDragOver={(event) => {
                                     event.preventDefault();
@@ -34248,11 +34309,11 @@ transform: translateY(0);
                                     event.stopPropagation();
                                     handleKomoDrop(event, dk, section.key, card.placementId);
                                   }}
-                                  onTouchStart={(event) => beginKomoTouchDrag(event, {
+                                  onTouchStart={flippedKomoCardId !== card.placementId ? (event) => beginKomoTouchDrag(event, {
                                     card,
                                     from: { dateKey: dk, slotKey: section.key },
                                     compact: false,
-                                  })}
+                                  }) : undefined}
                                   style={
                                     tripKomoTouchDrag?.overDateKey === dk &&
                                     tripKomoTouchDrag?.overSlotKey === section.key &&
@@ -34261,102 +34322,206 @@ transform: translateY(0);
                                           outline: darkMode ? '2px solid rgba(110, 231, 183, 0.75)' : '2px solid rgba(16, 185, 129, 0.8)',
                                           outlineOffset: '6px',
                                           borderRadius: '18px',
+                                          perspective: '800px',
                                         }
-                                      : undefined
+                                      : { perspective: '800px' }
                                   }
                                 >
-                                  {renderKomoPolaroid(card)}
-                                  <div className="mt-2 flex items-center justify-center rounded-full bg-amber-50/60 px-2.5 py-0.5 text-amber-800/60 shadow-sm ring-1 ring-amber-200/40 dark:bg-white/[0.06] dark:text-amber-200/50 dark:ring-white/[0.08]">
-                                    <div className={card?.time ? "grid w-[126px] grid-cols-[14px_68px_36px] items-center justify-items-center gap-1" : "grid w-[126px] grid-cols-[36px_14px_68px] items-center justify-items-center gap-1"}>
-                                      {!card?.time ? <span className="inline-block h-4 w-[36px]" aria-hidden="true" /> : null}
-                                      <Clock className="h-3 w-3 shrink-0" />
-                                    <input
-                                      type="time"
-                                      value={String(card?.time || '')}
-                                      onChange={(event) => {
-                                        const nextValue = String(event.target.value || '').trim();
-                                        const currentValue = String(card?.time || '').trim();
-                                        if (!nextValue && currentValue) return;
-                                        updateKomoCardTime(dk, section.key, card.placementId, nextValue);
-                                      }}
-                                      onClick={(event) => event.stopPropagation()}
-                                      className="w-[68px] bg-transparent text-center outline-none"
-                                      style={{ fontFamily: "'Caveat', cursive", fontSize: '13px' }}
-                                      aria-label={`Time for ${card?.label || 'trip polaroid'}`}
-                                    />
-                                      {card?.time && (
+                                  {/* 3D flip container */}
+                                  <div
+                                    className="relative transition-transform duration-500"
+                                    style={{
+                                      transformStyle: 'preserve-3d',
+                                      transform: flippedKomoCardId === card.placementId ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                                      cursor: flippedKomoCardId === card.placementId ? 'default' : 'grab',
+                                    }}
+                                    onClick={(e) => {
+                                      if (flippedKomoCardId === card.placementId) return;
+                                      e.stopPropagation();
+                                      setFlippedKomoCardId(card.placementId);
+                                    }}
+                                  >
+                                    {/* Front face */}
+                                    <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+                                      {renderKomoPolaroid(card)}
+                                    </div>
+                                    {/* Back face */}
+                                    <div
+                                      className="absolute inset-0 overflow-hidden rounded-[3px] bg-amber-50 p-2 shadow-md dark:bg-slate-200"
+                                      style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
                                       <button
                                         type="button"
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          updateKomoCardTime(dk, section.key, card.placementId, '');
-                                        }}
-                                        className="rounded-full px-1.5 py-0.5 text-[10px] text-amber-700/80 underline underline-offset-2 dark:text-amber-200/70"
+                                        onClick={(e) => { e.stopPropagation(); setFlippedKomoCardId(null); }}
+                                        className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white/80 text-[11px] text-gray-500 shadow-sm"
+                                        title="Flip back"
                                       >
-                                        Reset
+                                        ↩
                                       </button>
-                                      )}
+                                      <textarea
+                                        value={String(card?.notes || '')}
+                                        onChange={(e) => updateKomoCardNotes(dk, section.key, card.placementId, e.target.value)}
+                                        onClick={(e) => e.stopPropagation()}
+                                        placeholder="notes..."
+                                        className="mt-1 h-[calc(100%-32px)] w-full resize-none bg-transparent text-gray-700 placeholder-gray-400/60 outline-none dark:text-gray-800 dark:placeholder-gray-500/60"
+                                        style={{ fontFamily: "'Caveat', cursive", fontSize: '13px', lineHeight: '1.45' }}
+                                        maxLength={500}
+                                      />
+                                      <div className="flex items-center justify-between pt-1">
+                                        {card?.attachmentUrl ? (
+                                          <a
+                                            href={card.attachmentUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="block h-6 w-6 overflow-hidden rounded shadow-sm ring-1 ring-gray-200/60"
+                                          >
+                                            <img src={card.attachmentUrl} alt="attachment" className="h-full w-full object-cover" />
+                                          </a>
+                                        ) : <span />}
+                                        <label
+                                          className="cursor-pointer rounded-full bg-white/70 px-1.5 py-0.5 text-[11px] text-gray-500 shadow-sm"
+                                          title="Attach photo"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          📎
+                                          <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={async (e) => {
+                                              const file = e.target.files?.[0];
+                                              if (!file || !tripId) return;
+                                              const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+                                              const uploadPath = `komo-attachments/${tripId}/${card.placementId}-${Date.now()}.${ext}`;
+                                              try {
+                                                const { url } = await uploadTripPhotoFileToR2(uploadPath, file);
+                                                updateKomoCardAttachment(dk, section.key, card.placementId, url);
+                                              } catch (err) {
+                                                console.warn('[komo] attachment upload failed:', err);
+                                              }
+                                            }}
+                                          />
+                                        </label>
+                                      </div>
                                     </div>
                                   </div>
-                                  <select
-                                    value={dk}
-                                    onChange={(event) => addKomoCardToSlot(card, event.target.value, section.key, { dateKey: dk, slotKey: section.key })}
-                                    onClick={(event) => event.stopPropagation()}
-                                    className="mt-1.5 w-28 rounded-xl border border-gray-200/50 bg-white/80 px-2 py-0.5 text-[10px] text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 dark:border-white/[0.08] dark:bg-slate-900/80 dark:text-gray-400"
-                                  >
-                                    {itineraryDates.map((date) => {
-                                      const dateKey = getDateKey(date);
-                                      return (
-                                        <option key={dateKey} value={dateKey}>
-                                          {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                        </option>
-                                      );
-                                    })}
-                                  </select>
-                                  <select
-                                    value={section.key}
-                                    onChange={(event) => moveKomoCardToSlot(dk, section.key, card.placementId, event.target.value)}
-                                    onClick={(event) => event.stopPropagation()}
-                                    className="mt-1.5 ml-1 w-24 rounded-xl border border-gray-200/50 bg-white/80 px-2 py-0.5 text-[10px] text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 dark:border-white/[0.08] dark:bg-slate-900/80 dark:text-gray-400"
-                                  >
-                                    {tripKomoSlotOptions.map((slotOption) => (
-                                      <option key={`${card.placementId}-${slotOption.key}`} value={slotOption.key}>
-                                        {slotOption.label}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <div className="mt-1.5 ml-1 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                                    <button
-                                      type="button"
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        moveKomoCardWithinSlot(dk, section.key, card.placementId, 'up');
-                                      }}
-                                      className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white text-[11px] text-gray-600 shadow-sm dark:border-white/10 dark:bg-slate-900 dark:text-gray-200"
-                                      title="Move earlier in this section"
-                                    >
-                                      ↑
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        moveKomoCardWithinSlot(dk, section.key, card.placementId, 'down');
-                                      }}
-                                      className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white text-[11px] text-gray-600 shadow-sm dark:border-white/10 dark:bg-slate-900 dark:text-gray-200"
-                                      title="Move later in this section"
-                                    >
-                                      ↓
-                                    </button>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => removeKomoCardFromSlot(dk, section.key, card.placementId)}
-                                    className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-white/60 bg-rose-400 text-[10px] font-semibold text-white shadow-sm opacity-0 transition-opacity group-hover:opacity-100"
-                                    aria-label="Remove Komo Book polaroid"
-                                  >
-                                    x
-                                  </button>
+                                  {/* Front controls — hidden when flipped */}
+                                  {flippedKomoCardId !== card.placementId && (
+                                    <>
+                                      <div className="mt-2 flex items-center justify-center rounded-full bg-amber-50/60 px-2.5 py-0.5 text-amber-800/60 shadow-sm ring-1 ring-amber-200/40 dark:bg-white/[0.06] dark:text-amber-200/50 dark:ring-white/[0.08]">
+                                        <div className={card?.time ? "grid w-[126px] grid-cols-[14px_68px_36px] items-center justify-items-center gap-1" : "grid w-[126px] grid-cols-[36px_14px_68px] items-center justify-items-center gap-1"}>
+                                          {!card?.time ? <span className="inline-block h-4 w-[36px]" aria-hidden="true" /> : null}
+                                          <Clock className="h-3 w-3 shrink-0" />
+                                          <input
+                                            type="time"
+                                            value={String(card?.time || '')}
+                                            onChange={(event) => {
+                                              const nextValue = String(event.target.value || '').trim();
+                                              const currentValue = String(card?.time || '').trim();
+                                              if (!nextValue && currentValue) return;
+                                              updateKomoCardTime(dk, section.key, card.placementId, nextValue);
+                                            }}
+                                            onClick={(event) => event.stopPropagation()}
+                                            className="w-[68px] bg-transparent text-center outline-none"
+                                            style={{ fontFamily: "'Caveat', cursive", fontSize: '13px' }}
+                                            aria-label={`Time for ${card?.label || 'trip polaroid'}`}
+                                          />
+                                          {card?.time && (
+                                            <button
+                                              type="button"
+                                              onClick={(event) => {
+                                                event.stopPropagation();
+                                                updateKomoCardTime(dk, section.key, card.placementId, '');
+                                              }}
+                                              className="rounded-full px-1.5 py-0.5 text-[10px] text-amber-700/80 underline underline-offset-2 dark:text-amber-200/70"
+                                            >
+                                              Reset
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <select
+                                        value={dk}
+                                        onChange={(event) => addKomoCardToSlot(card, event.target.value, section.key, { dateKey: dk, slotKey: section.key })}
+                                        onClick={(event) => event.stopPropagation()}
+                                        className="mt-1.5 w-28 rounded-xl border border-gray-200/50 bg-white/80 px-2 py-0.5 text-[10px] text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 dark:border-white/[0.08] dark:bg-slate-900/80 dark:text-gray-400"
+                                      >
+                                        {itineraryDates.map((date) => {
+                                          const dateKey = getDateKey(date);
+                                          return (
+                                            <option key={dateKey} value={dateKey}>
+                                              {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                            </option>
+                                          );
+                                        })}
+                                      </select>
+                                      <select
+                                        value={section.key}
+                                        onChange={(event) => moveKomoCardToSlot(dk, section.key, card.placementId, event.target.value)}
+                                        onClick={(event) => event.stopPropagation()}
+                                        className="mt-1.5 ml-1 w-24 rounded-xl border border-gray-200/50 bg-white/80 px-2 py-0.5 text-[10px] text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 dark:border-white/[0.08] dark:bg-slate-900/80 dark:text-gray-400"
+                                      >
+                                        {tripKomoSlotOptions.map((slotOption) => (
+                                          <option key={`${card.placementId}-${slotOption.key}`} value={slotOption.key}>
+                                            {slotOption.label}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <div className="mt-1.5 ml-1 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                                        <button
+                                          type="button"
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            moveKomoCardWithinSlot(dk, section.key, card.placementId, 'up');
+                                          }}
+                                          className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white text-[11px] text-gray-600 shadow-sm dark:border-white/10 dark:bg-slate-900 dark:text-gray-200"
+                                          title="Move earlier in this section"
+                                        >
+                                          ↑
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            moveKomoCardWithinSlot(dk, section.key, card.placementId, 'down');
+                                          }}
+                                          className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white text-[11px] text-gray-600 shadow-sm dark:border-white/10 dark:bg-slate-900 dark:text-gray-200"
+                                          title="Move later in this section"
+                                        >
+                                          ↓
+                                        </button>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => removeKomoCardFromSlot(dk, section.key, card.placementId)}
+                                        className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-white/60 bg-rose-400 text-[10px] font-semibold text-white shadow-sm opacity-0 transition-opacity group-hover:opacity-100"
+                                        aria-label="Remove Komo Book polaroid"
+                                      >
+                                        x
+                                      </button>
+                                    </>
+                                  )}
+                                  {/* Back controls — shown when flipped */}
+                                  {flippedKomoCardId === card.placementId && (
+                                    <div className="mt-2 flex items-center justify-center gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); openLocationActionChooser(card.label); }}
+                                        className="flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-0.5 text-[10px] text-gray-500 shadow-sm ring-1 ring-gray-200/60 dark:bg-slate-800/80 dark:text-gray-300 dark:ring-white/10"
+                                      >
+                                        📍 Maps
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); removeKomoCardFromSlot(dk, section.key, card.placementId); setFlippedKomoCardId(null); }}
+                                        className="flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-[10px] text-rose-500 shadow-sm ring-1 ring-rose-200/60 dark:bg-rose-900/20 dark:text-rose-400 dark:ring-rose-500/20"
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
