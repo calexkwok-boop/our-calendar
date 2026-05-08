@@ -34282,7 +34282,11 @@ transform: translateY(0);
                                 >
                                   {renderKomoPolaroid(card)}
                                   <div className="mt-2 flex items-center justify-center gap-1 rounded-full bg-amber-50/60 px-2.5 py-0.5 text-amber-800/60 shadow-sm ring-1 ring-amber-200/40 dark:bg-white/[0.06] dark:text-amber-200/50 dark:ring-white/[0.08]">
-                                    <Clock className="h-3 w-3 shrink-0" />
+                                    <Clock
+                                      className="h-3 w-3 shrink-0 cursor-pointer"
+                                      onClick={(event) => { event.stopPropagation(); updateKomoCardTime(dk, section.key, card.placementId, ''); }}
+                                      title="Clear time"
+                                    />
                                     <input
                                       type="time"
                                       value={String(card?.time || '')}
