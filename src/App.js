@@ -34281,15 +34281,15 @@ transform: translateY(0);
                                   }
                                 >
                                   {renderKomoPolaroid(card)}
-                                  <div className="mt-1.5 flex items-center justify-center gap-0.5 text-gray-400/60 dark:text-gray-500/50">
-                                    <Clock className="h-2.5 w-2.5 shrink-0" />
+                                  <div className="mt-2 flex items-center justify-center gap-1 rounded-full bg-amber-50/60 px-2.5 py-0.5 text-amber-800/60 shadow-sm ring-1 ring-amber-200/40 dark:bg-white/[0.06] dark:text-amber-200/50 dark:ring-white/[0.08]">
+                                    <Clock className="h-3 w-3 shrink-0" />
                                     <input
                                       type="time"
                                       value={String(card?.time || '')}
                                       onChange={(event) => updateKomoCardTime(dk, section.key, card.placementId, event.target.value)}
                                       onClick={(event) => event.stopPropagation()}
-                                      className="min-w-[64px] bg-transparent text-center outline-none text-gray-400/70 dark:text-gray-500/60"
-                                      style={{ fontFamily: "'Caveat', cursive", fontSize: '12px' }}
+                                      className="min-w-[68px] bg-transparent text-center outline-none"
+                                      style={{ fontFamily: "'Caveat', cursive", fontSize: '13px' }}
                                       aria-label={`Time for ${card?.label || 'trip polaroid'}`}
                                     />
                                   </div>
