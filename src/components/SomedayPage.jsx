@@ -547,81 +547,32 @@ function SuggestionPreviewSheet({ suggestion, onClose, onAdd, darkMode }) {
 }
 
 function SuggestionCard({ s, onAdd, onOpenDetails, darkMode }) {
-  const [ghostPos, setGhostPos] = useState(null); // { x, y } fixed screen coords
-  const [dragging, setDragging] = useState(false);
-  const startRef = useRef(null);
-  const anchorRef = useRef(null); // offset from pointer to card top-left
-
-  function onPointerDown(e) {
-    if (e.button !== undefined && e.button !== 0) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    const rect = e.currentTarget.getBoundingClientRect();
-    anchorRef.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top };
-    startRef.current = { x: e.clientX, y: e.clientY };
-    setDragging(true);
-    setGhostPos({ x: rect.left, y: rect.top });
-  }
-
-  function onPointerMove(e) {
-    if (!dragging) return;
-    setGhostPos({
-      x: e.clientX - (anchorRef.current?.dx ?? 0),
-      y: e.clientY - (anchorRef.current?.dy ?? 0),
-    });
-  }
-
-  function onPointerUp(e) {
-    if (!dragging) return;
-    const dx = startRef.current ? e.clientX - startRef.current.x : 0;
-    const dy = startRef.current ? e.clientY - startRef.current.y : 0;
-    const dropTarget = document.elementFromPoint(e.clientX, e.clientY)?.closest?.('[data-chapter-dropzone="true"]');
-    setDragging(false);
-    setGhostPos(null);
-    startRef.current = null;
-    if (dropTarget || dy > 50) {
-      onAdd(s);
-      return;
-    }
-    if (Math.abs(dx) < 8 && Math.abs(dy) < 8) onOpenDetails?.(s);
-  }
-
-  const isDraggingDown = dragging && ghostPos && startRef.current && (ghostPos.y + (anchorRef.current?.dy ?? 0)) - startRef.current.y > 10;
-
   return (
-    <>
-      {/* Stationary placeholder — dims while ghost is out */}
-      <div
-        draggable
-        style={{ flexShrink: 0, position: 'relative', cursor: dragging ? 'grabbing' : 'grab', userSelect: 'none', touchAction: 'none', opacity: dragging ? 0.35 : 1, transition: 'opacity 0.15s' }}
-        onDragStart={(e) => {
-          e.dataTransfer.setData('application/json', JSON.stringify(s));
-          e.dataTransfer.effectAllowed = 'copy';
-        }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
+    <div
+      draggable
+      style={{ flexShrink: 0, position: 'relative', cursor: 'pointer', userSelect: 'none' }}
+      onDragStart={(e) => {
+        e.dataTransfer.setData('application/json', JSON.stringify(s));
+        e.dataTransfer.effectAllowed = 'copy';
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => onOpenDetails?.(s)}
+        style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
       >
         <div style={{ transform: `rotate(${s.rot}deg)` }}>
           <SuggestionCardInner s={s} darkMode={darkMode} shadow="2px 3px 10px rgba(0,0,0,0.14)" />
         </div>
-        <button
-          onPointerDown={e => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); onAdd(s); }}
-          style={{ position: 'absolute', bottom: -8, right: -8, width: 22, height: 22, borderRadius: '50%', background: '#2dd4bf', border: '2px solid white', color: '#0a1020', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, zIndex: 5, boxShadow: '0 2px 6px rgba(45,212,191,0.4)' }}>+</button>
-      </div>
-
-      {/* Portal ghost — floats above everything, follows pointer */}
-      {dragging && ghostPos && createPortal(
-        <div style={{ position: 'fixed', left: ghostPos.x, top: ghostPos.y, zIndex: 99999, pointerEvents: 'none', transform: `rotate(${s.rot}deg) scale(${isDraggingDown ? 1.1 : 1})`, transition: 'transform 0.1s', filter: 'drop-shadow(0 16px 32px rgba(0,0,0,0.35))' }}>
-          <SuggestionCardInner s={s} darkMode={darkMode} shadow="none" />
-          {isDraggingDown && (
-            <div style={{ textAlign: 'center', marginTop: 4, fontSize: 9, color: '#2dd4bf', fontWeight: 700, letterSpacing: '0.05em' }}>drop to add ↓</div>
-          )}
-        </div>,
-        document.body
-      )}
-    </>
+      </button>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onAdd(s); }}
+        style={{ position: 'absolute', bottom: -8, right: -8, width: 22, height: 22, borderRadius: '50%', background: '#2dd4bf', border: '2px solid white', color: '#0a1020', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, zIndex: 5, boxShadow: '0 2px 6px rgba(45,212,191,0.4)' }}
+      >
+        +
+      </button>
+    </div>
   );
 }
 
