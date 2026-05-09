@@ -1512,31 +1512,12 @@ function CountdownEditSheet({ pin, onClose, onSave, darkMode }) {
   );
 }
 
-function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, darkMode, hasLinkedTrip = false, linkedTripDates = null, onInvite, onCoverChange, onPublishChange, onAddPin, onUpdatePin, onPinDataChange }) {
+function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, darkMode, hasLinkedTrip = false, linkedTripDates = null, onInvite, onCoverChange, onPublishChange, onAddPin, onUpdatePin }) {
   const [showAddMemory, setShowAddMemory] = useState(false);
   const [memoryText, setMemoryText] = useState('');
   const [tripAlbumPhotos, setTripAlbumPhotos] = useState([]);
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [selectedPin, setSelectedPin] = useState(null);
-  const [flippedPinId, setFlippedPinId] = useState(null);
-  const [pinNotes, setPinNotes] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('komo-chapter-notes') || '{}'); } catch { return {}; }
-  });
-  const savePinNote = (id, note) => {
-    const next = { ...pinNotes, [id]: note };
-    setPinNotes(next);
-    try { localStorage.setItem('komo-chapter-notes', JSON.stringify(next)); } catch {}
-    onPinDataChange?.(chapter.id, id, { notes: note });
-  };
-  const [pinAttachments, setPinAttachments] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('komo-chapter-attachments') || '{}'); } catch { return {}; }
-  });
-  const savePinAttachment = (id, dataUrl) => {
-    const next = { ...pinAttachments, [id]: dataUrl };
-    setPinAttachments(next);
-    try { localStorage.setItem('komo-chapter-attachments', JSON.stringify(next)); } catch {}
-    onPinDataChange?.(chapter.id, id, { attachmentUrl: dataUrl });
-  };
   const [placeSearch, setPlaceSearch] = useState('');
   const [placeResults, setPlaceResults] = useState([]);
   const [placeLoading, setPlaceLoading] = useState(false);
@@ -1601,7 +1582,14 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
   const [publishTagsInput, setPublishTagsInput] = useState(Array.isArray(chapter.public_tags) ? chapter.public_tags.join(', ') : '');
   const [publishSaving, setPublishSaving] = useState(false);
   const [coverPinId, setCoverPinId] = useState(chapter.coverPinId || chapter.cover_pin_id || null);
+  const [draggingPinId, setDraggingPinId] = useState(null);
+  const [dragPreviewById, setDragPreviewById] = useState({});
   const menuRef = useRef(null);
+  const chapterBoardRef = useRef(null);
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const draggingTypeRef = useRef('');
+  const didDragRef = useRef(false);
   // seed rotates each time the page mounts (chapter reopened)
   const [suggestionSeed] = useState(() => Math.floor(Math.random() * 997));
   // Prefer the live pins state so newly added suggestions appear in Pinned immediately.
@@ -1635,6 +1623,105 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
   const imagePins = chapterPins.filter(p => getPinImageUrl(p));
   const coverPin = (coverPinId ? imagePins.find(p => String(p.id) === String(coverPinId)) : null) || imagePins[0] || null;
   const canPublish = Boolean(onDeleteChapter);
+  const chapterBoardPins = useMemo(
+    () => chapterPins.map((pin, index) => {
+      const normalized = normalizeBoardPin(pin, index, String(chapter.id || ''));
+      const preview = dragPreviewById[String(pin.id || '')];
+      return preview ? { ...normalized, ...preview } : normalized;
+    }),
+    [chapter.id, chapterPins, dragPreviewById],
+  );
+  const chapterBoardHeight = useMemo(() => {
+    if (chapterBoardPins.length === 0) return 300;
+    return Math.max(
+      300,
+      ...chapterBoardPins.map((pin) => (Number(pin.y) || 0) + estimatedPinHeight(pin) + 36),
+    );
+  }, [chapterBoardPins]);
+
+  function estimateChapterPinWidth(pin) {
+    if (pin.type === 'sticker') return 72;
+    if (pin.type === 'label') return 220;
+    if (pin.type === 'note' || pin.type === 'checklist' || pin.type === 'countdown') return 156;
+    return 156;
+  }
+
+  function handleChapterPinTap(pin) {
+    if (didDragRef.current) return;
+    if (pin.type === 'label' || pin.type === 'sticker') return;
+    setSelectedPin(pin);
+  }
+
+  function startChapterPinDrag(e, pin) {
+    if (e.target?.closest?.('button, textarea, input, label, a')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const touch = e.touches?.[0] ?? e;
+    didDragRef.current = false;
+    draggingTypeRef.current = pin.type;
+    dragOffsetRef.current = { x: touch.clientX - (Number(pin.x) || 0), y: touch.clientY - (Number(pin.y) || 0) };
+    dragStartRef.current = { x: touch.clientX, y: touch.clientY };
+    setDraggingPinId(pin.id);
+  }
+
+  const onChapterPinMove = useCallback((e) => {
+    if (!draggingPinId) return;
+    const touch = e.touches?.[0] ?? e;
+    const dx = touch.clientX - dragStartRef.current.x;
+    const dy = touch.clientY - dragStartRef.current.y;
+    if (!didDragRef.current && Math.hypot(dx, dy) < 6) return;
+    didDragRef.current = true;
+    const board = chapterBoardRef.current;
+    const pin = chapterBoardPins.find((item) => item.id === draggingPinId);
+    if (!board || !pin) return;
+    const rect = board.getBoundingClientRect();
+    const pinWidth = estimateChapterPinWidth(pin);
+    const maxX = Math.max(0, rect.width - pinWidth);
+    const maxY = Math.max(0, chapterBoardHeight - estimatedPinHeight(pin));
+    const nextX = Math.max(0, Math.min(maxX, touch.clientX - dragOffsetRef.current.x));
+    const nextY = Math.max(0, Math.min(maxY, touch.clientY - dragOffsetRef.current.y));
+    setDragPreviewById((prev) => ({
+      ...prev,
+      [String(draggingPinId)]: { x: nextX, y: nextY, rot: pin.rot ?? 0 },
+    }));
+  }, [chapterBoardHeight, chapterBoardPins, draggingPinId]);
+
+  const stopChapterPinDrag = useCallback(() => {
+    if (!draggingPinId) return;
+    const preview = dragPreviewById[String(draggingPinId)];
+    const pin = chapterBoardPins.find((item) => item.id === draggingPinId);
+    if (pin && didDragRef.current && preview) {
+      onUpdatePin?.(draggingPinId, preview);
+    } else if (pin && !didDragRef.current) {
+      handleChapterPinTap(pin);
+    }
+    didDragRef.current = false;
+    setDraggingPinId(null);
+    setDragPreviewById((prev) => {
+      if (!Object.prototype.hasOwnProperty.call(prev, String(draggingPinId))) return prev;
+      const next = { ...prev };
+      delete next[String(draggingPinId)];
+      return next;
+    });
+  }, [chapterBoardPins, dragPreviewById, draggingPinId, onUpdatePin]);
+
+  useEffect(() => {
+    if (!draggingPinId) return undefined;
+    const handleMove = (event) => onChapterPinMove(event);
+    const handleEnd = () => stopChapterPinDrag();
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleEnd);
+    window.addEventListener('touchmove', handleMove, { passive: false });
+    window.addEventListener('touchend', handleEnd);
+    window.addEventListener('touchcancel', handleEnd);
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleEnd);
+      window.removeEventListener('touchmove', handleMove);
+      window.removeEventListener('touchend', handleEnd);
+      window.removeEventListener('touchcancel', handleEnd);
+    };
+  }, [draggingPinId, onChapterPinMove, stopChapterPinDrag]);
 
   useEffect(() => {
     setCoverPinId(chapter.coverPinId || chapter.cover_pin_id || null);
@@ -1892,174 +1979,59 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
           </div>
         )}
         <p style={{ fontSize: 10, color: ts, textTransform: 'uppercase', letterSpacing: '0.18em', margin: '0 0 14px', fontWeight: 600 }}>Pinned · {chapterPins.length} item{chapterPins.length !== 1 ? 's' : ''}</p>
-        {chapterPins.filter(p => p.type === 'checklist' || p.type === 'countdown').map(p => (
-          <div key={p.id} style={{ position: 'relative', marginBottom: 10 }}>
-            {p.type === 'checklist' && (() => {
-              const allItems = p.meta?.items || [];
-              const doneCount = allItems.filter(i => i.checked).length;
-              const pct = allItems.length > 0 ? Math.round((doneCount / allItems.length) * 100) : 0;
-              return (
-                <div onClick={() => setEditingChecklist(p)} style={{ background: darkMode ? '#1e2535' : '#faf9f5', borderRadius: 16, padding: '14px 16px', boxShadow: `0 1px 6px ${darkMode ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.07)'}`, cursor: 'pointer', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : '#ede8df'}` }}>
-                  {/* header */}
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
-                    <p style={{ fontFamily: CAVEAT, fontSize: 20, fontWeight: 700, color: tp, margin: 0, lineHeight: 1.2 }}>{p.label || 'Checklist'}</p>
-                    {allItems.length > 0 && <span style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: doneCount === allItems.length ? '#2dd4bf' : ts, flexShrink: 0, marginLeft: 8, marginTop: 2 }}>{doneCount}/{allItems.length}</span>}
-                  </div>
-                  {/* progress bar */}
-                  {allItems.length > 0 && (
-                    <div style={{ height: 3, borderRadius: 99, background: darkMode ? 'rgba(255,255,255,0.08)' : '#e8e3da', marginBottom: 12, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, background: '#2dd4bf', transition: 'width 0.3s ease' }} />
-                    </div>
-                  )}
-                  {/* items */}
-                  {allItems.length === 0 && <p style={{ fontFamily: CAVEAT, fontSize: 17, color: ts, margin: 0, fontStyle: 'italic' }}>Nothing here yet — tap to add</p>}
-                  {allItems.map(item => (
-                    <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }} onClick={e => e.stopPropagation()}>
-                      <div
-                        onClick={() => {
-                          const updatedItems = allItems.map(i => i.id === item.id ? { ...i, checked: !i.checked } : i);
-                          onUpdatePin?.(p.id, { meta: { ...(p.meta || {}), items: updatedItems } });
-                        }}
-                        style={{ flexShrink: 0, width: 20, height: 20, borderRadius: '50%', border: item.checked ? 'none' : `2px solid #2dd4bf`, background: item.checked ? '#2dd4bf' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.15s ease' }}
-                      >
-                        {item.checked && <span style={{ color: '#0a1020', fontSize: 11, fontWeight: 700, lineHeight: 1 }}>✓</span>}
-                      </div>
-                      <span style={{ fontFamily: CAVEAT, fontSize: 18, color: item.checked ? ts : tp, textDecoration: item.checked ? 'line-through' : 'none', lineHeight: 1.2 }}>{item.text}</span>
-                    </div>
-                  ))}
-                  {/* edit hint */}
-                  <p style={{ fontFamily: SANS, fontSize: 10, color: ts, margin: '6px 0 0', opacity: 0.7 }}>Tap to edit</p>
-                </div>
-              );
-            })()}
-            {p.type === 'countdown' && (() => {
-              const targetDate = p.meta?.targetDate || '';
-              const days = (() => {
-                if (!targetDate) return null;
-                const [y, m, d] = targetDate.split('-').map(Number);
-                const target = new Date(y, m - 1, d);
-                const today = new Date(); today.setHours(0, 0, 0, 0);
-                return Math.round((target - today) / 86400000);
-              })();
-              let bg, accent, textCol, numCol, sublabel;
-              if (days === null)   { bg = darkMode ? '#1e2535' : '#f3f4f6'; accent = '#9ca3af'; textCol = '#9ca3af'; numCol = '#9ca3af'; sublabel = '—'; }
-              else if (days < 0)   { bg = darkMode ? '#1e2535' : '#f3f4f6'; accent = '#d1d5db'; textCol = '#9ca3af'; numCol = '#d1d5db'; sublabel = 'days ago'; }
-              else if (days === 0) { bg = darkMode ? '#2d2510' : '#fffbeb'; accent = '#f59e0b'; textCol = darkMode ? '#fcd34d' : '#92400e'; numCol = '#f59e0b'; sublabel = 'TODAY! 🎉'; }
-              else if (days <= 7)  { bg = darkMode ? '#2d1020' : '#fff0f5'; accent = '#f472b6'; textCol = darkMode ? '#f9a8d4' : '#831843'; numCol = '#ec4899'; sublabel = days === 1 ? 'day to go! 🔥' : 'days to go! 🔥'; }
-              else if (days <= 30) { bg = darkMode ? '#2d2010' : '#fffbeb'; accent = '#fbbf24'; textCol = darkMode ? '#fde68a' : '#78350f'; numCol = '#f59e0b'; sublabel = 'days away ✨'; }
-              else                 { bg = darkMode ? '#0f2520' : '#f0fdf9'; accent = '#2dd4bf'; textCol = darkMode ? '#99f6e4' : '#134e4a'; numCol = '#0d9488'; sublabel = 'days away'; }
-              return (
-                <div style={{ background: bg, borderRadius: 16, padding: '18px 20px', border: `1px solid ${accent}33`, position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: accent }} />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <div style={{ fontSize: 44, lineHeight: 1, flexShrink: 0 }}>{p.emoji || '⏳'}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontFamily: CAVEAT, fontSize: 17, fontWeight: 700, color: textCol, margin: '0 0 2px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{p.label}</p>
-                      {days === 0 ? (
-                        <p style={{ fontFamily: CAVEAT, fontSize: 26, fontWeight: 700, color: numCol, margin: 0, lineHeight: 1 }}>{sublabel}</p>
-                      ) : (
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                          <span style={{ fontFamily: CAVEAT, fontSize: 48, fontWeight: 700, color: numCol, lineHeight: 1 }}>{Math.abs(days)}</span>
-                          <span style={{ fontFamily: SANS, fontSize: 11, color: textCol, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{sublabel}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-            {onRemovePin && (
-              <button onClick={e => { e.stopPropagation(); onRemovePin(p.id); }} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.08)', border: 'none', borderRadius: '50%', width: 18, height: 18, color: '#6b7280', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, zIndex: 20 }}>✕</button>
-            )}
-          </div>
-        ))}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
-          {chapterPins.filter(p => p.type !== 'checklist' && p.type !== 'countdown').map(p => {
-            const isFlipped = flippedPinId === p.id;
-            const cardW = p.type === 'note' ? 140 : 130;
-            const cardMinH = p.type === 'note' ? 80 : cardW + 22;
-            return (
-            <div key={p.id} style={{ transform: `rotate(${(p.rot || 0) * 0.4}deg)`, position: 'relative', perspective: '600px' }}>
-              <div style={{ transformStyle: 'preserve-3d', transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)', transition: 'transform 0.5s', position: 'relative' }}>
-                {/* Front — tap opens detail modal as before */}
-                <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', cursor: 'pointer' }} onClick={() => setSelectedPin(p)}>
-                  {p.type === 'note' ? (
-                    <div style={{ background: (NOTE_COLORS[p.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'].bg, padding: '11px 12px', width: cardW, minHeight: cardMinH, borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', position: 'relative' }}>
-                      <Pushpin colorKey="purple" darkMode={darkMode} />
-                      <p style={{ fontFamily: CAVEAT, fontSize: 13, color: (NOTE_COLORS[p.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'].text, margin: 0, lineHeight: 1.45 }}>{p.text}</p>
-                      {p.status === 'done' && <SharpieX size={118} />}
-                    </div>
-                  ) : (
-                    <div style={{ background: darkMode ? '#e2e8f0' : '#fff', padding: '5px 5px 0', width: cardW, borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', position: 'relative' }}>
-                      <Pushpin colorKey="purple" darkMode={darkMode} />
-                      <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 1, position: 'relative' }}>
-                        {getPinImageUrl(p) ? <img src={getPinImageUrl(p)} alt={p.label} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: p.status === 'done' ? 'grayscale(40%) brightness(0.85)' : 'none' }} /> : <div style={{ width: '100%', height: '100%', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30 }}>{p.emoji || '📌'}</div>}
-                        {p.status === 'done' && <SharpieX size={120} />}
-                      </div>
-                      <div style={{ padding: '5px 2px 6px', textAlign: 'center', fontFamily: CAVEAT, fontSize: 11, color: p.status === 'done' ? '#9ca3af' : '#374151', textDecoration: p.status === 'done' ? 'line-through' : 'none', lineHeight: 1.3 }}>{p.emoji ? `${p.emoji} ${p.label}` : p.label}</div>
-                    </div>
-                  )}
-                  {/* Flip button — bottom-right corner */}
-                  {onRemovePin && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onRemovePin(p.id); }}
-                      style={{ position: 'absolute', top: 6, right: 6, width: 18, height: 18, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: 'none', color: '#6b7280', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, zIndex: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.12)' }}
-                      title="Remove from chapter"
-                    >
-                      x
-                    </button>
-                  )}
-                  {!isFlipped && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setFlippedPinId(p.id); }}
-                      style={{ position: 'absolute', bottom: 4, right: 4, width: 20, height: 20, borderRadius: '50%', background: 'rgba(255,255,255,0.85)', border: 'none', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.12)', zIndex: 10, color: '#9ca3af' }}
-                      title="Flip to write notes"
-                    >✏️</button>
-                  )}
-                </div>
-                {/* Back — notes + photo upload */}
-                <div
-                  style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', position: 'absolute', inset: 0, background: '#fefce8', borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', padding: '8px', display: 'flex', flexDirection: 'column', width: cardW, minHeight: cardMinH, overflow: 'hidden' }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button onClick={(e) => { e.stopPropagation(); setFlippedPinId(null); }} style={{ position: 'absolute', top: 4, right: 4, width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: 'none', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', zIndex: 1 }}>↩</button>
-                  <textarea
-                    value={pinNotes[p.id] || ''}
-                    onChange={(e) => savePinNote(p.id, e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                    placeholder="notes..."
-                    style={{ marginTop: 4, flex: 1, width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontFamily: CAVEAT, fontSize: 13, color: '#374151', lineHeight: 1.45, padding: 0 }}
-                    maxLength={500}
-                  />
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 }}>
-                    {pinAttachments[p.id] ? (
-                      <a href={pinAttachments[p.id]} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ display: 'block', width: 24, height: 24, borderRadius: 4, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
-                        <img src={pinAttachments[p.id]} alt="attachment" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      </a>
-                    ) : <span />}
-                    <label style={{ cursor: 'pointer', borderRadius: 999, background: 'rgba(255,255,255,0.7)', border: 'none', padding: '2px 6px', fontSize: 11, color: '#6b7280', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }} title="Attach photo" onClick={(e) => e.stopPropagation()}>
-                      📎
-                      <input
-                        type="file"
-                        accept="image/*"
-                        style={{ display: 'none' }}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          const reader = new FileReader();
-                          reader.onload = (ev) => savePinAttachment(p.id, ev.target.result);
-                          reader.readAsDataURL(file);
-                          e.target.value = '';
-                        }}
-                      />
-                    </label>
-                  </div>
-                </div>
-              </div>
+        <div
+          ref={chapterBoardRef}
+          style={{
+            position: 'relative',
+            width: '100%',
+            minHeight: chapterBoardHeight,
+            borderRadius: 18,
+            background: darkMode ? 'linear-gradient(180deg, rgba(18,27,42,0.92), rgba(10,16,26,0.96))' : 'linear-gradient(180deg, #fffdf8, #f7f1e7)',
+            border: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : '#ece5d8'}`,
+            boxShadow: darkMode ? 'inset 0 1px 0 rgba(255,255,255,0.03), 0 14px 30px rgba(0,0,0,0.22)' : 'inset 0 1px 0 rgba(255,255,255,0.8), 0 14px 28px rgba(161,140,108,0.12)',
+            overflow: 'hidden',
+            touchAction: draggingPinId ? 'none' : 'pan-y',
+          }}
+        >
+          <div style={{ position: 'absolute', inset: 0, backgroundImage: darkMode ? 'radial-gradient(circle at 20% 18%, rgba(94,173,206,0.08), transparent 30%), radial-gradient(circle at 82% 24%, rgba(45,212,191,0.08), transparent 26%)' : 'radial-gradient(circle at 18% 16%, rgba(251,207,232,0.24), transparent 28%), radial-gradient(circle at 82% 18%, rgba(191,219,254,0.2), transparent 24%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', inset: 0, backgroundImage: darkMode ? 'linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)' : 'linear-gradient(rgba(160,140,110,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(160,140,110,0.06) 1px, transparent 1px)', backgroundSize: '34px 34px', opacity: darkMode ? 0.4 : 0.75, pointerEvents: 'none' }} />
+          {chapterBoardPins.map((pin) => (
+            <div
+              key={pin.id}
+              style={{
+                position: 'absolute',
+                left: pin.x,
+                top: pin.y,
+                transform: `rotate(${pin.rot}deg)${draggingPinId === pin.id ? ' scale(1.04)' : ''}`,
+                zIndex: draggingPinId === pin.id ? 40 : (pin.type === 'label' || pin.type === 'sticker') ? 12 : 4,
+                userSelect: 'none',
+                transition: draggingPinId === pin.id ? 'none' : 'transform 0.16s ease',
+                touchAction: 'none',
+                filter: draggingPinId === pin.id
+                  ? (darkMode ? 'drop-shadow(0 18px 34px rgba(0,0,0,0.68))' : 'drop-shadow(0 18px 34px rgba(0,0,0,0.24))')
+                  : 'none',
+              }}
+              onMouseDown={(e) => startChapterPinDrag(e, pin)}
+              onTouchStart={(e) => startChapterPinDrag(e, pin)}
+            >
+              {pin.type === 'note'
+                ? <NotePin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={() => handleChapterPinTap(pin)} darkMode={darkMode} />
+                : pin.type === 'label'
+                ? <LabelPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} darkMode={darkMode} />
+                : pin.type === 'sticker'
+                ? <StickerPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} />
+                : pin.type === 'checklist'
+                ? <ChecklistPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={() => setEditingChecklist(pin)} darkMode={darkMode} />
+                : pin.type === 'countdown'
+                ? <CountdownPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={() => handleChapterPinTap(pin)} />
+                : <PhotoPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={() => handleChapterPinTap(pin)} darkMode={darkMode} />}
             </div>
-            );
-          })}
-          {chapterPins.length === 0 && <p style={{ fontFamily: CAVEAT, fontSize: 16, color: ts, fontStyle: 'italic' }}>No pins yet — tap + to add your first pin</p>}
+          ))}
+          {chapterPins.length === 0 && (
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+              <p style={{ fontFamily: CAVEAT, fontSize: 22, color: ts, fontStyle: 'italic', margin: 0 }}>No pins yet — tap + to add your first pin</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -3095,6 +3067,8 @@ const SomedayPage = ({
   }
 
   function addSuggestionToChapter(suggestion, chapterId) {
+    const position = chapters.find(c => c.id === chapterId)?.itemIds?.length || 0;
+    const defaultPos = gridPosition(position);
     const newPin = {
       id: `pin-sug-${Date.now()}`,
       type: 'photo',
@@ -3109,9 +3083,9 @@ const SomedayPage = ({
       mapQuery: suggestion.mapQuery || '',
       meta: { persistScope: 'chapter' },
       chapterId,
-      x: 0,
-      y: 0,
-      rot: (Math.random() - 0.5) * 3,
+      x: defaultPos.x,
+      y: defaultPos.y,
+      rot: defaultPos.rot,
     };
     setPins(prev => [...prev, newPin]);
     setChapters(prev => prev.map(c =>
@@ -3124,7 +3098,6 @@ const SomedayPage = ({
         : c
     ));
     // Also write directly to chapter_pins so collaborators see it
-    const position = chapters.find(c => c.id === chapterId)?.itemIds?.length || 0;
     supabase.from('chapter_pins').upsert(pinToRow({ ...newPin, chapterId }, chapterId, position)).then(() => {});
   }
 
@@ -3135,6 +3108,15 @@ const SomedayPage = ({
     if (updates.meta !== undefined) dbUpdates.meta = updates.meta;
     if (updates.label !== undefined) dbUpdates.label = updates.label;
     if (updates.emoji !== undefined) dbUpdates.emoji = updates.emoji;
+    if (updates.text !== undefined) dbUpdates.description = updates.text;
+    if (updates.imageUrl !== undefined) dbUpdates.image_url = updates.imageUrl;
+    if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId;
+    if (updates.status !== undefined) dbUpdates.status = updates.status;
+    if (updates.pinColor !== undefined) dbUpdates.pin_color = updates.pinColor;
+    if (updates.noteColor !== undefined) dbUpdates.note_color = updates.noteColor;
+    if (updates.x !== undefined) dbUpdates.x = updates.x;
+    if (updates.y !== undefined) dbUpdates.y = updates.y;
+    if (updates.rot !== undefined) dbUpdates.rot = updates.rot;
     if (Object.keys(dbUpdates).length > 0) {
       supabase.from('chapter_pins').update(dbUpdates).eq('id', pinId).then(({ error }) => {
         if (error) console.error('chapter_pins update failed:', pinId, error);
@@ -3143,15 +3125,17 @@ const SomedayPage = ({
   }
 
   function addDirectPinToChapter(chapterId, pinData) {
+    const position = (chapters.find(c => c.id === chapterId)?.itemIds || []).length;
+    const defaultPos = gridPosition(position);
     const newPin = {
       id: crypto.randomUUID(),
       ...pinData,
       meta: { ...(pinData.meta || {}), persistScope: 'chapter' },
       chapterId,
       status: pinData.status || 'dreaming',
-      x: 0,
-      y: 0,
-      rot: (Math.random() - 0.5) * 3,
+      x: pinData.x ?? defaultPos.x,
+      y: pinData.y ?? defaultPos.y,
+      rot: pinData.rot ?? defaultPos.rot,
     };
     setPins(prev => [...prev, newPin]);
     setChapters(prev => prev.map(c =>
@@ -3163,7 +3147,6 @@ const SomedayPage = ({
           }
         : c
     ));
-    const position = (chapters.find(c => c.id === chapterId)?.itemIds || []).length;
     supabase.from('chapter_pins').upsert(pinToRow({ ...newPin, chapterId }, chapterId, position)).then(({ error }) => { if (error) console.error('chapter_pins upsert failed:', error); });
   }
 
@@ -3246,7 +3229,7 @@ const SomedayPage = ({
       return (
         <>
           <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
-          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={chapter.owner_id === currentUser ? () => deleteChapter(activeChapterId) : undefined} onCreateTrip={chapter.owner_id === currentUser ? onCreateTripFromChapter : undefined} darkMode={darkMode} hasLinkedTrip={chaptersWithLinkedTrips.has(String(chapter.id))} linkedTripDates={chaptersWithLinkedTrips.get(String(chapter.id)) || null} onInvite={email => inviteToChapter(activeChapterId, email)} onCoverChange={({ chapterId, coverPinId }) => setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, cover_pin_id: coverPinId } : c))} onPublishChange={updateChapterPublishState} onAddPin={chapter.owner_id === currentUser ? (data) => addDirectPinToChapter(activeChapterId, data) : undefined} onUpdatePin={updateChapterPin} onPinDataChange={onPinDataChange} />
+          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={chapter.owner_id === currentUser ? () => deleteChapter(activeChapterId) : undefined} onCreateTrip={chapter.owner_id === currentUser ? onCreateTripFromChapter : undefined} darkMode={darkMode} hasLinkedTrip={chaptersWithLinkedTrips.has(String(chapter.id))} linkedTripDates={chaptersWithLinkedTrips.get(String(chapter.id)) || null} onInvite={email => inviteToChapter(activeChapterId, email)} onCoverChange={({ chapterId, coverPinId }) => setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, cover_pin_id: coverPinId } : c))} onPublishChange={updateChapterPublishState} onAddPin={(data) => addDirectPinToChapter(activeChapterId, data)} onUpdatePin={updateChapterPin} onPinDataChange={onPinDataChange} />
         </>
       );
     }
