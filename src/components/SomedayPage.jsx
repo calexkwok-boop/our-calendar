@@ -1360,7 +1360,7 @@ function CountdownEditSheet({ pin, onClose, onSave, darkMode }) {
   );
 }
 
-function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, darkMode, hasLinkedTrip = false, linkedTripDates = null, onInvite, onCoverChange, onPublishChange, onAddPin, onUpdatePin }) {
+function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, darkMode, hasLinkedTrip = false, linkedTripDates = null, onInvite, onCoverChange, onPublishChange, onAddPin, onUpdatePin, onPinDataChange }) {
   const [showAddMemory, setShowAddMemory] = useState(false);
   const [memoryText, setMemoryText] = useState('');
   const [tripAlbumPhotos, setTripAlbumPhotos] = useState([]);
@@ -1374,6 +1374,16 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
     const next = { ...pinNotes, [id]: note };
     setPinNotes(next);
     try { localStorage.setItem('komo-chapter-notes', JSON.stringify(next)); } catch {}
+    onPinDataChange?.(chapter.id, id, { notes: note });
+  };
+  const [pinAttachments, setPinAttachments] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('komo-chapter-attachments') || '{}'); } catch { return {}; }
+  });
+  const savePinAttachment = (id, dataUrl) => {
+    const next = { ...pinAttachments, [id]: dataUrl };
+    setPinAttachments(next);
+    try { localStorage.setItem('komo-chapter-attachments', JSON.stringify(next)); } catch {}
+    onPinDataChange?.(chapter.id, id, { attachmentUrl: dataUrl });
   };
   const [editingChecklist, setEditingChecklist] = useState(null);
   const [showInvite, setShowInvite] = useState(false);
@@ -1749,28 +1759,42 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                     title="Flip to write notes"
                   >✏️</button>
                 </div>
-                {/* Back — notes + maps; flip back button top-right */}
+                {/* Back — notes + photo upload */}
                 <div
-                  style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', position: 'absolute', inset: 0, background: '#fefce8', borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', padding: '8px', display: 'flex', flexDirection: 'column', width: cardW, minHeight: cardMinH }}
+                  style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', position: 'absolute', inset: 0, background: '#fefce8', borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', padding: '8px', display: 'flex', flexDirection: 'column', width: cardW, minHeight: cardMinH, overflow: 'hidden' }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontFamily: CAVEAT, fontSize: 11, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: 4 }}>{p.label || p.text}</span>
-                    <button onClick={(e) => { e.stopPropagation(); setFlippedPinId(null); }} style={{ width: 24, height: 24, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: 'none', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>↩</button>
-                  </div>
+                  <button onClick={(e) => { e.stopPropagation(); setFlippedPinId(null); }} style={{ position: 'absolute', top: 4, right: 4, width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: 'none', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', zIndex: 1 }}>↩</button>
                   <textarea
                     value={pinNotes[p.id] || ''}
                     onChange={(e) => savePinNote(p.id, e.target.value)}
                     onClick={(e) => e.stopPropagation()}
                     placeholder="notes..."
-                    style={{ flex: 1, width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontFamily: CAVEAT, fontSize: 13, color: '#374151', lineHeight: 1.45, padding: 0 }}
+                    style={{ marginTop: 4, flex: 1, width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontFamily: CAVEAT, fontSize: 13, color: '#374151', lineHeight: 1.45, padding: 0 }}
                     maxLength={500}
                   />
-                  <div style={{ display: 'flex', gap: 4, paddingTop: 4, justifyContent: 'space-between' }}>
-                    <button onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.label || p.text || '')}`, '_blank'); }} style={{ borderRadius: 999, background: 'rgba(255,255,255,0.7)', border: 'none', padding: '2px 7px', fontSize: 10, color: '#6b7280', cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }}>📍 Maps</button>
-                    {onRemovePin && (
-                      <button onClick={(e) => { e.stopPropagation(); onRemovePin(p.id); setFlippedPinId(null); }} style={{ borderRadius: 999, background: '#fff1f2', border: 'none', padding: '2px 7px', fontSize: 10, color: '#f43f5e', cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }}>Remove</button>
-                    )}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 }}>
+                    {pinAttachments[p.id] ? (
+                      <a href={pinAttachments[p.id]} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ display: 'block', width: 24, height: 24, borderRadius: 4, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
+                        <img src={pinAttachments[p.id]} alt="attachment" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </a>
+                    ) : <span />}
+                    <label style={{ cursor: 'pointer', borderRadius: 999, background: 'rgba(255,255,255,0.7)', border: 'none', padding: '2px 6px', fontSize: 11, color: '#6b7280', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }} title="Attach photo" onClick={(e) => e.stopPropagation()}>
+                      📎
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = (ev) => savePinAttachment(p.id, ev.target.result);
+                          reader.readAsDataURL(file);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
                   </div>
                 </div>
               </div>
@@ -2111,6 +2135,7 @@ const SomedayPage = ({
   userEmail = '',
   inviteRefreshToken = 0,
   initialChapters = [],
+  onPinDataChange,
 }) => {
   const [pins, setPins] = useState(() => mergeBoardPinsWithChapterPins(
     dreams.map((d, idx) => {
@@ -2941,7 +2966,7 @@ const SomedayPage = ({
       return (
         <>
           <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
-          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={chapter.owner_id === currentUser ? () => deleteChapter(activeChapterId) : undefined} onCreateTrip={chapter.owner_id === currentUser ? onCreateTripFromChapter : undefined} darkMode={darkMode} hasLinkedTrip={chaptersWithLinkedTrips.has(String(chapter.id))} linkedTripDates={chaptersWithLinkedTrips.get(String(chapter.id)) || null} onInvite={email => inviteToChapter(activeChapterId, email)} onCoverChange={({ chapterId, coverPinId }) => setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, cover_pin_id: coverPinId } : c))} onPublishChange={updateChapterPublishState} onAddPin={chapter.owner_id === currentUser ? (data) => addDirectPinToChapter(activeChapterId, data) : undefined} onUpdatePin={updateChapterPin} />
+          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={chapter.owner_id === currentUser ? () => deleteChapter(activeChapterId) : undefined} onCreateTrip={chapter.owner_id === currentUser ? onCreateTripFromChapter : undefined} darkMode={darkMode} hasLinkedTrip={chaptersWithLinkedTrips.has(String(chapter.id))} linkedTripDates={chaptersWithLinkedTrips.get(String(chapter.id)) || null} onInvite={email => inviteToChapter(activeChapterId, email)} onCoverChange={({ chapterId, coverPinId }) => setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, cover_pin_id: coverPinId } : c))} onPublishChange={updateChapterPublishState} onAddPin={chapter.owner_id === currentUser ? (data) => addDirectPinToChapter(activeChapterId, data) : undefined} onUpdatePin={updateChapterPin} onPinDataChange={onPinDataChange} />
         </>
       );
     }

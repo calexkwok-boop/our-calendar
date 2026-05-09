@@ -274,6 +274,8 @@ const ScrapbookHomeHybrid = ({
 
   const [cachedMoment] = useState(() => readCachedTodayMoment(todayKey));
   const displayMoment = todayMoment || cachedMoment;
+  const [readyMomentPhotoUrl, setReadyMomentPhotoUrl] = useState(() => String(cachedMoment?.url || todayMoment?.photoUrl || '').trim());
+  const [isMomentPhotoReady, setIsMomentPhotoReady] = useState(() => Boolean(String(cachedMoment?.url || todayMoment?.photoUrl || '').trim()));
   const shuffledBucketList = React.useMemo(() => (
     [...bucketList].sort((left, right) => {
       const leftKey = `${komoShuffleSeedRef.current}:${String(left?.id || left?.text || '')}`;
@@ -298,6 +300,39 @@ const ScrapbookHomeHybrid = ({
       }));
     } catch {}
   }, [todayKey, todayMoment?.photoUrl, todayMoment?.title]);
+
+  React.useEffect(() => {
+    const nextUrl = String(displayMoment?.photoUrl || cachedMoment?.url || '').trim();
+    if (!nextUrl) {
+      setReadyMomentPhotoUrl('');
+      setIsMomentPhotoReady(false);
+      return;
+    }
+    if (nextUrl === readyMomentPhotoUrl) {
+      setIsMomentPhotoReady(true);
+      return;
+    }
+    setIsMomentPhotoReady(false);
+    let cancelled = false;
+    const img = new Image();
+    img.decoding = 'async';
+    img.onload = () => {
+      if (cancelled) return;
+      setReadyMomentPhotoUrl(nextUrl);
+      setIsMomentPhotoReady(true);
+    };
+    img.onerror = () => {
+      if (cancelled) return;
+      setReadyMomentPhotoUrl(nextUrl);
+      setIsMomentPhotoReady(true);
+    };
+    img.src = nextUrl;
+    return () => {
+      cancelled = true;
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [cachedMoment?.url, displayMoment?.photoUrl, readyMomentPhotoUrl]);
 
   React.useEffect(() => {
     const activeUrls = memoryCollageTiles.filter(Boolean);
@@ -546,14 +581,20 @@ const ScrapbookHomeHybrid = ({
                   onClick={() => onOpenMemory?.(todayMoment || displayMoment)}
                   className="w-full"
                 >
-                  <div className="aspect-[4/3] w-full overflow-hidden rounded-[2px]">
-                    {displayMoment.photoUrl ? (
-                      <img
-                        src={displayMoment.photoUrl}
-                        alt="Today's moment"
-                        className="h-full w-full object-cover"
-                        fetchpriority="high"
-                      />
+                  <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[2px]">
+                    {readyMomentPhotoUrl ? (
+                      <>
+                        <img
+                          src={readyMomentPhotoUrl}
+                          alt="Today's moment"
+                          className={`h-full w-full object-cover transition-opacity duration-300 ${isMomentPhotoReady ? 'opacity-100' : 'opacity-95'}`}
+                          fetchpriority="high"
+                          loading="eager"
+                        />
+                        {!isMomentPhotoReady && (
+                          <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-violet-100/70 via-rose-50/80 to-amber-100/70 dark:from-violet-900/30 dark:via-slate-900/80 dark:to-amber-900/20" />
+                        )}
+                      </>
                     ) : (
                       <div className="h-full w-full bg-gradient-to-br from-violet-100 via-rose-50 to-amber-100 dark:from-violet-900/30 dark:via-slate-900 dark:to-amber-900/20 flex items-center justify-center">
                         <Camera className="w-12 h-12 text-pink-400/60" />

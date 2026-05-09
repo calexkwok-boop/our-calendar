@@ -20685,6 +20685,39 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
     return m;
   }, [tripKomoState, subCalendars]);
+
+  const handleChapterPinDataChange = (chapterId, pinId, patch) => {
+    const linked = chaptersWithLinkedTrips.get(String(chapterId));
+    if (!linked?.trip_id) return;
+    const tid = linked.trip_id;
+    const safePrev = tripKomoState && typeof tripKomoState === 'object' ? tripKomoState : {};
+    const current = (safePrev[tid] && typeof safePrev[tid] === 'object') ? safePrev[tid] : {};
+    const slots = { ...(current.slots || {}) };
+    let changed = false;
+    for (const dk of Object.keys(slots)) {
+      const day = { ...slots[dk] };
+      for (const sk of Object.keys(day)) {
+        const cards = Array.isArray(day[sk]) ? [...day[sk]] : [];
+        const idx = cards.findIndex((c) => String(c?.sourceId || '') === String(pinId));
+        if (idx >= 0) {
+          cards[idx] = { ...cards[idx], ...patch };
+          day[sk] = cards;
+          changed = true;
+        }
+      }
+      slots[dk] = day;
+    }
+    if (!changed) return;
+    const nextTripKomo = { ...current, slots };
+    const nextState = { ...safePrev, [tid]: nextTripKomo };
+    writeTripKomoState(user?.id, nextState);
+    setTripKomoState(nextState);
+    if (user?.id) {
+      supabase.from('sub_calendars').update({ komo_state: nextTripKomo }).eq('id', tid)
+        .then(({ error }) => { if (error) console.warn('[komo] pin sync failed:', error.message); });
+    }
+  };
+
   const primaryJourneyGoal = sortedJourneyGoals.find((goal) => goal?.active !== false) || null;
   const todayWeatherIcon = weather[todayKey]?.icon;
   const weatherGreetingEmoji = (todayWeatherIcon && todayWeatherIcon !== 'FOG') ? todayWeatherIcon : homeGreetingEmoji;
@@ -20974,11 +21007,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const DAILY_PHOTO_CACHE_KEY = `komo-daily-photos-${userId}-${today}`;
     const DAILY_PHOTO_TTL = 5 * 60 * 1000; // 5 min
 
-    // Show stale cache immediately so the strip renders before the fetch completes
+    // Show cached data immediately so the strip renders before the fetch completes.
     let hasFreshDailyPhotoCache = false;
     try {
       const cached = JSON.parse(localStorage.getItem(DAILY_PHOTO_CACHE_KEY) || 'null');
-      if (cached?.photos && Array.isArray(cached.photos) && Date.now() - (cached.ts || 0) < DAILY_PHOTO_TTL) {
+      if (cached?.photos && Array.isArray(cached.photos) && cached.photos.length > 0) {
         setFriendsDailyPhotos((prev) => {
           const sameLength = Array.isArray(prev) && prev.length === cached.photos.length;
           const unchanged = sameLength && prev.every((entry, index) => (
@@ -20990,7 +21023,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           ));
           return unchanged ? prev : cached.photos;
         });
-        hasFreshDailyPhotoCache = true;
+        hasFreshDailyPhotoCache = Date.now() - (cached.ts || 0) < DAILY_PHOTO_TTL;
       }
     } catch {}
 
@@ -21034,9 +21067,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
         if (cancelled) return;
         if (!friendIds.length) { if (!cancelled) setFriendsDailyPhotos([]); return; }
+        const prefetchedFriendMetaById = Object.fromEntries(
+          (Array.isArray(prefetchedFriendsList) ? prefetchedFriendsList : [])
+            .map((friend) => {
+              const id = String(friend?.userId || '').trim();
+              if (!id) return null;
+              return [id, friend];
+            })
+            .filter(Boolean)
+        );
+        const needsHandleLookup = friendIds.some((id) => !String(prefetchedFriendMetaById[id]?.handle || '').trim());
         const [{ data: todayMemories }, { data: handles }] = await Promise.all([
           supabase.from('user_memories').select('owner_user_id, memory').in('owner_user_id', friendIds).eq('memory_date', today),
-          supabase.from('user_handles').select('user_id, handle').in('user_id', friendIds),
+          needsHandleLookup
+            ? supabase.from('user_handles').select('user_id, handle').in('user_id', friendIds)
+            : Promise.resolve({ data: [] }),
         ]);
         if (cancelled) return;
         const handleMap = {};
@@ -21046,12 +21091,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           const photoUrl = String(mem.coverPhoto || mem.photos?.[0]?.url || mem.photoUrl || '').trim();
           if (!photoUrl) return null;
           const uid = String(row.owner_user_id);
+          const prefetchedFriend = prefetchedFriendMetaById[uid] || null;
           return {
             userId: uid,
-            handle: handleMap[uid] || uid.slice(0, 8),
+            handle: String(prefetchedFriend?.handle || handleMap[uid] || uid.slice(0, 8)).trim(),
             photoUrl,
             memoryDate: today,
-            avatarUrl: `${supabase.supabaseUrl}/storage/v1/object/public/avatars/${uid}/avatar`,
+            avatarUrl: String(prefetchedFriend?.avatarUrl || `${supabase.supabaseUrl}/storage/v1/object/public/avatars/${uid}/avatar`).trim(),
           };
         }).filter(Boolean);
         if (!cancelled) {
@@ -21502,6 +21548,26 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const runHydration = async () => {
       const tombstones = memoryPersistence.readMemoriesTombstones(user?.id);
       const filterTombstones = (list) => list.filter((m) => !tombstones.has(String(m?.id || '')));
+      const localRows = memoryPersistence.readMemoriesState(user?.id);
+      const localGuestRows = currentMemoriesUserId !== 'guest'
+        ? memoryPersistence.readMemoriesState('guest')
+        : [];
+      const optimisticMemories = filterTombstones(
+        currentMemoriesUserId !== 'guest'
+          ? memoryPersistence.mergePersistedMemories(localRows, localGuestRows)
+          : localRows
+      ).map((memory) => memoryPersistence.stampMemoryOwner(memory, currentMemoriesUserId));
+      if (!cancelled && optimisticMemories.length > 0) {
+        setMemories((prev) => {
+          const sameLength = Array.isArray(prev) && prev.length === optimisticMemories.length;
+          const unchanged = sameLength && prev.every((memory, index) => (
+            String(memory?.id || '') === String(optimisticMemories[index]?.id || '')
+            && String(memory?.updatedAt || memory?.createdAt || '') === String(optimisticMemories[index]?.updatedAt || optimisticMemories[index]?.createdAt || '')
+            && String(memory?.coverPhoto || memory?.photoUrl || '') === String(optimisticMemories[index]?.coverPhoto || optimisticMemories[index]?.photoUrl || '')
+          ));
+          return unchanged ? prev : optimisticMemories;
+        });
+      }
 
       // Fetch all async sources in parallel.
       const [remoteRows, indexedDbRows, guestIndexedDbRows] = await Promise.all([
@@ -21525,7 +21591,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         if (cancelled) return;
         setMemories(merged);
         memoryPersistence.persistMemoriesState(user?.id, merged);
-        void memoryPersistence.persistRemoteMemoriesState(user?.id, merged);
       } else {
         if (cancelled) return;
         setMemories(savedForCurrentUser);
@@ -21588,7 +21653,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (memoriesHydratedUserId !== currentMemoriesUserId) return;
     if (!Array.isArray(eligibleMemoryTripSyncEntries) || eligibleMemoryTripSyncEntries.length === 0) return;
     let cancelled = false;
-    (async () => {
+    let scheduleId = null;
+    const runTripMemorySync = async () => {
       // Process one trip at a time to avoid blasting the DB with concurrent member + photo queries.
       const drafts = [];
       for (const { tripId } of eligibleMemoryTripSyncEntries) {
@@ -21648,9 +21714,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         if (!changed) return prev;
         return next.sort((a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0)));
       });
-    })();
+    };
+    if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      scheduleId = window.requestIdleCallback(() => { void runTripMemorySync(); }, { timeout: 2500 });
+    } else {
+      scheduleId = window.setTimeout(() => { void runTripMemorySync(); }, 1200);
+    }
     return () => {
       cancelled = true;
+      if (scheduleId !== null && typeof window !== 'undefined' && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(scheduleId);
+      } else if (scheduleId !== null) {
+        window.clearTimeout(scheduleId);
+      }
     };
   }, [
     eligibleMemoryTripSyncEntries,
@@ -32029,6 +32105,7 @@ transform: translateY(0);
                 pinPositionOverrides={somedayPinPositions}
                 onCreateTripFromChapter={startTripFromKomoChapter}
                 chaptersWithLinkedTrips={chaptersWithLinkedTrips}
+                onPinDataChange={handleChapterPinDataChange}
               />
               </Suspense>
             );
@@ -33852,6 +33929,9 @@ transform: translateY(0);
           };
           const updateKomoCardField = (dateKey, slotKey, placementId, patch) => {
             if (!dateKey || !slotKey || !placementId) return;
+            const currentDay = (tripKomo?.slots?.[dateKey] || {});
+            const currentCards = Array.isArray(currentDay[slotKey]) ? currentDay[slotKey] : [];
+            const sourceId = (currentCards.find((c) => String(c?.placementId || '') === String(placementId || '')) || {}).sourceId;
             updateTripKomo((current) => {
               const slots = { ...(current.slots || {}) };
               const day = { ...(slots[dateKey] || {}) };
@@ -33863,6 +33943,22 @@ transform: translateY(0);
               slots[dateKey] = day;
               return { ...current, slots };
             });
+            if (sourceId) {
+              if ('notes' in patch) {
+                try {
+                  const chNotes = JSON.parse(localStorage.getItem('komo-chapter-notes') || '{}');
+                  chNotes[sourceId] = patch.notes;
+                  localStorage.setItem('komo-chapter-notes', JSON.stringify(chNotes));
+                } catch {}
+              }
+              if ('attachmentUrl' in patch) {
+                try {
+                  const chAttach = JSON.parse(localStorage.getItem('komo-chapter-attachments') || '{}');
+                  chAttach[sourceId] = patch.attachmentUrl;
+                  localStorage.setItem('komo-chapter-attachments', JSON.stringify(chAttach));
+                } catch {}
+              }
+            }
           };
           const updateKomoCardNotes = (dateKey, slotKey, placementId, notes) =>
             updateKomoCardField(dateKey, slotKey, placementId, { notes: String(notes || '') });
