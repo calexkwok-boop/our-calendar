@@ -1537,6 +1537,60 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
     try { localStorage.setItem('komo-chapter-attachments', JSON.stringify(next)); } catch {}
     onPinDataChange?.(chapter.id, id, { attachmentUrl: dataUrl });
   };
+  const [placeSearch, setPlaceSearch] = useState('');
+  const [placeResults, setPlaceResults] = useState([]);
+  const [placeLoading, setPlaceLoading] = useState(false);
+  const [placeAdding, setPlaceAdding] = useState(null); // place_id being added
+  const searchInputRef = useRef(null);
+
+  useEffect(() => {
+    const q = placeSearch.trim();
+    if (q.length < 2) { setPlaceResults([]); return; }
+    const t = setTimeout(async () => {
+      setPlaceLoading(true);
+      try {
+        const res = await fetch(`/api/places?action=autocomplete&input=${encodeURIComponent(q)}&types=establishment`);
+        const data = await res.json();
+        setPlaceResults(Array.isArray(data.predictions) ? data.predictions.slice(0, 6) : []);
+      } catch { setPlaceResults([]); }
+      finally { setPlaceLoading(false); }
+    }, 280);
+    return () => clearTimeout(t);
+  }, [placeSearch]);
+
+  const PLACE_TYPE_EMOJI = {
+    lodging: '🏨', hotel: '🏨',
+    restaurant: '🍽️', food: '🍽️', meal_takeaway: '🍽️', cafe: '☕',
+    bar: '🍸', night_club: '🎶',
+    amusement_park: '🎢', tourist_attraction: '⭐', point_of_interest: '📍',
+    park: '🌿', natural_feature: '🌿',
+    shopping_mall: '🛍️', store: '🛍️', clothing_store: '🛍️',
+    museum: '🏛️', art_gallery: '🖼️', church: '⛪', place_of_worship: '🕌',
+    spa: '💆', gym: '💪',
+    movie_theater: '🎬', stadium: '🏟️',
+    airport: '✈️', train_station: '🚂', transit_station: '🚉',
+    beach: '🏖️', campground: '⛺',
+  };
+
+  const handleSelectPlace = async (prediction) => {
+    if (!onAddPin) return;
+    setPlaceAdding(prediction.place_id);
+    setPlaceSearch('');
+    setPlaceResults([]);
+    const types = prediction.types || [];
+    const emoji = types.map(t => PLACE_TYPE_EMOJI[t]).find(Boolean) || '📍';
+    const label = prediction.structured_formatting?.main_text || prediction.description;
+    let imageUrl = '';
+    try {
+      const detailRes = await fetch(`/api/places?action=details&place_id=${prediction.place_id}`);
+      const detail = await detailRes.json();
+      const ref = detail.result?.photos?.[0]?.photo_reference;
+      if (ref) imageUrl = `/api/places?action=photo&ref=${encodeURIComponent(ref)}&maxwidth=400`;
+    } catch {}
+    onAddPin({ type: 'photo', label, emoji, imageUrl, status: 'dreaming', categoryId: 'travel' });
+    setPlaceAdding(null);
+  };
+
   const [editingChecklist, setEditingChecklist] = useState(null);
   const [showInvite, setShowInvite] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -1796,6 +1850,47 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
         }}
         style={{ padding: '22px 16px 0' }}
       >
+        {/* Place search */}
+        {onAddPin && (
+          <div style={{ position: 'relative', marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: darkMode ? 'rgba(255,255,255,0.06)' : '#fff', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e0d5'}`, borderRadius: 14, padding: '9px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+              <span style={{ fontSize: 15, opacity: 0.5, flexShrink: 0 }}>🔍</span>
+              <input
+                ref={searchInputRef}
+                value={placeSearch}
+                onChange={e => setPlaceSearch(e.target.value)}
+                placeholder="Search places to add…"
+                style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontFamily: CAVEAT, fontSize: 16, color: tp, minWidth: 0 }}
+              />
+              {placeLoading && <span style={{ fontSize: 12, color: ts, flexShrink: 0 }}>…</span>}
+              {placeSearch && !placeLoading && (
+                <button onClick={() => { setPlaceSearch(''); setPlaceResults([]); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: ts, padding: 0, flexShrink: 0 }}>✕</button>
+              )}
+            </div>
+            {placeResults.length > 0 && (
+              <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: darkMode ? '#1e2535' : '#fff', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e0d5'}`, borderRadius: 14, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 50, overflow: 'hidden' }}>
+                {placeResults.map((p, i) => (
+                  <button
+                    key={p.place_id}
+                    disabled={placeAdding === p.place_id}
+                    onClick={() => handleSelectPlace(p)}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'none', border: 'none', cursor: placeAdding === p.place_id ? 'default' : 'pointer', borderTop: i > 0 ? `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : '#f0ebe3'}` : 'none', textAlign: 'left', opacity: placeAdding && placeAdding !== p.place_id ? 0.4 : 1 }}
+                  >
+                    <span style={{ fontSize: 18, flexShrink: 0 }}>{(p.types || []).map(t => PLACE_TYPE_EMOJI[t]).find(Boolean) || '📍'}</span>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontFamily: CAVEAT, fontSize: 16, color: tp, lineHeight: 1.2, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                        {placeAdding === p.place_id ? 'Adding…' : (p.structured_formatting?.main_text || p.description)}
+                      </div>
+                      {p.structured_formatting?.secondary_text && (
+                        <div style={{ fontSize: 11, color: ts, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', marginTop: 1 }}>{p.structured_formatting.secondary_text}</div>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         <p style={{ fontSize: 10, color: ts, textTransform: 'uppercase', letterSpacing: '0.18em', margin: '0 0 14px', fontWeight: 600 }}>Pinned · {chapterPins.length} item{chapterPins.length !== 1 ? 's' : ''}</p>
         {chapterPins.filter(p => p.type === 'checklist' || p.type === 'countdown').map(p => (
           <div key={p.id} style={{ position: 'relative', marginBottom: 10 }}>
@@ -1905,11 +2000,22 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                     </div>
                   )}
                   {/* Flip button — bottom-right corner */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setFlippedPinId(p.id); }}
-                    style={{ position: 'absolute', bottom: 4, right: 4, width: 20, height: 20, borderRadius: '50%', background: 'rgba(255,255,255,0.85)', border: 'none', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.12)', zIndex: 10, color: '#9ca3af' }}
-                    title="Flip to write notes"
-                  >✏️</button>
+                  {onRemovePin && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onRemovePin(p.id); }}
+                      style={{ position: 'absolute', top: 6, right: 6, width: 18, height: 18, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: 'none', color: '#6b7280', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, zIndex: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.12)' }}
+                      title="Remove from chapter"
+                    >
+                      x
+                    </button>
+                  )}
+                  {!isFlipped && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setFlippedPinId(p.id); }}
+                      style={{ position: 'absolute', bottom: 4, right: 4, width: 20, height: 20, borderRadius: '50%', background: 'rgba(255,255,255,0.85)', border: 'none', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.12)', zIndex: 10, color: '#9ca3af' }}
+                      title="Flip to write notes"
+                    >✏️</button>
+                  )}
                 </div>
                 {/* Back — notes + photo upload */}
                 <div
@@ -2972,15 +3078,19 @@ const SomedayPage = ({
   }
 
   function removePinFromChapter(pinId) {
-    const pinType = pins.find(p => p.id === pinId)?.type;
+    const pin = pins.find(p => p.id === pinId);
+    const isChapterOnlyPin = pin?.meta?.persistScope === 'chapter';
     markPinDeleted(pinId);
     setChapters(prev => prev.map(c => ({
       ...c,
       itemIds: (c.itemIds || []).filter(id => id !== pinId),
       pins: (c.pins || []).filter(p => p.id !== pinId),
     })));
-    setPins(prev => prev.filter(p => p.id !== pinId));
-    if (pinType !== 'checklist' && pinType !== 'countdown') onDeleteDream?.(pinId);
+    setPins(prev => prev.flatMap((p) => {
+      if (p.id !== pinId) return [p];
+      if (isChapterOnlyPin) return [];
+      return [{ ...p, chapterId: undefined }];
+    }));
     supabase.from('chapter_pins').delete().eq('id', pinId).then(({ error }) => { if (error) console.error('chapter_pins delete failed:', error); });
   }
 
@@ -2997,10 +3107,22 @@ const SomedayPage = ({
       description: suggestion.description || '',
       tip: suggestion.tip || '',
       mapQuery: suggestion.mapQuery || '',
+      meta: { persistScope: 'chapter' },
+      chapterId,
+      x: 0,
+      y: 0,
+      rot: (Math.random() - 0.5) * 3,
     };
     setPins(prev => [...prev, newPin]);
-    onAddDream?.(newPin);
-    addPinToChapter(newPin.id, chapterId);
+    setChapters(prev => prev.map(c =>
+      c.id === chapterId
+        ? {
+            ...c,
+            itemIds: [...new Set([...(c.itemIds || []), newPin.id])],
+            pins: [...(c.pins || []), newPin],
+          }
+        : c
+    ));
     // Also write directly to chapter_pins so collaborators see it
     const position = chapters.find(c => c.id === chapterId)?.itemIds?.length || 0;
     supabase.from('chapter_pins').upsert(pinToRow({ ...newPin, chapterId }, chapterId, position)).then(() => {});
@@ -3024,6 +3146,7 @@ const SomedayPage = ({
     const newPin = {
       id: crypto.randomUUID(),
       ...pinData,
+      meta: { ...(pinData.meta || {}), persistScope: 'chapter' },
       chapterId,
       status: pinData.status || 'dreaming',
       x: 0,
@@ -3031,9 +3154,14 @@ const SomedayPage = ({
       rot: (Math.random() - 0.5) * 3,
     };
     setPins(prev => [...prev, newPin]);
-    if (newPin.type !== 'checklist' && newPin.type !== 'countdown') onAddDream?.(newPin);
     setChapters(prev => prev.map(c =>
-      c.id === chapterId ? { ...c, itemIds: [...new Set([...(c.itemIds || []), newPin.id])] } : c
+      c.id === chapterId
+        ? {
+            ...c,
+            itemIds: [...new Set([...(c.itemIds || []), newPin.id])],
+            pins: [...(c.pins || []), newPin],
+          }
+        : c
     ));
     const position = (chapters.find(c => c.id === chapterId)?.itemIds || []).length;
     supabase.from('chapter_pins').upsert(pinToRow({ ...newPin, chapterId }, chapterId, position)).then(({ error }) => { if (error) console.error('chapter_pins upsert failed:', error); });

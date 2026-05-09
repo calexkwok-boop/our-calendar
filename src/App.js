@@ -23776,7 +23776,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 }
               }}
               className="flex-1 px-6 py-3 text-white rounded-xl hover:shadow-lg transition-all font-medium"
-              style={themeAccentButtonStyle}
+              style={{ ...themeAccentButtonStyle, fontFamily: "'Caveat', cursive" }}
             >
               + Add event
             </button>
