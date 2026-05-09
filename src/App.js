@@ -12197,7 +12197,20 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           low: Math.round(data.daily.temperature_2m_min[i]),
         };
       });
-      setWeather(weatherMap);
+      setWeather((prev) => {
+        const prevKeys = Object.keys(prev || {});
+        const nextKeys = Object.keys(weatherMap);
+        if (prevKeys.length !== nextKeys.length) return weatherMap;
+        const unchanged = nextKeys.every((key) => {
+          const prevEntry = prev?.[key];
+          const nextEntry = weatherMap[key];
+          return prevEntry?.icon === nextEntry?.icon
+            && prevEntry?.color === nextEntry?.color
+            && prevEntry?.high === nextEntry?.high
+            && prevEntry?.low === nextEntry?.low;
+        });
+        return unchanged ? prev : weatherMap;
+      });
     } catch (err) {
       console.error('Failed to fetch weather:', err);
     }
@@ -20869,6 +20882,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   useEffect(() => {
     const currentQuickThoughtsUserId = String(user?.id || 'guest').trim() || 'guest';
+    if (quickThoughtsHydratedUserId === currentQuickThoughtsUserId) return;
     let cancelled = false;
     let timeoutId = null;
     let idleId = null;
@@ -20908,7 +20922,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }
       if (timeoutId !== null) window.clearTimeout(timeoutId);
     };
-  }, [user?.id, bottomNavTab]);
+  }, [user?.id, bottomNavTab, quickThoughtsHydratedUserId]);
 
   useEffect(() => {
     const currentQuickThoughtsUserId = String(user?.id || 'guest').trim() || 'guest';
@@ -20945,7 +20959,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     try {
       const cached = JSON.parse(localStorage.getItem(DAILY_PHOTO_CACHE_KEY) || 'null');
       if (cached?.photos && Array.isArray(cached.photos) && Date.now() - (cached.ts || 0) < DAILY_PHOTO_TTL) {
-        setFriendsDailyPhotos(cached.photos);
+        setFriendsDailyPhotos((prev) => {
+          const sameLength = Array.isArray(prev) && prev.length === cached.photos.length;
+          const unchanged = sameLength && prev.every((entry, index) => (
+            String(entry?.userId || '') === String(cached.photos[index]?.userId || '')
+            && String(entry?.handle || '') === String(cached.photos[index]?.handle || '')
+            && String(entry?.photoUrl || '') === String(cached.photos[index]?.photoUrl || '')
+            && String(entry?.memoryDate || '') === String(cached.photos[index]?.memoryDate || '')
+            && String(entry?.avatarUrl || '') === String(cached.photos[index]?.avatarUrl || '')
+          ));
+          return unchanged ? prev : cached.photos;
+        });
         hasFreshDailyPhotoCache = true;
       }
     } catch {}
@@ -21011,7 +21035,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           };
         }).filter(Boolean);
         if (!cancelled) {
-          setFriendsDailyPhotos(photos);
+          setFriendsDailyPhotos((prev) => {
+            const sameLength = Array.isArray(prev) && prev.length === photos.length;
+            const unchanged = sameLength && prev.every((entry, index) => (
+              String(entry?.userId || '') === String(photos[index]?.userId || '')
+              && String(entry?.handle || '') === String(photos[index]?.handle || '')
+              && String(entry?.photoUrl || '') === String(photos[index]?.photoUrl || '')
+              && String(entry?.memoryDate || '') === String(photos[index]?.memoryDate || '')
+              && String(entry?.avatarUrl || '') === String(photos[index]?.avatarUrl || '')
+            ));
+            return unchanged ? prev : photos;
+          });
           try { localStorage.setItem(DAILY_PHOTO_CACHE_KEY, JSON.stringify({ photos, ts: Date.now() })); } catch {}
         }
       } catch {}
@@ -21441,6 +21475,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   useEffect(() => {
     const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
+    if (memoriesHydratedUserId === currentMemoriesUserId) return;
     let cancelled = false;
     let timeoutId = null;
     let idleId = null;
@@ -21493,7 +21528,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }
       if (timeoutId !== null) window.clearTimeout(timeoutId);
     };
-  }, [user?.id, bottomNavTab]);
+  }, [user?.id, bottomNavTab, memoriesHydratedUserId]);
 
   useEffect(() => {
     const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';

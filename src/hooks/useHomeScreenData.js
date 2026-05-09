@@ -581,9 +581,14 @@ export default function useHomeScreenData({
   const collageDayKey = `${todayKey}:${String(user?.id || 'guest').trim()}`;
   if (_rawCollagePhotos.length > 0 && frozenCollageRef.current?.dayKey !== collageDayKey) {
     frozenCollageRef.current = { dayKey: collageDayKey, photos: _rawCollagePhotos };
+  }
+
+  useEffect(() => {
+    if (_rawCollagePhotos.length === 0) return;
+    if (frozenCollageRef.current?.dayKey !== collageDayKey) return;
     // Persist so the next visit can preload before Supabase data arrives.
     try { localStorage.setItem(`collage-v1:${collageDayKey}`, JSON.stringify(_rawCollagePhotos)); } catch {}
-  }
+  }, [_rawCollagePhotos, collageDayKey]);
 
   // On mount (and whenever auth/day changes), kick off image preloads for yesterday's cached URLs
   // so they're already in the browser cache by the time the collage renders.

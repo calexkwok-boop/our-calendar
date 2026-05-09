@@ -250,6 +250,7 @@ const ScrapbookHomeHybrid = ({
     try { localStorage.setItem('komo-home-notes', JSON.stringify(next)); } catch {}
   };
   const [loadedMemoryCollageUrls, setLoadedMemoryCollageUrls] = useState(() => new Set());
+  const loadedMemoryCollageUrlsRef = React.useRef(new Set());
   const [isLayoutEditOpen, setIsLayoutEditOpen] = useState(false);
   const { sections: homeSections, toggleVisible: toggleSectionVisible, reorder: reorderSections } = useHomeSectionLayout();
   const sectionVisible = (id) => homeSections.find((s) => s.id === id)?.visible !== false;
@@ -264,14 +265,6 @@ const ScrapbookHomeHybrid = ({
     (m) => String(m?.date || '').trim().slice(0, 10) === todayKey
   ) || null;
 
-  // Cache the photo URL so subsequent visits show it instantly, before memory hydration.
-  if (todayMoment?.photoUrl) {
-    try {
-      window.localStorage.setItem(TODAY_MOMENT_CACHE_KEY, JSON.stringify({
-        date: todayKey, url: todayMoment.photoUrl, title: todayMoment.title || '',
-      }));
-    } catch {}
-  }
   const [cachedMoment] = useState(() => readCachedTodayMoment(todayKey));
   const displayMoment = todayMoment || cachedMoment;
   const shuffledBucketList = React.useMemo(() => (
@@ -287,14 +280,28 @@ const ScrapbookHomeHybrid = ({
   ), [memoryCollagePhotos]);
 
   React.useEffect(() => {
+    loadedMemoryCollageUrlsRef.current = loadedMemoryCollageUrls;
+  }, [loadedMemoryCollageUrls]);
+
+  React.useEffect(() => {
+    if (!todayMoment?.photoUrl) return;
+    try {
+      window.localStorage.setItem(TODAY_MOMENT_CACHE_KEY, JSON.stringify({
+        date: todayKey, url: todayMoment.photoUrl, title: todayMoment.title || '',
+      }));
+    } catch {}
+  }, [todayKey, todayMoment?.photoUrl, todayMoment?.title]);
+
+  React.useEffect(() => {
     const activeUrls = memoryCollageTiles.filter(Boolean);
     setLoadedMemoryCollageUrls((prev) => {
       const next = new Set(activeUrls.filter((url) => prev.has(url)));
       if (next.size === prev.size && Array.from(next).every((url) => prev.has(url))) return prev;
+      loadedMemoryCollageUrlsRef.current = next;
       return next;
     });
     const preloads = activeUrls
-      .filter((url) => !loadedMemoryCollageUrls.has(url))
+      .filter((url) => !loadedMemoryCollageUrlsRef.current.has(url))
       .map((url) => {
         const img = new Image();
         img.decoding = 'async';
@@ -304,6 +311,7 @@ const ScrapbookHomeHybrid = ({
             if (prev.has(url)) return prev;
             const next = new Set(prev);
             next.add(url);
+            loadedMemoryCollageUrlsRef.current = next;
             return next;
           });
         };
@@ -314,7 +322,7 @@ const ScrapbookHomeHybrid = ({
         img.onload = null;
       });
     };
-  }, [loadedMemoryCollageUrls, memoryCollageTiles]);
+  }, [memoryCollageTiles]);
 
   return (
     <div className="min-h-screen bg-[#faf8f3] dark:bg-slate-950 p-4 sm:p-6">
