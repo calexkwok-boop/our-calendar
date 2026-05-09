@@ -214,6 +214,7 @@ const ScrapbookHomeHybrid = ({
   onPlanFromDream,
   onDeleteDream,
   onOpenSomeday,
+  onPinDataChange,
 
   // Theme
   themeAccentHeadingStyle,
@@ -251,10 +252,20 @@ const ScrapbookHomeHybrid = ({
   const [cardNotes, setCardNotes] = useState(() => {
     try { return JSON.parse(localStorage.getItem('komo-home-notes') || '{}'); } catch { return {}; }
   });
-  const saveCardNote = (id, note) => {
+  const saveCardNote = (id, note, chapterId) => {
     const next = { ...cardNotes, [id]: note };
     setCardNotes(next);
     try { localStorage.setItem('komo-home-notes', JSON.stringify(next)); } catch {}
+    onPinDataChange?.(chapterId, id, { notes: note });
+  };
+  const [cardAttachments, setCardAttachments] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem('komo-home-attachments') || '{}'); } catch { return {}; }
+  });
+  const saveCardAttachment = (id, dataUrl, chapterId) => {
+    const next = { ...cardAttachments, [id]: dataUrl };
+    setCardAttachments(next);
+    try { localStorage.setItem('komo-home-attachments', JSON.stringify(next)); } catch {}
+    onPinDataChange?.(chapterId, id, { attachmentUrl: dataUrl });
   };
   const [loadedMemoryCollageUrls, setLoadedMemoryCollageUrls] = useState(() => new Set());
   const loadedMemoryCollageUrlsRef = React.useRef(new Set());
@@ -924,42 +935,44 @@ const ScrapbookHomeHybrid = ({
                       style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-handwritten text-xs text-gray-500 truncate pr-1">{dream.text}</span>
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); setFlippedCardId(null); }}
-                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/90 text-[14px] text-gray-500 shadow-sm"
-                        >
-                          ↩
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setFlippedCardId(null); }}
+                        className="absolute right-2 top-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/90 text-[14px] text-gray-500 shadow-sm"
+                      >
+                        ↩
+                      </button>
                       <textarea
                         value={cardNotes[dream.id] || ''}
-                        onChange={(e) => saveCardNote(dream.id, e.target.value)}
+                        onChange={(e) => saveCardNote(dream.id, e.target.value, dream.chapterId)}
                         onClick={(e) => e.stopPropagation()}
                         placeholder="notes..."
-                        className="flex-1 w-full resize-none bg-transparent text-gray-700 placeholder-gray-400/60 outline-none dark:text-gray-800"
+                        className="mt-1 flex-1 w-full resize-none bg-transparent text-gray-700 placeholder-gray-400/60 outline-none dark:text-gray-800"
                         style={{ fontFamily: "'Caveat', cursive", fontSize: '14px', lineHeight: '1.45' }}
                         maxLength={500}
                       />
                       <div className="flex items-center justify-between pt-2">
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dream.text)}`, '_blank'); }}
-                          className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] text-gray-500 shadow-sm"
-                        >
-                          📍 Maps
-                        </button>
-                        {onDeleteDream && (
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); onDeleteDream(dream); setFlippedCardId(null); }}
-                            className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] text-rose-500 shadow-sm"
-                          >
-                            Remove
-                          </button>
-                        )}
+                        {cardAttachments[dream.id] ? (
+                          <a href={cardAttachments[dream.id]} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="block h-6 w-6 overflow-hidden rounded shadow-sm ring-1 ring-gray-200/60">
+                            <img src={cardAttachments[dream.id]} alt="attachment" className="h-full w-full object-cover" />
+                          </a>
+                        ) : <span />}
+                        <label className="cursor-pointer rounded-full bg-white/70 px-2 py-0.5 text-[11px] text-gray-500 shadow-sm" title="Attach photo" onClick={(e) => e.stopPropagation()}>
+                          📎
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const reader = new FileReader();
+                              reader.onload = (ev) => saveCardAttachment(dream.id, ev.target.result, dream.chapterId);
+                              reader.readAsDataURL(file);
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
                       </div>
                     </div>
                   </div>

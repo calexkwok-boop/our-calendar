@@ -3094,6 +3094,80 @@ const deriveScrambleStandings = (tournament) => {
     ));
 };
 
+function CompactKomoCardBack({ card, linkedChapterId, onFlipBack, onDataChange }) {
+  const [notes, setNotes] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem('komo-chapter-notes') || '{}')[card?.id] || ''; } catch { return ''; }
+  });
+  const [attachment, setAttachment] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem('komo-chapter-attachments') || '{}')[card?.id] || ''; } catch { return ''; }
+  });
+  const saveNotes = (note) => {
+    setNotes(note);
+    try {
+      const next = JSON.parse(localStorage.getItem('komo-chapter-notes') || '{}');
+      next[card.id] = note;
+      localStorage.setItem('komo-chapter-notes', JSON.stringify(next));
+    } catch {}
+    onDataChange?.(linkedChapterId, card.id, { notes: note });
+  };
+  const saveAttachment = (dataUrl) => {
+    setAttachment(dataUrl);
+    try {
+      const next = JSON.parse(localStorage.getItem('komo-chapter-attachments') || '{}');
+      next[card.id] = dataUrl;
+      localStorage.setItem('komo-chapter-attachments', JSON.stringify(next));
+    } catch {}
+    onDataChange?.(linkedChapterId, card.id, { attachmentUrl: dataUrl });
+  };
+  return (
+    <div
+      className="absolute inset-0 overflow-hidden rounded-[3px] bg-amber-50 p-1.5 shadow-md dark:bg-slate-200"
+      style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', display: 'flex', flexDirection: 'column' }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onFlipBack(); }}
+        className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-white/80 text-[10px] text-gray-500 shadow-sm"
+      >
+        ↩
+      </button>
+      <textarea
+        value={notes}
+        onChange={(e) => saveNotes(e.target.value)}
+        onClick={(e) => e.stopPropagation()}
+        placeholder="notes..."
+        className="mt-4 flex-1 w-full resize-none bg-transparent text-[11px] text-gray-700 placeholder-gray-400/60 outline-none dark:text-gray-800"
+        style={{ fontFamily: "'Caveat', cursive", lineHeight: '1.4' }}
+        maxLength={500}
+      />
+      <div className="flex items-center justify-between pt-1">
+        {attachment ? (
+          <a href={attachment} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="block h-5 w-5 overflow-hidden rounded shadow-sm ring-1 ring-gray-200/60">
+            <img src={attachment} alt="attachment" className="h-full w-full object-cover" />
+          </a>
+        ) : <span />}
+        <label className="cursor-pointer rounded-full bg-white/70 px-1 py-0.5 text-[10px] text-gray-500 shadow-sm" title="Attach photo" onClick={(e) => e.stopPropagation()}>
+          📎
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = (ev) => saveAttachment(ev.target.result);
+              reader.readAsDataURL(file);
+              e.target.value = '';
+            }}
+          />
+        </label>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -29966,6 +30040,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
              profileBadgeCount={totalNotificationBadgeCount}
               onOpenAccountMenu={toggleAccountMenu}
               onEditProfilePhoto={openLayerMediaMenu}
+              onPinDataChange={handleChapterPinDataChange}
             />
         )}
 
@@ -34473,29 +34548,12 @@ transform: translateY(0);
                                   <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
                                     {renderKomoPolaroid(card, { compact: true })}
                                   </div>
-                                  <div
-                                    className="absolute inset-0 flex flex-col items-center justify-between overflow-hidden rounded-[3px] bg-amber-50 p-1.5 shadow-md dark:bg-slate-200"
-                                    style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <button
-                                      type="button"
-                                      onClick={(e) => { e.stopPropagation(); setFlippedKomoCardId(null); }}
-                                      className="self-end flex h-4 w-4 items-center justify-center rounded-full bg-white/80 text-[9px] text-gray-500 shadow-sm"
-                                    >
-                                      ↩
-                                    </button>
-                                    <p className="w-full text-center text-gray-700 dark:text-gray-800" style={{ fontFamily: "'Caveat', cursive", fontSize: '12px', lineHeight: '1.3' }}>
-                                      {String(card?.label || card?.text || '')}
-                                    </p>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => { e.stopPropagation(); openLocationActionChooser(card?.label || card?.text || ''); }}
-                                      className="rounded-full bg-white/70 px-1.5 py-0.5 text-[9px] text-gray-500 shadow-sm"
-                                    >
-                                      📍 Maps
-                                    </button>
-                                  </div>
+                                  <CompactKomoCardBack
+                                    card={card}
+                                    linkedChapterId={linkedChapterId}
+                                    onFlipBack={() => setFlippedKomoCardId(null)}
+                                    onDataChange={handleChapterPinDataChange}
+                                  />
                                 </div>
                               </div>
                             ))}
