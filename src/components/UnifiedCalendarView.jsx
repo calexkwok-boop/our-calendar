@@ -1092,7 +1092,7 @@ const SelectedDateDetails = ({
       <button
         onClick={() => onAddEvent?.(selectedDate)}
         className="w-full py-3 rounded-2xl text-white font-semibold hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-2"
-        style={{ background: 'linear-gradient(90deg, #8b5cf6 0%, #ec4899 52%, #f97316 100%)' }}>
+        style={{ background: 'linear-gradient(90deg, #8b5cf6 0%, #ec4899 52%, #f97316 100%)', fontFamily: "'Caveat', cursive" }}>
         <Plus className="w-5 h-5" />
         <span>Add Event</span>
       </button>
