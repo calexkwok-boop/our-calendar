@@ -34588,10 +34588,16 @@ transform: translateY(0);
                                               const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
                                               const uploadPath = `komo-attachments/${tripId}/${card.placementId}-${Date.now()}.${ext}`;
                                               try {
-                                                await uploadTripPhotoFileToR2(uploadPath, file);
+                                                const uploadedAttachment = await uploadTripPhotoFileToR2(uploadPath, file);
                                                 const readTargets = await requestR2TripPhotoReadUrls([uploadPath]);
-                                                const signedUrl = String(readTargets?.[0]?.url || readTargets?.[0]?.signedUrl || '').trim();
-                                                if (signedUrl) updateKomoCardAttachment(dk, section.key, card.placementId, signedUrl);
+                                                const attachmentUrl = String(
+                                                  readTargets?.[0]?.readUrl
+                                                  || readTargets?.[0]?.url
+                                                  || readTargets?.[0]?.signedUrl
+                                                  || uploadedAttachment?.url
+                                                  || ''
+                                                ).trim();
+                                                if (attachmentUrl) updateKomoCardAttachment(dk, section.key, card.placementId, attachmentUrl);
                                               } catch (err) {
                                                 console.warn('[komo] attachment upload failed:', err);
                                               }
