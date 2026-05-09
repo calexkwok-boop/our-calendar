@@ -285,6 +285,89 @@ function normalizeSuggestionText(value = '') {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+const WEAK_ANCHOR_TERMS = [
+  'trip',
+  'vacation',
+  'holiday',
+  'weekend',
+  'spring',
+  'summer',
+  'fall',
+  'autumn',
+  'winter',
+  'plan',
+  'planning',
+  'someday',
+];
+
+function getSuggestionSearchText(chapter, chapterPins) {
+  return [
+    chapter?.title,
+    chapter?.public_title,
+    Array.isArray(chapter?.public_tags) ? chapter.public_tags.join(' ') : '',
+    ...chapterPins.flatMap((pin) => [
+      pin?.mapQuery,
+      pin?.label,
+      pin?.text,
+      pin?.description,
+    ]),
+  ].join(' ').toLowerCase();
+}
+
+function inferDisneyDestinationContext(chapter, chapterPins) {
+  const haystack = getSuggestionSearchText(chapter, chapterPins);
+  const hasAnaheimSignals = ['anaheim', 'disneyland', 'california adventure', 'dca', 'orange county', 'southern california'].some((term) => haystack.includes(term));
+  const hasOrlandoSignals = ['orlando', 'florida', 'disney world', 'magic kingdom', 'epcot', 'hollywood studios', 'animal kingdom', 'lake buena vista'].some((term) => haystack.includes(term));
+
+  if (hasAnaheimSignals && !hasOrlandoSignals) {
+    return {
+      mode: 'anaheim',
+      forcedAnchors: ['Disneyland Anaheim California', 'Anaheim California'],
+    };
+  }
+  if (hasOrlandoSignals && !hasAnaheimSignals) {
+    return {
+      mode: 'orlando',
+      forcedAnchors: ['Walt Disney World Orlando Florida', 'Orlando Florida'],
+    };
+  }
+  return { mode: null, forcedAnchors: [] };
+}
+
+function scoreAnchorCandidate(value, disneyContext) {
+  const raw = String(value || '').trim();
+  const normalized = normalizeSuggestionText(raw);
+  if (!normalized || normalized.length < 4) return -Infinity;
+
+  const words = normalized.split(' ').filter(Boolean);
+  let score = 0;
+
+  if (words.length >= 2) score += 4;
+  if (/[,-]/.test(raw)) score += 2;
+  if (/\b(in|at|near)\b/i.test(raw)) score += 1;
+  if (WEAK_ANCHOR_TERMS.some((term) => normalized.includes(term))) score -= 6;
+
+  const hasDisney = normalized.includes('disney');
+  const hasAnaheim = ['anaheim', 'disneyland', 'california adventure', 'orange county'].some((term) => normalized.includes(term));
+  const hasOrlando = ['orlando', 'florida', 'disney world', 'magic kingdom', 'epcot', 'lake buena vista'].some((term) => normalized.includes(term));
+
+  if (hasAnaheim) score += 14;
+  if (hasOrlando) score += 14;
+  if (hasDisney && !hasAnaheim && !hasOrlando) score -= 10;
+
+  if (disneyContext?.mode === 'anaheim') {
+    if (hasAnaheim) score += 24;
+    if (hasOrlando) score -= 40;
+    if (normalized === 'disney' || normalized.endsWith(' disney trip')) score -= 20;
+  } else if (disneyContext?.mode === 'orlando') {
+    if (hasOrlando) score += 24;
+    if (hasAnaheim) score -= 40;
+    if (normalized === 'disney' || normalized.endsWith(' disney trip')) score -= 20;
+  }
+
+  return score;
+}
+
 function getLiveSuggestionCategories(chapter, chapterPins, refreshCount = 0) {
   const theme = detectSuggestionTheme(chapter, chapterPins);
   const pool = LIVE_SUGGESTION_CATEGORIES[theme] || LIVE_SUGGESTION_CATEGORIES.generic;
@@ -293,8 +376,12 @@ function getLiveSuggestionCategories(chapter, chapterPins, refreshCount = 0) {
 }
 
 function inferChapterAnchorCandidates(chapter, chapterPins) {
+  const disneyContext = inferDisneyDestinationContext(chapter, chapterPins);
   const values = [
+    ...disneyContext.forcedAnchors,
     chapter?.title,
+    chapter?.public_title,
+    ...(Array.isArray(chapter?.public_tags) ? chapter.public_tags : []),
     ...chapterPins.flatMap((pin) => [
       pin?.mapQuery,
       pin?.label,
@@ -306,13 +393,26 @@ function inferChapterAnchorCandidates(chapter, chapterPins) {
     .filter(Boolean);
 
   const seen = new Set();
-  return values.filter((value) => {
-    const normalized = normalizeSuggestionText(value);
-    if (!normalized || normalized.length < 4) return false;
-    if (seen.has(normalized)) return false;
-    seen.add(normalized);
-    return true;
-  }).slice(0, 6);
+  return values
+    .map((value) => ({
+      value,
+      normalized: normalizeSuggestionText(value),
+      score: scoreAnchorCandidate(value, disneyContext),
+    }))
+    .filter(({ normalized, score }) => {
+      if (!normalized || score === -Infinity) return false;
+      if (seen.has(normalized)) return false;
+      seen.add(normalized);
+      return score > -12;
+    })
+    .sort((a, b) => b.score - a.score || b.value.length - a.value.length)
+    .map(({ value }) => value)
+    .filter((value) => {
+      const normalized = normalizeSuggestionText(value);
+      if (!normalized || normalized.length < 4) return false;
+      return true;
+    })
+    .slice(0, 6);
 }
 
 function buildPlaceSuggestionTip(result, anchor, category) {
@@ -322,6 +422,15 @@ function buildPlaceSuggestionTip(result, anchor, category) {
     return `Google-rated ${rating.toFixed(1)} with ${reviewCount.toLocaleString()} reviews near ${anchor}.`;
   }
   return `${category.label} near ${anchor}.`;
+}
+
+function buildPlaceSuggestionWhy(result, anchor, category) {
+  const area = result?.formatted_address || result?.vicinity || anchor;
+  const rating = Number(result?.rating || 0);
+  if (rating >= 4.5) {
+    return `A standout ${category.label.toLowerCase()} option around ${area} with especially strong ratings.`;
+  }
+  return `An easy ${category.label.toLowerCase()} option that keeps you close to ${area}.`;
 }
 
 function generateSuggestions(chapter, chapterPins, seed = 0) {
@@ -360,7 +469,84 @@ function SuggestionCardInner({ s, darkMode, shadow }) {
   );
 }
 
-function SuggestionCard({ s, onAdd, darkMode }) {
+function SuggestionPreviewSheet({ suggestion, onClose, onAdd, darkMode }) {
+  const { sheetStyle, handleProps } = useSwipeDownSheet(onClose);
+  const sheetBg = darkMode ? '#131c2e' : '#ffffff';
+  const tp = darkMode ? '#e8eaf0' : '#1a1a2e';
+  const ts = darkMode ? '#64748b' : '#9ca3af';
+  const divider = darkMode ? 'rgba(255,255,255,0.07)' : '#f0ece4';
+  const mapsUrl = suggestion?.mapQuery
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(suggestion.mapQuery)}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(suggestion?.label || '')}`;
+
+  if (!suggestion) return null;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 10045, background: 'rgba(0,0,0,0.52)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: sheetBg, borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 480, margin: '0 auto', maxHeight: '88dvh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', ...sheetStyle }}>
+        <div {...handleProps} style={{ padding: '14px 0 0', display: 'flex', justifyContent: 'center', ...handleProps.style }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
+        </div>
+
+        {suggestion.imageUrl && (
+          <div style={{ width: '100%', height: 210, overflow: 'hidden', position: 'relative' }}>
+            <img src={suggestion.imageUrl} alt={suggestion.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.48))' }} />
+          </div>
+        )}
+
+        <div style={{ padding: '18px 18px max(32px, calc(env(safe-area-inset-bottom) + 32px))' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+            <div>
+              <p style={{ fontSize: 10, color: '#5eadce', textTransform: 'uppercase', letterSpacing: '0.16em', margin: '0 0 4px', fontWeight: 700 }}>
+                {suggestion.categoryId || 'experience'}
+              </p>
+              <h2 style={{ fontFamily: CAVEAT, fontSize: 26, fontWeight: 700, color: tp, margin: 0, lineHeight: 1.1 }}>
+                {suggestion.emoji ? `${suggestion.emoji} ${suggestion.label}` : suggestion.label}
+              </h2>
+            </div>
+            <button onClick={onClose} style={{ flexShrink: 0, background: darkMode ? 'rgba(255,255,255,0.06)' : '#f5f3ee', border: 'none', borderRadius: '50%', width: 32, height: 32, color: ts, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+          </div>
+
+          <div style={{ display: 'grid', gap: 14 }}>
+            <div>
+              <p style={{ fontSize: 10, color: '#5eadce', textTransform: 'uppercase', letterSpacing: '0.14em', fontWeight: 700, margin: '0 0 6px' }}>Why go</p>
+              <p style={{ fontSize: 14, color: tp, lineHeight: 1.6, margin: 0 }}>{suggestion.whyItFits || suggestion.tip || 'A nice nearby pick to round out the trip.'}</p>
+            </div>
+
+            {suggestion.description && (
+              <div style={{ borderTop: `1px solid ${divider}`, paddingTop: 14 }}>
+                <p style={{ fontSize: 10, color: '#5eadce', textTransform: 'uppercase', letterSpacing: '0.14em', fontWeight: 700, margin: '0 0 6px' }}>What it is</p>
+                <p style={{ fontSize: 14, color: tp, lineHeight: 1.6, margin: 0 }}>{suggestion.description}</p>
+              </div>
+            )}
+
+            {suggestion.tip && suggestion.tip !== suggestion.whyItFits && (
+              <div style={{ background: darkMode ? 'rgba(45,212,191,0.08)' : '#f0fdfb', border: `1px solid ${darkMode ? 'rgba(45,212,191,0.2)' : 'rgba(45,212,191,0.3)'}`, borderRadius: 12, padding: '10px 14px' }}>
+                <p style={{ fontSize: 10, color: '#0d9488', textTransform: 'uppercase', letterSpacing: '0.14em', fontWeight: 700, margin: '0 0 4px' }}>Good to know</p>
+                <p style={{ fontSize: 13, color: tp, lineHeight: 1.55, margin: 0 }}>{suggestion.tip}</p>
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 18 }}>
+            <button
+              onClick={() => { onAdd?.(suggestion); onClose(); }}
+              style={{ padding: '13px', borderRadius: 14, background: '#2dd4bf', color: '#0a1020', border: 'none', fontFamily: CAVEAT, fontSize: 18, fontWeight: 700, cursor: 'pointer' }}
+            >
+              Add to chapter
+            </button>
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '13px', borderRadius: 14, background: '#5eadce', color: '#fff', textDecoration: 'none', fontFamily: CAVEAT, fontSize: 17, fontWeight: 700 }}>
+              🗺️ Find on Maps
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SuggestionCard({ s, onAdd, onOpenDetails, darkMode }) {
   const [ghostPos, setGhostPos] = useState(null); // { x, y } fixed screen coords
   const [dragging, setDragging] = useState(false);
   const startRef = useRef(null);
@@ -386,12 +572,17 @@ function SuggestionCard({ s, onAdd, darkMode }) {
 
   function onPointerUp(e) {
     if (!dragging) return;
+    const dx = startRef.current ? e.clientX - startRef.current.x : 0;
     const dy = startRef.current ? e.clientY - startRef.current.y : 0;
     const dropTarget = document.elementFromPoint(e.clientX, e.clientY)?.closest?.('[data-chapter-dropzone="true"]');
     setDragging(false);
     setGhostPos(null);
     startRef.current = null;
-    if (dropTarget || dy > 50) onAdd(s);
+    if (dropTarget || dy > 50) {
+      onAdd(s);
+      return;
+    }
+    if (Math.abs(dx) < 8 && Math.abs(dy) < 8) onOpenDetails?.(s);
   }
 
   const isDraggingDown = dragging && ghostPos && startRef.current && (ghostPos.y + (anchorRef.current?.dy ?? 0)) - startRef.current.y > 10;
@@ -439,6 +630,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
   const [refreshCount, setRefreshCount] = useState(0);
   const [liveSuggestions, setLiveSuggestions] = useState([]);
   const [loadingLiveSuggestions, setLoadingLiveSuggestions] = useState(false);
+  const [selectedSuggestion, setSelectedSuggestion] = useState(null);
   // Memoize: only recompute when chapter identity, pin labels, seed, or refresh count changes
   const pinLabelKey = chapterPins.map(p => (p.label || p.text || '').toLowerCase()).join('\x00');
   const fallbackSuggestions = React.useMemo(
@@ -497,6 +689,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
                 imageUrl: photoRef ? `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800` : '',
                 description: `${result.formatted_address || result.vicinity || ''}`.trim() || `${category.label} near ${anchor}.`,
                 tip: buildPlaceSuggestionTip(result, anchor, category),
+                whyItFits: buildPlaceSuggestionWhy(result, anchor, category),
                 mapQuery: `${result.name} ${result.formatted_address || result.vicinity || anchor}`.trim(),
                 rot: (((initialSeed + found.length * 7 + refreshCount) % 11) - 5) * 0.55,
               };
@@ -540,9 +733,17 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
       ) : (
         <div style={{ display: 'flex', gap: 14, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 18, paddingTop: 14 }}>
           {visible.map((s) => (
-            <SuggestionCard key={s.id} s={s} onAdd={handleAdd} darkMode={darkMode} />
+            <SuggestionCard key={s.id} s={s} onAdd={handleAdd} onOpenDetails={setSelectedSuggestion} darkMode={darkMode} />
           ))}
         </div>
+      )}
+      {selectedSuggestion && (
+        <SuggestionPreviewSheet
+          suggestion={selectedSuggestion}
+          onClose={() => setSelectedSuggestion(null)}
+          onAdd={handleAdd}
+          darkMode={darkMode}
+        />
       )}
     </div>
   );
