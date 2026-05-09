@@ -650,8 +650,8 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
     <div style={{ background: cardBg, padding: '6px 6px 0', boxShadow: shadow, width: 150, borderRadius: 2, cursor: isDragging ? 'grabbing' : 'grab', position: 'relative', transition: isDragging ? 'none' : 'box-shadow 0.2s' }} onClick={onTap}>
       <Pushpin colorKey={pin.pinColor} darkMode={darkMode} />
       <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 2, position: 'relative' }}>
-        {pin.imageUrl
-          ? <img src={pin.imageUrl} alt={pin.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: pin.status === 'done' ? 'grayscale(40%) brightness(0.85)' : 'none' }} draggable={false} />
+        {getPinImageUrl(pin)
+          ? <img src={getPinImageUrl(pin)} alt={pin.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: pin.status === 'done' ? 'grayscale(40%) brightness(0.85)' : 'none' }} draggable={false} />
           : <div style={{ width: '100%', height: '100%', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, filter: pin.status === 'done' ? 'grayscale(40%)' : 'none' }}>{pin.emoji || '📌'}</div>
         }
         {pin.status === 'done' && <SharpieX size={138} />}
@@ -847,7 +847,7 @@ function ChapterSuggestionPrompt({ group, pins, onConfirm, onDismiss, darkMode }
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, overflowX: 'auto', paddingBottom: 4 }}>
           {groupPins.map(p => (
             <div key={p.id} style={{ flexShrink: 0, width: 64, height: 64, borderRadius: 10, overflow: 'hidden', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}>
-              {p.imageUrl ? <img src={p.imageUrl} alt={p.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 24 }}>{p.emoji || (p.type === 'note' ? '📝' : '📌')}</span>}
+              {getPinImageUrl(p) ? <img src={getPinImageUrl(p)} alt={p.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 24 }}>{p.emoji || (p.type === 'note' ? '📝' : '📌')}</span>}
             </div>
           ))}
         </div>
@@ -1041,11 +1041,11 @@ function DetailSheet({ pin, chapters, onClose, onConvertToEvent, onConvertToTrip
           <div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
         </div>
 
-        {pin.type === 'photo' && pin.imageUrl && (
-          <img src={pin.imageUrl} alt={pin.label} style={{ width: '100%', height: 180, objectFit: 'cover', borderRadius: 16, marginBottom: 14 }} />
+        {pin.type === 'photo' && getPinImageUrl(pin) && (
+          <img src={getPinImageUrl(pin)} alt={pin.label} style={{ width: '100%', height: 180, objectFit: 'cover', borderRadius: 16, marginBottom: 14 }} />
         )}
         <p style={{ fontFamily: CAVEAT, fontSize: 26, fontWeight: 700, color: tp, marginBottom: 4, lineHeight: 1.2 }}>
-          {!pin.imageUrl && pin.emoji ? `${pin.emoji} ` : ''}{pin.label || pin.text}
+          {!getPinImageUrl(pin) && pin.emoji ? `${pin.emoji} ` : ''}{pin.label || pin.text}
         </p>
         {pin.type === 'note' && (
           <div style={{ background: (NOTE_COLORS[pin.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'].bg, borderRadius: 14, padding: '12px 14px', marginBottom: 16 }}>
@@ -1136,9 +1136,9 @@ function ChapterPinSheet({ pin, onClose, onRemove, darkMode, hasLinkedTrip = fal
         </div>
 
         {/* Cover image */}
-        {pin.imageUrl && (
+        {getPinImageUrl(pin) && (
           <div style={{ width: '100%', height: 200, overflow: 'hidden', position: 'relative' }}>
-            <img src={pin.imageUrl} alt={pin.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            <img src={getPinImageUrl(pin)} alt={pin.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.5))' }} />
           </div>
         )}
@@ -1416,7 +1416,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
     const extras = Array.from(mergedById.values()).filter((pin) => !chapterItemIds.includes(String(pin?.id || '')));
     return [...ordered, ...extras];
   }, [chapter.id, chapter.itemIds, chapter.pins, pins]);
-  const imagePins = chapterPins.filter(p => p.imageUrl);
+  const imagePins = chapterPins.filter(p => getPinImageUrl(p));
   const coverPin = (coverPinId ? imagePins.find(p => String(p.id) === String(coverPinId)) : null) || imagePins[0] || null;
   const canPublish = Boolean(onDeleteChapter);
 
@@ -1570,9 +1570,9 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
         </div>
       )}
 
-      {coverPin?.imageUrl && (
+      {getPinImageUrl(coverPin) && (
         <div style={{ position: 'relative', width: '100%', height: 200, overflow: 'hidden' }}>
-          <img src={coverPin.imageUrl} alt={chapter.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          <img src={getPinImageUrl(coverPin)} alt={chapter.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 35%, rgba(0,0,0,0.55))' }} />
           <div style={{ position: 'absolute', bottom: 14, left: 16 }}>
             <span style={{ fontFamily: CAVEAT, fontSize: 30, color: '#fff', fontWeight: 700, textShadow: '0 2px 10px rgba(0,0,0,0.6)', display: 'block' }}>{chapter.title}</span>
@@ -1602,7 +1602,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                   onClick={() => pickCover(pin)}
                   style={{ flexShrink: 0, width: 110, height: 110, borderRadius: 14, overflow: 'hidden', cursor: 'pointer', border: String(pin.id) === String(coverPinId) || (!coverPinId && pin === imagePins[0]) ? '3px solid #2dd4bf' : '3px solid transparent', boxSizing: 'border-box' }}
                 >
-                  <img src={pin.imageUrl} alt={pin.title || ''} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  <img src={getPinImageUrl(pin)} alt={pin.title || ''} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                 </div>
               ))}
             </div>
@@ -1736,7 +1736,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                     <div style={{ background: darkMode ? '#e2e8f0' : '#fff', padding: '5px 5px 0', width: cardW, borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', position: 'relative' }}>
                       <Pushpin colorKey="purple" darkMode={darkMode} />
                       <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 1, position: 'relative' }}>
-                        {p.imageUrl ? <img src={p.imageUrl} alt={p.label} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: p.status === 'done' ? 'grayscale(40%) brightness(0.85)' : 'none' }} /> : <div style={{ width: '100%', height: '100%', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30 }}>{p.emoji || '📌'}</div>}
+                        {getPinImageUrl(p) ? <img src={getPinImageUrl(p)} alt={p.label} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: p.status === 'done' ? 'grayscale(40%) brightness(0.85)' : 'none' }} /> : <div style={{ width: '100%', height: '100%', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30 }}>{p.emoji || '📌'}</div>}
                         {p.status === 'done' && <SharpieX size={120} />}
                       </div>
                       <div style={{ padding: '5px 2px 6px', textAlign: 'center', fontFamily: CAVEAT, fontSize: 11, color: p.status === 'done' ? '#9ca3af' : '#374151', textDecoration: p.status === 'done' ? 'line-through' : 'none', lineHeight: 1.3 }}>{p.emoji ? `${p.emoji} ${p.label}` : p.label}</div>
@@ -2027,6 +2027,16 @@ function estimatedPinHeight(pin = {}) {
   return 210;
 }
 
+function getPinImageUrl(pin = {}) {
+  return String(
+    pin?.imageUrl
+    || pin?.photoUrl
+    || pin?.coverPhoto
+    || pin?.photos?.[0]?.url
+    || ''
+  ).trim();
+}
+
 function normalizeBoardPin(pin, index = 0, forcedChapterId = '', pinPositionOverrides = {}) {
   const pos = (pin?.x == null || pin?.y == null)
     ? gridPosition(index)
@@ -2040,7 +2050,9 @@ function normalizeBoardPin(pin, index = 0, forcedChapterId = '', pinPositionOver
     chapterId: String(forcedChapterId || pin?.chapterId || '').trim() || undefined,
     pinColor: pin?.pinColor ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)],
     noteColor: pin?.noteColor ?? 'yellow',
-    type: pin?.type ?? (pin?.imageUrl || pin?.emoji ? 'photo' : 'note'),
+    imageUrl: getPinImageUrl(pin),
+    photoUrl: getPinImageUrl(pin),
+    type: pin?.type ?? (getPinImageUrl(pin) || pin?.emoji ? 'photo' : 'note'),
   };
 }
 
@@ -2103,16 +2115,18 @@ const SomedayPage = ({
   const [pins, setPins] = useState(() => mergeBoardPinsWithChapterPins(
     dreams.map((d, idx) => {
       const pos = (d.x == null || d.y == null) ? gridPosition(idx) : { x: d.x, y: d.y, rot: d.rot };
-      return {
-        ...d,
-        ...pos,
-        rot: pos.rot ?? d.rot ?? (Math.random() * 6 - 3),
-        pinColor: d.status === 'planning'
-          ? 'purple'
-          : (d.pinColor ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)]),
-        noteColor: d.noteColor ?? 'yellow',
-        type: d.type ?? (d.imageUrl || d.emoji ? 'photo' : 'note'),
-      };
+        return {
+          ...d,
+          ...pos,
+          rot: pos.rot ?? d.rot ?? (Math.random() * 6 - 3),
+          pinColor: d.status === 'planning'
+            ? 'purple'
+            : (d.pinColor ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)]),
+          noteColor: d.noteColor ?? 'yellow',
+          imageUrl: getPinImageUrl(d),
+          photoUrl: getPinImageUrl(d),
+          type: d.type ?? (getPinImageUrl(d) || d.emoji ? 'photo' : 'note'),
+        };
     }),
     initialChapters,
     pinPositionOverrides
@@ -2181,7 +2195,7 @@ const SomedayPage = ({
         // Full repopulation — async hydration arrived after mount
         return dreams.map((d, idx) => {
           const pos = (d.x == null || d.y == null) ? gridPosition(idx) : { x: d.x, y: d.y, rot: d.rot };
-          return { ...d, ...pos, rot: pos.rot ?? d.rot ?? (Math.random() * 6 - 3), pinColor: d.pinColor ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)], noteColor: d.noteColor ?? 'yellow', type: d.type ?? (d.imageUrl || d.emoji ? 'photo' : 'note') };
+          return { ...d, ...pos, rot: pos.rot ?? d.rot ?? (Math.random() * 6 - 3), pinColor: d.pinColor ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)], noteColor: d.noteColor ?? 'yellow', imageUrl: getPinImageUrl(d), photoUrl: getPinImageUrl(d), type: d.type ?? (getPinImageUrl(d) || d.emoji ? 'photo' : 'note') };
         });
       }
       // Status-only sync for pins already present
@@ -2225,7 +2239,7 @@ const SomedayPage = ({
     chapter_id: chapterId,
     label: pin.label || '',
     description: pin.description || '',
-    image_url: pin.imageUrl || '',
+    image_url: getPinImageUrl(pin),
     emoji: pin.emoji || '',
     category_id: pin.categoryId || '',
     status: pin.status || 'dreaming',
@@ -2248,6 +2262,7 @@ const SomedayPage = ({
       label: row.label || '',
       description: row.description || '',
       imageUrl: row.image_url || '',
+      photoUrl: row.image_url || '',
       emoji: row.emoji || '',
       categoryId: row.category_id || '',
       status: row.status || 'dreaming',
@@ -2595,7 +2610,7 @@ const SomedayPage = ({
       if (!toAdd.length) return prev;
       const newPins = toAdd.reduce((acc, d) => {
         const pos = (d.x == null || d.y == null) ? positionBelowLowestPin([...prev, ...acc], acc.length) : { x: d.x, y: d.y, rot: d.rot };
-        acc.push({ ...d, ...pos, rot: pos.rot ?? d.rot ?? (Math.random() * 6 - 3), pinColor: d.pinColor ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)], noteColor: d.noteColor ?? 'yellow', type: d.type ?? (d.imageUrl || d.emoji ? 'photo' : 'note') });
+        acc.push({ ...d, ...pos, rot: pos.rot ?? d.rot ?? (Math.random() * 6 - 3), pinColor: d.pinColor ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)], noteColor: d.noteColor ?? 'yellow', imageUrl: getPinImageUrl(d), photoUrl: getPinImageUrl(d), type: d.type ?? (getPinImageUrl(d) || d.emoji ? 'photo' : 'note') });
         return acc;
       }, []);
       return [...prev, ...newPins];
@@ -3044,7 +3059,7 @@ const SomedayPage = ({
                       <div style={{ background: darkMode ? '#e2e8f0' : '#ffffff', padding: '8px 8px 0', borderRadius: 3, boxShadow: '0 10px 36px rgba(0,0,0,0.18)', width: 180, position: 'relative' }}>
                         <Pushpin colorKey="purple" darkMode={darkMode} />
                         <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 2 }}>
-                          {focusPin.imageUrl ? <img src={focusPin.imageUrl} alt={focusPin.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : <div style={{ width: '100%', height: '100%', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 56 }}>{focusPin.emoji || '📌'}</div>}
+                          {getPinImageUrl(focusPin) ? <img src={getPinImageUrl(focusPin)} alt={focusPin.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : <div style={{ width: '100%', height: '100%', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 56 }}>{focusPin.emoji || '📌'}</div>}
                         </div>
                         <div style={{ padding: '8px 4px 10px', textAlign: 'center' }}>
                           <div style={{ fontFamily: CAVEAT, fontSize: 16, color: '#374151', lineHeight: 1.3 }}>{focusPin.emoji ? `${focusPin.emoji} ${focusPin.label || focusPin.text}` : (focusPin.label || focusPin.text)}</div>

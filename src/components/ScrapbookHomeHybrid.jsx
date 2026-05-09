@@ -103,17 +103,24 @@ const getVisualPreviewUrl = (item) => String(
 ).trim();
 
 const getOnYourMindImageUrl = (dream) => {
+  const fallbackImageUrl = String(
+    dream?.photoUrl
+    || dream?.imageUrl
+    || dream?.coverPhoto
+    || dream?.photos?.[0]?.url
+    || ''
+  ).trim();
   const sourceType = String(dream?.type || dream?.sourceType || '').trim().toLowerCase();
   const category = String(dream?.category || dream?.categoryId || '').trim().toLowerCase();
   const isDestinationDream = sourceType === 'destinations' || category === 'travel';
-  if (!isDestinationDream) return String(dream?.photoUrl || dream?.imageUrl || '').trim();
+  if (!isDestinationDream) return fallbackImageUrl;
   return getDestinationImageOverride({
     id: dream?.id,
     name: dream?.text,
     destination_name: dream?.text,
     title: dream?.text,
     cardTitle: dream?.text,
-  }) || String(dream?.photoUrl || dream?.imageUrl || '').trim();
+  }) || fallbackImageUrl;
 };
 
 const toLocalDateKey = (date) => {

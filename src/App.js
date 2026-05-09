@@ -1627,6 +1627,13 @@ const mergePersistedBucketList = (...dreamLists) => {
   dreamLists.forEach((list) => {
     (Array.isArray(list) ? list : []).forEach((dream, index) => {
       if (!dream || typeof dream !== 'object') return;
+      const normalizedImageUrl = String(
+        dream?.photoUrl
+        || dream?.imageUrl
+        || dream?.coverPhoto
+        || dream?.photos?.[0]?.url
+        || ''
+      ).trim();
       const idKey = String(dream?.id || '').trim();
       const fallbackKey = [
         String(dream?.text || dream?.dream || '').trim().toLowerCase(),
@@ -1644,6 +1651,8 @@ const mergePersistedBucketList = (...dreamLists) => {
         emoji: String(dream?.emoji || '').trim(),
         sources: Array.isArray(dream?.sources) ? dream.sources : [],
         createdAt: String(dream?.createdAt || '').trim(),
+        photoUrl: normalizedImageUrl,
+        imageUrl: normalizedImageUrl,
       });
     });
   });
@@ -19801,11 +19810,22 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const coverPinId = String(activeTripLinkedChapter.cover_pin_id || '').trim();
     if (coverPinId) {
       const coverItem = (bucketList || []).find(d => String(d?.id || '') === coverPinId);
-      if (coverItem?.imageUrl) return coverItem.imageUrl;
+      const coverItemImageUrl = String(
+        coverItem?.imageUrl
+        || coverItem?.photoUrl
+        || coverItem?.coverPhoto
+        || coverItem?.photos?.[0]?.url
+        || ''
+      ).trim();
+      if (coverItemImageUrl) return coverItemImageUrl;
     }
     return (bucketList || []).find(d =>
-      d?.imageUrl && (activeTripLinkedChapter.itemIds || []).some(id => String(id) === String(d?.id || ''))
-    )?.imageUrl || '';
+      String(d?.imageUrl || d?.photoUrl || d?.coverPhoto || d?.photos?.[0]?.url || '').trim()
+      && (activeTripLinkedChapter.itemIds || []).some(id => String(id) === String(d?.id || ''))
+    )?.imageUrl || (bucketList || []).find(d =>
+      String(d?.imageUrl || d?.photoUrl || d?.coverPhoto || d?.photos?.[0]?.url || '').trim()
+      && (activeTripLinkedChapter.itemIds || []).some(id => String(id) === String(d?.id || ''))
+    )?.photoUrl || '';
   })();
   const activeTripCoverPhoto = activeTripChapterCoverUrl
     ? { url: activeTripChapterCoverUrl }
@@ -25596,6 +25616,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     const text = String(dream?.dream || dream?.text || '').trim();
     if (!text) return;
     const category = String(dream?.category || 'travel').trim() || 'travel';
+    const normalizedImageUrl = String(
+      dream?.photoUrl
+      || dream?.imageUrl
+      || dream?.coverPhoto
+      || dream?.photos?.[0]?.url
+      || ''
+    ).trim();
     const categoryEmoji = {
       travel: '✈️',
       food: '🍽️',
@@ -25611,7 +25638,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         category,
         sources: Array.isArray(dream?.sources) ? dream.sources : [],
         emoji: categoryEmoji[category] || '✨',
-        photoUrl: String(dream?.photoUrl || '').trim(),
+        photoUrl: normalizedImageUrl,
+        imageUrl: normalizedImageUrl,
         createdAt: new Date().toISOString(),
       },
       ...(Array.isArray(prev) ? prev : []),
@@ -33677,7 +33705,13 @@ transform: translateY(0);
               label: dream.text,
               text: dream.text,
               emoji: dream.emoji || '*',
-              imageUrl: dream.photoUrl || '',
+              imageUrl: String(
+                dream.imageUrl
+                || dream.photoUrl
+                || dream.coverPhoto
+                || dream.photos?.[0]?.url
+                || ''
+              ).trim(),
               categoryId: komoCategoryMap[dream.category] || 'experiences',
               chapterId: dream.chapterId,
               status: dream.status || 'dreaming',
@@ -33700,7 +33734,13 @@ transform: translateY(0);
             sourceId: String(card.sourceId || card.id || '').trim(),
             placementId: String(card.placementId || '').trim(),
             label: String(card.label || card.text || 'Komo Book idea').trim(),
-            imageUrl: String(card.imageUrl || '').trim(),
+            imageUrl: String(
+              card.imageUrl
+              || card.photoUrl
+              || card.coverPhoto
+              || card.photos?.[0]?.url
+              || ''
+            ).trim(),
             emoji: String(card.emoji || '*').trim(),
             type: String(card.type || 'photo').trim(),
             rot: Number(card.rot || 0),
