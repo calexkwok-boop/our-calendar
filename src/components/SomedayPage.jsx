@@ -1632,10 +1632,11 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
     [chapter.id, chapterPins, dragPreviewById],
   );
   const chapterBoardHeight = useMemo(() => {
-    if (chapterBoardPins.length === 0) return 300;
+    if (chapterBoardPins.length === 0) return 640;
     return Math.max(
-      300,
-      ...chapterBoardPins.map((pin) => (Number(pin.y) || 0) + estimatedPinHeight(pin) + 36),
+      640,
+      Math.ceil(chapterBoardPins.length / 2) * 240 + 260,
+      ...chapterBoardPins.map((pin) => (Number(pin.y) || 0) + estimatedPinHeight(pin) + 180),
     );
   }, [chapterBoardPins]);
 
@@ -1676,10 +1677,12 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
     if (!board || !pin) return;
     const rect = board.getBoundingClientRect();
     const pinWidth = estimateChapterPinWidth(pin);
-    const maxX = Math.max(0, rect.width - pinWidth);
-    const maxY = Math.max(0, chapterBoardHeight - estimatedPinHeight(pin));
+    const isDecor = draggingTypeRef.current === 'label' || draggingTypeRef.current === 'sticker';
+    const isSticker = draggingTypeRef.current === 'sticker';
+    const maxX = Math.max(0, rect.width - (isSticker ? 24 : pinWidth));
+    const maxY = Math.max(isDecor ? -320 : 0, chapterBoardHeight - 240);
     const nextX = Math.max(0, Math.min(maxX, touch.clientX - dragOffsetRef.current.x));
-    const nextY = Math.max(0, Math.min(maxY, touch.clientY - dragOffsetRef.current.y));
+    const nextY = Math.max(isDecor ? -320 : 0, Math.min(maxY, touch.clientY - dragOffsetRef.current.y));
     setDragPreviewById((prev) => ({
       ...prev,
       [String(draggingPinId)]: { x: nextX, y: nextY, rot: pin.rot ?? 0 },
@@ -2493,7 +2496,7 @@ const SomedayPage = ({
     id: pin.id,
     chapter_id: chapterId,
     label: pin.label || '',
-    description: pin.description || '',
+    description: pin.description || pin.text || '',
     image_url: getPinImageUrl(pin),
     emoji: pin.emoji || '',
     category_id: pin.categoryId || '',
@@ -2506,7 +2509,16 @@ const SomedayPage = ({
     x: pin.x || 0,
     y: pin.y || 0,
     rot: pin.rot || 0,
-    meta: pin.meta || null,
+    meta: {
+      ...(pin.meta || {}),
+      text: pin.text ?? '',
+      fontStyle: pin.fontStyle,
+      fontSize: pin.fontSize,
+      textColor: pin.textColor,
+      styleVariant: pin.styleVariant,
+      sticker: pin.sticker,
+      size: pin.size,
+    },
     position,
   });
 
@@ -2516,6 +2528,7 @@ const SomedayPage = ({
       id: row.id,
       label: row.label || '',
       description: row.description || '',
+      text: row.meta?.text ?? row.description ?? '',
       imageUrl: row.image_url || '',
       photoUrl: row.image_url || '',
       emoji: row.emoji || '',
@@ -2527,6 +2540,12 @@ const SomedayPage = ({
       noteColor: row.note_color || 'yellow',
       type: row.type || 'note',
       meta: row.meta || null,
+      fontStyle: row.meta?.fontStyle,
+      fontSize: row.meta?.fontSize,
+      textColor: row.meta?.textColor,
+      styleVariant: row.meta?.styleVariant,
+      sticker: row.meta?.sticker,
+      size: row.meta?.size,
       x: override.x ?? row.x ?? 0,
       y: override.y ?? row.y ?? 0,
       rot: override.rot ?? row.rot ?? 0,
