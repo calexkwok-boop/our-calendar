@@ -1608,6 +1608,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
   const dragStartRef = useRef({ x: 0, y: 0 });
   const draggingTypeRef = useRef('');
   const didDragRef = useRef(false);
+  const dragLatestPositionRef = useRef({});
   // seed rotates each time the page mounts (chapter reopened)
   const [suggestionSeed] = useState(() => Math.floor(Math.random() * 997));
   // Prefer the live pins state so newly added suggestions appear in Pinned immediately.
@@ -1623,10 +1624,10 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
     if (!Array.isArray(chapter.pins) || chapter.pins.length === 0) return livePins;
 
     const mergedById = new Map();
-    chapter.pins.forEach((pin) => {
+    livePins.forEach((pin) => {
       mergedById.set(String(pin?.id || ''), pin);
     });
-    livePins.forEach((pin) => {
+    chapter.pins.forEach((pin) => {
       const key = String(pin?.id || '');
       mergedById.set(key, { ...(mergedById.get(key) || {}), ...pin });
     });
@@ -1676,6 +1677,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
     draggingTypeRef.current = pin.type;
     dragOffsetRef.current = { x: touch.clientX - (Number(pin.x) || 0), y: touch.clientY - (Number(pin.y) || 0) };
     dragStartRef.current = { x: touch.clientX, y: touch.clientY };
+    dragLatestPositionRef.current[String(pin.id)] = { x: Number(pin.x) || 0, y: Number(pin.y) || 0, rot: pin.rot ?? 0 };
     setDraggingPinId(pin.id);
   }
 
@@ -1700,18 +1702,21 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
     const maxY = Math.max(isDecor ? -320 : 0, chapterBoardHeight - 240);
     const nextX = Math.max(0, Math.min(maxX, touch.clientX - dragOffsetRef.current.x));
     const nextY = Math.max(isDecor ? -320 : 0, Math.min(maxY, touch.clientY - dragOffsetRef.current.y));
+    dragLatestPositionRef.current[String(draggingPinId)] = { x: nextX, y: nextY, rot: pin.rot ?? 0 };
     onMovePin?.(draggingPinId, { x: nextX, y: nextY, rot: pin.rot ?? 0 });
-  }, [chapterBoardHeight, chapterBoardPins, draggingPinId]);
+  }, [chapterBoardHeight, chapterBoardPins, draggingPinId, onMovePin]);
 
   const stopChapterPinDrag = useCallback(() => {
     if (!draggingPinId) return;
     const pin = chapterBoardPins.find((item) => item.id === draggingPinId);
     const wasDragged = didDragRef.current;
+    const latest = dragLatestPositionRef.current[String(draggingPinId)];
     if (pin && wasDragged) {
-      onUpdatePin?.(draggingPinId, { x: pin.x, y: pin.y, rot: pin.rot ?? 0 });
+      onUpdatePin?.(draggingPinId, latest || { x: pin.x, y: pin.y, rot: pin.rot ?? 0 });
     } else if (pin && !wasDragged) {
       handleChapterPinTap(pin);
     }
+    delete dragLatestPositionRef.current[String(draggingPinId)];
     didDragRef.current = false;
     setDraggingPinId(null);
   }, [chapterBoardPins, draggingPinId, onUpdatePin]);
@@ -2047,20 +2052,50 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                 : pin.type === 'countdown'
                 ? <CountdownPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={() => handleChapterPinTap(pin)} />
                 : (
-                  <>
-                    <PhotoPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={() => handleChapterPinTap(pin)} darkMode={darkMode} />
-                    {flippedPinId !== pin.id && (
-                      <button
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onTouchStart={(e) => e.stopPropagation()}
-                        onClick={(e) => { e.stopPropagation(); setFlippedPinId(pin.id); }}
-                        style={{ position: 'absolute', bottom: 4, right: 4, width: 20, height: 20, borderRadius: '50%', background: 'rgba(255,255,255,0.85)', border: 'none', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.12)', zIndex: 10, color: '#9ca3af' }}
-                        title="Write notes"
-                      >✏️</button>
-                    )}
-                    {flippedPinId === pin.id && (
+                  <div
+                    style={{
+                      width: 150,
+                      height: 196,
+                      position: 'relative',
+                      perspective: '1200px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        transformStyle: 'preserve-3d',
+                        transition: draggingPinId === pin.id ? 'none' : 'transform 420ms cubic-bezier(0.22, 0.61, 0.36, 1)',
+                        transform: flippedPinId === pin.id ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                      }}
+                    >
                       <div
-                        style={{ position: 'absolute', inset: 0, background: '#fefce8', borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', padding: '8px', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 5 }}
+                        style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                      >
+                        <PhotoPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={() => handleChapterPinTap(pin)} darkMode={darkMode} />
+                        <button
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
+                          onClick={(e) => { e.stopPropagation(); setFlippedPinId(pin.id); }}
+                          style={{ position: 'absolute', bottom: 4, right: 4, width: 20, height: 20, borderRadius: '50%', background: 'rgba(255,255,255,0.85)', border: 'none', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.12)', zIndex: 10, color: '#9ca3af' }}
+                          title="Write notes"
+                        >✏️</button>
+                      </div>
+                      <div
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          backfaceVisibility: 'hidden',
+                          WebkitBackfaceVisibility: 'hidden',
+                          transform: 'rotateY(180deg)',
+                          background: '#fefce8',
+                          borderRadius: 2,
+                          boxShadow: '2px 3px 10px rgba(0,0,0,0.12)',
+                          padding: '8px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          overflow: 'hidden',
+                        }}
                         onMouseDown={(e) => e.stopPropagation()}
                         onTouchStart={(e) => e.stopPropagation()}
                         onClick={(e) => e.stopPropagation()}
@@ -2093,8 +2128,8 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                           </label>
                         </div>
                       </div>
-                    )}
-                  </>
+                    </div>
+                  </div>
                 )}
             </div>
           ))}
