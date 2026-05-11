@@ -1642,7 +1642,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
   const coverPin = (coverPinId ? imagePins.find(p => String(p.id) === String(coverPinId)) : null) || imagePins[0] || null;
   const canPublish = Boolean(onDeleteChapter);
   const chapterBoardPins = useMemo(
-    () => chapterPins.map((pin, index) => normalizeBoardPin(pin, index, String(chapter.id || ''))),
+    () => chapterPins.map((pin, index) => normalizeBoardPin(pin, index, String(chapter.id || ''), {})),
     [chapter.id, chapterPins],
   );
   const chapterBoardHeight = useMemo(() => {
