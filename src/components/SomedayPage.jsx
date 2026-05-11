@@ -1512,7 +1512,7 @@ function CountdownEditSheet({ pin, onClose, onSave, darkMode }) {
   );
 }
 
-function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, darkMode, hasLinkedTrip = false, linkedTripDates = null, onInvite, onCoverChange, onPublishChange, onAddPin, onUpdatePin }) {
+function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, onOpenLinkedTrip, darkMode, hasLinkedTrip = false, linkedTripDates = null, onInvite, onCoverChange, onPublishChange, onAddPin, onUpdatePin }) {
   const [showAddMemory, setShowAddMemory] = useState(false);
   const [memoryText, setMemoryText] = useState('');
   const [tripAlbumPhotos, setTripAlbumPhotos] = useState([]);
@@ -1590,6 +1590,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
   const dragStartRef = useRef({ x: 0, y: 0 });
   const draggingTypeRef = useRef('');
   const didDragRef = useRef(false);
+  const dragPreviewRef = useRef({});
   // seed rotates each time the page mounts (chapter reopened)
   const [suggestionSeed] = useState(() => Math.floor(Math.random() * 997));
   // Prefer the live pins state so newly added suggestions appear in Pinned immediately.
@@ -1667,6 +1668,9 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
 
   const onChapterPinMove = useCallback((e) => {
     if (!draggingPinId) return;
+    if (typeof e.preventDefault === 'function' && e.cancelable) {
+      e.preventDefault();
+    }
     const touch = e.touches?.[0] ?? e;
     const dx = touch.clientX - dragStartRef.current.x;
     const dy = touch.clientY - dragStartRef.current.y;
@@ -1683,6 +1687,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
     const maxY = Math.max(isDecor ? -320 : 0, chapterBoardHeight - 240);
     const nextX = Math.max(0, Math.min(maxX, touch.clientX - dragOffsetRef.current.x));
     const nextY = Math.max(isDecor ? -320 : 0, Math.min(maxY, touch.clientY - dragOffsetRef.current.y));
+    dragPreviewRef.current[String(draggingPinId)] = { x: nextX, y: nextY, rot: pin.rot ?? 0 };
     setDragPreviewById((prev) => ({
       ...prev,
       [String(draggingPinId)]: { x: nextX, y: nextY, rot: pin.rot ?? 0 },
@@ -1691,7 +1696,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
 
   const stopChapterPinDrag = useCallback(() => {
     if (!draggingPinId) return;
-    const preview = dragPreviewById[String(draggingPinId)];
+    const preview = dragPreviewRef.current[String(draggingPinId)] || dragPreviewById[String(draggingPinId)];
     const pin = chapterBoardPins.find((item) => item.id === draggingPinId);
     if (pin && didDragRef.current && preview) {
       onUpdatePin?.(draggingPinId, preview);
@@ -1706,10 +1711,15 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
       delete next[String(draggingPinId)];
       return next;
     });
+    delete dragPreviewRef.current[String(draggingPinId)];
   }, [chapterBoardPins, dragPreviewById, draggingPinId, onUpdatePin]);
 
   useEffect(() => {
     if (!draggingPinId) return undefined;
+    const previousBodyTouchAction = document.body.style.touchAction;
+    const previousDocTouchAction = document.documentElement.style.touchAction;
+    document.body.style.touchAction = 'none';
+    document.documentElement.style.touchAction = 'none';
     const handleMove = (event) => onChapterPinMove(event);
     const handleEnd = () => stopChapterPinDrag();
     window.addEventListener('mousemove', handleMove);
@@ -1718,6 +1728,8 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
     window.addEventListener('touchend', handleEnd);
     window.addEventListener('touchcancel', handleEnd);
     return () => {
+      document.body.style.touchAction = previousBodyTouchAction;
+      document.documentElement.style.touchAction = previousDocTouchAction;
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('mouseup', handleEnd);
       window.removeEventListener('touchmove', handleMove);
@@ -1828,7 +1840,12 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                 style={{ background: darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfb', border: `1px solid ${darkMode ? 'rgba(45,212,191,0.28)' : '#99f6e4'}`, borderRadius: 20, padding: '6px 14px', fontSize: 15, color: darkMode ? '#2dd4bf' : '#0d9488', cursor: 'pointer', flexShrink: 0, fontWeight: 700, fontFamily: CAVEAT }}
               >Invite</button>
             )}
-            {onCreateTrip && (
+            {hasLinkedTrip && linkedTripDates?.trip_id ? (
+              <button
+                onClick={() => onOpenLinkedTrip?.(linkedTripDates.trip_id)}
+                style={{ background: darkMode ? 'rgba(125,211,252,0.14)' : '#ecfeff', border: `1px solid ${darkMode ? 'rgba(125,211,252,0.28)' : '#a5f3fc'}`, borderRadius: 20, padding: '6px 14px', fontSize: 15, color: darkMode ? '#7dd3fc' : '#0e7490', cursor: 'pointer', flexShrink: 0, fontWeight: 700, fontFamily: CAVEAT }}
+              >Open trip</button>
+            ) : onCreateTrip && (
               <button
                 onClick={() => onCreateTrip(chapter)}
                 style={{ background: darkMode ? 'rgba(125,211,252,0.14)' : '#ecfeff', border: `1px solid ${darkMode ? 'rgba(125,211,252,0.28)' : '#a5f3fc'}`, borderRadius: 20, padding: '6px 14px', fontSize: 15, color: darkMode ? '#7dd3fc' : '#0e7490', cursor: 'pointer', flexShrink: 0, fontWeight: 700, fontFamily: CAVEAT }}
@@ -2363,6 +2380,7 @@ const SomedayPage = ({
   onPersistPinLayout,
   pinPositionOverrides = {},
   onCreateTripFromChapter,
+  onOpenTripById,
   darkMode = false,
   chaptersWithLinkedTrips = new Set(),
   userEmail = '',
@@ -3248,7 +3266,7 @@ const SomedayPage = ({
       return (
         <>
           <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
-          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={chapter.owner_id === currentUser ? () => deleteChapter(activeChapterId) : undefined} onCreateTrip={chapter.owner_id === currentUser ? onCreateTripFromChapter : undefined} darkMode={darkMode} hasLinkedTrip={chaptersWithLinkedTrips.has(String(chapter.id))} linkedTripDates={chaptersWithLinkedTrips.get(String(chapter.id)) || null} onInvite={email => inviteToChapter(activeChapterId, email)} onCoverChange={({ chapterId, coverPinId }) => setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, cover_pin_id: coverPinId } : c))} onPublishChange={updateChapterPublishState} onAddPin={(data) => addDirectPinToChapter(activeChapterId, data)} onUpdatePin={updateChapterPin} onPinDataChange={onPinDataChange} />
+          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={chapter.owner_id === currentUser ? () => deleteChapter(activeChapterId) : undefined} onCreateTrip={chapter.owner_id === currentUser ? onCreateTripFromChapter : undefined} onOpenLinkedTrip={onOpenTripById} darkMode={darkMode} hasLinkedTrip={chaptersWithLinkedTrips.has(String(chapter.id))} linkedTripDates={chaptersWithLinkedTrips.get(String(chapter.id)) || null} onInvite={email => inviteToChapter(activeChapterId, email)} onCoverChange={({ chapterId, coverPinId }) => setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, cover_pin_id: coverPinId } : c))} onPublishChange={updateChapterPublishState} onAddPin={(data) => addDirectPinToChapter(activeChapterId, data)} onUpdatePin={updateChapterPin} onPinDataChange={onPinDataChange} />
         </>
       );
     }

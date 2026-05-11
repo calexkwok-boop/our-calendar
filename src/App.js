@@ -19882,6 +19882,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const activeTripChapterCoverUrl = (() => {
     if (!activeTripLinkedChapter) return '';
     const coverPinId = String(activeTripLinkedChapter.cover_pin_id || '').trim();
+    const chapterPins = Array.isArray(activeTripLinkedChapter.pins) ? activeTripLinkedChapter.pins : [];
+    if (coverPinId) {
+      const chapterCoverPin = chapterPins.find((pin) => String(pin?.id || '') === coverPinId);
+      const chapterCoverUrl = String(
+        chapterCoverPin?.imageUrl
+        || chapterCoverPin?.photoUrl
+        || chapterCoverPin?.coverPhoto
+        || chapterCoverPin?.photos?.[0]?.url
+        || ''
+      ).trim();
+      if (chapterCoverUrl) return chapterCoverUrl;
+    }
     if (coverPinId) {
       const coverItem = (bucketList || []).find(d => String(d?.id || '') === coverPinId);
       const coverItemImageUrl = String(
@@ -19892,6 +19904,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         || ''
       ).trim();
       if (coverItemImageUrl) return coverItemImageUrl;
+    }
+    const chapterImagePin = chapterPins.find((pin) => String(pin?.imageUrl || pin?.photoUrl || pin?.coverPhoto || pin?.photos?.[0]?.url || '').trim());
+    if (chapterImagePin) {
+      return String(
+        chapterImagePin?.imageUrl
+        || chapterImagePin?.photoUrl
+        || chapterImagePin?.coverPhoto
+        || chapterImagePin?.photos?.[0]?.url
+        || ''
+      ).trim();
     }
     return (bucketList || []).find(d =>
       String(d?.imageUrl || d?.photoUrl || d?.coverPhoto || d?.photos?.[0]?.url || '').trim()
@@ -32179,6 +32201,7 @@ transform: translateY(0);
                 onPersistPinLayout={handleSomedayPersistPinLayout}
                 pinPositionOverrides={somedayPinPositions}
                 onCreateTripFromChapter={startTripFromKomoChapter}
+                onOpenTripById={openSubCalendarById}
                 chaptersWithLinkedTrips={chaptersWithLinkedTrips}
                 onPinDataChange={handleChapterPinDataChange}
               />
@@ -33879,8 +33902,28 @@ transform: translateY(0);
               ...(somedayPinPositions[thought.id] || {}),
             })),
           ];
+          const linkedChapterPinMap = new Map(
+            komoPins.map((pin) => [String(pin?.id || '').trim(), pin])
+          );
           const linkedChapterCards = linkedChapter
-            ? komoPins.filter((pin) => (linkedChapter.itemIds || []).some((id) => String(id || '') === String(pin?.id || '')))
+            ? (Array.isArray(linkedChapter.pins) ? linkedChapter.pins : [])
+                .map((pin) => {
+                  const pinId = String(pin?.id || '').trim();
+                  const merged = linkedChapterPinMap.get(pinId);
+                  return merged ? { ...pin, ...merged } : pin;
+                })
+                .filter((pin) => String(pin?.id || '').trim())
+                .sort((a, b) => {
+                  const posA = Number.isFinite(Number(a?.position)) ? Number(a.position) : Number.MAX_SAFE_INTEGER;
+                  const posB = Number.isFinite(Number(b?.position)) ? Number(b.position) : Number.MAX_SAFE_INTEGER;
+                  if (posA !== posB) return posA - posB;
+                  const yA = Number.isFinite(Number(a?.y)) ? Number(a.y) : Number.MAX_SAFE_INTEGER;
+                  const yB = Number.isFinite(Number(b?.y)) ? Number(b.y) : Number.MAX_SAFE_INTEGER;
+                  if (yA !== yB) return yA - yB;
+                  const xA = Number.isFinite(Number(a?.x)) ? Number(a.x) : Number.MAX_SAFE_INTEGER;
+                  const xB = Number.isFinite(Number(b?.x)) ? Number(b.x) : Number.MAX_SAFE_INTEGER;
+                  return xA - xB;
+                })
             : [];
           const normalizeKomoCard = (card = {}) => ({
             sourceId: String(card.sourceId || card.id || '').trim(),
