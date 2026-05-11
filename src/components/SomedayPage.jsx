@@ -2079,8 +2079,8 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                   ? (darkMode ? 'drop-shadow(0 18px 34px rgba(0,0,0,0.68))' : 'drop-shadow(0 18px 34px rgba(0,0,0,0.24))')
                   : 'none',
               }}
-              onMouseDown={(e) => startChapterPinDrag(e, pin)}
-              onTouchStart={(e) => startChapterPinDrag(e, pin)}
+              onMouseDown={(e) => { if (flippedPinId === pin.id) return; startChapterPinDrag(e, pin); }}
+              onTouchStart={(e) => { if (flippedPinId === pin.id) return; startChapterPinDrag(e, pin); }}
             >
               {pin.type === 'note'
                 ? <NotePin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={() => handleChapterPinTap(pin)} darkMode={darkMode} />
@@ -2093,13 +2093,20 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                 : pin.type === 'countdown'
                 ? <CountdownPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={() => handleChapterPinTap(pin)} />
                 : (
-                  <div style={{ position: 'relative', perspective: '600px' }}>
-                    <div style={{ transformStyle: 'preserve-3d', transform: flippedPinId === pin.id ? 'rotateY(180deg)' : 'rotateY(0deg)', transition: 'transform 0.5s', position: 'relative' }}>
-                      <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-                        <PhotoPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={() => handleChapterPinTap(pin)} darkMode={darkMode} />
-                      </div>
+                  <>
+                    <PhotoPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={() => handleChapterPinTap(pin)} darkMode={darkMode} />
+                    {flippedPinId !== pin.id && (
+                      <button
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); setFlippedPinId(pin.id); }}
+                        style={{ position: 'absolute', bottom: 4, right: 4, width: 20, height: 20, borderRadius: '50%', background: 'rgba(255,255,255,0.85)', border: 'none', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.12)', zIndex: 10, color: '#9ca3af' }}
+                        title="Write notes"
+                      >✏️</button>
+                    )}
+                    {flippedPinId === pin.id && (
                       <div
-                        style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', position: 'absolute', inset: 0, background: '#fefce8', borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', padding: '8px', display: 'flex', flexDirection: 'column', overflow: 'hidden', pointerEvents: flippedPinId === pin.id ? 'auto' : 'none' }}
+                        style={{ position: 'absolute', inset: 0, background: '#fefce8', borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', padding: '8px', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 5 }}
                         onMouseDown={(e) => e.stopPropagation()}
                         onTouchStart={(e) => e.stopPropagation()}
                         onClick={(e) => e.stopPropagation()}
@@ -2132,17 +2139,8 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                           </label>
                         </div>
                       </div>
-                    </div>
-                    {flippedPinId !== pin.id && (
-                      <button
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onTouchStart={(e) => e.stopPropagation()}
-                        onClick={(e) => { e.stopPropagation(); setFlippedPinId(pin.id); }}
-                        style={{ position: 'absolute', bottom: 4, right: 4, width: 20, height: 20, borderRadius: '50%', background: 'rgba(255,255,255,0.85)', border: 'none', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.12)', zIndex: 10, color: '#9ca3af' }}
-                        title="Flip to write notes"
-                      >✏️</button>
                     )}
-                  </div>
+                  </>
                 )}
             </div>
           ))}
