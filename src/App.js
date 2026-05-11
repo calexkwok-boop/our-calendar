@@ -3096,27 +3096,21 @@ const deriveScrambleStandings = (tournament) => {
 
 function CompactKomoCardBack({ card, linkedChapterId, onFlipBack, onDataChange }) {
   const [notes, setNotes] = React.useState(() => {
-    try { return JSON.parse(localStorage.getItem('komo-chapter-notes') || '{}')[card?.id] || ''; } catch { return ''; }
+    return String(card?.notes || '').trim();
   });
   const [attachment, setAttachment] = React.useState(() => {
-    try { return JSON.parse(localStorage.getItem('komo-chapter-attachments') || '{}')[card?.id] || ''; } catch { return ''; }
+    return String(card?.attachmentUrl || '').trim();
   });
+  React.useEffect(() => {
+    setNotes(String(card?.notes || '').trim());
+    setAttachment(String(card?.attachmentUrl || '').trim());
+  }, [card?.notes, card?.attachmentUrl, card?.id]);
   const saveNotes = (note) => {
     setNotes(note);
-    try {
-      const next = JSON.parse(localStorage.getItem('komo-chapter-notes') || '{}');
-      next[card.id] = note;
-      localStorage.setItem('komo-chapter-notes', JSON.stringify(next));
-    } catch {}
     onDataChange?.(linkedChapterId, card.id, { notes: note });
   };
   const saveAttachment = (dataUrl) => {
     setAttachment(dataUrl);
-    try {
-      const next = JSON.parse(localStorage.getItem('komo-chapter-attachments') || '{}');
-      next[card.id] = dataUrl;
-      localStorage.setItem('komo-chapter-attachments', JSON.stringify(next));
-    } catch {}
     onDataChange?.(linkedChapterId, card.id, { attachmentUrl: dataUrl });
   };
   return (
@@ -20783,35 +20777,87 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [tripKomoState, subCalendars]);
 
   const handleChapterPinDataChange = (chapterId, pinId, patch) => {
-    const linked = chaptersWithLinkedTrips.get(String(chapterId));
-    if (!linked?.trip_id) return;
-    const tid = linked.trip_id;
-    const safePrev = tripKomoState && typeof tripKomoState === 'object' ? tripKomoState : {};
-    const current = (safePrev[tid] && typeof safePrev[tid] === 'object') ? safePrev[tid] : {};
-    const slots = { ...(current.slots || {}) };
-    let changed = false;
-    for (const dk of Object.keys(slots)) {
-      const day = { ...slots[dk] };
-      for (const sk of Object.keys(day)) {
-        const cards = Array.isArray(day[sk]) ? [...day[sk]] : [];
-        const idx = cards.findIndex((c) => String(c?.sourceId || '') === String(pinId));
-        if (idx >= 0) {
-          cards[idx] = { ...cards[idx], ...patch };
-          day[sk] = cards;
-          changed = true;
-        }
-      }
-      slots[dk] = day;
-    }
-    if (!changed) return;
-    const nextTripKomo = { ...current, slots };
-    const nextState = { ...safePrev, [tid]: nextTripKomo };
-    writeTripKomoState(user?.id, nextState);
-    setTripKomoState(nextState);
-    if (user?.id) {
-      supabase.from('sub_calendars').update({ komo_state: nextTripKomo }).eq('id', tid)
-        .then(({ error }) => { if (error) console.warn('[komo] pin sync failed:', error.message); });
-    }
+    const normalizedPinId = String(pinId || '').trim();
+    if (!normalizedPinId || !patch || typeof patch !== 'object') return;
+    const normalizedPatch = {
+      ...('notes' in patch ? { notes: String(patch.notes || '') } : {}),
+      ...('attachmentUrl' in patch ? { attachmentUrl: String(patch.attachmentUrl || '') } : {}),
+    };
+    if (Object.keys(normalizedPatch).length === 0) return;
+
+    setBucketList((prev) => (
+      Array.isArray(prev)
+        ? prev.map((item) => (
+            String(item?.id || '') === normalizedPinId
+              ? { ...item, ...normalizedPatch }
+              : item
+          ))
+        : prev
+    ));
+    setQuickThoughts((prev) => (
+      Array.isArray(prev)
+        ? prev.map((item) => (
+            String(item?.id || '') === normalizedPinId
+              ? { ...item, ...normalizedPatch }
+              : item
+          ))
+        : prev
+    ));
+    setKomoChapters((prev) => (
+      Array.isArray(prev)
+        ? prev.map((chapter) => {
+            const chapterMatches = String(chapterId || '').trim()
+              ? String(chapter?.id || '').trim() === String(chapterId || '').trim()
+              : (chapter?.pins || []).some((pin) => String(pin?.id || '') === normalizedPinId);
+            if (!chapterMatches) return chapter;
+            return {
+              ...chapter,
+              pins: (Array.isArray(chapter?.pins) ? chapter.pins : []).map((pin) => (
+                String(pin?.id || '') === normalizedPinId
+                  ? { ...pin, ...normalizedPatch, meta: { ...(pin?.meta || {}), ...normalizedPatch } }
+                  : pin
+              )),
+            };
+          })
+        : prev
+    ));
+    setTripKomoState((prev) => {
+      const safePrev = prev && typeof prev === 'object' ? prev : {};
+      let changed = false;
+      const nextState = Object.fromEntries(
+        Object.entries(safePrev).map(([tripId, tripKomo]) => {
+          const current = tripKomo && typeof tripKomo === 'object' ? tripKomo : {};
+          const slots = { ...(current.slots || {}) };
+          let tripChanged = false;
+          Object.keys(slots).forEach((dk) => {
+            const day = { ...(slots[dk] || {}) };
+            Object.keys(day).forEach((sk) => {
+              const cards = Array.isArray(day[sk]) ? [...day[sk]] : [];
+              let slotChanged = false;
+              day[sk] = cards.map((card) => {
+                if (String(card?.sourceId || '') !== normalizedPinId) return card;
+                slotChanged = true;
+                return { ...card, ...normalizedPatch };
+              });
+              if (slotChanged) tripChanged = true;
+            });
+            slots[dk] = day;
+          });
+          if (tripChanged) {
+            changed = true;
+            const nextTripKomo = { ...current, slots };
+            if (user?.id) {
+              supabase.from('sub_calendars').update({ komo_state: nextTripKomo }).eq('id', tripId)
+                .then(({ error }) => { if (error) console.warn('[komo] pin sync failed:', error.message); });
+            }
+            return [tripId, nextTripKomo];
+          }
+          return [tripId, current];
+        })
+      );
+      if (changed) writeTripKomoState(user?.id, nextState);
+      return changed ? nextState : safePrev;
+    });
   };
 
   const primaryJourneyGoal = sortedJourneyGoals.find((goal) => goal?.active !== false) || null;
@@ -25758,13 +25804,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     if (!text) return;
     const colors = ['yellow', 'pink', 'blue', 'green'];
     const color = colors.includes(String(thought?.color || '')) ? thought.color : colors[Math.floor(Math.random() * colors.length)];
-    setQuickThoughts((prev) => [
-      {
-        id: uuidv4(),
-        text,
-        color,
-        createdAt: new Date().toISOString(),
-      },
+      setQuickThoughts((prev) => [
+        {
+          id: uuidv4(),
+          text,
+          color,
+          notes: String(thought?.notes || ''),
+          attachmentUrl: String(thought?.attachmentUrl || ''),
+          createdAt: new Date().toISOString(),
+        },
       ...(Array.isArray(prev) ? prev : []),
     ]);
   };
@@ -25869,6 +25917,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           color,
           status: pin.status || 'dreaming',
           chapterId: pin.chapterId,
+          notes: pin.notes || '',
+          attachmentUrl: pin.attachmentUrl || '',
           createdAt: new Date().toISOString(),
         },
         ...(Array.isArray(prev) ? prev : []),
@@ -25876,7 +25926,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     } else {
       const pinCatToBucketCat = { places: 'travel', food: 'food', experiences: 'adventure', home: 'home', buy: 'buy' };
       setBucketList((prev) => [
-        { id: pin.id, text: pin.label || pin.text || '', category: pinCatToBucketCat[pin.categoryId] || 'travel', emoji: pin.emoji || '✨', photoUrl: pin.imageUrl || '', createdAt: new Date().toISOString(), sources: [] },
+        { id: pin.id, text: pin.label || pin.text || '', category: pinCatToBucketCat[pin.categoryId] || 'travel', emoji: pin.emoji || '✨', photoUrl: pin.imageUrl || '', attachmentUrl: pin.attachmentUrl || '', notes: pin.notes || '', createdAt: new Date().toISOString(), sources: [] },
         ...(Array.isArray(prev) ? prev : []),
       ]);
     }
@@ -25920,18 +25970,18 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             .catch(() => {});
         }
       }
-      if (pin.status != null || pin.chapterId !== undefined) {
+      if (pin.status != null || pin.chapterId !== undefined || pin.notes !== undefined || pin.attachmentUrl !== undefined) {
         setBucketList(prev =>
           (Array.isArray(prev) ? prev : []).map(d =>
             String(d?.id || '') === String(pin.id)
-              ? { ...d, ...(pin.status != null ? { status: pin.status } : {}), ...(pin.chapterId !== undefined ? { chapterId: pin.chapterId } : {}) }
+              ? { ...d, ...(pin.status != null ? { status: pin.status } : {}), ...(pin.chapterId !== undefined ? { chapterId: pin.chapterId } : {}), ...(pin.notes !== undefined ? { notes: pin.notes } : {}), ...(pin.attachmentUrl !== undefined ? { attachmentUrl: pin.attachmentUrl } : {}) }
               : d
           )
         );
         setQuickThoughts(prev =>
           (Array.isArray(prev) ? prev : []).map(thought =>
             String(thought?.id || '') === String(pin.id)
-              ? { ...thought, ...(pin.status != null ? { status: pin.status } : {}), ...(pin.chapterId !== undefined ? { chapterId: pin.chapterId } : {}) }
+              ? { ...thought, ...(pin.status != null ? { status: pin.status } : {}), ...(pin.chapterId !== undefined ? { chapterId: pin.chapterId } : {}), ...(pin.notes !== undefined ? { notes: pin.notes } : {}), ...(pin.attachmentUrl !== undefined ? { attachmentUrl: pin.attachmentUrl } : {}) }
               : thought
           )
         );
@@ -32155,6 +32205,7 @@ transform: translateY(0);
                 emoji: d.emoji || '✨',
                 imageUrl: resolveSomedayDreamImage(d),
                 notes: d.notes || '',
+                attachmentUrl: d.attachmentUrl || '',
                 brand: d.brand || '',
                 priceRange: d.priceRange || '',
                 sourceType: d.type || '',
@@ -32174,6 +32225,8 @@ transform: translateY(0);
                 pinColor: 'purple',
                 categoryId: 'notes',
                 status: t.status || 'dreaming',
+                notes: t.notes || '',
+                attachmentUrl: t.attachmentUrl || '',
                 chapterId: t.chapterId,
                 ...(somedayPinPositions[t.id] || {}),
               })),
@@ -34065,22 +34118,7 @@ transform: translateY(0);
               slots[dateKey] = day;
               return { ...current, slots };
             });
-            if (sourceId) {
-              if ('notes' in patch) {
-                try {
-                  const chNotes = JSON.parse(localStorage.getItem('komo-chapter-notes') || '{}');
-                  chNotes[sourceId] = patch.notes;
-                  localStorage.setItem('komo-chapter-notes', JSON.stringify(chNotes));
-                } catch {}
-              }
-              if ('attachmentUrl' in patch) {
-                try {
-                  const chAttach = JSON.parse(localStorage.getItem('komo-chapter-attachments') || '{}');
-                  chAttach[sourceId] = patch.attachmentUrl;
-                  localStorage.setItem('komo-chapter-attachments', JSON.stringify(chAttach));
-                } catch {}
-              }
-            }
+            if (sourceId) handleChapterPinDataChange(linkedChapterId, sourceId, patch);
           };
           const updateKomoCardNotes = (dateKey, slotKey, placementId, notes) =>
             updateKomoCardField(dateKey, slotKey, placementId, { notes: String(notes || '') });

@@ -808,8 +808,8 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
         }
         {pin.status === 'done' && <SharpieX size={138} />}
       </div>
-      <div style={{ padding: '6px 2px 7px', textAlign: 'center' }}>
-        <div style={{ fontFamily: CAVEAT, fontSize: 12, color: labelCol, lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', textDecoration: pin.status === 'done' ? 'line-through' : 'none' }}>
+      <div style={{ padding: '6px 2px 7px', textAlign: 'center', minHeight: 44 }}>
+        <div style={{ minHeight: 31, fontFamily: CAVEAT, fontSize: 12, color: labelCol, lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', textDecoration: pin.status === 'done' ? 'line-through' : 'none' }}>
           {pin.emoji ? `${pin.emoji} ${pin.label}` : pin.label}
         </div>
       </div>
@@ -2099,7 +2099,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                         <div style={{ width: 162, minHeight: 185, background: '#fefce8', borderRadius: 2, boxShadow: '3px 5px 16px rgba(0,0,0,0.22)', padding: '8px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
                           <button onClick={(e) => { e.stopPropagation(); setFlippedPinId(null); }} style={{ position: 'absolute', top: 4, right: 4, width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: 'none', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', zIndex: 1 }}>↩</button>
                           <textarea
-                            value={pinNotes[pin.id] || ''}
+                            value={pin.notes || pinNotes[pin.id] || ''}
                             onChange={(e) => savePinNote(pin.id, e.target.value)}
                             onClick={(e) => e.stopPropagation()}
                             placeholder="notes..."
@@ -2107,9 +2107,9 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                             maxLength={500}
                           />
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 }}>
-                            {pinAttachments[pin.id] ? (
-                              <a href={pinAttachments[pin.id]} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ display: 'block', width: 24, height: 24, borderRadius: 4, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
-                                <img src={pinAttachments[pin.id]} alt="attachment" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            {(pin.attachmentUrl || pinAttachments[pin.id]) ? (
+                              <a href={pin.attachmentUrl || pinAttachments[pin.id]} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ display: 'block', width: 24, height: 24, borderRadius: 4, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
+                                <img src={pin.attachmentUrl || pinAttachments[pin.id]} alt="attachment" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               </a>
                             ) : <span />}
                             <label style={{ cursor: 'pointer', borderRadius: 999, background: 'rgba(255,255,255,0.7)', border: 'none', padding: '2px 6px', fontSize: 11, color: '#6b7280', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }} title="Attach photo" onClick={(e) => e.stopPropagation()}>
@@ -2620,7 +2620,11 @@ const SomedayPage = ({
       try { localStorage.setItem('komo-board-notes', JSON.stringify(next)); } catch {}
       return next;
     });
-  }, []);
+    const linkedChapterId = String((Array.isArray(chapters) ? chapters : []).find((chapter) => (
+      Array.isArray(chapter?.pins) && chapter.pins.some((pin) => String(pin?.id || '') === String(id || ''))
+    ))?.id || '').trim();
+    onPinDataChange?.(linkedChapterId || undefined, id, { notes: note });
+  }, [chapters, onPinDataChange]);
   const [boardPinAttachments, setBoardPinAttachments] = useState(() => {
     try { return JSON.parse(localStorage.getItem('komo-board-attachments') || '{}'); } catch { return {}; }
   });
@@ -2630,7 +2634,11 @@ const SomedayPage = ({
       try { localStorage.setItem('komo-board-attachments', JSON.stringify(next)); } catch {}
       return next;
     });
-  }, []);
+    const linkedChapterId = String((Array.isArray(chapters) ? chapters : []).find((chapter) => (
+      Array.isArray(chapter?.pins) && chapter.pins.some((pin) => String(pin?.id || '') === String(id || ''))
+    ))?.id || '').trim();
+    onPinDataChange?.(linkedChapterId || undefined, id, { attachmentUrl: dataUrl });
+  }, [chapters, onPinDataChange]);
   const normalizedAuthUserId = String(authUserId || '').trim();
   const normalizedCurrentUser = String(currentUser || '').trim();
   const chapterOwnerIdentity = normalizedAuthUserId || normalizedCurrentUser;
@@ -2685,14 +2693,29 @@ const SomedayPage = ({
           return { ...d, ...pos, rot: pos.rot ?? d.rot ?? (Math.random() * 6 - 3), pinColor: d.pinColor ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)], noteColor: d.noteColor ?? 'yellow', imageUrl: getPinImageUrl(d), photoUrl: getPinImageUrl(d), type: d.type ?? (getPinImageUrl(d) || d.emoji ? 'photo' : 'note') };
         });
       }
-      // Status-only sync for pins already present
-      const statusById = new Map(dreams.map(d => [String(d.id), d.status]));
+      // Keep lightweight source fields in sync when parent dream data changes.
+      const sourceById = new Map(dreams.map(d => [String(d.id), d]));
       let changed = false;
       const next = ps.map(p => {
-        const s = statusById.get(String(p.id));
-        if (s !== undefined && (s !== p.status || (s === 'planning' && p.pinColor !== 'purple') || (s !== 'planning' && p.pinColor === 'purple' && !p.chapterId))) {
+        const source = sourceById.get(String(p.id));
+        const s = source?.status;
+        const nextNotes = source?.notes;
+        const nextAttachmentUrl = source?.attachmentUrl;
+        if (
+          source
+          && (
+            s !== undefined && (s !== p.status || (s === 'planning' && p.pinColor !== 'purple') || (s !== 'planning' && p.pinColor === 'purple' && !p.chapterId))
+            || nextNotes !== undefined && nextNotes !== p.notes
+            || nextAttachmentUrl !== undefined && nextAttachmentUrl !== p.attachmentUrl
+          )
+        ) {
           changed = true;
-          return { ...p, status: s, pinColor: s === 'planning' ? 'purple' : (p.chapterId ? 'purple' : (p.pinColor === 'purple' ? 'teal' : p.pinColor)) };
+          return {
+            ...p,
+            ...(s !== undefined ? { status: s, pinColor: s === 'planning' ? 'purple' : (p.chapterId ? 'purple' : (p.pinColor === 'purple' ? 'teal' : p.pinColor)) } : {}),
+            ...(nextNotes !== undefined ? { notes: nextNotes } : {}),
+            ...(nextAttachmentUrl !== undefined ? { attachmentUrl: nextAttachmentUrl } : {}),
+          };
         }
         return p;
       });
@@ -2740,6 +2763,8 @@ const SomedayPage = ({
     rot: pin.rot || 0,
     meta: {
       ...(pin.meta || {}),
+      notes: pin.notes ?? '',
+      attachmentUrl: pin.attachmentUrl ?? '',
       text: pin.text ?? '',
       fontStyle: pin.fontStyle,
       fontSize: pin.fontSize,
@@ -2759,6 +2784,8 @@ const SomedayPage = ({
       label: row.label || '',
       description: row.description || '',
       text: row.meta?.text ?? row.description ?? '',
+      notes: row.meta?.notes ?? '',
+      attachmentUrl: row.meta?.attachmentUrl ?? '',
       imageUrl: row.image_url || '',
       photoUrl: row.image_url || '',
       emoji: row.emoji || '',
@@ -3771,8 +3798,6 @@ const SomedayPage = ({
               ? <ChecklistPin  pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
               : pin.type === 'countdown'
               ? <CountdownPin  pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} />
-              : isPinInChapter(pin)
-              ? <PhotoPin      pin={{ ...pin, pinColor: 'purple', chapterId: getPinChapterId(pin) }} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
               : (
                 <div style={{ position: 'relative', width: 162, minHeight: 185, perspective: '1200px' }}>
                   <div
@@ -3784,10 +3809,10 @@ const SomedayPage = ({
                       transition: dragging === pin.id ? 'none' : 'transform 420ms cubic-bezier(0.22, 0.61, 0.36, 1)',
                       transform: flippedBoardPinId === pin.id ? 'rotateY(180deg)' : 'rotateY(0deg)',
                     }}
-                  >
-                    <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-                      <div style={{ position: 'relative', width: 162, minHeight: 185 }}>
-                        <PhotoPin pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
+                    >
+                      <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+                        <div style={{ position: 'relative', width: 162, minHeight: 185 }}>
+                        <PhotoPin pin={isPinInChapter(pin) ? { ...pin, pinColor: 'purple', chapterId: getPinChapterId(pin) } : pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
                         <button
                           onMouseDown={(e) => e.stopPropagation()}
                           onTouchStart={(e) => e.stopPropagation()}
@@ -3806,7 +3831,7 @@ const SomedayPage = ({
                       <div style={{ width: 162, minHeight: 185, background: '#fefce8', borderRadius: 2, boxShadow: '3px 5px 16px rgba(0,0,0,0.22)', padding: '8px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
                         <button onClick={(e) => { e.stopPropagation(); setFlippedBoardPinId(null); }} style={{ position: 'absolute', top: 4, right: 4, width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: 'none', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', zIndex: 1 }}>↩</button>
                         <textarea
-                          value={boardPinNotes[pin.id] || ''}
+                            value={pin.notes || boardPinNotes[pin.id] || ''}
                           onChange={(e) => saveBoardPinNote(pin.id, e.target.value)}
                           onClick={(e) => e.stopPropagation()}
                           placeholder="notes..."
@@ -3814,9 +3839,9 @@ const SomedayPage = ({
                           maxLength={500}
                         />
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 }}>
-                          {boardPinAttachments[pin.id] ? (
-                            <a href={boardPinAttachments[pin.id]} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ display: 'block', width: 24, height: 24, borderRadius: 4, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
-                              <img src={boardPinAttachments[pin.id]} alt="attachment" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          {(pin.attachmentUrl || boardPinAttachments[pin.id]) ? (
+                            <a href={pin.attachmentUrl || boardPinAttachments[pin.id]} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ display: 'block', width: 24, height: 24, borderRadius: 4, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
+                              <img src={pin.attachmentUrl || boardPinAttachments[pin.id]} alt="attachment" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             </a>
                           ) : <span />}
                           <label style={{ cursor: 'pointer', borderRadius: 999, background: 'rgba(255,255,255,0.7)', border: 'none', padding: '2px 6px', fontSize: 11, color: '#6b7280', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }} title="Attach photo" onClick={(e) => e.stopPropagation()}>
