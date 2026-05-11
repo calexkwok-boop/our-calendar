@@ -1602,6 +1602,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
   const [publishSaving, setPublishSaving] = useState(false);
   const [coverPinId, setCoverPinId] = useState(chapter.coverPinId || chapter.cover_pin_id || null);
   const [draggingPinId, setDraggingPinId] = useState(null);
+  const [dragPreviewById, setDragPreviewById] = useState({});
   const menuRef = useRef(null);
   const chapterBoardRef = useRef(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
@@ -1609,6 +1610,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
   const draggingTypeRef = useRef('');
   const didDragRef = useRef(false);
   const dragLatestPositionRef = useRef({});
+  const draggingPinRef = useRef(null);
   // seed rotates each time the page mounts (chapter reopened)
   const [suggestionSeed] = useState(() => Math.floor(Math.random() * 997));
   // Prefer the live pins state so newly added suggestions appear in Pinned immediately.
@@ -1643,8 +1645,12 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
   const coverPin = (coverPinId ? imagePins.find(p => String(p.id) === String(coverPinId)) : null) || imagePins[0] || null;
   const canPublish = Boolean(onDeleteChapter);
   const chapterBoardPins = useMemo(
-    () => chapterPins.map((pin, index) => normalizeBoardPin(pin, index, String(chapter.id || ''), {})),
-    [chapter.id, chapterPins],
+    () => chapterPins.map((pin, index) => {
+      const normalized = normalizeBoardPin(pin, index, String(chapter.id || ''));
+      const preview = dragPreviewById[String(pin.id || '')];
+      return preview ? { ...normalized, ...preview } : normalized;
+    }),
+    [chapter.id, chapterPins, dragPreviewById],
   );
   const chapterBoardHeight = useMemo(() => {
     if (chapterBoardPins.length === 0) return 640;
@@ -1675,6 +1681,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
     const touch = e.touches?.[0] ?? e;
     didDragRef.current = false;
     draggingTypeRef.current = pin.type;
+    draggingPinRef.current = pin;
     dragOffsetRef.current = { x: touch.clientX - (Number(pin.x) || 0), y: touch.clientY - (Number(pin.y) || 0) };
     dragStartRef.current = { x: touch.clientX, y: touch.clientY };
     dragLatestPositionRef.current[String(pin.id)] = { x: Number(pin.x) || 0, y: Number(pin.y) || 0, rot: pin.rot ?? 0 };
@@ -1692,34 +1699,42 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
     if (!didDragRef.current && Math.hypot(dx, dy) < 6) return;
     didDragRef.current = true;
     const board = chapterBoardRef.current;
-    const pin = chapterBoardPins.find((item) => item.id === draggingPinId);
-    if (!board || !pin) return;
+    if (!board) return;
     const rect = board.getBoundingClientRect();
-    const pinWidth = estimateChapterPinWidth(pin);
-    const isDecor = draggingTypeRef.current === 'label' || draggingTypeRef.current === 'sticker';
-    const isSticker = draggingTypeRef.current === 'sticker';
+    const pinType = draggingTypeRef.current;
+    const pinWidth = pinType === 'sticker' ? 72 : pinType === 'label' ? 220 : 156;
+    const isDecor = pinType === 'label' || pinType === 'sticker';
+    const isSticker = pinType === 'sticker';
     const maxX = Math.max(0, rect.width - (isSticker ? 24 : pinWidth));
     const maxY = Math.max(isDecor ? -320 : 0, chapterBoardHeight - 240);
     const nextX = Math.max(0, Math.min(maxX, touch.clientX - dragOffsetRef.current.x));
     const nextY = Math.max(isDecor ? -320 : 0, Math.min(maxY, touch.clientY - dragOffsetRef.current.y));
-    dragLatestPositionRef.current[String(draggingPinId)] = { x: nextX, y: nextY, rot: pin.rot ?? 0 };
-    onMovePin?.(draggingPinId, { x: nextX, y: nextY, rot: pin.rot ?? 0 });
-  }, [chapterBoardHeight, chapterBoardPins, draggingPinId, onMovePin]);
+    const rot = dragLatestPositionRef.current[String(draggingPinId)]?.rot ?? 0;
+    dragLatestPositionRef.current[String(draggingPinId)] = { x: nextX, y: nextY, rot };
+    setDragPreviewById(prev => ({ ...prev, [String(draggingPinId)]: { x: nextX, y: nextY, rot } }));
+  }, [chapterBoardHeight, draggingPinId]);
 
   const stopChapterPinDrag = useCallback(() => {
     if (!draggingPinId) return;
-    const pin = chapterBoardPins.find((item) => item.id === draggingPinId);
+    const pin = draggingPinRef.current;
     const wasDragged = didDragRef.current;
     const latest = dragLatestPositionRef.current[String(draggingPinId)];
-    if (pin && wasDragged) {
-      onUpdatePin?.(draggingPinId, latest || { x: pin.x, y: pin.y, rot: pin.rot ?? 0 });
-    } else if (pin && !wasDragged) {
+    if (wasDragged && latest) {
+      onUpdatePin?.(draggingPinId, latest);
+    } else if (!wasDragged && pin) {
       handleChapterPinTap(pin);
     }
     delete dragLatestPositionRef.current[String(draggingPinId)];
     didDragRef.current = false;
+    draggingPinRef.current = null;
     setDraggingPinId(null);
-  }, [chapterBoardPins, draggingPinId, onUpdatePin]);
+    setDragPreviewById(prev => {
+      if (!Object.prototype.hasOwnProperty.call(prev, String(draggingPinId))) return prev;
+      const next = { ...prev };
+      delete next[String(draggingPinId)];
+      return next;
+    });
+  }, [draggingPinId, onUpdatePin]);
 
   useEffect(() => {
     if (!draggingPinId) return undefined;
@@ -2051,84 +2066,51 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                 ? <ChecklistPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={() => setEditingChecklist(pin)} darkMode={darkMode} />
                 : pin.type === 'countdown'
                 ? <CountdownPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={() => handleChapterPinTap(pin)} />
-                : (
+                : flippedPinId === pin.id ? (
                   <div
-                    style={{
-                      width: 162,
-                      height: 208,
-                      position: 'relative',
-                      perspective: '1200px',
-                    }}
+                    style={{ width: 162, minHeight: 185, background: '#fefce8', borderRadius: 2, boxShadow: '3px 5px 16px rgba(0,0,0,0.22)', padding: '8px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <div
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        transformStyle: 'preserve-3d',
-                        transition: draggingPinId === pin.id ? 'none' : 'transform 420ms cubic-bezier(0.22, 0.61, 0.36, 1)',
-                        transform: flippedPinId === pin.id ? 'rotateY(180deg)' : 'rotateY(0deg)',
-                      }}
-                    >
-                      <div
-                        style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
-                      >
-                        <PhotoPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={() => handleChapterPinTap(pin)} darkMode={darkMode} />
-                        <button
-                          onMouseDown={(e) => e.stopPropagation()}
-                          onTouchStart={(e) => e.stopPropagation()}
-                          onClick={(e) => { e.stopPropagation(); setFlippedPinId(pin.id); }}
-                          style={{ position: 'absolute', bottom: 8, right: 8, width: 20, height: 20, borderRadius: '50%', background: 'rgba(255,255,255,0.85)', border: 'none', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.12)', zIndex: 10, color: '#9ca3af' }}
-                          title="Write notes"
-                        >✏️</button>
-                      </div>
-                      <div
-                        style={{
-                          position: 'absolute',
-                          inset: 0,
-                          backfaceVisibility: 'hidden',
-                          WebkitBackfaceVisibility: 'hidden',
-                          transform: 'rotateY(180deg)',
-                          background: '#fefce8',
-                          borderRadius: 2,
-                          boxShadow: '2px 3px 10px rgba(0,0,0,0.12)',
-                          padding: '8px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          overflow: 'hidden',
-                        }}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onTouchStart={(e) => e.stopPropagation()}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button onClick={(e) => { e.stopPropagation(); setFlippedPinId(null); }} style={{ position: 'absolute', top: 4, right: 4, width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: 'none', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', zIndex: 1 }}>↩</button>
-                        <textarea
-                          value={pinNotes[pin.id] || ''}
-                          onChange={(e) => savePinNote(pin.id, e.target.value)}
-                          onClick={(e) => e.stopPropagation()}
-                          placeholder="notes..."
-                          style={{ marginTop: 4, flex: 1, width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontFamily: CAVEAT, fontSize: 13, color: '#374151', lineHeight: 1.45, padding: 0 }}
-                          maxLength={500}
-                        />
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 }}>
-                          {pinAttachments[pin.id] ? (
-                            <a href={pinAttachments[pin.id]} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ display: 'block', width: 24, height: 24, borderRadius: 4, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
-                              <img src={pinAttachments[pin.id]} alt="attachment" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            </a>
-                          ) : <span />}
-                          <label style={{ cursor: 'pointer', borderRadius: 999, background: 'rgba(255,255,255,0.7)', border: 'none', padding: '2px 6px', fontSize: 11, color: '#6b7280', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }} title="Attach photo" onClick={(e) => e.stopPropagation()}>
-                            📎
-                            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (!file) return;
-                              const reader = new FileReader();
-                              reader.onload = (ev) => savePinAttachment(pin.id, ev.target.result);
-                              reader.readAsDataURL(file);
-                              e.target.value = '';
-                            }} />
-                          </label>
-                        </div>
-                      </div>
+                    <button onClick={(e) => { e.stopPropagation(); setFlippedPinId(null); }} style={{ position: 'absolute', top: 4, right: 4, width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: 'none', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', zIndex: 1 }}>↩</button>
+                    <textarea
+                      value={pinNotes[pin.id] || ''}
+                      onChange={(e) => savePinNote(pin.id, e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      placeholder="notes..."
+                      style={{ marginTop: 4, flex: 1, width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontFamily: CAVEAT, fontSize: 13, color: '#374151', lineHeight: 1.45, padding: 0 }}
+                      maxLength={500}
+                    />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 }}>
+                      {pinAttachments[pin.id] ? (
+                        <a href={pinAttachments[pin.id]} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ display: 'block', width: 24, height: 24, borderRadius: 4, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
+                          <img src={pinAttachments[pin.id]} alt="attachment" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </a>
+                      ) : <span />}
+                      <label style={{ cursor: 'pointer', borderRadius: 999, background: 'rgba(255,255,255,0.7)', border: 'none', padding: '2px 6px', fontSize: 11, color: '#6b7280', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }} title="Attach photo" onClick={(e) => e.stopPropagation()}>
+                        📎
+                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = (ev) => savePinAttachment(pin.id, ev.target.result);
+                          reader.readAsDataURL(file);
+                          e.target.value = '';
+                        }} />
+                      </label>
                     </div>
+                  </div>
+                ) : (
+                  <div style={{ position: 'relative', width: 162, minHeight: 185 }}>
+                    <PhotoPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={() => handleChapterPinTap(pin)} darkMode={darkMode} />
+                    <button
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onClick={(e) => { e.stopPropagation(); setFlippedPinId(pin.id); }}
+                      style={{ position: 'absolute', bottom: 6, right: 6, width: 20, height: 20, borderRadius: '50%', background: 'rgba(255,255,255,0.88)', border: 'none', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.12)', zIndex: 10, color: '#9ca3af' }}
+                      title="Write notes"
+                    >✏️</button>
                   </div>
                 )}
             </div>
