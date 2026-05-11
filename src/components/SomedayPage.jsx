@@ -2099,7 +2099,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                         <PhotoPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={() => handleChapterPinTap(pin)} darkMode={darkMode} />
                       </div>
                       <div
-                        style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', position: 'absolute', inset: 0, background: '#fefce8', borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', padding: '8px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+                        style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', position: 'absolute', inset: 0, background: '#fefce8', borderRadius: 2, boxShadow: '2px 3px 10px rgba(0,0,0,0.12)', padding: '8px', display: 'flex', flexDirection: 'column', overflow: 'hidden', pointerEvents: flippedPinId === pin.id ? 'auto' : 'none' }}
                         onMouseDown={(e) => e.stopPropagation()}
                         onTouchStart={(e) => e.stopPropagation()}
                         onClick={(e) => e.stopPropagation()}
