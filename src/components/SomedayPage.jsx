@@ -2066,51 +2066,67 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                 ? <ChecklistPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={() => setEditingChecklist(pin)} darkMode={darkMode} />
                 : pin.type === 'countdown'
                 ? <CountdownPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={() => handleChapterPinTap(pin)} />
-                : flippedPinId === pin.id ? (
-                  <div
-                    style={{ width: 162, minHeight: 185, background: '#fefce8', borderRadius: 2, boxShadow: '3px 5px 16px rgba(0,0,0,0.22)', padding: '8px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onTouchStart={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button onClick={(e) => { e.stopPropagation(); setFlippedPinId(null); }} style={{ position: 'absolute', top: 4, right: 4, width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: 'none', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', zIndex: 1 }}>↩</button>
-                    <textarea
-                      value={pinNotes[pin.id] || ''}
-                      onChange={(e) => savePinNote(pin.id, e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      placeholder="notes..."
-                      style={{ marginTop: 4, flex: 1, width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontFamily: CAVEAT, fontSize: 13, color: '#374151', lineHeight: 1.45, padding: 0 }}
-                      maxLength={500}
-                    />
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 }}>
-                      {pinAttachments[pin.id] ? (
-                        <a href={pinAttachments[pin.id]} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ display: 'block', width: 24, height: 24, borderRadius: 4, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
-                          <img src={pinAttachments[pin.id]} alt="attachment" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        </a>
-                      ) : <span />}
-                      <label style={{ cursor: 'pointer', borderRadius: 999, background: 'rgba(255,255,255,0.7)', border: 'none', padding: '2px 6px', fontSize: 11, color: '#6b7280', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }} title="Attach photo" onClick={(e) => e.stopPropagation()}>
-                        📎
-                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          const reader = new FileReader();
-                          reader.onload = (ev) => savePinAttachment(pin.id, ev.target.result);
-                          reader.readAsDataURL(file);
-                          e.target.value = '';
-                        }} />
-                      </label>
+                : (
+                  <div style={{ position: 'relative', width: 162, minHeight: 185, perspective: '1200px' }}>
+                    <div
+                      style={{
+                        position: 'relative',
+                        width: '100%',
+                        minHeight: 185,
+                        transformStyle: 'preserve-3d',
+                        transition: draggingPinId === pin.id ? 'none' : 'transform 420ms cubic-bezier(0.22, 0.61, 0.36, 1)',
+                        transform: flippedPinId === pin.id ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                      }}
+                    >
+                      <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+                        <div style={{ position: 'relative', width: 162, minHeight: 185 }}>
+                          <PhotoPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={() => handleChapterPinTap(pin)} darkMode={darkMode} />
+                          <button
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}
+                            onClick={(e) => { e.stopPropagation(); setFlippedPinId(pin.id); }}
+                            style={{ position: 'absolute', bottom: 6, right: 6, width: 20, height: 20, borderRadius: '50%', background: 'rgba(255,255,255,0.88)', border: 'none', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.12)', zIndex: 10, color: '#9ca3af' }}
+                            title="Write notes"
+                          >✏️</button>
+                        </div>
+                      </div>
+                      <div
+                        style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div style={{ width: 162, minHeight: 185, background: '#fefce8', borderRadius: 2, boxShadow: '3px 5px 16px rgba(0,0,0,0.22)', padding: '8px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+                          <button onClick={(e) => { e.stopPropagation(); setFlippedPinId(null); }} style={{ position: 'absolute', top: 4, right: 4, width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: 'none', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', zIndex: 1 }}>↩</button>
+                          <textarea
+                            value={pinNotes[pin.id] || ''}
+                            onChange={(e) => savePinNote(pin.id, e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            placeholder="notes..."
+                            style={{ marginTop: 4, flex: 1, width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontFamily: CAVEAT, fontSize: 13, color: '#374151', lineHeight: 1.45, padding: 0 }}
+                            maxLength={500}
+                          />
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 }}>
+                            {pinAttachments[pin.id] ? (
+                              <a href={pinAttachments[pin.id]} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ display: 'block', width: 24, height: 24, borderRadius: 4, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
+                                <img src={pinAttachments[pin.id]} alt="attachment" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              </a>
+                            ) : <span />}
+                            <label style={{ cursor: 'pointer', borderRadius: 999, background: 'rgba(255,255,255,0.7)', border: 'none', padding: '2px 6px', fontSize: 11, color: '#6b7280', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }} title="Attach photo" onClick={(e) => e.stopPropagation()}>
+                              📎
+                              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                const reader = new FileReader();
+                                reader.onload = (ev) => savePinAttachment(pin.id, ev.target.result);
+                                reader.readAsDataURL(file);
+                                e.target.value = '';
+                              }} />
+                            </label>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <div style={{ position: 'relative', width: 162, minHeight: 185 }}>
-                    <PhotoPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={() => handleChapterPinTap(pin)} darkMode={darkMode} />
-                    <button
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onTouchStart={(e) => e.stopPropagation()}
-                      onClick={(e) => { e.stopPropagation(); setFlippedPinId(pin.id); }}
-                      style={{ position: 'absolute', bottom: 6, right: 6, width: 20, height: 20, borderRadius: '50%', background: 'rgba(255,255,255,0.88)', border: 'none', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.12)', zIndex: 10, color: '#9ca3af' }}
-                      title="Write notes"
-                    >✏️</button>
                   </div>
                 )}
             </div>
@@ -2594,6 +2610,27 @@ const SomedayPage = ({
   const [chapterPromptGroup, setChapterPromptGroup] = useState(null);
   const [dismissedGroups, setDismissedGroups] = useState(new Set());
   const [pendingInvites, setPendingInvites] = useState([]);
+  const [flippedBoardPinId, setFlippedBoardPinId] = useState(null);
+  const [boardPinNotes, setBoardPinNotes] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('komo-board-notes') || '{}'); } catch { return {}; }
+  });
+  const saveBoardPinNote = useCallback((id, note) => {
+    setBoardPinNotes((prev) => {
+      const next = { ...prev, [id]: note };
+      try { localStorage.setItem('komo-board-notes', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
+  const [boardPinAttachments, setBoardPinAttachments] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('komo-board-attachments') || '{}'); } catch { return {}; }
+  });
+  const saveBoardPinAttachment = useCallback((id, dataUrl) => {
+    setBoardPinAttachments((prev) => {
+      const next = { ...prev, [id]: dataUrl };
+      try { localStorage.setItem('komo-board-attachments', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
   const normalizedAuthUserId = String(authUserId || '').trim();
   const normalizedCurrentUser = String(currentUser || '').trim();
   const chapterOwnerIdentity = normalizedAuthUserId || normalizedCurrentUser;
@@ -3721,8 +3758,8 @@ const SomedayPage = ({
           <div
             key={pin.id}
             style={{ position: 'absolute', left: pin.x, top: pin.y, transform: `rotate(${pin.rot}deg)${dragging === pin.id ? ' scale(1.06)' : ''}`, zIndex: dragging === pin.id ? 50 : (pin.type === 'label' || pin.type === 'sticker') ? 10 : 2, userSelect: 'none', transition: dragging === pin.id ? 'none' : 'transform 0.15s', touchAction: 'none', filter: dragging === pin.id ? (darkMode ? 'drop-shadow(0 16px 32px rgba(0,0,0,0.7))' : 'drop-shadow(0 16px 32px rgba(0,0,0,0.3))') : 'none' }}
-            onMouseDown={e => startDrag(e, pin.id)}
-            onTouchStart={e => startDrag(e, pin.id)}
+            onMouseDown={e => { if (flippedBoardPinId === pin.id) return; startDrag(e, pin.id); }}
+            onTouchStart={e => { if (flippedBoardPinId === pin.id) return; startDrag(e, pin.id); }}
           >
             {pin.type === 'note'
               ? <NotePin       pin={isPinInChapter(pin) ? { ...pin, pinColor: 'purple', chapterId: getPinChapterId(pin) } : pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
@@ -3734,7 +3771,71 @@ const SomedayPage = ({
               ? <ChecklistPin  pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
               : pin.type === 'countdown'
               ? <CountdownPin  pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} />
-              : <PhotoPin      pin={isPinInChapter(pin) ? { ...pin, pinColor: 'purple', chapterId: getPinChapterId(pin) } : pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
+              : isPinInChapter(pin)
+              ? <PhotoPin      pin={{ ...pin, pinColor: 'purple', chapterId: getPinChapterId(pin) }} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
+              : (
+                <div style={{ position: 'relative', width: 162, minHeight: 185, perspective: '1200px' }}>
+                  <div
+                    style={{
+                      position: 'relative',
+                      width: '100%',
+                      minHeight: 185,
+                      transformStyle: 'preserve-3d',
+                      transition: dragging === pin.id ? 'none' : 'transform 420ms cubic-bezier(0.22, 0.61, 0.36, 1)',
+                      transform: flippedBoardPinId === pin.id ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                    }}
+                  >
+                    <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+                      <div style={{ position: 'relative', width: 162, minHeight: 185 }}>
+                        <PhotoPin pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
+                        <button
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
+                          onClick={(e) => { e.stopPropagation(); setFlippedBoardPinId(pin.id); }}
+                          style={{ position: 'absolute', bottom: 6, right: 6, width: 20, height: 20, borderRadius: '50%', background: 'rgba(255,255,255,0.88)', border: 'none', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.12)', zIndex: 10, color: '#9ca3af' }}
+                          title="Write notes"
+                        >✏️</button>
+                      </div>
+                    </div>
+                    <div
+                      style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div style={{ width: 162, minHeight: 185, background: '#fefce8', borderRadius: 2, boxShadow: '3px 5px 16px rgba(0,0,0,0.22)', padding: '8px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+                        <button onClick={(e) => { e.stopPropagation(); setFlippedBoardPinId(null); }} style={{ position: 'absolute', top: 4, right: 4, width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: 'none', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', zIndex: 1 }}>↩</button>
+                        <textarea
+                          value={boardPinNotes[pin.id] || ''}
+                          onChange={(e) => saveBoardPinNote(pin.id, e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          placeholder="notes..."
+                          style={{ marginTop: 4, flex: 1, width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontFamily: CAVEAT, fontSize: 13, color: '#374151', lineHeight: 1.45, padding: 0 }}
+                          maxLength={500}
+                        />
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 }}>
+                          {boardPinAttachments[pin.id] ? (
+                            <a href={boardPinAttachments[pin.id]} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ display: 'block', width: 24, height: 24, borderRadius: 4, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
+                              <img src={boardPinAttachments[pin.id]} alt="attachment" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            </a>
+                          ) : <span />}
+                          <label style={{ cursor: 'pointer', borderRadius: 999, background: 'rgba(255,255,255,0.7)', border: 'none', padding: '2px 6px', fontSize: 11, color: '#6b7280', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }} title="Attach photo" onClick={(e) => e.stopPropagation()}>
+                            📎
+                            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const reader = new FileReader();
+                              reader.onload = (ev) => saveBoardPinAttachment(pin.id, ev.target.result);
+                              reader.readAsDataURL(file);
+                              e.target.value = '';
+                            }} />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
             }
           </div>
         ))}

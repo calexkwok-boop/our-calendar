@@ -33907,6 +33907,10 @@ transform: translateY(0);
           );
           const linkedChapterCards = linkedChapter
             ? (Array.isArray(linkedChapter.pins) ? linkedChapter.pins : [])
+                .filter((pin) => {
+                  const type = String(pin?.type || '').trim().toLowerCase();
+                  return type && type !== 'label' && type !== 'sticker';
+                })
                 .map((pin) => {
                   const pinId = String(pin?.id || '').trim();
                   const merged = linkedChapterPinMap.get(pinId);
