@@ -470,14 +470,14 @@ function generateSuggestions(chapter, chapterPins, seed = 0) {
 function SuggestionCardInner({ s, darkMode, shadow }) {
   const cardBg = darkMode ? '#e2e8f0' : '#ffffff';
   return (
-    <div style={{ background: cardBg, padding: '4px 4px 0', width: 88, borderRadius: 2, boxShadow: shadow, position: 'relative' }}>
+    <div style={{ background: cardBg, padding: '6px 6px 0', width: 120, borderRadius: 2, boxShadow: shadow, position: 'relative' }}>
       <Pushpin colorKey="teal" darkMode={false} />
-      <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 1, background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>
+      <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 1, background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34 }}>
         {s.imageUrl
           ? <img src={s.imageUrl} alt={s.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} draggable={false} />
           : s.emoji}
       </div>
-      <div style={{ padding: '4px 2px 5px', textAlign: 'center', fontFamily: CAVEAT, fontSize: 10, color: '#1a1a2e', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{s.label}</div>
+      <div style={{ padding: '5px 3px 7px', textAlign: 'center', fontFamily: CAVEAT, fontSize: 13, color: '#1a1a2e', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{s.label}</div>
     </div>
   );
 }

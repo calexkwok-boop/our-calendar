@@ -973,7 +973,7 @@ function PublishedCalendarCard({ calendar, onOpen, darkMode }) {
   return (
     <button
       onClick={() => onOpen?.(calendar)}
-      className={`flex-shrink-0 w-72 h-[228px] flex flex-col rounded-[26px] overflow-hidden text-left border shadow-sm active:opacity-80 ${darkMode ? "bg-[#161f30] border-transparent shadow-none" : "bg-white border-stone-100"}`}
+      className={`flex-shrink-0 w-72 min-h-[248px] flex flex-col rounded-[26px] overflow-hidden text-left border shadow-sm active:opacity-80 ${darkMode ? "bg-[#161f30] border-transparent shadow-none" : "bg-white border-stone-100"}`}
     >
       <div className={`relative h-40 flex-shrink-0 overflow-hidden ${darkMode ? "bg-gradient-to-br from-teal-900/60 via-cyan-900/40 to-slate-900" : "bg-gradient-to-br from-teal-100 via-cyan-50 to-amber-50"}`}>
         {coverUrl ? (
@@ -999,7 +999,7 @@ function PublishedCalendarCard({ calendar, onOpen, darkMode }) {
         <div className={`text-lg font-semibold leading-tight line-clamp-2 ${darkMode ? "text-white" : "text-slate-900"}`}>
           {calendar.public_title || calendar.name || "Public Calendar"}
         </div>
-        <p className={`text-sm leading-relaxed line-clamp-2 ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
+        <p className={`text-sm leading-relaxed line-clamp-3 ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
           {calendar.public_description || "A community calendar you can browse and join."}
         </p>
         {tags.length > 0 && (
