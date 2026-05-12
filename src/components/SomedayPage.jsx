@@ -3075,18 +3075,15 @@ const SomedayPage = ({
       return [
         ...hydratedChapters.map(c => {
           const ex = prev.find(p => p.id === c.id);
-          const dbItemIds = (c.itemIds || []).filter(id => !deletedChapterPinIds.current.has(String(id)));
-          const prevItemIds = (ex?.itemIds || []).filter(id => !deletedChapterPinIds.current.has(String(id)));
-          const itemIds = [...new Set([...dbItemIds, ...prevItemIds])];
-          // Merge DB pins with local edits — local wins; skip locally-deleted pins
+          const itemIds = (c.itemIds || []).filter(id => !deletedChapterPinIds.current.has(String(id)));
+          // Merge DB pins with local edits for matching current rows only.
           const dbPins = (c.pins || []).filter(dbPin => !deletedChapterPinIds.current.has(String(dbPin.id)));
           const localPins = (ex?.pins || []).filter(lp => !deletedChapterPinIds.current.has(String(lp.id)));
           const mergedPins = dbPins.map(dbPin => {
             const local = localPins.find(p => p.id === dbPin.id);
             return local ? { ...dbPin, ...local } : dbPin;
           });
-          const localOnlyPins = localPins.filter(p => !dbPins.some(dp => dp.id === p.id));
-          return { ...c, itemIds, pins: mergedPins.length > 0 ? [...mergedPins, ...localOnlyPins] : localPins, loaded: ex?.loaded };
+          return { ...c, itemIds, pins: mergedPins, loaded: true };
         }),
         ...localOnly,
       ];
@@ -3148,14 +3145,12 @@ const SomedayPage = ({
       pins: (() => {
         const filteredDb = loadedPins.filter(p => !deletedChapterPinIds.current.has(String(p.id)));
         const localPins = (c.pins || []).filter(p => !deletedChapterPinIds.current.has(String(p.id)));
-        const merged = filteredDb.map(dbPin => {
+        return filteredDb.map(dbPin => {
           const local = localPins.find(p => p.id === dbPin.id);
           return local ? { ...dbPin, ...local } : dbPin;
         });
-        const localOnly = localPins.filter(p => !filteredDb.some(dp => dp.id === p.id));
-        return [...merged, ...localOnly];
       })(),
-      itemIds: [...new Set([...(c.itemIds || []), ...loadedPins.filter(p => !deletedChapterPinIds.current.has(String(p.id))).map(p => p.id)])],
+      itemIds: loadedPins.filter(p => !deletedChapterPinIds.current.has(String(p.id))).map(p => p.id),
       memories: loadedMemories,
       collaborators: data.chapter_collaborators || [],
       loaded: true,
@@ -3232,6 +3227,35 @@ const SomedayPage = ({
       return [...prev, ...newPins];
     });
   }, [dreams]);
+
+  useEffect(() => {
+    const chapterIdByPinId = new Map();
+    (chapters || []).forEach((chapter) => {
+      const chapterId = String(chapter?.id || '').trim();
+      if (!chapterId) return;
+      (chapter.itemIds || []).forEach((pinId) => {
+        const normalizedPinId = String(pinId || '').trim();
+        if (normalizedPinId) chapterIdByPinId.set(normalizedPinId, chapterId);
+      });
+      (chapter.pins || []).forEach((pin) => {
+        const normalizedPinId = String(pin?.id || '').trim();
+        if (normalizedPinId) chapterIdByPinId.set(normalizedPinId, chapterId);
+      });
+    });
+    if (chapterIdByPinId.size === 0) return;
+    setPins((prev) => {
+      let changed = false;
+      const next = prev.map((pin) => {
+        const pinId = String(pin?.id || '').trim();
+        if (!pinId) return pin;
+        const chapterId = String(chapterIdByPinId.get(pinId) || '').trim();
+        if (!chapterId || String(pin?.chapterId || '').trim() === chapterId) return pin;
+        changed = true;
+        return { ...pin, chapterId };
+      });
+      return changed ? next : prev;
+    });
+  }, [chapters]);
 
   const pageBg      = darkMode ? '#0e1520' : '#faf8f3';
   const topbarBg    = darkMode ? '#131c2e' : '#ffffff';
