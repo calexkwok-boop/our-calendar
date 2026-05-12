@@ -3104,31 +3104,97 @@ const TRIP_SEARCH_PLACE_EMOJI = {
   lodging: '🏨', movie_theater: '🎬',
 };
 
-function TripPlaceSearch({ tripAnchor, darkMode, onDragStart, onDragEnd, onTouchStart }) {
+function TripPlaceSearch({ tripAnchor, tripId, darkMode, onDragStart, onDragEnd, onTouchStart }) {
   const [query, setQuery] = React.useState('');
-  const [anchor, setAnchor] = React.useState('');
+  const [anchor, setAnchor] = React.useState(() => String(tripAnchor || '').trim());
   const [editingAnchor, setEditingAnchor] = React.useState(false);
   const [anchorDraft, setAnchorDraft] = React.useState('');
   const [results, setResults] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
   const debounceRef = React.useRef(null);
   const anchorInputRef = React.useRef(null);
+  const parkEntityId = React.useRef(null);
+  const parkAttractions = React.useRef(null);
+  const [hasParkData, setHasParkData] = React.useState(false);
 
-  // Sync anchor from prop only on mount / when tripAnchor changes and user hasn't overridden
   const anchorSetByUser = React.useRef(false);
+
+  // When the user opens a different trip, reset everything
+  React.useEffect(() => {
+    anchorSetByUser.current = false;
+    setAnchor(String(tripAnchor || '').trim());
+    setQuery('');
+    setResults([]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripId]);
+
+  // Sync anchor when the computed value changes (e.g. after async data loads)
   React.useEffect(() => {
     if (!anchorSetByUser.current) setAnchor(String(tripAnchor || '').trim());
   }, [tripAnchor]);
+
+  // When anchor changes, check if it's a known theme park and pre-load its attractions
+  React.useEffect(() => {
+    parkEntityId.current = null;
+    parkAttractions.current = null;
+    setHasParkData(false);
+    const a = anchor.trim();
+    if (a.length < 3) return;
+    let canceled = false;
+    (async () => {
+      try {
+        const destRes = await fetch('https://api.themeparks.wiki/v1/destinations');
+        const destData = await destRes.json();
+        if (canceled) return;
+        const aLower = a.toLowerCase();
+        let match = null;
+        for (const dest of (destData.destinations || [])) {
+          for (const park of (dest.parks || [])) {
+            const pLower = park.name.toLowerCase();
+            if (pLower.includes(aLower) || aLower.includes(pLower.split(' ').slice(0, 3).join(' '))) {
+              match = park;
+              break;
+            }
+          }
+          if (match) break;
+        }
+        if (!match || canceled) return;
+        parkEntityId.current = match.id;
+        const attRes = await fetch(`https://api.themeparks.wiki/v1/entity/${match.id}/children`);
+        const attData = await attRes.json();
+        if (canceled) return;
+        const typeEmoji = { ATTRACTION: '🎢', SHOW: '🎭', RESTAURANT: '🍽️', HOTEL: '🏨', SHOP: '🛍️', MERCHANDISE: '🛍️', ENTERTAINMENT: '🎭' };
+        parkAttractions.current = (attData.children || []).map((child, i) => ({
+          id: `park-${child.id || i}`,
+          sourceId: `park-${child.id || i}`,
+          label: child.name,
+          imageUrl: '',
+          emoji: typeEmoji[child.entityType] || '🎢',
+          type: 'photo',
+          rot: ((i * 3 + 7) % 11 - 5) * 0.5,
+        }));
+        setHasParkData(true);
+      } catch { /* not a known theme park, silent */ }
+    })();
+    return () => { canceled = true; };
+  }, [anchor]);
 
   const runSearch = React.useCallback(async (q, loc) => {
     const term = q.trim();
     if (term.length < 2) { setResults([]); return; }
     setLoading(true);
     try {
+      const termLower = term.toLowerCase();
+      // Park attractions: sync filter from cached list
+      const parkResults = (parkAttractions.current || [])
+        .filter(a => a.label.toLowerCase().includes(termLower))
+        .slice(0, 6);
+      // Google Places: geo-aware search in parallel
       const fullQuery = loc ? `${term} in ${loc}` : term;
       const res = await fetch(`/api/places?action=textsearch&query=${encodeURIComponent(fullQuery)}`);
       const data = await res.json();
-      const places = (data.results || []).slice(0, 8).map((place, i) => {
+      const maxPlaces = parkResults.length > 0 ? 4 : 8;
+      const places = (data.results || []).slice(0, maxPlaces).map((place, i) => {
         const photoRef = place.photos?.[0]?.photo_reference;
         const emoji = (place.types || []).map(t => TRIP_SEARCH_PLACE_EMOJI[t]).find(Boolean) || '📍';
         return {
@@ -3141,7 +3207,7 @@ function TripPlaceSearch({ tripAnchor, darkMode, onDragStart, onDragEnd, onTouch
           rot: ((i * 3 + 7) % 11 - 5) * 0.5,
         };
       });
-      setResults(places);
+      setResults([...parkResults, ...places]);
     } catch {
       setResults([]);
     } finally {
@@ -3182,8 +3248,9 @@ function TripPlaceSearch({ tripAnchor, darkMode, onDragStart, onDragEnd, onTouch
   return (
     <div className="rounded-[28px] border border-sky-900/10 bg-sky-50/70 p-4 shadow-sm dark:border-sky-300/10 dark:bg-sky-950/20">
       <div className="flex items-center justify-between mb-2">
-        <div className="text-[11px] uppercase tracking-[0.2em] text-sky-700/70 dark:text-sky-300/75">
-          Search for places
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] uppercase tracking-[0.2em] text-sky-700/70 dark:text-sky-300/75">Search for places</span>
+          {hasParkData && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">🎢 Park</span>}
         </div>
         {/* Editable location anchor */}
         {editingAnchor ? (
@@ -3260,7 +3327,7 @@ function TripPlaceSearch({ tripAnchor, darkMode, onDragStart, onDragEnd, onTouch
             ))}
           </div>
           <div className="mt-2 rounded-xl border border-dashed border-sky-200 bg-white/60 px-3 py-2 text-xs text-sky-900/70 dark:border-sky-300/15 dark:bg-white/[0.03] dark:text-sky-100/70">
-            Drag a polaroid into Morning, Afternoon, or Evening below.
+            {hasParkData ? '🎢 Park attractions + nearby places. ' : ''}Drag a polaroid into Morning, Afternoon, or Evening below.
           </div>
         </>
       )}
@@ -34860,6 +34927,7 @@ transform: translateY(0);
                     </div>
 
                     <TripPlaceSearch
+                      tripId={activeSubCalendar?.id}
                       tripAnchor={(() => {
                         // 1. Explicit weather/destination location the user already set
                         const weatherLoc = String(activeSubCalendar?.weather_location || '').trim();
