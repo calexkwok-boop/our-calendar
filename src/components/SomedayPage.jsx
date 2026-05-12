@@ -228,6 +228,19 @@ const SUGGESTION_THEME_KEYS = {
   food:     ['omakase', 'restaurant', 'dining', 'foodie', 'michelin', 'tasting', 'brunch'],
 };
 
+const SUGGESTION_PILLS = [
+  { key: 'coffee',   emoji: '☕',  label: 'Coffee',     type: 'cafe',               categoryId: 'food',        queries: ['best coffee shop', 'local coffee roaster', 'specialty coffee', 'best café'] },
+  { key: 'food',     emoji: '🍽',  label: 'Food',       type: 'restaurant',         categoryId: 'food',        queries: ['best local restaurant', 'top rated restaurant', 'hidden gem restaurant', 'popular local dining'] },
+  { key: 'drinks',   emoji: '🍸',  label: 'Drinks',     type: 'bar',                categoryId: 'food',        queries: ['best cocktail bar', 'craft beer bar', 'best wine bar', 'rooftop drinks'] },
+  { key: 'dessert',  emoji: '🍰',  label: 'Dessert',    type: 'restaurant',         categoryId: 'food',        queries: ['best dessert place', 'best ice cream', 'best patisserie', 'best gelato'] },
+  { key: 'bakery',   emoji: '🥐',  label: 'Bakery',     type: 'bakery',             categoryId: 'food',        queries: ['best bakery', 'artisan bakery', 'best sourdough bread', 'pastry shop'] },
+  { key: 'shopping', emoji: '🛍',  label: 'Shopping',   type: 'store',              categoryId: 'places',      queries: ['best boutique shops', 'local independent stores', 'vintage shops', 'best shopping street'] },
+  { key: 'sights',   emoji: '🏛',  label: 'Sights',     type: 'tourist_attraction', categoryId: 'places',      queries: ['must see landmark', 'best local attraction', 'historic site', 'popular museum'] },
+  { key: 'outdoors', emoji: '🌿',  label: 'Outdoors',   type: 'park',               categoryId: 'experiences', queries: ['best park', 'nature walk trail', 'best garden', 'scenic outdoor space'] },
+  { key: 'photo',    emoji: '📸',  label: 'Photo spot', type: 'tourist_attraction', categoryId: 'places',      queries: ['best photo spot', 'best scenic viewpoint', 'best street art mural', 'most scenic location'] },
+  { key: 'market',   emoji: '🛒',  label: 'Market',     type: 'store',              categoryId: 'places',      queries: ['local farmers market', 'best food market', 'artisan market', 'best food hall'] },
+];
+
 const LIVE_SUGGESTION_CATEGORIES = {
   generic: [
     { key: 'coffee', label: 'Coffee nearby', query: 'best coffee', type: 'cafe', emoji: '☕', categoryId: 'food' },
@@ -579,10 +592,11 @@ function SuggestionCard({ s, onAdd, onOpenDetails, darkMode }) {
 function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode }) {
   const [addedIds, setAddedIds] = useState(new Set());
   const [refreshCount, setRefreshCount] = useState(0);
+  const [activePillKey, setActivePillKey] = useState(null);
   const [liveSuggestions, setLiveSuggestions] = useState([]);
   const [loadingLiveSuggestions, setLoadingLiveSuggestions] = useState(false);
   const [selectedSuggestion, setSelectedSuggestion] = useState(null);
-  // Memoize: only recompute when chapter identity, pin labels, seed, or refresh count changes
+
   const pinLabelKey = chapterPins.map(p => (p.label || p.text || '').toLowerCase()).join('\x00');
   const fallbackSuggestions = React.useMemo(
     () => generateSuggestions(chapter, chapterPins, initialSeed + refreshCount * 97),
@@ -593,29 +607,57 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
   const visible = suggestions.filter(s => !addedIds.has(s.id)).slice(0, 3);
   const ts = darkMode ? '#64748b' : '#9ca3af';
 
+  function handlePillClick(pillKey) {
+    const next = activePillKey === pillKey ? null : pillKey;
+    setActivePillKey(next);
+    setLiveSuggestions([]);
+    setAddedIds(new Set());
+    setRefreshCount(0);
+  }
+
   useEffect(() => {
     let cancelled = false;
     const existingLabels = new Set(chapterPins.map((pin) => normalizeSuggestionText(pin.label || pin.text || '')));
     const anchorCandidates = inferChapterAnchorCandidates(chapter, chapterPins);
 
-    if (anchorCandidates.length === 0) {
+    // Extend anchors with pin labels for variety; cycle starting point on refresh
+    const pinLabelAnchors = chapterPins.map(p => (p.label || p.text || '').trim()).filter(a => a.length > 3);
+    const extendedAnchors = [...anchorCandidates, ...pinLabelAnchors];
+    const anchorOffset = extendedAnchors.length > 1 ? (refreshCount % extendedAnchors.length) : 0;
+    const orderedAnchors = extendedAnchors.length > 0
+      ? [...extendedAnchors.slice(anchorOffset), ...extendedAnchors.slice(0, anchorOffset)]
+      : [];
+
+    if (orderedAnchors.length === 0) {
       setLiveSuggestions([]);
       setLoadingLiveSuggestions(false);
       return undefined;
     }
 
+    // Build category list: pill-specific (3 query variations) or theme-based rotation
+    const activePill = SUGGESTION_PILLS.find(p => p.key === activePillKey);
+    const categoriesToUse = activePill
+      ? [0, 1, 2].map(slot => ({
+          key: `${activePill.key}-${slot}`,
+          label: `${activePill.label} nearby`,
+          query: activePill.queries[(refreshCount + slot) % activePill.queries.length],
+          type: activePill.type,
+          emoji: activePill.emoji,
+          categoryId: activePill.categoryId,
+        }))
+      : getLiveSuggestionCategories(chapter, chapterPins, refreshCount);
+
     const loadNearbySuggestions = async () => {
       setLoadingLiveSuggestions(true);
       try {
-        const categories = getLiveSuggestionCategories(chapter, chapterPins, refreshCount);
         const found = [];
         const seenPlaces = new Set();
 
-        for (const category of categories) {
+        for (const category of categoriesToUse) {
           if (found.length >= 3) break;
           let matched = null;
 
-          for (const anchor of anchorCandidates) {
+          for (const anchor of orderedAnchors) {
             try {
               const q = encodeURIComponent(`${category.query} near ${anchor}`);
               const res = await fetch(`/api/places?action=textsearch&query=${q}&type=${encodeURIComponent(category.type)}`);
@@ -646,7 +688,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
               };
               break;
             } catch {
-              // Try the next anchor or category.
+              // try next anchor
             }
           }
 
@@ -661,7 +703,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
 
     loadNearbySuggestions();
     return () => { cancelled = true; };
-  }, [chapter.id, chapter.title, chapterPins, initialSeed, pinLabelKey, refreshCount]);
+  }, [chapter.id, chapter.title, chapterPins, initialSeed, pinLabelKey, refreshCount, activePillKey]);
 
   function handleAdd(s) {
     setAddedIds(prev => new Set([...prev, s.id]));
@@ -670,16 +712,47 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
 
   return (
     <div style={{ padding: '0 16px 4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <p style={{ fontSize: 10, color: ts, textTransform: 'uppercase', letterSpacing: '0.18em', margin: 0, fontWeight: 600 }}>Round out your trip</p>
         <button
           onClick={() => setRefreshCount(c => c + 1)}
           style={{ background: 'none', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e0d5'}`, borderRadius: 20, padding: '3px 10px', fontSize: 10, color: ts, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
         >↻ refresh</button>
       </div>
+
+      {/* Category pills */}
+      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', marginBottom: 10, paddingBottom: 2 }}>
+        {SUGGESTION_PILLS.map(pill => {
+          const isActive = activePillKey === pill.key;
+          return (
+            <button
+              key={pill.key}
+              onClick={() => handlePillClick(pill.key)}
+              style={{
+                flexShrink: 0,
+                padding: '4px 10px',
+                borderRadius: 20,
+                border: `1px solid ${isActive ? '#2dd4bf' : (darkMode ? 'rgba(255,255,255,0.12)' : '#e5e0d5')}`,
+                background: isActive ? '#2dd4bf' : 'transparent',
+                color: isActive ? '#0a1020' : ts,
+                fontSize: 11,
+                fontWeight: isActive ? 700 : 400,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {pill.emoji} {pill.label}
+            </button>
+          );
+        })}
+      </div>
+
       {visible.length === 0 ? (
         <p style={{ fontFamily: CAVEAT, fontSize: 14, color: ts, fontStyle: 'italic', margin: '0 0 8px' }}>
-          {loadingLiveSuggestions ? 'Finding real nearby spots...' : 'No more suggestions. Try refreshing!'}
+          {loadingLiveSuggestions ? 'Finding nearby spots...' : 'No results found. Try refreshing!'}
         </p>
       ) : (
         <div style={{ display: 'flex', gap: 14, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 18, paddingTop: 14 }}>
@@ -1587,7 +1660,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
       const ref = detail.result?.photos?.[0]?.photo_reference;
       if (ref) imageUrl = `/api/places?action=photo&ref=${encodeURIComponent(ref)}&maxwidth=400`;
     } catch {}
-    onAddPin({ type: 'photo', label, emoji, imageUrl, status: 'dreaming', categoryId: 'travel' });
+    onAddPin({ type: 'photo', label, emoji, imageUrl, status: 'dreaming', categoryId: 'places', pinColor: 'teal', mapQuery: label });
     setPlaceAdding(null);
   };
 
@@ -2298,6 +2371,12 @@ const SORT_CATEGORY_META = {
   notes:       { text: 'Notes 📝',         textColor: '#92400e', styleVariant: 'tape' },
 };
 
+function normalizeSortCategory(categoryId = '') {
+  const normalized = String(categoryId || '').trim().toLowerCase();
+  if (normalized === 'travel' || normalized === 'adventure') return 'places';
+  return normalized;
+}
+
 function buildAutoSortedPins(pins, onAddDream, onDeleteDream, onUpdateDream, startY = 20, chapters = []) {
   const LEFT_X = 16, RIGHT_X = 208, LABEL_H = 54, PHOTO_ROW_H = 224, NOTE_ROW_H = 168, GROUP_GAP = 36;
   const autoOldLabels = pins.filter(p => p.autoGenerated);
@@ -2351,8 +2430,11 @@ function buildAutoSortedPins(pins, onAddDream, onDeleteDream, onUpdateDream, sta
   contentPins.forEach(p => {
     let cat;
     if (p.type === 'note') cat = 'notes';
-    else if (p.sourceType === 'dreamshelf' || p.sourceType === 'products' || p.categoryId === 'buy') cat = 'buy';
-    else cat = orderedCats.includes(p.categoryId) ? p.categoryId : 'experiences';
+    else if (p.sourceType === 'dreamshelf' || p.sourceType === 'products' || normalizeSortCategory(p.categoryId) === 'buy') cat = 'buy';
+    else {
+      const normalizedCategoryId = normalizeSortCategory(p.categoryId);
+      cat = orderedCats.includes(normalizedCategoryId) ? normalizedCategoryId : 'experiences';
+    }
     if (!grouped[cat]) grouped[cat] = [];
     grouped[cat].push(p);
   });
@@ -2406,8 +2488,11 @@ function buildAutoSortedChapterPins(chapterPins, startY = 24) {
   contentPins.forEach((pin) => {
     let cat;
     if (pin.type === 'note') cat = 'notes';
-    else if (pin.sourceType === 'dreamshelf' || pin.sourceType === 'products' || pin.categoryId === 'buy') cat = 'buy';
-    else cat = orderedCats.includes(pin.categoryId) ? pin.categoryId : 'experiences';
+    else if (pin.sourceType === 'dreamshelf' || pin.sourceType === 'products' || normalizeSortCategory(pin.categoryId) === 'buy') cat = 'buy';
+    else {
+      const normalizedCategoryId = normalizeSortCategory(pin.categoryId);
+      cat = orderedCats.includes(normalizedCategoryId) ? normalizedCategoryId : 'experiences';
+    }
     if (!grouped[cat]) grouped[cat] = [];
     grouped[cat].push(pin);
   });
@@ -3476,12 +3561,15 @@ const SomedayPage = ({
   function addDirectPinToChapter(chapterId, pinData) {
     const position = (chapters.find(c => c.id === chapterId)?.itemIds || []).length;
     const defaultPos = gridPosition(position);
+    const normalizedCategoryId = normalizeSortCategory(pinData.categoryId || '');
     const newPin = {
       id: crypto.randomUUID(),
       ...pinData,
       meta: { ...(pinData.meta || {}), persistScope: 'chapter' },
       chapterId,
       status: pinData.status || 'dreaming',
+      categoryId: normalizedCategoryId || pinData.categoryId || '',
+      pinColor: pinData.pinColor || (normalizedCategoryId === 'places' ? 'teal' : undefined),
       x: pinData.x ?? defaultPos.x,
       y: pinData.y ?? defaultPos.y,
       rot: pinData.rot ?? defaultPos.rot,
