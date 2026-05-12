@@ -3607,6 +3607,7 @@ function App() {
   const [komoChapters, setKomoChapters] = useState(() => readSomedayChaptersState('guest'));
   const [tripKomoState, setTripKomoState] = useState(() => readTripKomoState('guest'));
   const [tripKomoTouchDrag, setTripKomoTouchDrag] = useState(null);
+  const [tripKomoTouchHoldActive, setTripKomoTouchHoldActive] = useState(false);
   const [tripKomoNativeDragActive, setTripKomoNativeDragActive] = useState(false);
   const [flippedKomoCardId, setFlippedKomoCardId] = useState(null);
   const [showAddDreamSheet, setShowAddDreamSheet] = useState(false);
@@ -8796,9 +8797,28 @@ function App() {
   useEffect(() => {
     if (subCalTab !== 'itinerary' || !subCalSelectedDate) {
       setTripKomoTouchDrag(null);
+      setTripKomoTouchHoldActive(false);
       tripKomoTouchPendingRef.current = null;
     }
   }, [subCalTab, subCalSelectedDate]);
+
+  useEffect(() => {
+    if (!tripKomoTouchDrag && !tripKomoTouchHoldActive) return undefined;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyTouchAction = document.body.style.touchAction;
+    const previousDocOverflow = document.documentElement.style.overflow;
+    const previousDocTouchAction = document.documentElement.style.touchAction;
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+    document.documentElement.style.overflow = 'hidden';
+    document.documentElement.style.touchAction = 'none';
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.touchAction = previousBodyTouchAction;
+      document.documentElement.style.overflow = previousDocOverflow;
+      document.documentElement.style.touchAction = previousDocTouchAction;
+    };
+  }, [tripKomoTouchDrag, tripKomoTouchHoldActive]);
 
   useEffect(() => {
     if (subCalTab !== 'itinerary' || !subCalSelectedDate) return undefined;
@@ -8806,6 +8826,9 @@ function App() {
       const touch = event.touches?.[0];
       if (!touch) return;
       const pending = tripKomoTouchPendingRef.current;
+      if (pending) {
+        event.preventDefault();
+      }
       if (pending && !tripKomoTouchDragRef.current) {
         const dx = Number(touch.clientX || 0) - Number(pending.startX || 0);
         const dy = Number(touch.clientY || 0) - Number(pending.startY || 0);
@@ -8836,6 +8859,7 @@ function App() {
       tripKomoAutoScrollYRef.current = null;
       tripKomoAutoScrollContainerRef.current = null;
       tripKomoTouchPendingRef.current = null;
+      setTripKomoTouchHoldActive(false);
       tripKomoTouchEndHandlerRef.current?.();
     };
     window.addEventListener('touchmove', handleTouchMove, { passive: false });
@@ -8853,6 +8877,7 @@ function App() {
       tripKomoAutoScrollYRef.current = null;
       tripKomoAutoScrollContainerRef.current = null;
       tripKomoTouchPendingRef.current = null;
+      setTripKomoTouchHoldActive(false);
     };
   }, [subCalTab, subCalSelectedDate]);
 
@@ -34458,6 +34483,7 @@ transform: translateY(0);
             if (target && typeof target.closest === 'function' && target.closest('button, select, input, textarea, option, [data-komo-no-touch-drag="true"]')) {
               return;
             }
+            setTripKomoTouchHoldActive(true);
             tripKomoTouchPendingRef.current = {
               card: normalizeKomoCard(payload.card),
               from: payload.from || null,
