@@ -1,5 +1,5 @@
 // UnifiedCalendarView.jsx - One beautiful page for everything
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { MapPin, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import Agenda from './Agenda';
 import JourneyPanel from './JourneyPanel';
@@ -19,6 +19,33 @@ const hexToRgba = (hex, alpha = 1) => {
     return 'rgba(168,85,247,1)';
   }
 };
+
+// Stable date helper — defined once at module level so it never causes re-renders
+const toDateOnlyTs = (date) => {
+  if (!date) return null;
+  const d = typeof date === 'string' ? new Date(date + 'T00:00:00') : new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+};
+
+const PAPER_TEXTURE_STYLE = `
+  .paper-texture {
+    background-image:
+      repeating-linear-gradient(0deg, rgba(0,0,0,.024) 0px, transparent 1px, transparent 2px, rgba(0,0,0,.024) 3px),
+      repeating-linear-gradient(90deg, rgba(0,0,0,.024) 0px, transparent 1px, transparent 2px, rgba(0,0,0,.024) 3px);
+  }
+  .dark .paper-texture {
+    background-image:
+      linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0)),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.035) 3px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.03) 3px);
+    background-blend-mode: screen, normal, normal;
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+`;
 
 const getWeEventDisplayBadge = (event, popupMeta) => {
   const normalizedCategory = String(
@@ -136,17 +163,19 @@ const UnifiedCalendarView = ({
   onOpenJourney,
   onJourneyCtaClick,
 }) => {
-  const scrollToSelectedDateDetails = () => {
+  const scrollToSelectedDateDetails = useCallback(() => {
     window.requestAnimationFrame(() => {
       const details = document.getElementById('todays-events');
       details?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
-  };
+  }, []);
 
-  const handleSelectDate = (date) => {
+  const handleSelectDate = useCallback((date) => {
     setSelectedDate(date);
-    scrollToSelectedDateDetails();
-  };
+    window.requestAnimationFrame(() => {
+      document.getElementById('todays-events')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [setSelectedDate]);
 
   // Auto-select today on mount
   useEffect(() => {
@@ -173,23 +202,15 @@ const UnifiedCalendarView = ({
   const [agendaRangeDays, setAgendaRangeDays] = useState(30);
   const [agendaSearchQuery, setAgendaSearchQuery] = useState('');
 
-  // Helpers used by Agenda component
-  const toDateOnlyTs = (date) => {
-    if (!date) return null;
-    const d = typeof date === 'string' ? new Date(date + 'T00:00:00') : new Date(date);
-    d.setHours(0, 0, 0, 0);
-    return d.getTime();
-  };
-  const getSubCalStartRaw = (sc) => sc?.start_date;
-  const getSubCalEndRaw = (sc) => sc?.end_date;
+  const getSubCalStartRaw = useCallback((sc) => sc?.start_date, []);
+  const getSubCalEndRaw = useCallback((sc) => sc?.end_date, []);
 
-  // Build agenda items for the selected range and apply search filter
-  const agendaItems = (() => {
+  const agendaItems = useMemo(() => {
     const days = Math.max(1, Math.min(365, Number(agendaRangeDays || 30)));
     const query = String(agendaSearchQuery || '').trim().toLowerCase();
     const out = [];
     const base = new Date(currentDate);
-    base.setHours(0,0,0,0);
+    base.setHours(0, 0, 0, 0);
     for (let i = 0; i < days; i += 1) {
       const d = new Date(base);
       d.setDate(base.getDate() + i);
@@ -203,12 +224,10 @@ const UnifiedCalendarView = ({
           const catKey = String(e?.category || 'other');
           const cat = categories[catKey] || {};
           const catLabel = String(cat.label || cat.name || '').toLowerCase();
-          const hay = `${title} ${location} ${catLabel}`;
-          if (hay.includes(query)) out.push({ ...e, date: getDateKey(d) });
+          if (`${title} ${location} ${catLabel}`.includes(query)) out.push({ ...e, date: getDateKey(d) });
         }
       });
     }
-    // sort by date, then time
     out.sort((a, b) => {
       const aTs = toDateOnlyTs(a?.date || a?.dateKey || '') || 0;
       const bTs = toDateOnlyTs(b?.date || b?.dateKey || '') || 0;
@@ -218,27 +237,13 @@ const UnifiedCalendarView = ({
       return String(a.time).localeCompare(String(b.time));
     });
     return out;
-  })();
+  }, [agendaRangeDays, agendaSearchQuery, currentDate, getEventsForDate, getDateKey, categories]);
   
   const accent = activeLayerPageTheme?.accent || '#a855f7';
 
   return (
     <div className="unified-calendar-view paper-texture" style={{ fontFamily: "'Caveat', cursive" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');
-        .paper-texture {
-          background-image:
-            repeating-linear-gradient(0deg, rgba(0,0,0,.024) 0px, transparent 1px, transparent 2px, rgba(0,0,0,.024) 3px),
-            repeating-linear-gradient(90deg, rgba(0,0,0,.024) 0px, transparent 1px, transparent 2px, rgba(0,0,0,.024) 3px);
-        }
-        .dark .paper-texture {
-          background-image:
-            linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0)),
-            repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.035) 3px),
-            repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.03) 3px);
-          background-blend-mode: screen, normal, normal;
-        }
-      `}</style>
+      <style>{PAPER_TEXTURE_STYLE}</style>
       {/* Persistent Header - Always visible */}
       <GreetingHeader
         todayEvents={todayEvents}
@@ -371,7 +376,7 @@ const UnifiedCalendarView = ({
 // GREETING HEADER
 // ============================================================================
 
-const GreetingHeader = ({ todayEvents, activeTrips, openSubCalendar, onScrollToTodaySchedule, darkMode, user, userName, accent }) => {
+const GreetingHeader = memo(({ todayEvents, activeTrips, openSubCalendar, onScrollToTodaySchedule, darkMode, user, userName, accent }) => {
   const getTimeBasedEmoji = () => {
     const hour = new Date().getHours();
     if (hour < 12) return '☀️';
@@ -441,7 +446,7 @@ const GreetingHeader = ({ todayEvents, activeTrips, openSubCalendar, onScrollToT
       </div>
     </div>
   );
-};
+});
 
 // ============================================================================
 // ACTIVE TRIPS BANNER (when multiple)
@@ -783,7 +788,7 @@ const AgendaList = ({ startDate, days = 30, getEventsForDate, getDateKey, onEven
 // CALENDAR GRID
 // ============================================================================
 
-const CalendarGrid = ({
+const CalendarGrid = memo(({
   currentDate,
   selectedDate,
   setSelectedDate,
@@ -798,11 +803,6 @@ const CalendarGrid = ({
   darkMode,
   accent,
 }) => {
-  const toDateOnlyTs = (date) => {
-    if (!date) return null;
-    const d = typeof date === 'string' ? new Date(date + 'T00:00:00') : new Date(date);
-    return d.getTime();
-  };
   return (
     <div className="grid grid-cols-7 gap-2 sm:gap-3 mb-6">
       {getDaysInMonth(currentDate).map((date, index) => {
@@ -896,7 +896,7 @@ const CalendarGrid = ({
       })}
     </div>
   );
-};
+});
 
 // ============================================================================
 // SELECTED DATE DETAILS
@@ -1097,18 +1097,6 @@ const SelectedDateDetails = ({
         <span>Add Event</span>
       </button>
       
-      <style>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </div>
   );
 };
