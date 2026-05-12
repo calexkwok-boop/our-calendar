@@ -2662,6 +2662,8 @@ const SomedayPage = ({
   inviteRefreshToken = 0,
   initialChapters = [],
   onPinDataChange,
+  requestedChapterId = '',
+  onRequestedChapterHandled,
 }) => {
   const [pins, setPins] = useState(() => mergeBoardPinsWithChapterPins(
     dreams.map((d, idx) => {
@@ -2900,6 +2902,17 @@ const SomedayPage = ({
     loadPendingInvites();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, authUserId, userEmail, inviteRefreshToken]);
+
+  useEffect(() => {
+    const targetChapterId = String(requestedChapterId || '').trim();
+    if (!targetChapterId) return;
+    const chapterExists = chapters.some((chapter) => String(chapter?.id || '').trim() === targetChapterId);
+    if (!chapterExists) return;
+    setActiveChapterId(targetChapterId);
+    const chapter = chapters.find((entry) => String(entry?.id || '').trim() === targetChapterId);
+    if (chapter && !chapter.loaded) loadChapterContent(targetChapterId);
+    onRequestedChapterHandled?.(targetChapterId);
+  }, [chapters, onRequestedChapterHandled, requestedChapterId]);
 
   async function loadPendingInvites() {
     if (!userEmail) return;

@@ -765,13 +765,13 @@ export default function useHomeScreenData({
       cursor.setDate(cursor.getDate() - 1);
     }
     const completedToday = reflectedDateKeys.has(getDateKey(new Date()));
-    return {
-      streak,
-      completedToday,
-      helpText: completedToday
-        ? 'Streak counted today. Come back tomorrow to keep it going.'
-        : 'Keep it going today: journal in Journey or add a moment.',
-    };
+      return {
+        streak,
+        completedToday,
+        helpText: completedToday
+          ? 'Streak counted today. Come back tomorrow to keep it going.'
+          : '',
+      };
   }, [getDateKey, getJourneyGoalType, homeResolvedMemories, journeyGoalById, journeyState?.entries]);
 
   return {

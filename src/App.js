@@ -3094,6 +3094,129 @@ const deriveScrambleStandings = (tournament) => {
     ));
 };
 
+const TRIP_SEARCH_PLACE_EMOJI = {
+  restaurant: '🍽️', food: '🍽️', meal_takeaway: '🍽️', meal_delivery: '🍽️',
+  cafe: '☕', bakery: '🥐', bar: '🍸', night_club: '🎶',
+  park: '🌿', natural_feature: '🌿', campground: '⛺', beach: '🏖️',
+  tourist_attraction: '⭐', point_of_interest: '📍', museum: '🏛️', art_gallery: '🖼️',
+  store: '🛍️', shopping_mall: '🛍️', clothing_store: '🛍️',
+  spa: '💆', gym: '💪', stadium: '🏟️', amusement_park: '🎢',
+  lodging: '🏨', movie_theater: '🎬',
+};
+
+function TripPlaceSearch({ tripName, darkMode, onDragStart, onDragEnd, onTouchStart }) {
+  const [query, setQuery] = React.useState('');
+  const [results, setResults] = React.useState([]);
+  const [loading, setLoading] = React.useState(false);
+  const debounceRef = React.useRef(null);
+
+  const runSearch = React.useCallback(async (q) => {
+    const term = q.trim();
+    if (term.length < 2) { setResults([]); return; }
+    setLoading(true);
+    try {
+      const anchor = String(tripName || '').trim();
+      const fullQuery = anchor ? `${term} near ${anchor}` : term;
+      const res = await fetch(`/api/places?action=textsearch&query=${encodeURIComponent(fullQuery)}`);
+      const data = await res.json();
+      const places = (data.results || []).slice(0, 8).map((place, i) => {
+        const photoRef = place.photos?.[0]?.photo_reference;
+        const emoji = (place.types || []).map(t => TRIP_SEARCH_PLACE_EMOJI[t]).find(Boolean) || '📍';
+        return {
+          id: `trip-search-${place.place_id || i}`,
+          sourceId: `trip-search-${place.place_id || i}`,
+          label: place.name,
+          imageUrl: photoRef ? `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=400` : '',
+          emoji,
+          type: 'photo',
+          rot: ((i * 3 + 7) % 11 - 5) * 0.5,
+        };
+      });
+      setResults(places);
+    } catch {
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [tripName]);
+
+  const handleChange = (e) => {
+    const q = e.target.value;
+    setQuery(q);
+    clearTimeout(debounceRef.current);
+    if (!q.trim()) { setResults([]); return; }
+    debounceRef.current = setTimeout(() => runSearch(q), 400);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      clearTimeout(debounceRef.current);
+      runSearch(query);
+    }
+  };
+
+  const handleClear = () => { setQuery(''); setResults([]); };
+
+  return (
+    <div className="rounded-[28px] border border-sky-900/10 bg-sky-50/70 p-4 shadow-sm dark:border-sky-300/10 dark:bg-sky-950/20">
+      <div className="text-[11px] uppercase tracking-[0.2em] text-sky-700/70 dark:text-sky-300/75 mb-2">
+        Search for places
+      </div>
+      <div className="flex items-center gap-2 rounded-2xl border border-sky-200 bg-white px-3 py-2 shadow-sm dark:border-sky-300/15 dark:bg-slate-900">
+        <span style={{ fontSize: 14, opacity: 0.5, flexShrink: 0 }}>🔍</span>
+        <input
+          value={query}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          placeholder="coffee shop, sushi, hiking trail…"
+          className="flex-1 min-w-0 bg-transparent text-sm text-gray-800 placeholder-gray-400 outline-none dark:text-gray-100 dark:placeholder-gray-500"
+          style={{ fontFamily: "'Caveat', cursive", fontSize: 15 }}
+        />
+        {loading && <span className="text-xs text-sky-400 shrink-0">…</span>}
+        {query && !loading && (
+          <button type="button" onClick={handleClear} className="shrink-0 text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500">✕</button>
+        )}
+      </div>
+
+      {results.length > 0 && (
+        <>
+          <div className="mt-4 flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+            {results.map((card) => (
+              <div
+                key={card.id}
+                className="shrink-0 touch-none"
+                draggable
+                onDragStart={(e) => onDragStart(e, card)}
+                onDragEnd={onDragEnd}
+                onTouchStart={(e) => onTouchStart(e, card)}
+              >
+                <div
+                  className="relative rounded-[3px] bg-white p-1 shadow-md w-24 dark:bg-slate-100"
+                  style={{ transform: `rotate(${card.rot * 0.35}deg)`, cursor: 'grab' }}
+                >
+                  <div className="aspect-square w-full overflow-hidden rounded-[2px] bg-sky-50">
+                    {card.imageUrl ? (
+                      <img src={card.imageUrl} alt={card.label} className="h-full w-full object-cover" draggable={false} />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-2xl">{card.emoji}</div>
+                    )}
+                  </div>
+                  <div className="px-1 py-1 text-center text-[11px] text-gray-700" style={{ fontFamily: "'Caveat', cursive" }}>
+                    <span className="line-clamp-2">{card.label}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 rounded-xl border border-dashed border-sky-200 bg-white/60 px-3 py-2 text-xs text-sky-900/70 dark:border-sky-300/15 dark:bg-white/[0.03] dark:text-sky-100/70">
+            Drag a polaroid into Morning, Afternoon, or Evening below.
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function CompactKomoCardBack({ card, linkedChapterId, onFlipBack, onDataChange }) {
   const [notes, setNotes] = React.useState(() => {
     return String(card?.notes || '').trim();
@@ -3527,6 +3650,7 @@ function App() {
   const [subCalEventGroupRatings, setSubCalEventGroupRatings] = useState({});
   const [showSubCalendarModal, setShowSubCalendarModal] = useState(false);
   const [pendingTripKomoChapterId, setPendingTripKomoChapterId] = useState('');
+  const [pendingOpenKomoChapterId, setPendingOpenKomoChapterId] = useState('');
   
     /* moved group ratings loader below subCalTab initialization */
 
@@ -32257,6 +32381,12 @@ transform: translateY(0);
                 onOpenTripById={openSubCalendarById}
                 chaptersWithLinkedTrips={chaptersWithLinkedTrips}
                 onPinDataChange={handleChapterPinDataChange}
+                requestedChapterId={pendingOpenKomoChapterId}
+                onRequestedChapterHandled={(chapterId) => {
+                  setPendingOpenKomoChapterId((current) => (
+                    String(current || '').trim() === String(chapterId || '').trim() ? '' : current
+                  ));
+                }}
               />
               </Suspense>
             );
@@ -34016,6 +34146,11 @@ transform: translateY(0);
           const setLinkedKomoChapter = (chapterId) => {
             updateTripKomo((current) => ({ ...current, chapterId, slots: current.slots || {} }));
           };
+          const openLinkedKomoChapter = () => {
+            if (!linkedChapterId) return;
+            setPendingOpenKomoChapterId(linkedChapterId);
+            setBottomNavTab('someday');
+          };
           const getSlotCards = (dateKey, slotKey) => (
             Array.isArray(tripKomo?.slots?.[dateKey]?.[slotKey]) ? tripKomo.slots[dateKey][slotKey] : []
           );
@@ -34583,12 +34718,25 @@ transform: translateY(0);
 
                     <div className="rounded-[28px] border border-emerald-900/10 bg-emerald-50/70 p-4 shadow-sm dark:border-emerald-300/10 dark:bg-emerald-950/20">
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <div className="text-[11px] uppercase tracking-[0.2em] text-emerald-700/70 dark:text-emerald-300/75">From your Komo Book</div>
-                          <div className="mt-1 text-lg font-semibold text-gray-900 dark:text-white" style={{ fontFamily: "'Caveat', cursive" }}>
-                            {linkedChapter ? linkedChapter.title : 'Link a chapter'}
+                        {linkedChapter ? (
+                          <button
+                            type="button"
+                            onClick={openLinkedKomoChapter}
+                            className="text-left transition-opacity hover:opacity-80 active:opacity-70"
+                          >
+                            <div className="text-[11px] uppercase tracking-[0.2em] text-emerald-700/70 dark:text-emerald-300/75">From your Komo Book</div>
+                            <div className="mt-1 text-lg font-semibold text-gray-900 dark:text-white" style={{ fontFamily: "'Caveat', cursive" }}>
+                              {linkedChapter.title}
+                            </div>
+                          </button>
+                        ) : (
+                          <div>
+                            <div className="text-[11px] uppercase tracking-[0.2em] text-emerald-700/70 dark:text-emerald-300/75">From your Komo Book</div>
+                            <div className="mt-1 text-lg font-semibold text-gray-900 dark:text-white" style={{ fontFamily: "'Caveat', cursive" }}>
+                              Link a chapter
+                            </div>
                           </div>
-                        </div>
+                        )}
                         <select
                           value={linkedChapterId}
                           onChange={(event) => setLinkedKomoChapter(event.target.value)}
@@ -34659,6 +34807,18 @@ transform: translateY(0);
                         </div>
                       )}
                     </div>
+
+                    <TripPlaceSearch
+                      tripName={activeSubCalendar?.name || ''}
+                      darkMode={darkMode}
+                      onDragStart={(e, card) => {
+                        setTripKomoNativeDragActive(true);
+                        e.dataTransfer.setData('application/json', JSON.stringify({ type: 'komo-source', card }));
+                        e.dataTransfer.effectAllowed = 'copy';
+                      }}
+                      onDragEnd={() => setTripKomoNativeDragActive(false)}
+                      onTouchStart={(e, card) => beginKomoTouchDrag(e, { card, compact: true })}
+                    />
 
                     {tripKomoTouchDrag?.card && (
                       <div
@@ -34850,23 +35010,23 @@ transform: translateY(0);
                                   {flippedKomoCardId !== card.placementId && (
                                     <>
                                       <div className="mt-2 flex items-center justify-center rounded-full bg-amber-50/60 px-2.5 py-0.5 text-amber-800/60 shadow-sm ring-1 ring-amber-200/40 dark:bg-white/[0.06] dark:text-amber-200/50 dark:ring-white/[0.08]">
-                                        <div className={card?.time ? "grid w-[126px] grid-cols-[14px_68px_36px] items-center justify-items-center gap-1" : "flex w-[126px] items-center justify-center gap-1"}>
-                                          <Clock className="h-3 w-3 shrink-0" />
-                                          <input
-                                            type="time"
-                                            value={String(card?.time || '')}
-                                            onChange={(event) => {
-                                              const nextValue = String(event.target.value || '').trim();
-                                              const currentValue = String(card?.time || '').trim();
-                                              if (!nextValue && currentValue) return;
-                                              updateKomoCardTime(dk, section.key, card.placementId, nextValue);
-                                            }}
-                                            onClick={(event) => event.stopPropagation()}
-                                            className="w-[68px] bg-transparent text-center outline-none"
-                                            style={{ fontFamily: "'Caveat', cursive", fontSize: '13px' }}
-                                            aria-label={`Time for ${card?.label || 'trip polaroid'}`}
-                                          />
-                                          {card?.time && (
+                                        {card?.time ? (
+                                          <div className="grid w-[126px] grid-cols-[14px_68px_36px] items-center justify-items-center gap-1">
+                                            <Clock className="h-3 w-3 shrink-0" />
+                                            <input
+                                              type="time"
+                                              value={String(card?.time || '')}
+                                              onChange={(event) => {
+                                                const nextValue = String(event.target.value || '').trim();
+                                                const currentValue = String(card?.time || '').trim();
+                                                if (!nextValue && currentValue) return;
+                                                updateKomoCardTime(dk, section.key, card.placementId, nextValue);
+                                              }}
+                                              onClick={(event) => event.stopPropagation()}
+                                              className="w-[68px] bg-transparent text-center outline-none"
+                                              style={{ fontFamily: "'Caveat', cursive", fontSize: '13px' }}
+                                              aria-label={`Time for ${card?.label || 'trip polaroid'}`}
+                                            />
                                             <button
                                               type="button"
                                               onClick={(event) => {
@@ -34877,8 +35037,23 @@ transform: translateY(0);
                                             >
                                               Reset
                                             </button>
-                                          )}
-                                        </div>
+                                          </div>
+                                        ) : (
+                                          <div className="relative flex h-5 w-[126px] items-center justify-center">
+                                            <Clock className="h-3 w-3 shrink-0" />
+                                            <input
+                                              type="time"
+                                              value=""
+                                              onChange={(event) => {
+                                                const nextValue = String(event.target.value || '').trim();
+                                                updateKomoCardTime(dk, section.key, card.placementId, nextValue);
+                                              }}
+                                              onClick={(event) => event.stopPropagation()}
+                                              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                                              aria-label={`Set time for ${card?.label || 'trip polaroid'}`}
+                                            />
+                                          </div>
+                                        )}
                                       </div>
                                       <select
                                         value={dk}
