@@ -3104,9 +3104,12 @@ const TRIP_SEARCH_PLACE_EMOJI = {
   lodging: '🏨', movie_theater: '🎬',
 };
 
-function TripPlaceSearch({ tripAnchor, tripId, darkMode, onDragStart, onDragEnd, onTouchStart }) {
+function TripPlaceSearch({ trip, darkMode, onDragStart, onDragEnd, onTouchStart }) {
+  const tripId = trip?.id || null;
+  const defaultAnchor = String(trip?.weather_location || trip?.name || '').trim();
+
   const [query, setQuery] = React.useState('');
-  const [anchor, setAnchor] = React.useState(() => String(tripAnchor || '').trim());
+  const [anchor, setAnchor] = React.useState(defaultAnchor);
   const [editingAnchor, setEditingAnchor] = React.useState(false);
   const [anchorDraft, setAnchorDraft] = React.useState('');
   const [results, setResults] = React.useState([]);
@@ -3119,20 +3122,13 @@ function TripPlaceSearch({ tripAnchor, tripId, darkMode, onDragStart, onDragEnd,
 
   const anchorSetByUser = React.useRef(false);
 
-  // Sync anchor whenever the trip or its computed location changes
+  // Sync if weather_location loads in asynchronously after mount
   React.useEffect(() => {
     if (!anchorSetByUser.current) {
-      const val = String(tripAnchor || '').trim();
-      setAnchor(val);
+      const val = String(trip?.weather_location || trip?.name || '').trim();
+      if (val) setAnchor(val);
     }
-  }, [tripAnchor, tripId]);
-
-  // On trip change: clear search state and allow anchor to re-sync
-  React.useEffect(() => {
-    anchorSetByUser.current = false;
-    setQuery('');
-    setResults([]);
-  }, [tripId]);
+  }, [trip?.weather_location, trip?.name, tripId]);
 
   // When anchor changes, check if it's a known theme park and pre-load its attractions
   React.useEffect(() => {
@@ -34929,25 +34925,7 @@ transform: translateY(0);
 
                     <TripPlaceSearch
                       key={activeSubCalendar?.id}
-                      tripId={activeSubCalendar?.id}
-                      tripAnchor={(() => {
-                        // 1. Explicit weather/destination location the user already set
-                        const weatherLoc = String(activeSubCalendar?.weather_location || '').trim();
-                        if (weatherLoc) return weatherLoc;
-                        // 2. Most-used event location already in the itinerary
-                        const locs = Object.values(subCalendarEvents || {})
-                          .flat()
-                          .map(ev => String(ev?.location || '').trim())
-                          .filter(l => l.length > 2);
-                        if (locs.length > 0) {
-                          const counts = {};
-                          locs.forEach(l => { counts[l] = (counts[l] || 0) + 1; });
-                          const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
-                          if (top) return top;
-                        }
-                        // 3. Trip name as fallback
-                        return String(activeSubCalendar?.name || '').trim();
-                      })()}
+                      trip={activeSubCalendar}
                       darkMode={darkMode}
                       onDragStart={(e, card) => {
                         setTripKomoNativeDragActive(true);
