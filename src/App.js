@@ -3686,6 +3686,11 @@ function App() {
   const tripKomoTouchPendingRef = useRef(null);
   const tripKomoTouchMoveHandlerRef = useRef(null);
   const tripKomoTouchEndHandlerRef = useRef(null);
+  const tripItineraryTouchDragRef = useRef(null);
+  const tripItineraryTouchPendingRef = useRef(null);
+  const tripItineraryTouchMoveHandlerRef = useRef(null);
+  const tripItineraryTouchEndHandlerRef = useRef(null);
+  const tripItineraryDragTargetKeyRef = useRef('');
   const tripKomoTouchScrollRafRef = useRef(null);
   const tripKomoAutoScrollXRef = useRef(null);
   const tripKomoAutoScrollYRef = useRef(null);
@@ -3759,9 +3764,11 @@ function App() {
   const [subCalWeatherExpanded, setSubCalWeatherExpanded] = useState(false);
   const weatherAutocompleteRef = useRef(null);
   const [draggedNoteId, setDraggedNoteId] = useState(null);
-    const [subCalendarEvents, setSubCalendarEvents] = useState({});
+  const [subCalendarEvents, setSubCalendarEvents] = useState({});
   const [tripItineraryDraggingEventId, setTripItineraryDraggingEventId] = useState(null);
   const [tripItineraryDragTargetKey, setTripItineraryDragTargetKey] = useState('');
+  const [tripItineraryTouchDrag, setTripItineraryTouchDrag] = useState(null);
+  const [tripItineraryTouchHoldActive, setTripItineraryTouchHoldActive] = useState(false);
   const [subCalEventRatings, setSubCalEventRatings] = useState({});
   const [subCalEventTagsMap, setSubCalEventTagsMap] = useState({});
   const [subCalEventReviews, setSubCalEventReviews] = useState({});
@@ -8737,8 +8744,16 @@ function App() {
   }, [tripKomoTouchDrag]);
 
   useEffect(() => {
+    tripItineraryTouchDragRef.current = tripItineraryTouchDrag;
+  }, [tripItineraryTouchDrag]);
+
+  useEffect(() => {
     tripKomoNativeDragActiveRef.current = tripKomoNativeDragActive;
   }, [tripKomoNativeDragActive]);
+
+  useEffect(() => {
+    tripItineraryDragTargetKeyRef.current = tripItineraryDragTargetKey;
+  }, [tripItineraryDragTargetKey]);
 
   const startTripKomoAutoScrollLoop = () => {
     if (tripKomoTouchScrollRafRef.current) return;
@@ -8798,12 +8813,16 @@ function App() {
     if (subCalTab !== 'itinerary' || !subCalSelectedDate) {
       setTripKomoTouchDrag(null);
       setTripKomoTouchHoldActive(false);
+      setTripItineraryTouchDrag(null);
+      setTripItineraryTouchHoldActive(false);
+      setTripItineraryDragTargetKey('');
       tripKomoTouchPendingRef.current = null;
+      tripItineraryTouchPendingRef.current = null;
     }
   }, [subCalTab, subCalSelectedDate]);
 
   useEffect(() => {
-    if (!tripKomoTouchDrag && !tripKomoTouchHoldActive) return undefined;
+    if (!tripKomoTouchDrag && !tripKomoTouchHoldActive && !tripItineraryTouchDrag && !tripItineraryTouchHoldActive) return undefined;
     const previousBodyOverflow = document.body.style.overflow;
     const previousBodyTouchAction = document.body.style.touchAction;
     const previousDocOverflow = document.documentElement.style.overflow;
@@ -8818,7 +8837,7 @@ function App() {
       document.documentElement.style.overflow = previousDocOverflow;
       document.documentElement.style.touchAction = previousDocTouchAction;
     };
-  }, [tripKomoTouchDrag, tripKomoTouchHoldActive]);
+  }, [tripKomoTouchDrag, tripKomoTouchHoldActive, tripItineraryTouchDrag, tripItineraryTouchHoldActive]);
 
   useEffect(() => {
     if (subCalTab !== 'itinerary' || !subCalSelectedDate) return undefined;
@@ -8878,6 +8897,54 @@ function App() {
       tripKomoAutoScrollContainerRef.current = null;
       tripKomoTouchPendingRef.current = null;
       setTripKomoTouchHoldActive(false);
+    };
+  }, [subCalTab, subCalSelectedDate]);
+
+  useEffect(() => {
+    if (subCalTab !== 'itinerary' || !subCalSelectedDate) return undefined;
+    const handleTouchMove = (event) => {
+      const touch = event.touches?.[0];
+      if (!touch) return;
+      const pending = tripItineraryTouchPendingRef.current;
+      if (pending) {
+        event.preventDefault();
+      }
+      if (pending && !tripItineraryTouchDragRef.current) {
+        const dx = Number(touch.clientX || 0) - Number(pending.startX || 0);
+        const dy = Number(touch.clientY || 0) - Number(pending.startY || 0);
+        const distance = Math.hypot(dx, dy);
+        if (distance >= 10) {
+          setTripItineraryTouchDrag({
+            eventId: pending.eventId,
+            title: pending.title,
+            x: touch.clientX,
+            y: touch.clientY,
+            dateKey: pending.dateKey,
+            sectionKey: pending.sectionKey,
+          });
+          setTripItineraryDraggingEventId(pending.eventId);
+        } else {
+          return;
+        }
+      }
+      if (!tripItineraryTouchDragRef.current) return;
+      event.preventDefault();
+      tripItineraryTouchMoveHandlerRef.current?.(touch);
+    };
+    const handleTouchEnd = () => {
+      tripItineraryTouchPendingRef.current = null;
+      setTripItineraryTouchHoldActive(false);
+      tripItineraryTouchEndHandlerRef.current?.();
+    };
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd);
+    window.addEventListener('touchcancel', handleTouchEnd);
+    return () => {
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('touchcancel', handleTouchEnd);
+      tripItineraryTouchPendingRef.current = null;
+      setTripItineraryTouchHoldActive(false);
     };
   }, [subCalTab, subCalSelectedDate]);
 
@@ -34619,6 +34686,23 @@ transform: translateY(0);
             if (previousOrder !== null) return previousOrder + 1000;
             return getSectionFallbackOrder(section, 100);
           };
+          const beginTripItineraryTouchDrag = (touchEvent, eventItem, section) => {
+            const touch = touchEvent.touches?.[0];
+            if (!touch || !eventItem?.id || !section?.key) return;
+            const target = touchEvent.target;
+            if (target && typeof target.closest === 'function' && target.closest('button, input, textarea, select, option, a, [data-trip-no-touch-drag="true"]')) {
+              return;
+            }
+            setTripItineraryTouchHoldActive(true);
+            tripItineraryTouchPendingRef.current = {
+              eventId: String(eventItem.id || ''),
+              title: String(eventItem.title || 'Plan'),
+              dateKey: dk,
+              sectionKey: section.key,
+              startX: touch.clientX,
+              startY: touch.clientY,
+            };
+          };
           const handleTripEventDrop = async (dropEvent, section, targetIndex) => {
             dropEvent.preventDefault();
             dropEvent.stopPropagation();
@@ -34635,12 +34719,45 @@ transform: translateY(0);
             setTripItineraryDraggingEventId(null);
             setTripItineraryDragTargetKey('');
           };
+          tripItineraryTouchMoveHandlerRef.current = (touch) => {
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+            const dropZone = target && typeof target.closest === 'function'
+              ? target.closest('[data-trip-event-drop-key]')
+              : null;
+            const dropKey = String(dropZone?.getAttribute?.('data-trip-event-drop-key') || '').trim();
+            setTripItineraryTouchDrag((prev) => (
+              prev
+                ? { ...prev, x: touch.clientX, y: touch.clientY }
+                : prev
+            ));
+            setTripItineraryDragTargetKey(dropKey);
+          };
+          tripItineraryTouchEndHandlerRef.current = async () => {
+            const activeDrag = tripItineraryTouchDragRef.current;
+            const targetKey = String(tripItineraryDragTargetKeyRef.current || '').trim();
+            setTripItineraryTouchDrag(null);
+            setTripItineraryDraggingEventId(null);
+            setTripItineraryDragTargetKey('');
+            if (!activeDrag || !targetKey) return;
+            const parts = targetKey.split(':');
+            if (parts.length !== 3) return;
+            const [dateKey, sectionKey, targetIndexRaw] = parts;
+            if (String(dateKey || '') !== dk) return;
+            if (String(sectionKey || '') !== String(activeDrag.sectionKey || '')) return;
+            const targetIndex = Number(targetIndexRaw);
+            if (!Number.isFinite(targetIndex)) return;
+            const section = groupedSections.find((entry) => String(entry?.key || '') === String(sectionKey || ''));
+            if (!section) return;
+            const nextOrder = getTripEventDropOrder(section, targetIndex, activeDrag.eventId);
+            await updateSubCalEvent(activeDrag.eventId, { itineraryOrder: nextOrder });
+          };
           const renderTripEventDropZone = (section, targetIndex) => {
             const dropKey = `${dk}:${section.key}:${targetIndex}`;
             const isActive = tripItineraryDragTargetKey === dropKey;
             return (
               <div
                 key={`drop-${dropKey}`}
+                data-trip-event-drop-key={dropKey}
                 onDragOver={(event) => {
                   try {
                     const payload = JSON.parse(event.dataTransfer.getData('application/json') || '{}');
@@ -35039,6 +35156,9 @@ transform: translateY(0);
                       setTripItineraryDraggingEventId(null);
                       setTripItineraryDragTargetKey('');
                     }}
+                    onTouchStart={subCalEditingEvent !== event.id ? (touchEvent) => beginTripItineraryTouchDrag(touchEvent, event, {
+                      key: getTripSectionKeyForEvent(event),
+                    }) : undefined}
                     className={isDraggingEvent ? 'opacity-60' : ''}
                   >
                     {subCalEditingEvent === event.id ? (
@@ -35393,6 +35513,22 @@ transform: translateY(0);
                         style={{ left: tripKomoTouchDrag.x, top: tripKomoTouchDrag.y }}
                       >
                         {renderKomoPolaroid(tripKomoTouchDrag.card, { compact: tripKomoTouchDrag.compact !== false })}
+                      </div>
+                    )}
+
+                    {tripItineraryTouchDrag?.eventId && (
+                      <div
+                        className="pointer-events-none fixed z-[121] -translate-x-1/2 -translate-y-1/2 opacity-95"
+                        style={{ left: tripItineraryTouchDrag.x, top: tripItineraryTouchDrag.y, width: 'min(320px, calc(100vw - 32px))' }}
+                      >
+                        <div className="rounded-3xl border border-white/10 bg-white/92 p-3 shadow-xl dark:bg-slate-900/88">
+                          <div className="text-[15px] font-medium text-gray-900 dark:text-gray-100">
+                            {tripItineraryTouchDrag.title}
+                          </div>
+                          <div className="mt-1 text-xs text-purple-600 dark:text-purple-300" style={{ fontFamily: "'Caveat', cursive" }}>
+                            drag to reorder
+                          </div>
+                        </div>
                       </div>
                     )}
 
