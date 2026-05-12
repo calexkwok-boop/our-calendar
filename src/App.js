@@ -3104,19 +3104,28 @@ const TRIP_SEARCH_PLACE_EMOJI = {
   lodging: '🏨', movie_theater: '🎬',
 };
 
-function TripPlaceSearch({ tripName, darkMode, onDragStart, onDragEnd, onTouchStart }) {
+function TripPlaceSearch({ tripAnchor, darkMode, onDragStart, onDragEnd, onTouchStart }) {
   const [query, setQuery] = React.useState('');
+  const [anchor, setAnchor] = React.useState('');
+  const [editingAnchor, setEditingAnchor] = React.useState(false);
+  const [anchorDraft, setAnchorDraft] = React.useState('');
   const [results, setResults] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
   const debounceRef = React.useRef(null);
+  const anchorInputRef = React.useRef(null);
 
-  const runSearch = React.useCallback(async (q) => {
+  // Sync anchor from prop only on mount / when tripAnchor changes and user hasn't overridden
+  const anchorSetByUser = React.useRef(false);
+  React.useEffect(() => {
+    if (!anchorSetByUser.current) setAnchor(String(tripAnchor || '').trim());
+  }, [tripAnchor]);
+
+  const runSearch = React.useCallback(async (q, loc) => {
     const term = q.trim();
     if (term.length < 2) { setResults([]); return; }
     setLoading(true);
     try {
-      const anchor = String(tripName || '').trim();
-      const fullQuery = anchor ? `${term} near ${anchor}` : term;
+      const fullQuery = loc ? `${term} in ${loc}` : term;
       const res = await fetch(`/api/places?action=textsearch&query=${encodeURIComponent(fullQuery)}`);
       const data = await res.json();
       const places = (data.results || []).slice(0, 8).map((place, i) => {
@@ -3138,37 +3147,79 @@ function TripPlaceSearch({ tripName, darkMode, onDragStart, onDragEnd, onTouchSt
     } finally {
       setLoading(false);
     }
-  }, [tripName]);
+  }, []);
 
   const handleChange = (e) => {
     const q = e.target.value;
     setQuery(q);
     clearTimeout(debounceRef.current);
     if (!q.trim()) { setResults([]); return; }
-    debounceRef.current = setTimeout(() => runSearch(q), 400);
+    debounceRef.current = setTimeout(() => runSearch(q, anchor), 400);
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      clearTimeout(debounceRef.current);
-      runSearch(query);
-    }
+    if (e.key === 'Enter') { clearTimeout(debounceRef.current); runSearch(query, anchor); }
   };
 
   const handleClear = () => { setQuery(''); setResults([]); };
 
+  const commitAnchor = () => {
+    const val = anchorDraft.trim();
+    setAnchor(val);
+    anchorSetByUser.current = true;
+    setEditingAnchor(false);
+    setResults([]);
+  };
+
+  const startEditAnchor = () => {
+    setAnchorDraft(anchor);
+    setEditingAnchor(true);
+    setTimeout(() => anchorInputRef.current?.focus(), 30);
+  };
+
+  const ts = darkMode ? 'rgba(186,230,253,0.6)' : 'rgba(12,74,110,0.55)';
+
   return (
     <div className="rounded-[28px] border border-sky-900/10 bg-sky-50/70 p-4 shadow-sm dark:border-sky-300/10 dark:bg-sky-950/20">
-      <div className="text-[11px] uppercase tracking-[0.2em] text-sky-700/70 dark:text-sky-300/75 mb-2">
-        Search for places
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[11px] uppercase tracking-[0.2em] text-sky-700/70 dark:text-sky-300/75">
+          Search for places
+        </div>
+        {/* Editable location anchor */}
+        {editingAnchor ? (
+          <div className="flex items-center gap-1">
+            <input
+              ref={anchorInputRef}
+              value={anchorDraft}
+              onChange={e => setAnchorDraft(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') commitAnchor(); if (e.key === 'Escape') setEditingAnchor(false); }}
+              placeholder="Disneyland, Tokyo, etc."
+              className="rounded-xl border border-sky-300 bg-white px-2 py-0.5 text-xs text-gray-700 outline-none dark:border-sky-500/30 dark:bg-slate-800 dark:text-gray-200"
+              style={{ width: 140 }}
+            />
+            <button type="button" onClick={commitAnchor} className="text-xs text-sky-600 font-semibold dark:text-sky-400">✓</button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={startEditAnchor}
+            className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
+            style={{ background: darkMode ? 'rgba(186,230,253,0.08)' : 'rgba(186,230,253,0.5)', color: ts }}
+          >
+            <span>📍</span>
+            <span className="max-w-[120px] truncate">{anchor || 'Set location'}</span>
+            <span style={{ opacity: 0.5 }}>✎</span>
+          </button>
+        )}
       </div>
+
       <div className="flex items-center gap-2 rounded-2xl border border-sky-200 bg-white px-3 py-2 shadow-sm dark:border-sky-300/15 dark:bg-slate-900">
         <span style={{ fontSize: 14, opacity: 0.5, flexShrink: 0 }}>🔍</span>
         <input
           value={query}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder="coffee shop, sushi, hiking trail…"
+          placeholder="rides, restaurants, coffee…"
           className="flex-1 min-w-0 bg-transparent text-sm text-gray-800 placeholder-gray-400 outline-none dark:text-gray-100 dark:placeholder-gray-500"
           style={{ fontFamily: "'Caveat', cursive", fontSize: 15 }}
         />
@@ -34809,7 +34860,24 @@ transform: translateY(0);
                     </div>
 
                     <TripPlaceSearch
-                      tripName={activeSubCalendar?.name || ''}
+                      tripAnchor={(() => {
+                        // 1. Explicit weather/destination location the user already set
+                        const weatherLoc = String(activeSubCalendar?.weather_location || '').trim();
+                        if (weatherLoc) return weatherLoc;
+                        // 2. Most-used event location already in the itinerary
+                        const locs = Object.values(subCalendarEvents || {})
+                          .flat()
+                          .map(ev => String(ev?.location || '').trim())
+                          .filter(l => l.length > 2);
+                        if (locs.length > 0) {
+                          const counts = {};
+                          locs.forEach(l => { counts[l] = (counts[l] || 0) + 1; });
+                          const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
+                          if (top) return top;
+                        }
+                        // 3. Trip name as fallback
+                        return String(activeSubCalendar?.name || '').trim();
+                      })()}
                       darkMode={darkMode}
                       onDragStart={(e, card) => {
                         setTripKomoNativeDragActive(true);
