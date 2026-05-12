@@ -3759,6 +3759,8 @@ function App() {
   const weatherAutocompleteRef = useRef(null);
   const [draggedNoteId, setDraggedNoteId] = useState(null);
     const [subCalendarEvents, setSubCalendarEvents] = useState({});
+  const [tripItineraryDraggingEventId, setTripItineraryDraggingEventId] = useState(null);
+  const [tripItineraryDragTargetKey, setTripItineraryDragTargetKey] = useState('');
   const [subCalEventRatings, setSubCalEventRatings] = useState({});
   const [subCalEventTagsMap, setSubCalEventTagsMap] = useState({});
   const [subCalEventReviews, setSubCalEventReviews] = useState({});
@@ -4883,6 +4885,11 @@ function App() {
       if (error) { console.error('Error loading sub_calendar_events:', error); return {}; }
       const grouped = {};
       (data || []).forEach(e => {
+        const parsedEventData = e.event_data && typeof e.event_data === 'object' && !Array.isArray(e.event_data)
+          ? e.event_data
+          : (typeof e.event_data === 'string'
+            ? (() => { try { return JSON.parse(e.event_data); } catch { return null; } })()
+            : null);
         if (!grouped[e.date]) grouped[e.date] = [];
         grouped[e.date].push({
           id: e.id,
@@ -4896,6 +4903,8 @@ function App() {
           userId: e.user_id,
           reactions: e.reactions ? JSON.parse(e.reactions) : {},
           location: e.location || null,
+          eventData: parsedEventData,
+          itineraryOrder: Number.isFinite(Number(parsedEventData?.itineraryOrder)) ? Number(parsedEventData.itineraryOrder) : null,
         });
       });
       setSubCalendarEvents(grouped);
@@ -7969,6 +7978,7 @@ function App() {
     if (!title?.trim() || !activeSubCalendar) { console.log('addSubCalEvent bail: no title or no activeSubCalendar', {title, activeSubCalendar}); return; }
     if (!user?.id) { console.log('addSubCalEvent bail: no user'); return; }
     const id = `sce_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const itineraryOrder = getTripTimelineOrderFromTime(time);
     const newEvent = {
       id,
       sub_calendar_id: activeSubCalendar.id,
@@ -7982,6 +7992,7 @@ function App() {
       user_id: user.id,
       reactions: null,
       location: location || null,
+      event_data: itineraryOrder !== null ? { itineraryOrder } : null,
     };
     const { data, error } = await supabase
       .from('sub_calendar_events')
@@ -8001,6 +8012,8 @@ function App() {
         endTime: newEvent.end_time, notes: null, date: dateKey,
         category: subCalNewEventForm?.category || 'other', createdBy: currentUser, userId: user.id, reactions: {},
         location: location || null,
+        eventData: newEvent.event_data,
+        itineraryOrder,
       }]
     }));
   };
@@ -8008,6 +8021,12 @@ function App() {
   const updateSubCalEvent = async (eventId, updates) => {
     if (!assertCanEditSubCalendar('edit itinerary events')) return;
     const dbUpdates = {};
+    const currentEvent = Object.values(subCalendarEvents || {})
+      .flatMap((rows) => (Array.isArray(rows) ? rows : []))
+      .find((row) => String(row?.id || '') === String(eventId || ''));
+    const nextEventData = currentEvent?.eventData && typeof currentEvent.eventData === 'object' && !Array.isArray(currentEvent.eventData)
+      ? { ...currentEvent.eventData }
+      : {};
     if (updates.title !== undefined) dbUpdates.title = updates.title;
     if (updates.time !== undefined) dbUpdates.time = updates.time;
     if (updates.endTime !== undefined) dbUpdates.end_time = updates.endTime;
@@ -8015,6 +8034,14 @@ function App() {
     if (updates.location !== undefined) dbUpdates.location = updates.location;
     if (updates.category !== undefined) dbUpdates.category = updates.category;
     if (updates.reactions !== undefined) dbUpdates.reactions = JSON.stringify(updates.reactions);
+    if (updates.itineraryOrder !== undefined) {
+      if (Number.isFinite(Number(updates.itineraryOrder))) {
+        nextEventData.itineraryOrder = Number(updates.itineraryOrder);
+      } else {
+        delete nextEventData.itineraryOrder;
+      }
+      dbUpdates.event_data = Object.keys(nextEventData).length > 0 ? nextEventData : null;
+    }
     const { data, error } = await supabase
       .from('sub_calendar_events')
       .update(dbUpdates)
@@ -8030,7 +8057,14 @@ function App() {
       const updated = { ...prev };
       Object.keys(updated).forEach(dateKey => {
         updated[dateKey] = updated[dateKey].map(e =>
-          e.id === eventId ? { ...e, ...updates } : e
+          e.id === eventId ? {
+            ...e,
+            ...updates,
+            eventData: updates.itineraryOrder !== undefined ? (Object.keys(nextEventData).length > 0 ? nextEventData : null) : e.eventData,
+            itineraryOrder: updates.itineraryOrder !== undefined
+              ? (Number.isFinite(Number(updates.itineraryOrder)) ? Number(updates.itineraryOrder) : null)
+              : e.itineraryOrder,
+          } : e
         );
       });
       return updated;
@@ -20267,6 +20301,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     { key: 'evening', label: 'Evening', startHour: 18, endHour: 23, defaultHour: 19, accent: 'from-purple-500/20 to-fuchsia-500/5' },
     { key: 'anytime', label: 'Anytime', startHour: null, endHour: null, defaultHour: null, accent: 'from-white/10 to-white/5' },
   ];
+  const parseTripTimeToMinutes = (timeValue) => {
+    const value = String(timeValue || '').trim();
+    const match = value.match(/^(\d{1,2}):(\d{2})$/);
+    if (!match) return null;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return null;
+    }
+    return (hours * 60) + minutes;
+  };
+  const getTripTimelineOrderFromTime = (timeValue) => {
+    const minutes = parseTripTimeToMinutes(timeValue);
+    return Number.isFinite(minutes) ? minutes * 1000 : null;
+  };
   const getTripSectionKeyForEvent = (event) => {
     const time = String(event?.time || '').trim();
     if (!time) return 'anytime';
@@ -34144,6 +34193,11 @@ transform: translateY(0);
           const todayDateKey = getDateKey(new Date());
           const canJumpToTodayInTrip = itineraryDates.some((date) => getDateKey(date) === todayDateKey) && todayDateKey !== dk;
           const dayEvents = (subCalendarEvents[dk] || []).sort((a, b) => {
+            const orderA = Number.isFinite(Number(a?.itineraryOrder)) ? Number(a.itineraryOrder) : getTripTimelineOrderFromTime(a?.time);
+            const orderB = Number.isFinite(Number(b?.itineraryOrder)) ? Number(b.itineraryOrder) : getTripTimelineOrderFromTime(b?.time);
+            if (orderA !== null && orderB !== null && orderA !== orderB) return orderA - orderB;
+            if (orderA !== null) return -1;
+            if (orderB !== null) return 1;
             if (!a.time) return 1;
             if (!b.time) return -1;
             return a.time.localeCompare(b.time);
@@ -34497,6 +34551,356 @@ transform: translateY(0);
               </div>
             );
           };
+          const getSectionFallbackOrder = (section, offset = 0) => {
+            const baseHour = Number.isFinite(Number(section?.defaultHour)) ? Number(section.defaultHour) : 12;
+            return (baseHour * 60 * 1000) + 500000 + offset;
+          };
+          const getSectionTimelineItems = (section, excludeEventId = '') => {
+            const cards = getSlotCards(dk, section.key).map((card, index) => ({
+              id: `card:${card.placementId}`,
+              kind: 'card',
+              placementId: String(card?.placementId || ''),
+              order: getTripTimelineOrderFromTime(card?.time) ?? getSectionFallbackOrder(section, index),
+              card,
+            }));
+            const events = (section.events || [])
+              .filter((event) => String(event?.id || '') !== String(excludeEventId || ''))
+              .map((event, index) => ({
+                id: `event:${event.id}`,
+                kind: 'event',
+                eventId: String(event?.id || ''),
+                order: Number.isFinite(Number(event?.itineraryOrder))
+                  ? Number(event.itineraryOrder)
+                  : (getTripTimelineOrderFromTime(event?.time) ?? getSectionFallbackOrder(section, 200 + index)),
+                event,
+              }));
+            return [...cards, ...events].sort((a, b) => {
+              if (a.order !== b.order) return a.order - b.order;
+              if (a.kind !== b.kind) return a.kind === 'card' ? -1 : 1;
+              return String(a.id || '').localeCompare(String(b.id || ''));
+            });
+          };
+          const getTripEventDropOrder = (section, targetIndex, draggingEventId) => {
+            const items = getSectionTimelineItems(section, draggingEventId);
+            const previous = targetIndex > 0 ? items[targetIndex - 1] : null;
+            const next = targetIndex < items.length ? items[targetIndex] : null;
+            const previousOrder = Number.isFinite(Number(previous?.order)) ? Number(previous.order) : null;
+            const nextOrder = Number.isFinite(Number(next?.order)) ? Number(next.order) : null;
+            if (previousOrder !== null && nextOrder !== null) {
+              return previousOrder < nextOrder ? previousOrder + ((nextOrder - previousOrder) / 2) : previousOrder + 1;
+            }
+            if (nextOrder !== null) return nextOrder - 1000;
+            if (previousOrder !== null) return previousOrder + 1000;
+            return getSectionFallbackOrder(section, 100);
+          };
+          const handleTripEventDrop = async (dropEvent, section, targetIndex) => {
+            dropEvent.preventDefault();
+            dropEvent.stopPropagation();
+            try {
+              const payload = JSON.parse(dropEvent.dataTransfer.getData('application/json') || '{}');
+              if (payload?.type !== 'trip-itinerary-event') return;
+              if (String(payload?.dateKey || '') !== dk) return;
+              if (String(payload?.sectionKey || '') !== String(section.key || '')) return;
+              const eventId = String(payload?.eventId || '').trim();
+              if (!eventId) return;
+              const nextOrder = getTripEventDropOrder(section, targetIndex, eventId);
+              await updateSubCalEvent(eventId, { itineraryOrder: nextOrder });
+            } catch {}
+            setTripItineraryDraggingEventId(null);
+            setTripItineraryDragTargetKey('');
+          };
+          const renderTripEventDropZone = (section, targetIndex) => {
+            const dropKey = `${dk}:${section.key}:${targetIndex}`;
+            const isActive = tripItineraryDragTargetKey === dropKey;
+            return (
+              <div
+                key={`drop-${dropKey}`}
+                onDragOver={(event) => {
+                  try {
+                    const payload = JSON.parse(event.dataTransfer.getData('application/json') || '{}');
+                    if (payload?.type !== 'trip-itinerary-event') return;
+                    if (String(payload?.dateKey || '') !== dk) return;
+                    if (String(payload?.sectionKey || '') !== String(section.key || '')) return;
+                  } catch {
+                    return;
+                  }
+                  event.preventDefault();
+                  event.stopPropagation();
+                  event.dataTransfer.dropEffect = 'move';
+                  if (tripItineraryDragTargetKey !== dropKey) setTripItineraryDragTargetKey(dropKey);
+                }}
+                onDragEnter={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  if (tripItineraryDragTargetKey !== dropKey) setTripItineraryDragTargetKey(dropKey);
+                }}
+                onDragLeave={() => {
+                  if (tripItineraryDragTargetKey === dropKey) setTripItineraryDragTargetKey('');
+                }}
+                onDrop={(event) => handleTripEventDrop(event, section, targetIndex)}
+                className={`transition-all ${isActive ? 'h-6' : 'h-3'}`}
+              >
+                <div className={`mx-auto h-full rounded-full border border-dashed ${isActive ? 'border-purple-400/80 bg-purple-100/60 dark:border-purple-300/70 dark:bg-purple-500/10' : 'border-transparent bg-transparent'}`} />
+              </div>
+            );
+          };
+          const renderTripSlotCard = (card, section) => (
+            <div
+              key={`card-${card.placementId}`}
+              className="group relative touch-none self-start"
+              data-komo-placement-id={card.placementId}
+              draggable={flippedKomoCardId !== card.placementId}
+              onDragStart={flippedKomoCardId !== card.placementId ? (event) => {
+                setTripKomoNativeDragActive(true);
+                event.dataTransfer.setData('application/json', JSON.stringify({
+                  type: 'komo-slot',
+                  card,
+                  from: { dateKey: dk, slotKey: section.key },
+                }));
+                event.dataTransfer.effectAllowed = 'move';
+              } : undefined}
+              onDragEnd={() => setTripKomoNativeDragActive(false)}
+              onDragOver={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                event.dataTransfer.dropEffect = 'move';
+              }}
+              onDrop={(event) => {
+                event.stopPropagation();
+                handleKomoDrop(event, dk, section.key, card.placementId);
+              }}
+              onTouchStart={flippedKomoCardId !== card.placementId ? (event) => beginKomoTouchDrag(event, {
+                card,
+                from: { dateKey: dk, slotKey: section.key },
+                compact: false,
+              }) : undefined}
+              style={
+                tripKomoTouchDrag?.overDateKey === dk &&
+                tripKomoTouchDrag?.overSlotKey === section.key &&
+                tripKomoTouchDrag?.overPlacementId === String(card.placementId || '')
+                  ? {
+                      outline: darkMode ? '2px solid rgba(110, 231, 183, 0.75)' : '2px solid rgba(16, 185, 129, 0.8)',
+                      outlineOffset: '6px',
+                      borderRadius: '18px',
+                      perspective: '800px',
+                    }
+                  : { perspective: '800px' }
+              }
+            >
+              <div
+                className="relative transition-transform duration-500"
+                style={{
+                  transformStyle: 'preserve-3d',
+                  transform: flippedKomoCardId === card.placementId ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                  cursor: flippedKomoCardId === card.placementId ? 'default' : 'grab',
+                }}
+                onClick={(e) => {
+                  if (flippedKomoCardId === card.placementId) return;
+                  e.stopPropagation();
+                  setFlippedKomoCardId(card.placementId);
+                }}
+              >
+                <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+                  {renderKomoPolaroid(card)}
+                </div>
+                <div
+                  className="absolute inset-0 overflow-hidden rounded-[3px] bg-amber-50 p-2 shadow-md dark:bg-slate-200"
+                  style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setFlippedKomoCardId(null); }}
+                    className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-[14px] text-gray-500 shadow-sm"
+                    title="Flip back"
+                  >
+                    ↩
+                  </button>
+                  <textarea
+                    value={String(card?.notes || '')}
+                    onChange={(e) => updateKomoCardNotes(dk, section.key, card.placementId, e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    placeholder="notes..."
+                    className="mt-1 h-[calc(100%-32px)] w-full resize-none bg-transparent text-gray-700 placeholder-gray-400/60 outline-none dark:text-gray-800 dark:placeholder-gray-500/60"
+                    style={{ fontFamily: "'Caveat', cursive", fontSize: '13px', lineHeight: '1.45' }}
+                    maxLength={500}
+                  />
+                  <div className="flex items-center justify-between pt-1">
+                    {card?.attachmentUrl ? (
+                      <a
+                        href={card.attachmentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="block h-6 w-6 overflow-hidden rounded shadow-sm ring-1 ring-gray-200/60"
+                      >
+                        <img src={card.attachmentUrl} alt="attachment" className="h-full w-full object-cover" />
+                      </a>
+                    ) : <span />}
+                    <label
+                      className="cursor-pointer rounded-full bg-white/70 px-1.5 py-0.5 text-[11px] text-gray-500 shadow-sm"
+                      title="Attach photo"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      📎
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file || !tripId) return;
+                          const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+                          const uploadPath = `komo-attachments/${tripId}/${card.placementId}-${Date.now()}.${ext}`;
+                          try {
+                            const uploadedAttachment = await uploadTripPhotoFileToR2(uploadPath, file);
+                            const readTargets = await requestR2TripPhotoReadUrls([uploadPath]);
+                            const attachmentUrl = String(
+                              readTargets?.[0]?.readUrl
+                              || readTargets?.[0]?.url
+                              || readTargets?.[0]?.signedUrl
+                              || uploadedAttachment?.url
+                              || ''
+                            ).trim();
+                            if (attachmentUrl) updateKomoCardAttachment(dk, section.key, card.placementId, attachmentUrl);
+                          } catch (err) {
+                            console.warn('[komo] attachment upload failed:', err);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+              {flippedKomoCardId !== card.placementId && (
+                <>
+                  <div className="mt-2 flex items-center justify-center rounded-full bg-amber-50/60 px-2.5 py-0.5 text-amber-800/60 shadow-sm ring-1 ring-amber-200/40 dark:bg-white/[0.06] dark:text-amber-200/50 dark:ring-white/[0.08]">
+                    {card?.time ? (
+                      <div className="grid w-[126px] grid-cols-[14px_68px_36px] items-center justify-items-center gap-1">
+                        <Clock className="h-3 w-3 shrink-0" />
+                        <input
+                          type="time"
+                          value={String(card?.time || '')}
+                          onChange={(event) => {
+                            const nextValue = String(event.target.value || '').trim();
+                            const currentValue = String(card?.time || '').trim();
+                            if (!nextValue && currentValue) return;
+                            updateKomoCardTime(dk, section.key, card.placementId, nextValue);
+                          }}
+                          onClick={(event) => event.stopPropagation()}
+                          className="w-[68px] bg-transparent text-center outline-none"
+                          style={{ fontFamily: "'Caveat', cursive", fontSize: '13px' }}
+                          aria-label={`Time for ${card?.label || 'trip polaroid'}`}
+                        />
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            updateKomoCardTime(dk, section.key, card.placementId, '');
+                          }}
+                          className="rounded-full px-1.5 py-0.5 text-[10px] text-amber-700/80 underline underline-offset-2 dark:text-amber-200/70"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="relative flex h-5 w-[126px] items-center justify-center">
+                        <Clock className="h-3 w-3 shrink-0" />
+                        <input
+                          type="time"
+                          value=""
+                          onChange={(event) => {
+                            const nextValue = String(event.target.value || '').trim();
+                            updateKomoCardTime(dk, section.key, card.placementId, nextValue);
+                          }}
+                          onClick={(event) => event.stopPropagation()}
+                          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                          aria-label={`Set time for ${card?.label || 'trip polaroid'}`}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <select
+                    value={dk}
+                    onChange={(event) => addKomoCardToSlot(card, event.target.value, section.key, { dateKey: dk, slotKey: section.key })}
+                    onClick={(event) => event.stopPropagation()}
+                    className="mt-1.5 w-28 rounded-xl border border-gray-200/50 bg-white/80 px-2 py-0.5 text-[10px] text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 dark:border-white/[0.08] dark:bg-slate-900/80 dark:text-gray-400"
+                  >
+                    {itineraryDates.map((date) => {
+                      const dateKey = getDateKey(date);
+                      return (
+                        <option key={dateKey} value={dateKey}>
+                          {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <select
+                    value={section.key}
+                    onChange={(event) => moveKomoCardToSlot(dk, section.key, card.placementId, event.target.value)}
+                    onClick={(event) => event.stopPropagation()}
+                    className="mt-1.5 ml-1 w-24 rounded-xl border border-gray-200/50 bg-white/80 px-2 py-0.5 text-[10px] text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 dark:border-white/[0.08] dark:bg-slate-900/80 dark:text-gray-400"
+                  >
+                    {tripKomoSlotOptions.map((slotOption) => (
+                      <option key={`${card.placementId}-${slotOption.key}`} value={slotOption.key}>
+                        {slotOption.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="mt-1.5 ml-1 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        moveKomoCardWithinSlot(dk, section.key, card.placementId, 'up');
+                      }}
+                      className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white text-[11px] text-gray-600 shadow-sm dark:border-white/10 dark:bg-slate-900 dark:text-gray-200"
+                      title="Move earlier in this section"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        moveKomoCardWithinSlot(dk, section.key, card.placementId, 'down');
+                      }}
+                      className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white text-[11px] text-gray-600 shadow-sm dark:border-white/10 dark:bg-slate-900 dark:text-gray-200"
+                      title="Move later in this section"
+                    >
+                      ↓
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeKomoCardFromSlot(dk, section.key, card.placementId)}
+                    className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-white/60 bg-rose-400 text-[10px] font-semibold text-white shadow-sm opacity-0 transition-opacity group-hover:opacity-100"
+                    aria-label="Remove Komo Book polaroid"
+                  >
+                    x
+                  </button>
+                </>
+              )}
+              {flippedKomoCardId === card.placementId && (
+                <div className="mt-2 flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); openLocationActionChooser(card.label); }}
+                    className="flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-0.5 text-[10px] text-gray-500 shadow-sm ring-1 ring-gray-200/60 dark:bg-slate-800/80 dark:text-gray-300 dark:ring-white/10"
+                  >
+                    📍 Maps
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); removeKomoCardFromSlot(dk, section.key, card.placementId); setFlippedKomoCardId(null); }}
+                    className="flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-[10px] text-rose-500 shadow-sm ring-1 ring-rose-200/60 dark:bg-rose-900/20 dark:text-rose-400 dark:ring-rose-500/20"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+            </div>
+          );
 
           return (
             <div className="px-4 py-4 space-y-4">
@@ -34589,8 +34993,28 @@ transform: translateY(0);
                 const renderPlanCard = (event) => {
                   const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
                   const weEventBadge = getWeEventDisplayBadge(event, popupMeta);
+                  const isDraggingEvent = tripItineraryDraggingEventId === event.id;
                   return (
-                  <div key={event.id}>
+                  <div
+                    key={event.id}
+                    draggable={subCalEditingEvent !== event.id}
+                    onDragStart={subCalEditingEvent !== event.id ? (dragEvent) => {
+                      setTripItineraryDraggingEventId(event.id);
+                      setTripItineraryDragTargetKey('');
+                      dragEvent.dataTransfer.setData('application/json', JSON.stringify({
+                        type: 'trip-itinerary-event',
+                        eventId: event.id,
+                        dateKey: dk,
+                        sectionKey: getTripSectionKeyForEvent(event),
+                      }));
+                      dragEvent.dataTransfer.effectAllowed = 'move';
+                    } : undefined}
+                    onDragEnd={() => {
+                      setTripItineraryDraggingEventId(null);
+                      setTripItineraryDragTargetKey('');
+                    }}
+                    className={isDraggingEvent ? 'opacity-60' : ''}
+                  >
                     {subCalEditingEvent === event.id ? (
                       <div
                         className="rounded-3xl border-2 border-purple-300 bg-white p-3 shadow-sm dark:border-purple-500/40 dark:bg-slate-900/85 space-y-2"
@@ -34619,7 +35043,8 @@ transform: translateY(0);
                                 const p = match[3]?.toLowerCase();
                                 if (p === 'pm' && h < 12) h += 12;
                                 if (p === 'am' && h === 12) h = 0;
-                                updateSubCalEvent(event.id, { time: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}` });
+                                const nextTime = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+                                updateSubCalEvent(event.id, { time: nextTime, itineraryOrder: getTripTimelineOrderFromTime(nextTime) });
                               }
                             }}
                             className="flex-1 min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-2xl text-base sm:text-sm"
@@ -34668,7 +35093,7 @@ transform: translateY(0);
                         </button>
                       </div>
                     ) : (
-                    <div className="rounded-3xl border border-white/10 bg-white/75 p-3 shadow-sm dark:bg-slate-900/70">
+                    <div className="rounded-3xl border border-white/10 bg-white/75 p-3 shadow-sm dark:bg-slate-900/70" style={{ cursor: 'grab' }}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <div className="font-medium text-[15px] text-gray-900 dark:text-gray-100">
@@ -34945,13 +35370,16 @@ transform: translateY(0);
                       </div>
                     )}
 
-                    {groupedSections.filter((section) => section.key !== 'anytime').map((section) => (
+                    {groupedSections.filter((section) => section.key !== 'anytime').map((section) => {
+                      const sectionTimelineItems = getSectionTimelineItems(section);
+                      const sectionItemCount = sectionTimelineItems.length;
+                      return (
                       <div key={section.key} className="rounded-[28px] border border-white/10 bg-white/72 p-4 shadow-sm dark:bg-slate-900/68">
                         <div className="flex items-center justify-between gap-3">
                           <div>
                             <div className="text-lg font-semibold text-gray-900 dark:text-white" style={{ fontFamily: "'Caveat', cursive" }}>{section.label}</div>
                             <div className="text-sm text-gray-400 dark:text-gray-500">
-                              {section.events.length > 0 ? `${section.events.length} ${section.events.length === 1 ? 'plan' : 'plans'}` : 'Nothing locked in yet'}
+                              {sectionItemCount > 0 ? `${sectionItemCount} ${sectionItemCount === 1 ? 'item' : 'items'}` : 'Nothing locked in yet'}
                             </div>
                           </div>
                           <SmartAddPlanCompact
@@ -34973,6 +35401,50 @@ transform: translateY(0);
 
                         <div
                           className="mt-4 min-h-[80px] rounded-2xl border border-dashed border-emerald-300/25 bg-gradient-to-b from-amber-50/25 to-white/5 px-3 py-3 transition-all dark:border-white/[0.05] dark:from-white/[0.015] dark:to-transparent"
+                          data-komo-slot-key={section.key}
+                          data-komo-date-key={dk}
+                          onDragOver={(event) => {
+                            event.preventDefault();
+                            event.dataTransfer.dropEffect = 'copy';
+                          }}
+                          onDrop={(event) => handleKomoDrop(event, dk, section.key)}
+                          style={
+                            tripKomoTouchDrag?.overDateKey === dk && tripKomoTouchDrag?.overSlotKey === section.key
+                              ? {
+                                  borderColor: darkMode ? 'rgba(110, 231, 183, 0.55)' : 'rgba(16, 185, 129, 0.75)',
+                                  backgroundColor: darkMode ? 'rgba(16, 185, 129, 0.10)' : 'rgba(16, 185, 129, 0.08)',
+                                }
+                              : undefined
+                          }
+                        >
+                          {sectionTimelineItems.length > 0 ? (
+                            <div className="space-y-2">
+                              {renderTripEventDropZone(section, 0)}
+                              {sectionTimelineItems.map((item, index) => (
+                                <React.Fragment key={item.id}>
+                                  {item.kind === 'card' ? renderTripSlotCard(item.card, section) : renderPlanCard(item.event)}
+                                  {renderTripEventDropZone(section, index + 1)}
+                                </React.Fragment>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="flex h-full min-h-[68px] items-center justify-center text-center text-[14px] text-emerald-700/30 dark:text-emerald-300/20" style={{ fontFamily: "'Caveat', cursive" }}>
+                              drop polaroids here
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mt-4 space-y-3">
+                          {sectionTimelineItems.length === 0 ? (
+                            <div className={`rounded-3xl bg-gradient-to-br ${section.accent} border border-white/5 px-4 py-5`}>
+                              <div className="text-sm font-medium text-gray-800 dark:text-gray-100">Keep {section.label.toLowerCase()} open until you need it.</div>
+                              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Add one anchor plan here instead of filling the day with placeholder slots.</div>
+                            </div>
+                          ) : null}
+                        </div>
+
+                        <div
+                          className="hidden mt-4 min-h-[80px] rounded-2xl border border-dashed border-emerald-300/25 bg-gradient-to-b from-amber-50/25 to-white/5 px-3 py-3 transition-all dark:border-white/[0.05] dark:from-white/[0.015] dark:to-transparent"
                           data-komo-slot-key={section.key}
                           data-komo-date-key={dk}
                           onDragOver={(event) => {
@@ -35261,7 +35733,7 @@ transform: translateY(0);
                           )}
                         </div>
 
-                        <div className="mt-4 space-y-3">
+                        <div className="hidden mt-4 space-y-3">
                           {section.events.length > 0 ? (
                             section.events.map(renderPlanCard)
                           ) : (
@@ -35272,7 +35744,7 @@ transform: translateY(0);
                           )}
                         </div>
                       </div>
-                    ))}
+                    )})}
                   </div>
                 );
               })()}
