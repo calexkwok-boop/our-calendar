@@ -3119,19 +3119,20 @@ function TripPlaceSearch({ tripAnchor, tripId, darkMode, onDragStart, onDragEnd,
 
   const anchorSetByUser = React.useRef(false);
 
-  // When the user opens a different trip, reset everything
+  // Sync anchor whenever the trip or its computed location changes
+  React.useEffect(() => {
+    if (!anchorSetByUser.current) {
+      const val = String(tripAnchor || '').trim();
+      setAnchor(val);
+    }
+  }, [tripAnchor, tripId]);
+
+  // On trip change: clear search state and allow anchor to re-sync
   React.useEffect(() => {
     anchorSetByUser.current = false;
-    setAnchor(String(tripAnchor || '').trim());
     setQuery('');
     setResults([]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tripId]);
-
-  // Sync anchor when the computed value changes (e.g. after async data loads)
-  React.useEffect(() => {
-    if (!anchorSetByUser.current) setAnchor(String(tripAnchor || '').trim());
-  }, [tripAnchor]);
 
   // When anchor changes, check if it's a known theme park and pre-load its attractions
   React.useEffect(() => {
@@ -34927,6 +34928,7 @@ transform: translateY(0);
                     </div>
 
                     <TripPlaceSearch
+                      key={activeSubCalendar?.id}
                       tripId={activeSubCalendar?.id}
                       tripAnchor={(() => {
                         // 1. Explicit weather/destination location the user already set
