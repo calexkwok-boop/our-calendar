@@ -8764,6 +8764,13 @@ function App() {
 
   const startTripKomoAutoScrollLoop = () => {
     if (tripKomoTouchScrollRafRef.current) return;
+    const canScrollContainerInDirection = (node, delta) => {
+      if (!(node instanceof Element)) return false;
+      if (!(node.scrollHeight > node.clientHeight + 4)) return false;
+      if (delta < 0) return node.scrollTop > 0;
+      if (delta > 0) return node.scrollTop + node.clientHeight < node.scrollHeight - 1;
+      return false;
+    };
     const findScrollableContainer = (element) => {
       let node = element instanceof Element ? element : null;
       while (node && node !== document.body && node !== document.documentElement) {
@@ -8802,12 +8809,18 @@ function App() {
         const pointerTarget = Number.isFinite(pointerX) && Number.isFinite(pointerY)
           ? document.elementFromPoint(pointerX, pointerY)
           : null;
-        const detectedContainer = findScrollableContainer(pointerTarget);
+        let detectedContainer = findScrollableContainer(pointerTarget);
+        while (detectedContainer && !canScrollContainerInDirection(detectedContainer, delta)) {
+          detectedContainer = findScrollableContainer(detectedContainer.parentElement);
+        }
         if (detectedContainer) {
           tripKomoAutoScrollContainerRef.current = detectedContainer;
         }
-        const scrollContainer = detectedContainer || tripKomoAutoScrollContainerRef.current || null;
-        if (scrollContainer) {
+        const fallbackContainer = canScrollContainerInDirection(tripKomoAutoScrollContainerRef.current, delta)
+          ? tripKomoAutoScrollContainerRef.current
+          : null;
+        const scrollContainer = detectedContainer || fallbackContainer || null;
+        if (scrollContainer && canScrollContainerInDirection(scrollContainer, delta)) {
           scrollContainer.scrollTop += delta;
         } else {
           window.scrollBy({ top: delta, behavior: 'auto' });
@@ -34844,11 +34857,28 @@ transform: translateY(0);
               </div>
             );
           };
-          const renderTripSlotCard = (card, section) => (
+          const getTripEventDropIndexFromPointer = (container, itemCount, clientY) => {
+            if (!(container instanceof Element) || !Number.isFinite(Number(clientY))) return itemCount;
+            const items = Array.from(container.querySelectorAll('[data-trip-sort-item-index]'))
+              .map((node) => {
+                const index = Number(node.getAttribute('data-trip-sort-item-index'));
+                if (!Number.isFinite(index)) return null;
+                return { index, rect: node.getBoundingClientRect() };
+              })
+              .filter(Boolean)
+              .sort((a, b) => a.index - b.index);
+            for (const item of items) {
+              const midpoint = item.rect.top + (item.rect.height / 2);
+              if (clientY < midpoint) return item.index;
+            }
+            return itemCount;
+          };
+          const renderTripSlotCard = (card, section, timelineIndex) => (
             <div
               key={`card-${card.placementId}`}
               className="group relative touch-none self-start"
               data-komo-placement-id={card.placementId}
+              data-trip-sort-item-index={timelineIndex}
               draggable={flippedKomoCardId !== card.placementId}
               onDragStart={flippedKomoCardId !== card.placementId ? (event) => {
                 setTripKomoNativeDragActive(true);
@@ -35190,13 +35220,14 @@ transform: translateY(0);
                     </div>
                   </div>
                 );
-                const renderPlanCard = (event) => {
+                const renderPlanCard = (event, section, timelineIndex) => {
                   const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
                   const weEventBadge = getWeEventDisplayBadge(event, popupMeta);
                   const isDraggingEvent = tripItineraryDraggingEventId === event.id;
                   return (
                   <div
                     key={event.id}
+                    data-trip-sort-item-index={timelineIndex}
                     draggable={subCalEditingEvent !== event.id}
                     onDragStart={subCalEditingEvent !== event.id ? (dragEvent) => {
                       const payload = {
@@ -35627,11 +35658,32 @@ transform: translateY(0);
                           className="mt-4 min-h-[80px] rounded-2xl border border-dashed border-emerald-300/25 bg-gradient-to-b from-amber-50/25 to-white/5 px-3 py-3 transition-all dark:border-white/[0.05] dark:from-white/[0.015] dark:to-transparent"
                           data-komo-slot-key={section.key}
                           data-komo-date-key={dk}
+                          data-trip-section-key={section.key}
                           onDragOver={(event) => {
+                            const itineraryPayload = tripItineraryDragPayloadRef.current;
+                            if (itineraryPayload?.type === 'trip-itinerary-event') {
+                              if (String(itineraryPayload?.dateKey || '') !== dk) return;
+                              if (String(itineraryPayload?.sectionKey || '') !== String(section.key || '')) return;
+                              const targetIndex = getTripEventDropIndexFromPointer(event.currentTarget, sectionTimelineItems.length, event.clientY);
+                              event.preventDefault();
+                              event.stopPropagation();
+                              event.dataTransfer.dropEffect = 'move';
+                              const dropKey = `${dk}:${section.key}:${targetIndex}`;
+                              if (tripItineraryDragTargetKey !== dropKey) setTripItineraryDragTargetKey(dropKey);
+                              return;
+                            }
                             event.preventDefault();
                             event.dataTransfer.dropEffect = 'copy';
                           }}
-                          onDrop={(event) => handleKomoDrop(event, dk, section.key)}
+                          onDrop={(event) => {
+                            const itineraryPayload = tripItineraryDragPayloadRef.current;
+                            if (itineraryPayload?.type === 'trip-itinerary-event') {
+                              const targetIndex = getTripEventDropIndexFromPointer(event.currentTarget, sectionTimelineItems.length, event.clientY);
+                              handleTripEventDrop(event, section, targetIndex);
+                              return;
+                            }
+                            handleKomoDrop(event, dk, section.key);
+                          }}
                           style={
                             tripKomoTouchDrag?.overDateKey === dk && tripKomoTouchDrag?.overSlotKey === section.key
                               ? {
@@ -35646,7 +35698,7 @@ transform: translateY(0);
                               {renderTripEventDropZone(section, 0)}
                               {sectionTimelineItems.map((item, index) => (
                                 <React.Fragment key={item.id}>
-                                  {item.kind === 'card' ? renderTripSlotCard(item.card, section) : renderPlanCard(item.event)}
+                                  {item.kind === 'card' ? renderTripSlotCard(item.card, section, index) : renderPlanCard(item.event, section, index)}
                                   {renderTripEventDropZone(section, index + 1)}
                                 </React.Fragment>
                               ))}
