@@ -1338,6 +1338,8 @@ const MemoryPhotosStep = ({
                 <img
                   src={toDirectStorageUrl(photo.url)}
                   alt={`Photo ${index + 1}`}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full aspect-square object-cover rounded-xl"
                 />
                 

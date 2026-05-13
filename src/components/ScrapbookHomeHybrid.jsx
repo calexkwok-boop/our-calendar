@@ -367,28 +367,6 @@ const ScrapbookHomeHybrid = ({
       loadedMemoryCollageUrlsRef.current = next;
       return next;
     });
-    const preloads = activeUrls
-      .filter((url) => !loadedMemoryCollageUrlsRef.current.has(url))
-      .map((url) => {
-        const img = new Image();
-        img.decoding = 'async';
-        img.src = url;
-        img.onload = () => {
-          setLoadedMemoryCollageUrls((prev) => {
-            if (prev.has(url)) return prev;
-            const next = new Set(prev);
-            next.add(url);
-            loadedMemoryCollageUrlsRef.current = next;
-            return next;
-          });
-        };
-        return img;
-      });
-    return () => {
-      preloads.forEach((img) => {
-        img.onload = null;
-      });
-    };
   }, [memoryCollageTiles]);
 
   React.useEffect(() => {
@@ -1079,9 +1057,9 @@ const ScrapbookHomeHybrid = ({
                   <img
                     src={url}
                     alt=""
-                    loading="eager"
+                    loading="lazy"
                     decoding="async"
-                    fetchpriority={index < 2 ? 'high' : 'auto'}
+                    fetchpriority="auto"
                     onLoad={() => {
                       setLoadedMemoryCollageUrls((prev) => {
                         if (prev.has(url)) return prev;

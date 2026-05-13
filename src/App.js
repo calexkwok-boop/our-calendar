@@ -515,6 +515,57 @@ const requestR2TripPhotoReadUrls = async (paths) => {
   return Array.isArray(data?.files) ? data.files : [];
 };
 
+const R2_TRIP_PHOTO_READ_URL_TTL_MS = 10 * 60 * 1000;
+const r2TripPhotoReadUrlCache = new Map();
+const r2TripPhotoReadUrlInFlight = new Map();
+
+const getCachedR2TripPhotoReadUrls = async (paths) => {
+  const normalizedPaths = Array.isArray(paths)
+    ? Array.from(new Set(paths.map((path) => String(path || '').trim()).filter(Boolean)))
+    : [];
+  if (!normalizedPaths.length) return [];
+  const now = Date.now();
+  const cachedEntries = [];
+  const missingPaths = [];
+  normalizedPaths.forEach((path) => {
+    const cached = r2TripPhotoReadUrlCache.get(path);
+    if (cached && cached.expiresAt > now && cached.readUrl) {
+      cachedEntries.push({ path, readUrl: cached.readUrl });
+    } else {
+      if (cached) r2TripPhotoReadUrlCache.delete(path);
+      missingPaths.push(path);
+    }
+  });
+  if (!missingPaths.length) return cachedEntries;
+  const missingKey = missingPaths.slice().sort().join('|');
+  let requestPromise = r2TripPhotoReadUrlInFlight.get(missingKey);
+  if (!requestPromise) {
+    requestPromise = requestR2TripPhotoReadUrls(missingPaths)
+      .then((files) => {
+        const nextNow = Date.now();
+        (Array.isArray(files) ? files : []).forEach((entry) => {
+          const path = String(entry?.path || '').trim();
+          const readUrl = String(entry?.readUrl || '').trim();
+          if (!path || !readUrl) return;
+          r2TripPhotoReadUrlCache.set(path, {
+            readUrl,
+            expiresAt: nextNow + R2_TRIP_PHOTO_READ_URL_TTL_MS,
+          });
+        });
+        return files;
+      })
+      .finally(() => {
+        r2TripPhotoReadUrlInFlight.delete(missingKey);
+      });
+    r2TripPhotoReadUrlInFlight.set(missingKey, requestPromise);
+  }
+  const fetchedEntries = await requestPromise;
+  return [
+    ...cachedEntries,
+    ...(Array.isArray(fetchedEntries) ? fetchedEntries : []),
+  ];
+};
+
 const hydrateR2TripPhotoDisplayUrls = async (photos = []) => {
   const safePhotos = Array.isArray(photos) ? photos : [];
   const uniquePaths = Array.from(new Set(
@@ -526,7 +577,7 @@ const hydrateR2TripPhotoDisplayUrls = async (photos = []) => {
   ));
   if (!uniquePaths.length) return safePhotos;
   try {
-    const signedFiles = await requestR2TripPhotoReadUrls(uniquePaths);
+    const signedFiles = await getCachedR2TripPhotoReadUrls(uniquePaths);
     const readUrlByPath = new Map(
       signedFiles
         .map((entry) => [String(entry?.path || '').trim(), String(entry?.readUrl || '').trim()])
