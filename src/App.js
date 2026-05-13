@@ -34873,12 +34873,53 @@ transform: translateY(0);
             }
             return itemCount;
           };
+          const getTripEventDropIndexForItem = (targetElement, timelineIndex, clientY) => {
+            if (!(targetElement instanceof Element) || !Number.isFinite(Number(clientY))) return timelineIndex;
+            const rect = targetElement.getBoundingClientRect();
+            return clientY < rect.top + (rect.height / 2) ? timelineIndex : timelineIndex + 1;
+          };
+          const getTripItineraryDragPayload = () => {
+            const payload = tripItineraryDragPayloadRef.current;
+            if (payload?.type !== 'trip-itinerary-event') return null;
+            if (String(payload?.dateKey || '') !== dk) return null;
+            return payload;
+          };
+          const handleTripItineraryItemDragOver = (event, section, timelineIndex) => {
+            const payload = getTripItineraryDragPayload();
+            if (!payload) return false;
+            if (String(payload?.sectionKey || '') !== String(section.key || '')) return false;
+            const targetIndex = getTripEventDropIndexForItem(event.currentTarget, timelineIndex, event.clientY);
+            event.preventDefault();
+            event.stopPropagation();
+            event.dataTransfer.dropEffect = 'move';
+            const dropKey = `${dk}:${section.key}:${targetIndex}`;
+            if (tripItineraryDragTargetKey !== dropKey) setTripItineraryDragTargetKey(dropKey);
+            return true;
+          };
+          const handleTripItineraryItemDrop = (event, section, timelineIndex) => {
+            const payload = getTripItineraryDragPayload();
+            if (!payload) return false;
+            const targetIndex = getTripEventDropIndexForItem(event.currentTarget, timelineIndex, event.clientY);
+            handleTripEventDrop(event, section, targetIndex);
+            return true;
+          };
           const renderTripSlotCard = (card, section, timelineIndex) => (
             <div
               key={`card-${card.placementId}`}
               className="group relative touch-none self-start"
               data-komo-placement-id={card.placementId}
               data-trip-sort-item-index={timelineIndex}
+              onDragOver={(event) => {
+                if (handleTripItineraryItemDragOver(event, section, timelineIndex)) return;
+                event.preventDefault();
+                event.stopPropagation();
+                event.dataTransfer.dropEffect = 'move';
+              }}
+              onDrop={(event) => {
+                if (handleTripItineraryItemDrop(event, section, timelineIndex)) return;
+                event.stopPropagation();
+                handleKomoDrop(event, dk, section.key, card.placementId);
+              }}
               draggable={flippedKomoCardId !== card.placementId}
               onDragStart={flippedKomoCardId !== card.placementId ? (event) => {
                 setTripKomoNativeDragActive(true);
@@ -35229,6 +35270,12 @@ transform: translateY(0);
                     key={event.id}
                     data-trip-sort-item-index={timelineIndex}
                     draggable={subCalEditingEvent !== event.id}
+                    onDragOver={subCalEditingEvent !== event.id ? (dragEvent) => {
+                      handleTripItineraryItemDragOver(dragEvent, section, timelineIndex);
+                    } : undefined}
+                    onDrop={subCalEditingEvent !== event.id ? (dragEvent) => {
+                      handleTripItineraryItemDrop(dragEvent, section, timelineIndex);
+                    } : undefined}
                     onDragStart={subCalEditingEvent !== event.id ? (dragEvent) => {
                       const payload = {
                         type: 'trip-itinerary-event',
