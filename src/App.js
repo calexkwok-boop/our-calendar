@@ -522,7 +522,6 @@ const hydrateR2TripPhotoDisplayUrls = async (photos = []) => {
       getR2TripPhotoStorageLocation(photo?.thumbnail_url)?.path,
       getR2TripPhotoStorageLocation(photo?.medium_url)?.path,
       getR2TripPhotoStorageLocation(photo?.url)?.path,
-      getR2TripPhotoStorageLocation(photo?.original_url)?.path,
     ].filter(Boolean))
   ));
   if (!uniquePaths.length) return safePhotos;
@@ -537,13 +536,11 @@ const hydrateR2TripPhotoDisplayUrls = async (photos = []) => {
       const thumbnailPath = getR2TripPhotoStorageLocation(photo?.thumbnail_url)?.path;
       const mediumPath = getR2TripPhotoStorageLocation(photo?.medium_url)?.path;
       const mainPath = getR2TripPhotoStorageLocation(photo?.url)?.path;
-      const originalPath = getR2TripPhotoStorageLocation(photo?.original_url)?.path;
       return {
         ...photo,
         resolved_thumbnail_url: (thumbnailPath && readUrlByPath.get(thumbnailPath)) || '',
         resolved_medium_url: (mediumPath && readUrlByPath.get(mediumPath)) || '',
         resolved_url: (mainPath && readUrlByPath.get(mainPath)) || '',
-        resolved_original_url: (originalPath && readUrlByPath.get(originalPath)) || '',
       };
     });
   } catch (error) {
@@ -765,22 +762,54 @@ const getTripPhotoThumbnailUrl = (photo) => String(
 
 const getTripPhotoFallbackUrl = (photo) => String(
   photo?.local_preview_url
-  || photo?.resolved_original_url
   || photo?.resolved_medium_url
   || photo?.resolved_url
-  || photo?.original_url
   || photo?.medium_url
   || photo?.url
+  || photo?.resolved_original_url
+  || photo?.original_url
   || ''
 ).trim();
 
 const getTripPhotoDisplayUrl = (photo) => String(
   photo?.local_preview_url
   || photo?.resolved_medium_url
-  || photo?.resolved_url
-  || photo?.resolved_original_url
   || photo?.medium_url
+  || photo?.resolved_url
   || photo?.url
+  || photo?.resolved_original_url
+  || photo?.original_url
+  || ''
+).trim();
+
+const getTripPhotoLightboxUrl = (photo) => String(
+  photo?.local_preview_url
+  || photo?.resolved_medium_url
+  || photo?.medium_url
+  || photo?.resolved_url
+  || photo?.url
+  || photo?.resolved_original_url
+  || photo?.original_url
+  || ''
+).trim();
+
+const getTripPhotoDownloadUrl = (photo) => String(
+  photo?.resolved_medium_url
+  || photo?.medium_url
+  || photo?.resolved_url
+  || photo?.url
+  || photo?.thumbnail_url
+  || photo?.resolved_original_url
+  || photo?.original_url
+  || ''
+).trim();
+
+const getTripPhotoExportUrl = (photo) => String(
+  photo?.resolved_medium_url
+  || photo?.medium_url
+  || photo?.resolved_url
+  || photo?.url
+  || photo?.resolved_original_url
   || photo?.original_url
   || ''
 ).trim();
@@ -2425,7 +2454,8 @@ const buildTripHighlights = (trip, photos, itineraryItems) => {
     title: hookMoment?.item?.title || tripTitle,
     subtitle: tripDatesLabel,
     caption: hookPhoto?.caption || hookMoment?.item?.notes || `The part of ${tripTitle} that still feels worth replaying.`,
-    image: hookPhoto?.url || null,
+    image: getTripPhotoExportUrl(hookPhoto) || null,
+    imageObject: hookPhoto || null,
     meta: hookMoment?.item?.location || uniqueLocations.slice(0, 2).join(' · '),
     tag: pickHighlightLabel(hookMoment, true),
   }, {
@@ -2446,7 +2476,8 @@ const buildTripHighlights = (trip, photos, itineraryItems) => {
       title: moment?.item?.title || `Highlight ${index + 1}`,
       subtitle: new Date(`${moment.dateKey}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
       caption: moment?.featuredPhoto?.caption || moment?.item?.notes || 'One of the moments that made the trip feel worth planning.',
-      image: moment?.featuredPhoto?.url || null,
+      image: getTripPhotoExportUrl(moment?.featuredPhoto) || null,
+      imageObject: moment?.featuredPhoto || null,
       meta: moment?.item?.location || '',
       tag: pickHighlightLabel(moment),
       bullets: moment?.bullets?.slice(0, 2),
@@ -2457,7 +2488,8 @@ const buildTripHighlights = (trip, photos, itineraryItems) => {
     title: `Steal this trip`,
     subtitle: tripTitle,
     caption: `Save the restaurants, landmarks, and standout moments from ${tripTitle}, then publish it to Explore when you're ready.`,
-    image: selectedHighlights[1]?.featuredPhoto?.url || hookPhoto?.url || null,
+    image: getTripPhotoExportUrl(selectedHighlights[1]?.featuredPhoto) || getTripPhotoExportUrl(hookPhoto) || null,
+    imageObject: selectedHighlights[1]?.featuredPhoto || hookPhoto || null,
     meta: uniqueLocations.slice(0, 2).join(' · '),
     tag: 'Do it again',
   });
@@ -7132,9 +7164,10 @@ function App() {
   };
 
   const saveSinglePhotoToDevice = async (photo) => {
-    if (!photo?.url) return;
+    const downloadUrl = getTripPhotoDownloadUrl(photo);
+    if (!downloadUrl) return;
     try {
-      const res = await fetch(photo.url);
+      const res = await fetch(downloadUrl);
       if (!res.ok) throw new Error('fetch failed');
       const blob = await res.blob();
       const extFromType = blob.type?.split('/')[1] || 'jpg';
@@ -7298,7 +7331,9 @@ function App() {
       const files = [];
       for (let i = 0; i < selected.length; i++) {
         const photo = selected[i];
-        const res = await fetch(photo.url);
+        const downloadUrl = getTripPhotoDownloadUrl(photo);
+        if (!downloadUrl) continue;
+        const res = await fetch(downloadUrl);
         if (!res.ok) continue;
         const blob = await res.blob();
         const extFromType = blob.type?.split('/')[1] || 'jpg';
@@ -20761,6 +20796,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     image.onerror = () => reject(new Error(`Failed to load image: ${url}`));
     image.src = url;
   });
+  const resolveTripHighlightSlideImageUrl = (slide) => {
+    if (!slide || typeof slide !== 'object') return '';
+    const photoObject = slide?.photoObject || slide?.imageObject || slide?.backgroundObject || null;
+    if (photoObject && typeof photoObject === 'object') {
+      return getTripPhotoExportUrl(photoObject);
+    }
+    return String(
+      slide?.photo
+      || slide?.image
+      || slide?.background
+      || ''
+    ).trim();
+  };
   const drawTripHighlightCoverImage = (ctx, image, width, height) => {
     const imageRatio = image.width / image.height;
     const frameRatio = width / height;
@@ -20830,7 +20878,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     ctx.fillRect(0, 0, width, height);
 
     if (slide?.type === 'photo') {
-      const image = imageCache.get(String(slide?.photo || '').trim());
+      const image = imageCache.get(resolveTripHighlightSlideImageUrl(slide));
       if (image) {
         ctx.save();
         ctx.filter = 'blur(18px) brightness(0.55)';
@@ -20930,7 +20978,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     const imageUrls = Array.from(new Set(
       (slides || [])
-        .flatMap((slide) => [String(slide?.photo || '').trim(), String(slide?.background || '').trim()])
+        .map((slide) => resolveTripHighlightSlideImageUrl(slide))
         .filter(Boolean)
     ));
     const imageEntries = await Promise.all(imageUrls.map(async (url) => {
@@ -35539,7 +35587,7 @@ transform: translateY(0);
                           title="View event photo"
                         >
                           <img
-                            src={getTripPhotoDisplayUrl(getEventPhotos(event.id)[0])}
+                            src={getTripPhotoThumbnailUrl(getEventPhotos(event.id)[0])}
                             alt=""
                             className="h-28 w-full rounded-2xl object-cover"
                           />
@@ -36324,7 +36372,7 @@ transform: translateY(0);
                                       title="View event photo"
                                     >
                                       <img
-                                        src={getTripPhotoDisplayUrl(getEventPhotos(event.id)[0])}
+                                        src={getTripPhotoThumbnailUrl(getEventPhotos(event.id)[0])}
                                         alt=""
                                         className="w-12 h-12 rounded-lg object-cover border border-purple-200 dark:border-purple-700"
                                       />
@@ -36472,7 +36520,7 @@ transform: translateY(0);
                             title="View event photo"
                           >
                             <img
-                              src={getTripPhotoDisplayUrl(getEventPhotos(event.id)[0])}
+                              src={getTripPhotoThumbnailUrl(getEventPhotos(event.id)[0])}
                               alt=""
                               className="w-9 h-9 rounded-md object-cover border border-gray-200 dark:border-gray-600"
                             />
@@ -38176,7 +38224,7 @@ transform: translateY(0);
               <X className="w-5 h-5" />
             </button>
             <img
-              src={getTripPhotoDisplayUrl(lightboxPhoto)}
+              src={getTripPhotoLightboxUrl(lightboxPhoto)}
               data-fallback-src={getTripPhotoFallbackUrl(lightboxPhoto)}
               alt={lightboxPhoto.caption || ''}
               className="max-w-full max-h-[80vh] rounded-xl object-contain"
