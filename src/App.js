@@ -34987,6 +34987,31 @@ transform: translateY(0);
             handleTripEventDrop(event, section, targetIndex);
             return true;
           };
+          const getKomoInsertBeforePlacementId = (section, targetIndex, movingPlacementId = '') => {
+            const items = getSectionTimelineItems(section)
+              .filter((item) => item.kind !== 'card' || String(item?.placementId || '') !== String(movingPlacementId || ''));
+            for (let index = Math.max(0, Number(targetIndex) || 0); index < items.length; index += 1) {
+              const item = items[index];
+              if (item?.kind === 'card' && String(item?.placementId || '').trim()) {
+                return String(item.placementId || '').trim();
+              }
+            }
+            return null;
+          };
+          const handleKomoTimelineItemDrop = (event, section, targetIndex) => {
+            let payload = null;
+            try {
+              payload = JSON.parse(event.dataTransfer.getData('application/json') || '{}');
+            } catch {
+              payload = null;
+            }
+            if (!payload || (payload.type !== 'komo-source' && payload.type !== 'komo-slot')) return false;
+            const movingPlacementId = String(payload?.card?.placementId || '').trim();
+            const insertBeforePlacementId = getKomoInsertBeforePlacementId(section, targetIndex, movingPlacementId);
+            event.stopPropagation();
+            handleKomoDrop(event, dk, section.key, insertBeforePlacementId);
+            return true;
+          };
           const renderTripSlotCard = (card, section, timelineIndex) => (
             <div
               key={`card-${card.placementId}`}
@@ -35001,8 +35026,7 @@ transform: translateY(0);
               }}
               onDrop={(event) => {
                 if (handleTripItineraryItemDrop(event, section, timelineIndex)) return;
-                event.stopPropagation();
-                handleKomoDrop(event, dk, section.key, card.placementId);
+                handleKomoTimelineItemDrop(event, section, timelineIndex);
               }}
               draggable={flippedKomoCardId !== card.placementId}
               onDragStart={flippedKomoCardId !== card.placementId ? (event) => {
@@ -35015,15 +35039,6 @@ transform: translateY(0);
                 event.dataTransfer.effectAllowed = 'move';
               } : undefined}
               onDragEnd={() => setTripKomoNativeDragActive(false)}
-              onDragOver={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                event.dataTransfer.dropEffect = 'move';
-              }}
-              onDrop={(event) => {
-                event.stopPropagation();
-                handleKomoDrop(event, dk, section.key, card.placementId);
-              }}
               onTouchStart={flippedKomoCardId !== card.placementId ? (event) => beginKomoTouchDrag(event, {
                 card,
                 from: { dateKey: dk, slotKey: section.key },
@@ -35355,10 +35370,14 @@ transform: translateY(0);
                     data-trip-sort-item-index={timelineIndex}
                     draggable={subCalEditingEvent !== event.id}
                     onDragOver={subCalEditingEvent !== event.id ? (dragEvent) => {
-                      handleTripItineraryItemDragOver(dragEvent, section, timelineIndex);
+                      if (handleTripItineraryItemDragOver(dragEvent, section, timelineIndex)) return;
+                      dragEvent.preventDefault();
+                      dragEvent.stopPropagation();
+                      dragEvent.dataTransfer.dropEffect = 'move';
                     } : undefined}
                     onDrop={subCalEditingEvent !== event.id ? (dragEvent) => {
-                      handleTripItineraryItemDrop(dragEvent, section, timelineIndex);
+                      if (handleTripItineraryItemDrop(dragEvent, section, timelineIndex)) return;
+                      handleKomoTimelineItemDrop(dragEvent, section, timelineIndex);
                     } : undefined}
                     onDragStart={subCalEditingEvent !== event.id ? (dragEvent) => {
                       const payload = {
