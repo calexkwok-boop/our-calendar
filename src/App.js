@@ -1363,6 +1363,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 const isUuid = (value) => UUID_RE.test(String(value || '').trim());
 const getProfilePhotoCacheKey = (suffix) => `our-calendar-profile-photo:${String(suffix || '').trim()}`;
 const getTripSelectedDateStorageKey = (userId, subCalId) => `our-calendar-trip-selected-date:${String(userId || '').trim()}:${String(subCalId || '').trim()}`;
+const getTripItineraryLayoutStorageKey = (userId, subCalId) => `our-calendar-trip-itinerary-layout:${String(userId || 'guest').trim() || 'guest'}:${String(subCalId || '').trim()}`;
 const readStoredTripSelectedDateKey = (userId, subCalId) => {
   if (typeof window === 'undefined') return '';
   const key = getTripSelectedDateStorageKey(userId, subCalId);
@@ -1381,6 +1382,42 @@ const writeStoredTripSelectedDateKey = (userId, subCalId, dateKey) => {
     const normalized = String(dateKey || '').trim();
     if (normalized) {
       window.localStorage.setItem(key, normalized);
+    } else {
+      window.localStorage.removeItem(key);
+    }
+  } catch {}
+};
+const readTripItineraryLayoutState = (userId, subCalId) => {
+  if (typeof window === 'undefined') return {};
+  const key = getTripItineraryLayoutStorageKey(userId, subCalId);
+  if (!key || key.endsWith(':')) return {};
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(key) || '{}');
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return Object.entries(parsed).reduce((acc, [eventId, value]) => {
+      const normalizedEventId = String(eventId || '').trim();
+      if (!normalizedEventId || !value || typeof value !== 'object' || Array.isArray(value)) return acc;
+      const itineraryOrder = Number.isFinite(Number(value.itineraryOrder)) ? Number(value.itineraryOrder) : null;
+      const itinerarySectionKey = String(value.itinerarySectionKey || '').trim() || null;
+      if (itineraryOrder === null && !itinerarySectionKey) return acc;
+      acc[normalizedEventId] = {
+        ...(itineraryOrder !== null ? { itineraryOrder } : {}),
+        ...(itinerarySectionKey ? { itinerarySectionKey } : {}),
+      };
+      return acc;
+    }, {});
+  } catch {
+    return {};
+  }
+};
+const writeTripItineraryLayoutState = (userId, subCalId, state) => {
+  if (typeof window === 'undefined') return;
+  const key = getTripItineraryLayoutStorageKey(userId, subCalId);
+  if (!key || key.endsWith(':')) return;
+  try {
+    const safeState = state && typeof state === 'object' && !Array.isArray(state) ? state : {};
+    if (Object.keys(safeState).length > 0) {
+      window.localStorage.setItem(key, JSON.stringify(safeState));
     } else {
       window.localStorage.removeItem(key);
     }
@@ -3766,6 +3803,7 @@ function App() {
   const weatherAutocompleteRef = useRef(null);
   const [draggedNoteId, setDraggedNoteId] = useState(null);
   const [subCalendarEvents, setSubCalendarEvents] = useState({});
+  const [tripItineraryLayoutState, setTripItineraryLayoutState] = useState({});
   const [tripItineraryDraggingEventId, setTripItineraryDraggingEventId] = useState(null);
   const [tripItineraryDragTargetKey, setTripItineraryDragTargetKey] = useState('');
   const [tripItineraryTouchDrag, setTripItineraryTouchDrag] = useState(null);
@@ -4888,6 +4926,8 @@ function App() {
 
   const loadSubCalendarEvents = async (subCalId) => {
     try {
+      const layoutOverride = readTripItineraryLayoutState(user?.id, subCalId);
+      setTripItineraryLayoutState(layoutOverride);
       const { data, error } = await supabase
         .from('sub_calendar_events')
         .select('*')
@@ -4901,6 +4941,7 @@ function App() {
             ? (() => { try { return JSON.parse(e.event_data); } catch { return null; } })()
             : null);
         if (!grouped[e.date]) grouped[e.date] = [];
+        const localLayout = layoutOverride[String(e.id || '').trim()] || {};
         grouped[e.date].push({
           id: e.id,
           title: e.title,
@@ -4914,7 +4955,10 @@ function App() {
           reactions: e.reactions ? JSON.parse(e.reactions) : {},
           location: e.location || null,
           eventData: parsedEventData,
-          itineraryOrder: Number.isFinite(Number(parsedEventData?.itineraryOrder)) ? Number(parsedEventData.itineraryOrder) : null,
+          itineraryOrder: Number.isFinite(Number(localLayout?.itineraryOrder))
+            ? Number(localLayout.itineraryOrder)
+            : (Number.isFinite(Number(parsedEventData?.itineraryOrder)) ? Number(parsedEventData.itineraryOrder) : null),
+          itinerarySectionKey: String(localLayout?.itinerarySectionKey || parsedEventData?.itinerarySectionKey || '').trim() || null,
         });
       });
       setSubCalendarEvents(grouped);
@@ -8002,7 +8046,6 @@ function App() {
       user_id: user.id,
       reactions: null,
       location: location || null,
-      event_data: itineraryOrder !== null ? { itineraryOrder } : null,
     };
     const { data, error } = await supabase
       .from('sub_calendar_events')
@@ -8015,6 +8058,14 @@ function App() {
       return;
     }
     const dateKey = getDateKey(date);
+    const nextLayoutState = {
+      ...(tripItineraryLayoutState && typeof tripItineraryLayoutState === 'object' ? tripItineraryLayoutState : {}),
+      [id]: {
+        ...(itineraryOrder !== null ? { itineraryOrder } : {}),
+      },
+    };
+    setTripItineraryLayoutState(nextLayoutState);
+    writeTripItineraryLayoutState(user?.id, activeSubCalendar.id, nextLayoutState);
     setSubCalendarEvents(prev => ({
       ...prev,
       [dateKey]: [...(prev[dateKey] || []), {
@@ -8022,8 +8073,9 @@ function App() {
         endTime: newEvent.end_time, notes: null, date: dateKey,
         category: subCalNewEventForm?.category || 'other', createdBy: currentUser, userId: user.id, reactions: {},
         location: location || null,
-        eventData: newEvent.event_data,
+        eventData: null,
         itineraryOrder,
+        itinerarySectionKey: null,
       }]
     }));
   };
@@ -8034,9 +8086,6 @@ function App() {
     const currentEvent = Object.values(subCalendarEvents || {})
       .flatMap((rows) => (Array.isArray(rows) ? rows : []))
       .find((row) => String(row?.id || '') === String(eventId || ''));
-    const nextEventData = currentEvent?.eventData && typeof currentEvent.eventData === 'object' && !Array.isArray(currentEvent.eventData)
-      ? { ...currentEvent.eventData }
-      : {};
     if (updates.title !== undefined) dbUpdates.title = updates.title;
     if (updates.time !== undefined) dbUpdates.time = updates.time;
     if (updates.endTime !== undefined) dbUpdates.end_time = updates.endTime;
@@ -8044,24 +8093,44 @@ function App() {
     if (updates.location !== undefined) dbUpdates.location = updates.location;
     if (updates.category !== undefined) dbUpdates.category = updates.category;
     if (updates.reactions !== undefined) dbUpdates.reactions = JSON.stringify(updates.reactions);
-    if (updates.itineraryOrder !== undefined) {
-      if (Number.isFinite(Number(updates.itineraryOrder))) {
-        nextEventData.itineraryOrder = Number(updates.itineraryOrder);
-      } else {
-        delete nextEventData.itineraryOrder;
+    if (Object.keys(dbUpdates).length > 0) {
+      const { data, error } = await supabase
+        .from('sub_calendar_events')
+        .update(dbUpdates)
+        .eq('id', eventId)
+        .select('id')
+        .maybeSingle();
+      if (error || !data?.id) {
+        console.error('Error updating sub_calendar_event:', error);
+        alert(`Could not save trip event changes: ${error?.message || 'No row was updated.'}`);
+        return;
       }
-      dbUpdates.event_data = Object.keys(nextEventData).length > 0 ? nextEventData : null;
     }
-    const { data, error } = await supabase
-      .from('sub_calendar_events')
-      .update(dbUpdates)
-      .eq('id', eventId)
-      .select('id')
-      .maybeSingle();
-    if (error || !data?.id) {
-      console.error('Error updating sub_calendar_event:', error);
-      alert(`Could not save trip event changes: ${error?.message || 'No row was updated.'}`);
-      return;
+    const normalizedEventId = String(eventId || '').trim();
+    if (normalizedEventId && activeSubCalendar?.id && (
+      updates.itineraryOrder !== undefined
+      || updates.itinerarySectionKey !== undefined
+      || updates.time !== undefined
+    )) {
+      const nextLayoutState = { ...(tripItineraryLayoutState && typeof tripItineraryLayoutState === 'object' ? tripItineraryLayoutState : {}) };
+      const currentLayout = nextLayoutState[normalizedEventId] && typeof nextLayoutState[normalizedEventId] === 'object'
+        ? { ...nextLayoutState[normalizedEventId] }
+        : {};
+      if (updates.itineraryOrder !== undefined) {
+        if (Number.isFinite(Number(updates.itineraryOrder))) currentLayout.itineraryOrder = Number(updates.itineraryOrder);
+        else delete currentLayout.itineraryOrder;
+      }
+      if (updates.itinerarySectionKey !== undefined) {
+        const nextSectionKey = String(updates.itinerarySectionKey || '').trim();
+        if (nextSectionKey) currentLayout.itinerarySectionKey = nextSectionKey;
+        else delete currentLayout.itinerarySectionKey;
+      } else if (updates.time !== undefined) {
+        delete currentLayout.itinerarySectionKey;
+      }
+      if (Object.keys(currentLayout).length > 0) nextLayoutState[normalizedEventId] = currentLayout;
+      else delete nextLayoutState[normalizedEventId];
+      setTripItineraryLayoutState(nextLayoutState);
+      writeTripItineraryLayoutState(user?.id, activeSubCalendar.id, nextLayoutState);
     }
     setSubCalendarEvents(prev => {
       const updated = { ...prev };
@@ -8070,10 +8139,12 @@ function App() {
           e.id === eventId ? {
             ...e,
             ...updates,
-            eventData: updates.itineraryOrder !== undefined ? (Object.keys(nextEventData).length > 0 ? nextEventData : null) : e.eventData,
             itineraryOrder: updates.itineraryOrder !== undefined
               ? (Number.isFinite(Number(updates.itineraryOrder)) ? Number(updates.itineraryOrder) : null)
               : e.itineraryOrder,
+            itinerarySectionKey: updates.itinerarySectionKey !== undefined
+              ? (String(updates.itinerarySectionKey || '').trim() || null)
+              : (updates.time !== undefined ? null : e.itinerarySectionKey),
           } : e
         );
       });
@@ -8096,6 +8167,15 @@ function App() {
     if (!data || data.length === 0) {
       alert('Could not delete trip event (no rows affected). Check DB permissions.');
       return;
+    }
+    if (activeSubCalendar?.id) {
+      const normalizedEventId = String(eventId || '').trim();
+      if (normalizedEventId) {
+        const nextLayoutState = { ...(tripItineraryLayoutState && typeof tripItineraryLayoutState === 'object' ? tripItineraryLayoutState : {}) };
+        delete nextLayoutState[normalizedEventId];
+        setTripItineraryLayoutState(nextLayoutState);
+        writeTripItineraryLayoutState(user?.id, activeSubCalendar.id, nextLayoutState);
+      }
     }
     setSubCalendarEvents(prev => ({
       ...prev,
@@ -20478,6 +20558,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return Number.isFinite(minutes) ? minutes * 1000 : null;
   };
   const getTripSectionKeyForEvent = (event) => {
+    const overrideSectionKey = String(event?.itinerarySectionKey || event?.eventData?.itinerarySectionKey || '').trim();
+    if (overrideSectionKey) return overrideSectionKey;
     const time = String(event?.time || '').trim();
     if (!time) return 'anytime';
     const hour = Number(time.split(':')[0]);
@@ -34782,11 +34864,13 @@ transform: translateY(0);
               }
               if (payload?.type !== 'trip-itinerary-event') return;
               if (String(payload?.dateKey || '') !== dk) return;
-              if (String(payload?.sectionKey || '') !== String(section.key || '')) return;
               const eventId = String(payload?.eventId || '').trim();
               if (!eventId) return;
               const nextOrder = getTripEventDropOrder(section, targetIndex, eventId);
-              await updateSubCalEvent(eventId, { itineraryOrder: nextOrder });
+              await updateSubCalEvent(eventId, {
+                itineraryOrder: nextOrder,
+                itinerarySectionKey: String(section.key || '').trim() || null,
+              });
             } catch {}
             setTripItineraryDraggingEventId(null);
             setTripItineraryDragTargetKey('');
@@ -34817,13 +34901,15 @@ transform: translateY(0);
             if (parts.length !== 3) return;
             const [dateKey, sectionKey, targetIndexRaw] = parts;
             if (String(dateKey || '') !== dk) return;
-            if (String(sectionKey || '') !== String(activeDrag.sectionKey || '')) return;
             const targetIndex = Number(targetIndexRaw);
             if (!Number.isFinite(targetIndex)) return;
             const section = groupedSections.find((entry) => String(entry?.key || '') === String(sectionKey || ''));
             if (!section) return;
             const nextOrder = getTripEventDropOrder(section, targetIndex, activeDrag.eventId);
-            await updateSubCalEvent(activeDrag.eventId, { itineraryOrder: nextOrder });
+            await updateSubCalEvent(activeDrag.eventId, {
+              itineraryOrder: nextOrder,
+              itinerarySectionKey: String(sectionKey || '').trim() || null,
+            });
           };
           const renderTripEventDropZone = (section, targetIndex) => {
             const dropKey = `${dk}:${section.key}:${targetIndex}`;
@@ -34836,7 +34922,6 @@ transform: translateY(0);
                   const payload = tripItineraryDragPayloadRef.current;
                   if (payload?.type !== 'trip-itinerary-event') return;
                   if (String(payload?.dateKey || '') !== dk) return;
-                  if (String(payload?.sectionKey || '') !== String(section.key || '')) return;
                   event.preventDefault();
                   event.stopPropagation();
                   event.dataTransfer.dropEffect = 'move';
@@ -34887,7 +34972,6 @@ transform: translateY(0);
           const handleTripItineraryItemDragOver = (event, section, timelineIndex) => {
             const payload = getTripItineraryDragPayload();
             if (!payload) return false;
-            if (String(payload?.sectionKey || '') !== String(section.key || '')) return false;
             const targetIndex = getTripEventDropIndexForItem(event.currentTarget, timelineIndex, event.clientY);
             event.preventDefault();
             event.stopPropagation();
@@ -35710,7 +35794,6 @@ transform: translateY(0);
                             const itineraryPayload = tripItineraryDragPayloadRef.current;
                             if (itineraryPayload?.type === 'trip-itinerary-event') {
                               if (String(itineraryPayload?.dateKey || '') !== dk) return;
-                              if (String(itineraryPayload?.sectionKey || '') !== String(section.key || '')) return;
                               const targetIndex = getTripEventDropIndexFromPointer(event.currentTarget, sectionTimelineItems.length, event.clientY);
                               event.preventDefault();
                               event.stopPropagation();
