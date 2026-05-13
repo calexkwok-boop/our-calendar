@@ -298,6 +298,20 @@ const ScrapbookHomeHybrid = ({
   const memoryCollageTiles = React.useMemo(() => (
     (memoryCollagePhotos.length > 0 ? memoryCollagePhotos : ['', '', '', '']).slice(0, 4)
   ), [memoryCollagePhotos]);
+  const [openMemoryCollagePhoto, setOpenMemoryCollagePhoto] = useState(null);
+
+  const openMemoryCollageLightbox = React.useCallback((url, memory = null) => {
+    const normalizedUrl = String(url || '').trim();
+    if (!normalizedUrl) {
+      onOpenMemory?.(memory || null);
+      return;
+    }
+    setOpenMemoryCollagePhoto({
+      url: normalizedUrl,
+      title: String(memory?.title || '').trim(),
+      date: String(memory?.date || '').trim(),
+    });
+  }, [onOpenMemory]);
 
   React.useEffect(() => {
     loadedMemoryCollageUrlsRef.current = loadedMemoryCollageUrls;
@@ -376,6 +390,15 @@ const ScrapbookHomeHybrid = ({
       });
     };
   }, [memoryCollageTiles]);
+
+  React.useEffect(() => {
+    if (!openMemoryCollagePhoto) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setOpenMemoryCollagePhoto(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [openMemoryCollagePhoto]);
 
   return (
     <div className="min-h-screen bg-[#faf8f3] dark:bg-slate-950 p-4 sm:p-6">
@@ -1049,7 +1072,7 @@ const ScrapbookHomeHybrid = ({
             {memoryCollageTiles.map((url, index) => (
               <button
                 key={`memory-collage-${index}`}
-                onClick={() => url ? onOpenMemory?.(collageMemories[index] || null) : undefined}
+                onClick={() => openMemoryCollageLightbox(url, collageMemories[index] || null)}
                 className="relative h-36 sm:h-44 overflow-hidden rounded-[14px] border border-white/40 dark:border-white/10 bg-gradient-to-br from-violet-100 via-rose-50 to-amber-100 dark:from-violet-900/30 dark:via-slate-900 dark:to-amber-900/20 active:opacity-80"
               >
                 {url ? (
@@ -1223,6 +1246,44 @@ const ScrapbookHomeHybrid = ({
                 <div className="mx-5 h-0.5 rounded-full bg-violet-400 dark:bg-violet-500" />
               )}
             </div>
+          </div>
+        </div>
+      )}
+      {openMemoryCollagePhoto && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setOpenMemoryCollagePhoto(null)}
+        >
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setOpenMemoryCollagePhoto(null);
+            }}
+            className="absolute right-4 top-[max(1rem,calc(env(safe-area-inset-top)+0.5rem))] rounded-full bg-black/45 p-2 text-white transition-colors hover:bg-black/65"
+            aria-label="Close memory photo"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <div
+            className="w-full max-w-5xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <img
+              src={openMemoryCollagePhoto.url}
+              alt={openMemoryCollagePhoto.title || 'Memory photo'}
+              className="max-h-[82vh] w-full rounded-[28px] object-contain"
+            />
+            {(openMemoryCollagePhoto.title || openMemoryCollagePhoto.date) && (
+              <div className="mt-3 text-center text-white">
+                {openMemoryCollagePhoto.title ? (
+                  <div className="text-base font-semibold">{openMemoryCollagePhoto.title}</div>
+                ) : null}
+                {openMemoryCollagePhoto.date ? (
+                  <div className="mt-1 text-sm text-white/70">{formatDisplayDate(openMemoryCollagePhoto.date)}</div>
+                ) : null}
+              </div>
+            )}
           </div>
         </div>
       )}

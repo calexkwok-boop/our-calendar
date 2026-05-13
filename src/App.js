@@ -520,8 +520,8 @@ const hydrateR2TripPhotoDisplayUrls = async (photos = []) => {
   const uniquePaths = Array.from(new Set(
     safePhotos.flatMap((photo) => [
       getR2TripPhotoStorageLocation(photo?.thumbnail_url)?.path,
-      getR2TripPhotoStorageLocation(photo?.medium_url)?.path,
-      getR2TripPhotoStorageLocation(photo?.url)?.path,
+      getR2TripPhotoStorageLocation(photo?.medium_url)?.path
+        || getR2TripPhotoStorageLocation(photo?.url)?.path,
     ].filter(Boolean))
   ));
   if (!uniquePaths.length) return safePhotos;
@@ -534,13 +534,14 @@ const hydrateR2TripPhotoDisplayUrls = async (photos = []) => {
     );
     return safePhotos.map((photo) => {
       const thumbnailPath = getR2TripPhotoStorageLocation(photo?.thumbnail_url)?.path;
-      const mediumPath = getR2TripPhotoStorageLocation(photo?.medium_url)?.path;
-      const mainPath = getR2TripPhotoStorageLocation(photo?.url)?.path;
+      const mediumPath = getR2TripPhotoStorageLocation(photo?.medium_url)?.path
+        || getR2TripPhotoStorageLocation(photo?.url)?.path;
+      const mediumReadUrl = (mediumPath && readUrlByPath.get(mediumPath)) || '';
       return {
         ...photo,
         resolved_thumbnail_url: (thumbnailPath && readUrlByPath.get(thumbnailPath)) || '',
-        resolved_medium_url: (mediumPath && readUrlByPath.get(mediumPath)) || '',
-        resolved_url: (mainPath && readUrlByPath.get(mainPath)) || '',
+        resolved_medium_url: mediumReadUrl,
+        resolved_url: mediumReadUrl,
       };
     });
   } catch (error) {
@@ -754,7 +755,7 @@ const getTripPhotoThumbnailUrl = (photo) => String(
       return localPreviewUrl;
     }
     if (isR2Photo) {
-      return mediumUrl || mainUrl || originalUrl || thumbnailUrl || '';
+      return thumbnailUrl || mediumUrl || mainUrl || originalUrl || '';
     }
     return thumbnailUrl || mediumUrl || mainUrl || originalUrl || '';
   })()
@@ -3678,6 +3679,7 @@ function App() {
   const [tripKomoTouchDrag, setTripKomoTouchDrag] = useState(null);
   const [tripKomoTouchHoldActive, setTripKomoTouchHoldActive] = useState(false);
   const [tripKomoNativeDragActive, setTripKomoNativeDragActive] = useState(false);
+  const [tripKomoDragTargetKey, setTripKomoDragTargetKey] = useState('');
   const [flippedKomoCardId, setFlippedKomoCardId] = useState(null);
   const [showAddDreamSheet, setShowAddDreamSheet] = useState(false);
   const [makeItHappenItem, setMakeItHappenItem] = useState(null);
@@ -3761,6 +3763,7 @@ function App() {
   const tripItineraryTouchEndHandlerRef = useRef(null);
   const tripItineraryDragTargetKeyRef = useRef('');
   const tripItineraryDragPayloadRef = useRef(null);
+  const tripKomoDragPayloadRef = useRef(null);
   const tripKomoTouchScrollRafRef = useRef(null);
   const tripKomoAutoScrollXRef = useRef(null);
   const tripKomoAutoScrollYRef = useRef(null);
@@ -34722,7 +34725,7 @@ transform: translateY(0);
           const handleKomoDrop = (event, dateKey, slotKey, insertBeforePlacementId = null) => {
             event.preventDefault();
             try {
-              const payload = JSON.parse(event.dataTransfer.getData('application/json') || '{}');
+              const payload = getTripKomoDragPayload(event);
               if (payload?.type === 'komo-source') {
                 addKomoCardToSlot(payload.card, dateKey, slotKey, null, insertBeforePlacementId);
               }
@@ -34741,6 +34744,8 @@ transform: translateY(0);
               }
             } catch {}
             setTripKomoNativeDragActive(false);
+            setTripKomoDragTargetKey('');
+            tripKomoDragPayloadRef.current = null;
           };
           const beginKomoTouchDrag = (touchEvent, payload) => {
             const touch = touchEvent.touches?.[0];
@@ -35011,6 +35016,16 @@ transform: translateY(0);
             const rect = targetElement.getBoundingClientRect();
             return clientY < rect.top + (rect.height / 2) ? timelineIndex : timelineIndex + 1;
           };
+          const getTripKomoDragPayload = (dragEvent = null) => {
+            let payload = tripKomoDragPayloadRef.current;
+            if (payload?.type === 'komo-source' || payload?.type === 'komo-slot') return payload;
+            try {
+              payload = JSON.parse(dragEvent?.dataTransfer?.getData?.('application/json') || '{}');
+            } catch {
+              payload = null;
+            }
+            return payload?.type === 'komo-source' || payload?.type === 'komo-slot' ? payload : null;
+          };
           const getTripItineraryDragPayload = () => {
             const payload = tripItineraryDragPayloadRef.current;
             if (payload?.type !== 'trip-itinerary-event') return null;
@@ -35047,18 +35062,63 @@ transform: translateY(0);
             return null;
           };
           const handleKomoTimelineItemDrop = (event, section, targetIndex) => {
-            let payload = null;
-            try {
-              payload = JSON.parse(event.dataTransfer.getData('application/json') || '{}');
-            } catch {
-              payload = null;
-            }
+            const payload = getTripKomoDragPayload(event);
             if (!payload || (payload.type !== 'komo-source' && payload.type !== 'komo-slot')) return false;
             const movingPlacementId = String(payload?.card?.placementId || '').trim();
             const insertBeforePlacementId = getKomoInsertBeforePlacementId(section, targetIndex, movingPlacementId);
             event.stopPropagation();
             handleKomoDrop(event, dk, section.key, insertBeforePlacementId);
             return true;
+          };
+          const handleKomoTimelineItemDragOver = (event, section, timelineIndex) => {
+            const payload = getTripKomoDragPayload(event);
+            if (!payload) return false;
+            const targetIndex = getTripEventDropIndexForItem(event.currentTarget, timelineIndex, event.clientY);
+            event.preventDefault();
+            event.stopPropagation();
+            event.dataTransfer.dropEffect = payload.type === 'komo-slot' ? 'move' : 'copy';
+            const dropKey = `${dk}:${section.key}:${targetIndex}`;
+            if (tripKomoDragTargetKey !== dropKey) setTripKomoDragTargetKey(dropKey);
+            return true;
+          };
+          const handleKomoTimelineItemDropFromPointer = (event, section, timelineIndex) => {
+            const payload = getTripKomoDragPayload(event);
+            if (!payload) return false;
+            const targetIndex = getTripEventDropIndexForItem(event.currentTarget, timelineIndex, event.clientY);
+            handleKomoTimelineItemDrop(event, section, targetIndex);
+            return true;
+          };
+          const renderKomoDropZone = (section, targetIndex) => {
+            if (!tripKomoNativeDragActive && tripKomoDragTargetKey !== `${dk}:${section.key}:${targetIndex}`) return null;
+            const dropKey = `${dk}:${section.key}:${targetIndex}`;
+            const isActive = tripKomoDragTargetKey === dropKey;
+            return (
+              <div
+                key={`komo-drop-${dropKey}`}
+                onDragOver={(event) => {
+                  const payload = getTripKomoDragPayload(event);
+                  if (!payload) return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  event.dataTransfer.dropEffect = payload.type === 'komo-slot' ? 'move' : 'copy';
+                  if (tripKomoDragTargetKey !== dropKey) setTripKomoDragTargetKey(dropKey);
+                }}
+                onDragEnter={(event) => {
+                  const payload = getTripKomoDragPayload(event);
+                  if (!payload) return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  if (tripKomoDragTargetKey !== dropKey) setTripKomoDragTargetKey(dropKey);
+                }}
+                onDragLeave={() => {
+                  if (tripKomoDragTargetKey === dropKey) setTripKomoDragTargetKey('');
+                }}
+                onDrop={(event) => handleKomoTimelineItemDrop(event, section, targetIndex)}
+                className={`transition-all ${isActive ? 'h-6' : 'h-3'}`}
+              >
+                <div className={`mx-auto h-full rounded-full border border-dashed ${isActive ? 'border-emerald-400/85 bg-emerald-100/70 dark:border-emerald-300/80 dark:bg-emerald-500/15' : 'border-transparent bg-transparent'}`} />
+              </div>
+            );
           };
           const renderTripSlotCard = (card, section, timelineIndex) => (
             <div
@@ -35068,25 +35128,30 @@ transform: translateY(0);
               data-trip-sort-item-index={timelineIndex}
               onDragOver={(event) => {
                 if (handleTripItineraryItemDragOver(event, section, timelineIndex)) return;
-                event.preventDefault();
-                event.stopPropagation();
-                event.dataTransfer.dropEffect = 'move';
+                if (handleKomoTimelineItemDragOver(event, section, timelineIndex)) return;
               }}
               onDrop={(event) => {
                 if (handleTripItineraryItemDrop(event, section, timelineIndex)) return;
-                handleKomoTimelineItemDrop(event, section, timelineIndex);
+                handleKomoTimelineItemDropFromPointer(event, section, timelineIndex);
               }}
               draggable={flippedKomoCardId !== card.placementId}
               onDragStart={flippedKomoCardId !== card.placementId ? (event) => {
-                setTripKomoNativeDragActive(true);
-                event.dataTransfer.setData('application/json', JSON.stringify({
+                const payload = {
                   type: 'komo-slot',
                   card,
                   from: { dateKey: dk, slotKey: section.key },
-                }));
+                };
+                setTripKomoNativeDragActive(true);
+                setTripKomoDragTargetKey('');
+                tripKomoDragPayloadRef.current = payload;
+                event.dataTransfer.setData('application/json', JSON.stringify(payload));
                 event.dataTransfer.effectAllowed = 'move';
               } : undefined}
-              onDragEnd={() => setTripKomoNativeDragActive(false)}
+              onDragEnd={() => {
+                setTripKomoNativeDragActive(false);
+                setTripKomoDragTargetKey('');
+                tripKomoDragPayloadRef.current = null;
+              }}
               onTouchStart={flippedKomoCardId !== card.placementId ? (event) => beginKomoTouchDrag(event, {
                 card,
                 from: { dateKey: dk, slotKey: section.key },
@@ -35419,13 +35484,11 @@ transform: translateY(0);
                     draggable={subCalEditingEvent !== event.id}
                     onDragOver={subCalEditingEvent !== event.id ? (dragEvent) => {
                       if (handleTripItineraryItemDragOver(dragEvent, section, timelineIndex)) return;
-                      dragEvent.preventDefault();
-                      dragEvent.stopPropagation();
-                      dragEvent.dataTransfer.dropEffect = 'move';
+                      if (handleKomoTimelineItemDragOver(dragEvent, section, timelineIndex)) return;
                     } : undefined}
                     onDrop={subCalEditingEvent !== event.id ? (dragEvent) => {
                       if (handleTripItineraryItemDrop(dragEvent, section, timelineIndex)) return;
-                      handleKomoTimelineItemDrop(dragEvent, section, timelineIndex);
+                      handleKomoTimelineItemDropFromPointer(dragEvent, section, timelineIndex);
                     } : undefined}
                     onDragStart={subCalEditingEvent !== event.id ? (dragEvent) => {
                       const payload = {
@@ -35735,11 +35798,18 @@ transform: translateY(0);
                                 style={{ perspective: '600px' }}
                                 draggable={flippedKomoCardId !== card.id}
                                 onDragStart={flippedKomoCardId !== card.id ? (event) => {
+                                  const payload = { type: 'komo-source', card };
                                   setTripKomoNativeDragActive(true);
-                                  event.dataTransfer.setData('application/json', JSON.stringify({ type: 'komo-source', card }));
+                                  setTripKomoDragTargetKey('');
+                                  tripKomoDragPayloadRef.current = payload;
+                                  event.dataTransfer.setData('application/json', JSON.stringify(payload));
                                   event.dataTransfer.effectAllowed = 'copy';
                                 } : undefined}
-                                onDragEnd={() => setTripKomoNativeDragActive(false)}
+                                onDragEnd={() => {
+                                  setTripKomoNativeDragActive(false);
+                                  setTripKomoDragTargetKey('');
+                                  tripKomoDragPayloadRef.current = null;
+                                }}
                                 onTouchStart={flippedKomoCardId !== card.id ? (event) => beginKomoTouchDrag(event, { card, compact: true }) : undefined}
                               >
                                 <div
@@ -35790,11 +35860,18 @@ transform: translateY(0);
                       trip={activeSubCalendar}
                       darkMode={darkMode}
                       onDragStart={(e, card) => {
+                        const payload = { type: 'komo-source', card };
                         setTripKomoNativeDragActive(true);
-                        e.dataTransfer.setData('application/json', JSON.stringify({ type: 'komo-source', card }));
+                        setTripKomoDragTargetKey('');
+                        tripKomoDragPayloadRef.current = payload;
+                        e.dataTransfer.setData('application/json', JSON.stringify(payload));
                         e.dataTransfer.effectAllowed = 'copy';
                       }}
-                      onDragEnd={() => setTripKomoNativeDragActive(false)}
+                      onDragEnd={() => {
+                        setTripKomoNativeDragActive(false);
+                        setTripKomoDragTargetKey('');
+                        tripKomoDragPayloadRef.current = null;
+                      }}
                       onTouchStart={(e, card) => beginKomoTouchDrag(e, { card, compact: true })}
                     />
 
@@ -35869,8 +35946,14 @@ transform: translateY(0);
                               if (tripItineraryDragTargetKey !== dropKey) setTripItineraryDragTargetKey(dropKey);
                               return;
                             }
+                            const payload = getTripKomoDragPayload(event);
+                            if (!payload) return;
+                            const targetIndex = getTripEventDropIndexFromPointer(event.currentTarget, sectionTimelineItems.length, event.clientY);
                             event.preventDefault();
-                            event.dataTransfer.dropEffect = 'copy';
+                            event.stopPropagation();
+                            event.dataTransfer.dropEffect = payload.type === 'komo-slot' ? 'move' : 'copy';
+                            const dropKey = `${dk}:${section.key}:${targetIndex}`;
+                            if (tripKomoDragTargetKey !== dropKey) setTripKomoDragTargetKey(dropKey);
                           }}
                           onDrop={(event) => {
                             const itineraryPayload = tripItineraryDragPayloadRef.current;
@@ -35879,7 +35962,8 @@ transform: translateY(0);
                               handleTripEventDrop(event, section, targetIndex);
                               return;
                             }
-                            handleKomoDrop(event, dk, section.key);
+                            const targetIndex = getTripEventDropIndexFromPointer(event.currentTarget, sectionTimelineItems.length, event.clientY);
+                            handleKomoTimelineItemDrop(event, section, targetIndex);
                           }}
                           style={
                             tripKomoTouchDrag?.overDateKey === dk && tripKomoTouchDrag?.overSlotKey === section.key
@@ -35892,10 +35976,12 @@ transform: translateY(0);
                         >
                           {sectionTimelineItems.length > 0 ? (
                             <div className="space-y-2">
+                              {renderKomoDropZone(section, 0)}
                               {renderTripEventDropZone(section, 0)}
                               {sectionTimelineItems.map((item, index) => (
                                 <React.Fragment key={item.id}>
                                   {item.kind === 'card' ? renderTripSlotCard(item.card, section, index) : renderPlanCard(item.event, section, index)}
+                                  {renderKomoDropZone(section, index + 1)}
                                   {renderTripEventDropZone(section, index + 1)}
                                 </React.Fragment>
                               ))}
