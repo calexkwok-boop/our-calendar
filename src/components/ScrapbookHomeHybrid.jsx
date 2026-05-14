@@ -329,12 +329,8 @@ const ScrapbookHomeHybrid = ({
   React.useEffect(() => {
     const nextUrl = String(displayMoment?.photoUrl || cachedMoment?.url || '').trim();
     if (!nextUrl) {
-      setReadyMomentPhotoUrl('');
+      setReadyMomentPhotoUrl((prev) => (prev ? '' : prev));
       setIsMomentPhotoReady(false);
-      return;
-    }
-    if (nextUrl === readyMomentPhotoUrl) {
-      setIsMomentPhotoReady(true);
       return;
     }
     setIsMomentPhotoReady(false);
@@ -343,12 +339,12 @@ const ScrapbookHomeHybrid = ({
     img.decoding = 'async';
     img.onload = () => {
       if (cancelled) return;
-      setReadyMomentPhotoUrl(nextUrl);
+      setReadyMomentPhotoUrl((prev) => (prev === nextUrl ? prev : nextUrl));
       setIsMomentPhotoReady(true);
     };
     img.onerror = () => {
       if (cancelled) return;
-      setReadyMomentPhotoUrl(nextUrl);
+      setReadyMomentPhotoUrl((prev) => (prev === nextUrl ? prev : nextUrl));
       setIsMomentPhotoReady(true);
     };
     img.src = nextUrl;
@@ -357,7 +353,7 @@ const ScrapbookHomeHybrid = ({
       img.onload = null;
       img.onerror = null;
     };
-  }, [cachedMoment?.url, displayMoment?.photoUrl, readyMomentPhotoUrl]);
+  }, [cachedMoment?.url, displayMoment?.photoUrl]);
 
   React.useEffect(() => {
     const activeUrls = memoryCollageTiles.filter(Boolean);

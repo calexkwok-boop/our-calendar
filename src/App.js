@@ -35071,7 +35071,12 @@ transform: translateY(0);
             let payload = tripKomoDragPayloadRef.current;
             if (payload?.type === 'komo-source' || payload?.type === 'komo-slot') return payload;
             try {
-              payload = JSON.parse(dragEvent?.dataTransfer?.getData?.('application/json') || '{}');
+              const rawPayload = String(
+                dragEvent?.dataTransfer?.getData?.('application/json')
+                || dragEvent?.dataTransfer?.getData?.('text/plain')
+                || '{}'
+              ).trim();
+              payload = JSON.parse(rawPayload || '{}');
             } catch {
               payload = null;
             }
@@ -35192,10 +35197,12 @@ transform: translateY(0);
                   card,
                   from: { dateKey: dk, slotKey: section.key },
                 };
+                const serializedPayload = JSON.stringify(payload);
                 setTripKomoNativeDragActive(true);
                 setTripKomoDragTargetKey('');
                 tripKomoDragPayloadRef.current = payload;
-                event.dataTransfer.setData('application/json', JSON.stringify(payload));
+                event.dataTransfer.setData('application/json', serializedPayload);
+                event.dataTransfer.setData('text/plain', serializedPayload);
                 event.dataTransfer.effectAllowed = 'move';
               } : undefined}
               onDragEnd={() => {
@@ -35850,10 +35857,12 @@ transform: translateY(0);
                                 draggable={flippedKomoCardId !== card.id}
                                 onDragStart={flippedKomoCardId !== card.id ? (event) => {
                                   const payload = { type: 'komo-source', card };
+                                  const serializedPayload = JSON.stringify(payload);
                                   setTripKomoNativeDragActive(true);
                                   setTripKomoDragTargetKey('');
                                   tripKomoDragPayloadRef.current = payload;
-                                  event.dataTransfer.setData('application/json', JSON.stringify(payload));
+                                  event.dataTransfer.setData('application/json', serializedPayload);
+                                  event.dataTransfer.setData('text/plain', serializedPayload);
                                   event.dataTransfer.effectAllowed = 'copy';
                                 } : undefined}
                                 onDragEnd={() => {
@@ -35912,10 +35921,12 @@ transform: translateY(0);
                       darkMode={darkMode}
                       onDragStart={(e, card) => {
                         const payload = { type: 'komo-source', card };
+                        const serializedPayload = JSON.stringify(payload);
                         setTripKomoNativeDragActive(true);
                         setTripKomoDragTargetKey('');
                         tripKomoDragPayloadRef.current = payload;
-                        e.dataTransfer.setData('application/json', JSON.stringify(payload));
+                        e.dataTransfer.setData('application/json', serializedPayload);
+                        e.dataTransfer.setData('text/plain', serializedPayload);
                         e.dataTransfer.effectAllowed = 'copy';
                       }}
                       onDragEnd={() => {

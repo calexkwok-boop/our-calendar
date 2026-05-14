@@ -319,8 +319,10 @@ const MemorySystem = ({
   useEffect(() => {
     if (!selectedMemory?.id) return;
     const refreshed = (memories || []).find((memory) => String(memory?.id || '') === String(selectedMemory.id || ''));
-    if (refreshed) setSelectedMemory(refreshed);
-  }, [memories, selectedMemory]);
+    if (refreshed) {
+      setSelectedMemory((prev) => (prev === refreshed ? prev : refreshed));
+    }
+  }, [memories, selectedMemory?.id]);
   
   return (
     <div
