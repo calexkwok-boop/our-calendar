@@ -3925,6 +3925,7 @@ function App() {
   const subCalDateButtonRefs = useRef({});
   const tripHeaderActionStripRef = useRef(null);
   const subCalTabStripRef = useRef(null);
+  const tripItineraryScrollContainerRef = useRef(null);
 
   // Load group ratings for active trip when viewing Ratings tab (depends on subCalTab)
   useEffect(() => {
@@ -8974,26 +8975,29 @@ function App() {
           delta = Math.max(8, Math.round(maxStep * intensity));
         }
       }
-      if (delta !== 0) {
-        const pointerTarget = Number.isFinite(pointerX) && Number.isFinite(pointerY)
-          ? document.elementFromPoint(pointerX, pointerY)
-          : null;
-        let detectedContainer = findScrollableContainer(pointerTarget);
+        if (delta !== 0) {
+          const pointerTarget = Number.isFinite(pointerX) && Number.isFinite(pointerY)
+            ? document.elementFromPoint(pointerX, pointerY)
+            : null;
+          let detectedContainer = findScrollableContainer(pointerTarget);
         while (detectedContainer && !canScrollContainerInDirection(detectedContainer, delta)) {
           detectedContainer = findScrollableContainer(detectedContainer.parentElement);
         }
         if (detectedContainer) {
           tripKomoAutoScrollContainerRef.current = detectedContainer;
         }
-        const fallbackContainer = canScrollContainerInDirection(tripKomoAutoScrollContainerRef.current, delta)
-          ? tripKomoAutoScrollContainerRef.current
-          : null;
-        const scrollContainer = detectedContainer || fallbackContainer || null;
-        if (scrollContainer && canScrollContainerInDirection(scrollContainer, delta)) {
-          scrollContainer.scrollTop += delta;
-        } else {
-          window.scrollBy({ top: delta, behavior: 'auto' });
-        }
+          const fallbackContainer = canScrollContainerInDirection(tripKomoAutoScrollContainerRef.current, delta)
+            ? tripKomoAutoScrollContainerRef.current
+            : null;
+          const itineraryContainer = canScrollContainerInDirection(tripItineraryScrollContainerRef.current, delta)
+            ? tripItineraryScrollContainerRef.current
+            : null;
+          const scrollContainer = detectedContainer || fallbackContainer || itineraryContainer || null;
+          if (scrollContainer && canScrollContainerInDirection(scrollContainer, delta)) {
+            scrollContainer.scrollTop += delta;
+          } else {
+            window.scrollBy({ top: delta, behavior: 'auto' });
+          }
       }
       tripKomoTouchScrollRafRef.current = window.requestAnimationFrame(tick);
     };
@@ -34194,6 +34198,7 @@ transform: translateY(0);
         </div>
 
         <div
+          ref={tripItineraryScrollContainerRef}
           className="relative z-0 flex-1 overflow-y-auto"
           style={{
             WebkitOverflowScrolling: 'touch',
@@ -35018,6 +35023,7 @@ transform: translateY(0);
           const renderTripEventDropZone = (section, targetIndex) => {
             const dropKey = `${dk}:${section.key}:${targetIndex}`;
             const isActive = tripItineraryDragTargetKey === dropKey;
+            const isDragVisible = isActive || tripItineraryNativeDragActive || Boolean(tripItineraryTouchDrag?.eventId);
             return (
               <div
                 key={`drop-${dropKey}`}
@@ -35040,9 +35046,15 @@ transform: translateY(0);
                   if (tripItineraryDragTargetKey === dropKey) setTripItineraryDragTargetKey('');
                 }}
                 onDrop={(event) => handleTripEventDrop(event, section, targetIndex)}
-                className={`transition-all ${isActive ? 'h-6' : 'h-3'}`}
+                className={`transition-all ${isActive ? 'h-7' : isDragVisible ? 'h-5' : 'h-3'}`}
               >
-                <div className={`mx-auto h-full rounded-full border border-dashed ${isActive ? 'border-purple-400/80 bg-purple-100/60 dark:border-purple-300/70 dark:bg-purple-500/10' : 'border-transparent bg-transparent'}`} />
+                <div className={`mx-auto h-full rounded-full border border-dashed ${
+                  isActive
+                    ? 'border-purple-400/80 bg-purple-100/60 dark:border-purple-300/70 dark:bg-purple-500/10'
+                    : isDragVisible
+                      ? 'border-purple-200/75 bg-purple-50/55 dark:border-purple-400/30 dark:bg-purple-500/5'
+                      : 'border-transparent bg-transparent'
+                }`} />
               </div>
             );
           };
@@ -35170,9 +35182,10 @@ transform: translateY(0);
             return true;
           };
           const renderKomoDropZone = (section, targetIndex) => {
-            if (!tripKomoNativeDragActive && tripKomoDragTargetKey !== `${dk}:${section.key}:${targetIndex}`) return null;
             const dropKey = `${dk}:${section.key}:${targetIndex}`;
             const isActive = tripKomoDragTargetKey === dropKey;
+            const isDragVisible = isActive || tripKomoNativeDragActive || Boolean(tripKomoTouchDrag?.card);
+            if (!isDragVisible) return null;
             return (
               <div
                 key={`komo-drop-${dropKey}`}
@@ -35195,9 +35208,13 @@ transform: translateY(0);
                   if (tripKomoDragTargetKey === dropKey) setTripKomoDragTargetKey('');
                 }}
                 onDrop={(event) => handleKomoTimelineItemDrop(event, section, targetIndex)}
-                className={`transition-all ${isActive ? 'h-6' : 'h-3'}`}
+                className={`transition-all ${isActive ? 'h-7' : 'h-5'}`}
               >
-                <div className={`mx-auto h-full rounded-full border border-dashed ${isActive ? 'border-emerald-400/85 bg-emerald-100/70 dark:border-emerald-300/80 dark:bg-emerald-500/15' : 'border-transparent bg-transparent'}`} />
+                <div className={`mx-auto h-full rounded-full border border-dashed ${
+                  isActive
+                    ? 'border-emerald-400/85 bg-emerald-100/70 dark:border-emerald-300/80 dark:bg-emerald-500/15'
+                    : 'border-emerald-200/75 bg-emerald-50/55 dark:border-emerald-400/25 dark:bg-emerald-500/5'
+                }`} />
               </div>
             );
           };
