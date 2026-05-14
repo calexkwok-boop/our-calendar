@@ -35121,7 +35121,32 @@ transform: translateY(0);
             const payload = getTripKomoDragPayload(event);
             if (!payload || (payload.type !== 'komo-source' && payload.type !== 'komo-slot')) return false;
             const movingPlacementId = String(payload?.card?.placementId || '').trim();
-            const insertBeforePlacementId = getKomoInsertBeforePlacementId(section, targetIndex, movingPlacementId);
+            let normalizedTargetIndex = Math.max(0, Number(targetIndex) || 0);
+            if (
+              payload?.type === 'komo-slot'
+              && String(payload?.from?.dateKey || '') === dk
+              && String(payload?.from?.slotKey || '') === String(section?.key || '')
+              && movingPlacementId
+            ) {
+              const currentItems = getSectionTimelineItems(section);
+              const currentIndex = currentItems.findIndex((item) => (
+                item?.kind === 'card' && String(item?.placementId || '') === movingPlacementId
+              ));
+              if (currentIndex >= 0) {
+                if (normalizedTargetIndex > currentIndex) {
+                  normalizedTargetIndex -= 1;
+                }
+                if (normalizedTargetIndex === currentIndex) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setTripKomoNativeDragActive(false);
+                  setTripKomoDragTargetKey('');
+                  tripKomoDragPayloadRef.current = null;
+                  return true;
+                }
+              }
+            }
+            const insertBeforePlacementId = getKomoInsertBeforePlacementId(section, normalizedTargetIndex, movingPlacementId);
             event.stopPropagation();
             handleKomoDrop(event, dk, section.key, insertBeforePlacementId);
             return true;
