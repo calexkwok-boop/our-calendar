@@ -35081,7 +35081,7 @@ transform: translateY(0);
                 key={`mixed-drop-${dropKey}`}
                 data-trip-event-drop-key={dropKey}
                 onDragOver={(event) => {
-                  const itineraryPayload = tripItineraryDragPayloadRef.current;
+                  const itineraryPayload = getTripItineraryDragPayload(event);
                   if (itineraryPayload?.type === 'trip-itinerary-event' && String(itineraryPayload?.dateKey || '') === dk) {
                     event.preventDefault();
                     event.stopPropagation();
@@ -35097,7 +35097,7 @@ transform: translateY(0);
                   if (tripKomoDragTargetKey !== dropKey) setTripKomoDragTargetKey(dropKey);
                 }}
                 onDragEnter={(event) => {
-                  const itineraryPayload = tripItineraryDragPayloadRef.current;
+                  const itineraryPayload = getTripItineraryDragPayload(event);
                   if (itineraryPayload?.type === 'trip-itinerary-event' && String(itineraryPayload?.dateKey || '') === dk) {
                     event.preventDefault();
                     event.stopPropagation();
@@ -35115,7 +35115,7 @@ transform: translateY(0);
                   if (tripKomoDragTargetKey === dropKey) setTripKomoDragTargetKey('');
                 }}
                 onDrop={(event) => {
-                  const itineraryPayload = tripItineraryDragPayloadRef.current;
+                  const itineraryPayload = getTripItineraryDragPayload(event);
                   if (itineraryPayload?.type === 'trip-itinerary-event' && String(itineraryPayload?.dateKey || '') === dk) {
                     handleTripEventDrop(event, section, targetIndex);
                     return;
@@ -35172,14 +35172,26 @@ transform: translateY(0);
             }
             return payload?.type === 'komo-source' || payload?.type === 'komo-slot' ? payload : null;
           };
-          const getTripItineraryDragPayload = () => {
-            const payload = tripItineraryDragPayloadRef.current;
+          const getTripItineraryDragPayload = (dragEvent = null) => {
+            let payload = tripItineraryDragPayloadRef.current;
+            if (payload?.type !== 'trip-itinerary-event') {
+              try {
+                const rawPayload = String(
+                  dragEvent?.dataTransfer?.getData?.('application/json')
+                  || dragEvent?.dataTransfer?.getData?.('text/plain')
+                  || '{}'
+                ).trim();
+                payload = JSON.parse(rawPayload || '{}');
+              } catch {
+                payload = null;
+              }
+            }
             if (payload?.type !== 'trip-itinerary-event') return null;
             if (String(payload?.dateKey || '') !== dk) return null;
             return payload;
           };
           const handleTripItineraryItemDragOver = (event, section, timelineIndex) => {
-            const payload = getTripItineraryDragPayload();
+            const payload = getTripItineraryDragPayload(event);
             if (!payload) return false;
             const targetIndex = getTripEventDropIndexForItem(event.currentTarget, timelineIndex, event.clientY);
             event.preventDefault();
@@ -35190,7 +35202,7 @@ transform: translateY(0);
             return true;
           };
           const handleTripItineraryItemDrop = (event, section, timelineIndex) => {
-            const payload = getTripItineraryDragPayload();
+            const payload = getTripItineraryDragPayload(event);
             if (!payload) return false;
             const targetIndex = getTripEventDropIndexForItem(event.currentTarget, timelineIndex, event.clientY);
             handleTripEventDrop(event, section, targetIndex);
@@ -35676,11 +35688,13 @@ transform: translateY(0);
                         dateKey: dk,
                         sectionKey: getTripSectionKeyForEvent(event),
                       };
+                      const serializedPayload = JSON.stringify(payload);
                       setTripItineraryDraggingEventId(event.id);
                       setTripItineraryDragTargetKey('');
                       setTripItineraryNativeDragActive(true);
                       tripItineraryDragPayloadRef.current = payload;
-                      dragEvent.dataTransfer.setData('application/json', JSON.stringify(payload));
+                      dragEvent.dataTransfer.setData('application/json', serializedPayload);
+                      dragEvent.dataTransfer.setData('text/plain', serializedPayload);
                       dragEvent.dataTransfer.effectAllowed = 'move';
                     } : undefined}
                     onDragEnd={() => {
@@ -36118,7 +36132,7 @@ transform: translateY(0);
                           data-komo-date-key={dk}
                           data-trip-section-key={section.key}
                           onDragOver={(event) => {
-                            const itineraryPayload = tripItineraryDragPayloadRef.current;
+                            const itineraryPayload = getTripItineraryDragPayload(event);
                             if (itineraryPayload?.type === 'trip-itinerary-event') {
                               if (String(itineraryPayload?.dateKey || '') !== dk) return;
                               const targetIndex = getTripEventDropIndexFromPointer(event.currentTarget, sectionTimelineItems.length, event.clientY);
@@ -36139,7 +36153,7 @@ transform: translateY(0);
                             if (tripKomoDragTargetKey !== dropKey) setTripKomoDragTargetKey(dropKey);
                           }}
                           onDrop={(event) => {
-                            const itineraryPayload = tripItineraryDragPayloadRef.current;
+                            const itineraryPayload = getTripItineraryDragPayload(event);
                             if (itineraryPayload?.type === 'trip-itinerary-event') {
                               const targetIndex = getTripEventDropIndexFromPointer(event.currentTarget, sectionTimelineItems.length, event.clientY);
                               handleTripEventDrop(event, section, targetIndex);
