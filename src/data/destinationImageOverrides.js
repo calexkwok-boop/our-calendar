@@ -75,24 +75,45 @@ export const DESTINATION_IMAGE_OVERRIDES = {
   'queenstown': 'https://ik.imgkit.net/3vlqs5axxjf/TAW/ik-seo/uploadedImages/All_Gateways/ASPAC/Asia/Queenstown_Hero/5-Exceptional-Things-to-Do-in-Queenstown-New-Zeala.jpg?tr=w-1008%2Ch-567%2Cfo-auto',
   'everest-base-camp': 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Mount_Everest_Base_Camp.jpg/960px-Mount_Everest_Base_Camp.jpg',
   'norwegian-fjords': 'https://nordicventures.com/wp-content/uploads/2019/02/The-Norwegian-Fjords.jpg',
-  'the-gal-pagos-islands': 'https://en.wikipedia.org/wiki/File:Lobo_marino_(Zalophus_californianus_wollebaeki),_Punta_Pitt,_isla_de_San_Crist%C3%B3bal,_islas_Gal%C3%A1pagos,_Ecuador,_2015-07-24,_DD_11.JPG'
+  'the-galapagos-islands': 'https://commons.wikimedia.org/wiki/Special:FilePath/Lobo_marino_%28Zalophus_californianus_wollebaeki%29%2C_Punta_Pitt%2C_isla_de_San_Crist%C3%B3bal%2C_islas_Gal%C3%A1pagos%2C_Ecuador%2C_2015-07-24%2C_DD_11.JPG'
+};
+
+const DESTINATION_IMAGE_KEY_ALIASES = {
+  amazon: 'the-amazon',
+  'galapagos-islands': 'the-galapagos-islands',
+  'icefields-parkway': 'the-icefields-parkway',
+  'the-gal-pagos-islands': 'the-galapagos-islands',
+  'garden-route': 'the-garden-route'
+};
+
+const normalizeDestinationImageKey = (value = '') => String(value)
+  .trim()
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-|-$/g, '');
+
+const resolveDestinationImageKey = (value = '') => {
+  const key = normalizeDestinationImageKey(value);
+  if (!key) return '';
+  if (DESTINATION_IMAGE_OVERRIDES[key]) return key;
+  if (DESTINATION_IMAGE_KEY_ALIASES[key]) return DESTINATION_IMAGE_KEY_ALIASES[key];
+
+  const articleVariant = key.startsWith('the-') ? key.slice(4) : `the-${key}`;
+  if (DESTINATION_IMAGE_OVERRIDES[articleVariant]) return articleVariant;
+  return '';
 };
 
 export const getDestinationImageOverride = (destination = {}) => {
-  const id = String(destination?.id || '').trim();
-  if (id && DESTINATION_IMAGE_OVERRIDES[id]) return String(DESTINATION_IMAGE_OVERRIDES[id]).trim();
+  const idKey = resolveDestinationImageKey(destination?.id);
+  if (idKey) return String(DESTINATION_IMAGE_OVERRIDES[idKey]).trim();
 
-  const nameKey = String(
+  const nameKey = resolveDestinationImageKey(
     destination?.name
     || destination?.destination_name
     || destination?.cardTitle
     || destination?.title
     || ''
-  )
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
+  );
 
   if (nameKey && DESTINATION_IMAGE_OVERRIDES[nameKey]) return String(DESTINATION_IMAGE_OVERRIDES[nameKey]).trim();
   return '';
