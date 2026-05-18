@@ -104,9 +104,24 @@ const buildSupabaseTripPhotoPublicUrlFromPath = (value) => {
       return objectPath ? `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${objectPath}` : '';
     }
   }
+  return '';
+};
+
+const buildCurrentTripPhotoProviderUrlFromPath = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const normalizedRaw = raw.replace(/\\/g, '/').replace(/^\/+/, '');
+  if (!normalizedRaw) return '';
+  const objectPath = normalizeStorageObjectPath(normalizedRaw);
+  if (!objectPath) return '';
+  if (USE_R2_TRIP_PHOTO_STORAGE && R2_PUBLIC_BASE_URL) {
+    return `${R2_PUBLIC_BASE_URL}/${objectPath}`;
+  }
+  if (USE_FIREBASE_TRIP_PHOTO_STORAGE && FIREBASE_STORAGE_BUCKET) {
+    return `https://storage.googleapis.com/${FIREBASE_STORAGE_BUCKET}/${objectPath}`;
+  }
   if (/^(?:users?|photos?|trip-photos?|trips?)\//i.test(normalizedRaw) || /\/(?:main|thumb)\.(?:jpe?g|png|webp|heic|heif)$/i.test(normalizedRaw)) {
-    const objectPath = normalizeStorageObjectPath(normalizedRaw);
-    return objectPath ? `${SUPABASE_URL}/storage/v1/object/public/${TRIP_PHOTO_BUCKETS[0]}/${objectPath}` : '';
+    return SUPABASE_URL ? `${SUPABASE_URL}/storage/v1/object/public/${TRIP_PHOTO_BUCKETS[0]}/${objectPath}` : '';
   }
   return '';
 };
@@ -116,7 +131,7 @@ const normalizeTripPhotoUrl = (value) => {
   if (!raw) return '';
   if (/^(data:|blob:)/i.test(raw)) return raw;
   if (!/^[a-z]+:/i.test(raw) && !raw.startsWith('//')) {
-    const publicUrl = buildSupabaseTripPhotoPublicUrlFromPath(raw);
+    const publicUrl = buildSupabaseTripPhotoPublicUrlFromPath(raw) || buildCurrentTripPhotoProviderUrlFromPath(raw);
     if (publicUrl) return publicUrl;
   }
   try {
@@ -139,7 +154,7 @@ const normalizeTripPhotoUrl = (value) => {
       }
     }
     if (parsed.pathname) {
-      const publicUrl = buildSupabaseTripPhotoPublicUrlFromPath(parsed.pathname);
+      const publicUrl = buildSupabaseTripPhotoPublicUrlFromPath(parsed.pathname) || buildCurrentTripPhotoProviderUrlFromPath(parsed.pathname);
       if (publicUrl) return publicUrl;
     }
     if (parsed.pathname !== '/' && /\s/.test(parsed.pathname)) {
@@ -147,7 +162,7 @@ const normalizeTripPhotoUrl = (value) => {
     }
     return parsed.toString();
   } catch {
-    return buildSupabaseTripPhotoPublicUrlFromPath(raw) || encodeURI(raw);
+    return buildSupabaseTripPhotoPublicUrlFromPath(raw) || buildCurrentTripPhotoProviderUrlFromPath(raw) || encodeURI(raw);
   }
 };
 
