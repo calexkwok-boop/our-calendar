@@ -35219,6 +35219,24 @@ transform: translateY(0);
             }
             return null;
           };
+          const normalizeKomoTargetIndexForMove = (section, targetIndex, payload, movingPlacementId = '') => {
+            let normalizedTargetIndex = Math.max(0, Number(targetIndex) || 0);
+            if (
+              payload?.type === 'komo-slot'
+              && String(payload?.from?.dateKey || '') === dk
+              && String(payload?.from?.slotKey || '') === String(section?.key || '')
+              && movingPlacementId
+            ) {
+              const currentItems = getSectionTimelineItems(section);
+              const currentIndex = currentItems.findIndex((item) => (
+                item?.kind === 'card' && String(item?.placementId || '') === movingPlacementId
+              ));
+              if (currentIndex >= 0 && normalizedTargetIndex > currentIndex) {
+                normalizedTargetIndex -= 1;
+              }
+            }
+            return normalizedTargetIndex;
+          };
           const getKomoInsertBeforePlacementIdForItem = (section, timelineIndex, targetElement, clientY, movingPlacementId = '') => {
             const items = getSectionTimelineItems(section);
             const hoveredItem = items[timelineIndex] || null;
@@ -35243,7 +35261,7 @@ transform: translateY(0);
             const payload = getTripKomoDragPayload(event);
             if (!payload || (payload.type !== 'komo-source' && payload.type !== 'komo-slot')) return false;
             const movingPlacementId = String(payload?.card?.placementId || '').trim();
-            let normalizedTargetIndex = Math.max(0, Number(targetIndex) || 0);
+            let normalizedTargetIndex = normalizeKomoTargetIndexForMove(section, targetIndex, payload, movingPlacementId);
             if (
               payload?.type === 'komo-slot'
               && String(payload?.from?.dateKey || '') === dk
@@ -35281,13 +35299,9 @@ transform: translateY(0);
             event.stopPropagation();
             event.dataTransfer.dropEffect = payload.type === 'komo-slot' ? 'move' : 'copy';
             const movingPlacementId = String(payload?.card?.placementId || '').trim();
-            const insertBeforePlacementId = getKomoInsertBeforePlacementIdForItem(
-              section,
-              timelineIndex,
-              event.currentTarget,
-              event.clientY,
-              movingPlacementId
-            );
+            const rawTargetIndex = getTripEventDropIndexForItem(event.currentTarget, timelineIndex, event.clientY);
+            const normalizedTargetIndex = normalizeKomoTargetIndexForMove(section, rawTargetIndex, payload, movingPlacementId);
+            const insertBeforePlacementId = getKomoInsertBeforePlacementId(section, normalizedTargetIndex, movingPlacementId);
             const dropKey = `${dk}:${section.key}:${insertBeforePlacementId || '__end__'}`;
             if (tripKomoDragTargetKey !== dropKey) setTripKomoDragTargetKey(dropKey);
             return true;
@@ -35296,15 +35310,10 @@ transform: translateY(0);
             const payload = getTripKomoDragPayload(event);
             if (!payload) return false;
             const movingPlacementId = String(payload?.card?.placementId || '').trim();
-            const insertBeforePlacementId = getKomoInsertBeforePlacementIdForItem(
-              section,
-              timelineIndex,
-              event.currentTarget,
-              event.clientY,
-              movingPlacementId
-            );
-            const targetIndex = getTripEventDropIndexForItem(event.currentTarget, timelineIndex, event.clientY);
-            const nextTimelineOrder = getKomoTimelineOrderForTarget(section, targetIndex, movingPlacementId);
+            const rawTargetIndex = getTripEventDropIndexForItem(event.currentTarget, timelineIndex, event.clientY);
+            const normalizedTargetIndex = normalizeKomoTargetIndexForMove(section, rawTargetIndex, payload, movingPlacementId);
+            const insertBeforePlacementId = getKomoInsertBeforePlacementId(section, normalizedTargetIndex, movingPlacementId);
+            const nextTimelineOrder = getKomoTimelineOrderForTarget(section, normalizedTargetIndex, movingPlacementId);
             event.stopPropagation();
             handleKomoDrop(event, dk, section.key, insertBeforePlacementId, nextTimelineOrder);
             return true;

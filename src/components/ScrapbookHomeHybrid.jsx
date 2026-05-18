@@ -675,6 +675,7 @@ const ScrapbookHomeHybrid = ({
                           src={friend.photoUrl}
                           alt={friend.handle}
                           className="w-full h-full object-cover"
+                          loading="lazy"
                           decoding="async"
                         />
                       </div>

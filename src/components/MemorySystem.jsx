@@ -48,14 +48,57 @@ const toDirectStorageUrl = (url) => {
   return raw;
 };
 
-const getMemoryCoverUrl = (memory) => toDirectStorageUrl(String(
-  memory?.coverPhoto
-  || memory?.photos?.[0]?.url
-  || memory?.photos?.[0]?.photoUrl
-  || memory?.photoUrl
-  || memory?.photo_url
-  || ''
-).trim());
+const getMemoryPhotoUrl = (photo, preference = 'display') => {
+  if (!photo) return '';
+  const thumbnailUrl = String(
+    photo?.resolved_thumbnail_url
+    || photo?.thumbnail_url
+    || photo?.thumb_url
+    || photo?.local_thumbnail_preview_url
+    || ''
+  ).trim();
+  const mediumUrl = String(
+    photo?.resolved_medium_url
+    || photo?.medium_url
+    || photo?.resolved_url
+    || ''
+  ).trim();
+  const primaryUrl = String(
+    photo?.url
+    || photo?.photoUrl
+    || photo?.photo_url
+    || ''
+  ).trim();
+  const orderedCandidates = preference === 'thumbnail'
+    ? [thumbnailUrl, mediumUrl, primaryUrl]
+    : [mediumUrl, primaryUrl, thumbnailUrl];
+  return toDirectStorageUrl(orderedCandidates.find(Boolean) || '');
+};
+
+const getMemoryCoverUrl = (memory, preference = 'display') => {
+  const coverPhoto = String(memory?.coverPhoto || '').trim();
+  const matchingCoverPhoto = (memory?.photos || []).find((photo) => {
+    const candidates = [
+      photo?.url,
+      photo?.photoUrl,
+      photo?.photo_url,
+      photo?.medium_url,
+      photo?.resolved_medium_url,
+      photo?.thumbnail_url,
+      photo?.resolved_thumbnail_url,
+      photo?.thumb_url,
+    ].map((value) => String(value || '').trim()).filter(Boolean);
+    return coverPhoto && candidates.includes(coverPhoto);
+  });
+  return toDirectStorageUrl(String(
+    (matchingCoverPhoto && getMemoryPhotoUrl(matchingCoverPhoto, preference))
+    || coverPhoto
+    || getMemoryPhotoUrl(memory?.photos?.[0], preference)
+    || memory?.photoUrl
+    || memory?.photo_url
+    || ''
+  ).trim());
+};
 
 const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader();
@@ -167,7 +210,8 @@ const MemoryPlacesAutocomplete = ({ value, onSelect, placeholder, darkMode = fal
   const debounceRef = useRef(null);
 
   useEffect(() => {
-    setInput(value || '');
+    const nextValue = value || '';
+    setInput((prev) => (prev === nextValue ? prev : nextValue));
   }, [value]);
 
   useEffect(() => {
@@ -309,11 +353,11 @@ const MemorySystem = ({
   const [selectedMemory, setSelectedMemory] = useState(currentMemory);
 
   useEffect(() => {
-    setActiveView(view);
+    setActiveView((prev) => (prev === view ? prev : view));
   }, [view]);
 
   useEffect(() => {
-    setSelectedMemory(currentMemory);
+    setSelectedMemory((prev) => (prev === currentMemory ? prev : currentMemory));
   }, [currentMemory]);
 
   useEffect(() => {
@@ -612,7 +656,7 @@ const MemoryThumbnail = ({ memory, onClick, onToggleFavorite, onDelete, deleteRe
   const photoCount = memory.photos?.length || 0;
   const peopleCount = memory.taggedPeople?.length || 0;
   const reactionCount = memory.reactionCount || 0;
-  const coverPhoto = getMemoryCoverUrl(memory);
+  const coverPhoto = getMemoryCoverUrl(memory, 'thumbnail');
   const isFavorite = Boolean(memory?.isFavorite);
   const longPressTimerRef = useRef(null);
   const longPressFiredRef = useRef(false);
@@ -664,6 +708,8 @@ const MemoryThumbnail = ({ memory, onClick, onToggleFavorite, onDelete, deleteRe
         <img 
           src={coverPhoto} 
           alt={memory.title}
+          loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
         />
       ) : (
@@ -1289,7 +1335,7 @@ const MemoryPhotosStep = ({
         >
           <div
             className="h-56 w-full bg-cover bg-center"
-            style={{ backgroundImage: `url(${getMemoryCoverUrl(data)})` }}
+            style={{ backgroundImage: `url(${getMemoryCoverUrl(data, 'display')})` }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4">
@@ -1338,7 +1384,7 @@ const MemoryPhotosStep = ({
             {data.photos.map((photo, index) => (
               <div key={photo.id} className="relative group">
                 <img
-                  src={toDirectStorageUrl(photo.url)}
+                  src={getMemoryPhotoUrl(photo, 'thumbnail')}
                   alt={`Photo ${index + 1}`}
                   loading="lazy"
                   decoding="async"
@@ -1616,7 +1662,7 @@ const MemoryPreviewStep = ({ data, darkMode }) => {
         {/* Cover */}
         <div className="relative h-48">
           {getMemoryCoverUrl(data) ? (
-            <img src={getMemoryCoverUrl(data)} alt={data.title} className="w-full h-full object-cover" />
+            <img src={getMemoryCoverUrl(data, 'display')} alt={data.title} className="w-full h-full object-cover" loading="lazy" decoding="async" />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-rose-200 via-pink-100 to-rose-100 dark:from-rose-950 dark:via-slate-900 dark:to-stone-950" />
           )}
@@ -1687,8 +1733,10 @@ const MemoryPreviewStep = ({ data, darkMode }) => {
                 {data.photos.slice(0, 6).map((photo, idx) => (
                   <img
                     key={photo.id}
-                    src={toDirectStorageUrl(photo.url)}
+                    src={getMemoryPhotoUrl(photo, 'thumbnail')}
                     alt={`Photo ${idx + 1}`}
+                    loading="lazy"
+                    decoding="async"
                     className="aspect-square object-cover rounded-lg"
                   />
                 ))}
@@ -1944,7 +1992,7 @@ const CoverSlide = ({ memory }) => (
 
 const PhotoSlide = ({ photo }) => (
   <div className="w-full h-full relative flex items-center justify-center bg-black px-2 pt-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))] pb-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))]">
-    <img src={toDirectStorageUrl(photo.url)} alt={photo.caption} className="max-w-full max-h-full rounded-[28px] object-contain" />
+    <img src={getMemoryPhotoUrl(photo, 'display')} alt={photo.caption} className="max-w-full max-h-full rounded-[28px] object-contain" />
     <div className="pointer-events-none absolute inset-x-2 top-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))] h-20 rounded-t-[28px] bg-gradient-to-b from-black/50 via-black/18 to-transparent" />
     <div className="pointer-events-none absolute inset-x-2 bottom-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))] h-24 rounded-b-[28px] bg-gradient-to-t from-black/70 via-black/24 to-transparent" />
     {photo.caption && (
