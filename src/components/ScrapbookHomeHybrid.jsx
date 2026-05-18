@@ -800,7 +800,7 @@ const ScrapbookHomeHybrid = ({
         ) : (
         <button
           type="button"
-          onClick={tripSpotlight ? onOpenTripsTab : onStartTrip}
+          onClick={onOpenTripsTab}
           className="w-full rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-4 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
         >
           <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">

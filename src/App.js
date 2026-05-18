@@ -776,6 +776,7 @@ const normalizeTripPhotoRecord = (photo) => {
   );
   return {
     ...photo,
+    date: getTripPhotoDateKey(photo) || null,
     local_preview_url: localPreviewUrl,
     local_thumbnail_preview_url: localThumbnailPreviewUrl,
     original_url: normalizeTripPhotoUrl(photo?.original_url || normalizedUrl),
@@ -877,6 +878,23 @@ const getTripPhotoChronologicalValue = (photo, fallbackIndex = 0) => {
   const createdAt = Date.parse(String(photo?.created_at || photo?.createdAt || '').trim());
   if (Number.isFinite(createdAt) && createdAt > 0) return createdAt;
   return fallbackIndex;
+};
+
+const getTripPhotoDateKey = (photo) => {
+  const explicitDate = String(photo?.date || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(explicitDate)) return explicitDate;
+
+  const timestampCandidates = [
+    photo?.taken_at,
+    photo?.takenAt,
+    photo?.created_at,
+    photo?.createdAt,
+  ];
+  for (const candidate of timestampCandidates) {
+    const parsed = new Date(String(candidate || '').trim());
+    if (!Number.isNaN(parsed.getTime())) return getDateKey(parsed);
+  }
+  return '';
 };
 
 const sortTripPhotosChronologically = (photos = []) => (
