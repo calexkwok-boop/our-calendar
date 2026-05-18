@@ -1482,6 +1482,7 @@ export default function PopupEventPanel({
         const dedupedMembers = [];
         const seenSelfAliasByRole = new Set();
         const seenMemberIndexByUserId = new Map();
+        const duplicateMemberIdsToDelete = [];
         const rolePriority = { host: 4, cohost: 3, player: 2, guest: 1 };
         const membersSource = includeMembers
           ? (mems || [])
@@ -1511,7 +1512,12 @@ export default function PopupEventPanel({
               const existingRole = String(dedupedMembers[existingIndex]?.role || 'player').trim().toLowerCase();
               const nextRole = memberRole.toLowerCase();
               if ((rolePriority[nextRole] || 0) > (rolePriority[existingRole] || 0)) {
+                const existingId = String(dedupedMembers[existingIndex]?.id || '').trim();
+                if (isUuid(existingId)) duplicateMemberIdsToDelete.push(existingId);
                 dedupedMembers[existingIndex] = normalizedMember;
+              } else {
+                const duplicateId = String(member?.id || '').trim();
+                if (isUuid(duplicateId)) duplicateMemberIdsToDelete.push(duplicateId);
               }
               return;
             }
@@ -1519,6 +1525,14 @@ export default function PopupEventPanel({
           }
           dedupedMembers.push(normalizedMember);
         });
+        if (includeMembers && duplicateMemberIdsToDelete.length > 0) {
+          const uniqueDuplicateIds = Array.from(new Set(duplicateMemberIdsToDelete));
+          window.setTimeout(() => {
+            void Promise.all(uniqueDuplicateIds.map((memberId) => (
+              supabase.from('popup_event_members').delete().eq('id', memberId)
+            )));
+          }, 0);
+        }
         const memberList = [...dedupedMembers];
         const memberUserIds = new Set(memberList.map((m) => String(m.user_id || '')));
         (signups || []).forEach((s) => {
