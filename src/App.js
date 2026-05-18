@@ -3660,6 +3660,8 @@ function App() {
     date: new Date().toISOString().slice(0, 10),
     time: '',
     location: '',
+    inviteFriends: true,
+    weEventType: 'hangout',
   }));
   const [eventsTabVisibleLayerIdsInitialized, setEventsTabVisibleLayerIdsInitialized] = useState(false);
   const [popupFeatureAvailable, setPopupFeatureAvailable] = useState(true);
@@ -13338,6 +13340,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       date: getDateKey(new Date()),
       time: '',
       location: '',
+      inviteFriends: true,
+      weEventType: 'hangout',
     });
   }, []);
 

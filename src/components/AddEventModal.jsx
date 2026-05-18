@@ -67,10 +67,10 @@ const AddEventModal = ({
 }) => {
   const [errors, setErrors] = useState({});
   const [showCalendarPanel, setShowCalendarPanel] = useState(false);
-  const [showInvite, setShowInvite] = useState(false);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [copied, setCopied] = useState(false);
   const [locatingCurrent, setLocatingCurrent] = useState(false);
+  const showInvite = Boolean(formData.inviteFriends);
 
   const handleCopyLink = useCallback(async () => {
     if (!shareLink) return;
@@ -566,9 +566,7 @@ const AddEventModal = ({
               <button
                 type="button"
                 onClick={() => {
-                  const next = !showInvite;
-                  setShowInvite(next);
-                  setFormData((prev) => ({ ...prev, inviteFriends: next }));
+                  setFormData((prev) => ({ ...prev, inviteFriends: !Boolean(prev?.inviteFriends) }));
                 }}
                 className={`flex items-center gap-2 rounded-full border px-4 py-2 text-lg font-semibold transition-all ${
                   showInvite
