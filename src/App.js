@@ -34646,6 +34646,7 @@ transform: translateY(0);
             type: String(card.type || 'photo').trim(),
             rot: Number(card.rot || 0),
             time: String(card.time || '').trim(),
+            timelineOrder: Number.isFinite(Number(card.timelineOrder)) ? Number(card.timelineOrder) : null,
             notes: String(card.notes || ''),
             attachmentUrl: String(card.attachmentUrl || ''),
           });
@@ -34674,10 +34675,16 @@ transform: translateY(0);
             Array.isArray(tripKomo?.slots?.[dateKey]?.[slotKey]) ? tripKomo.slots[dateKey][slotKey] : []
           );
           const tripKomoSlotOptions = TRIP_DAY_SECTIONS.filter((section) => section.key !== 'anytime');
-          const addKomoCardToSlot = (card, dateKey, slotKey, moveFrom = null, insertBeforePlacementId = null) => {
-            const normalized = {
+          const addKomoCardToSlot = (card, dateKey, slotKey, moveFrom = null, insertBeforePlacementId = null, timelineOrderOverride = undefined) => {
+            const baseNormalized = {
               ...normalizeKomoCard(card),
               placementId: card.placementId || `komo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            };
+            const normalized = {
+              ...baseNormalized,
+              timelineOrder: Number.isFinite(Number(timelineOrderOverride))
+                ? Number(timelineOrderOverride)
+                : baseNormalized.timelineOrder,
             };
             if (
               moveFrom?.dateKey === dateKey &&
@@ -34715,20 +34722,16 @@ transform: translateY(0);
           };
           const moveKomoCardWithinSlot = (dateKey, slotKey, placementId, direction) => {
             if (!dateKey || !slotKey || !placementId || !direction) return;
-            updateTripKomo((current) => {
-              const slots = { ...(current.slots || {}) };
-              const day = { ...(slots[dateKey] || {}) };
-              const cards = Array.isArray(day[slotKey]) ? [...day[slotKey]] : [];
-              const index = cards.findIndex((item) => String(item?.placementId || '') === String(placementId || ''));
-              if (index < 0) return current;
-              const targetIndex = direction === 'up' ? index - 1 : index + 1;
-              if (targetIndex < 0 || targetIndex >= cards.length) return current;
-              const [moved] = cards.splice(index, 1);
-              cards.splice(targetIndex, 0, moved);
-              day[slotKey] = cards;
-              slots[dateKey] = day;
-              return { ...current, slots };
-            });
+            const section = groupedSections.find((entry) => String(entry?.key || '') === String(slotKey || ''));
+            if (!section) return;
+            const currentItems = getSectionTimelineItems(section);
+            const currentIndex = currentItems.findIndex((item) => (
+              item?.kind === 'card' && String(item?.placementId || '') === String(placementId || '')
+            ));
+            if (currentIndex < 0) return;
+            const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 2;
+            const nextOrder = getKomoTimelineOrderForTarget(section, targetIndex, placementId);
+            updateKomoCardField(dateKey, slotKey, placementId, { timelineOrder: nextOrder });
           };
           const updateKomoCardTime = (dateKey, slotKey, placementId, timeValue) => {
             if (!dateKey || !slotKey || !placementId) return;
@@ -34741,6 +34744,9 @@ transform: translateY(0);
               cards[index] = {
                 ...cards[index],
                 time: String(timeValue || '').trim(),
+                ...(String(timeValue || '').trim()
+                  ? { timelineOrder: getTripTimelineOrderFromTime(String(timeValue || '').trim()) }
+                  : {}),
               };
               day[slotKey] = cards;
               slots[dateKey] = day;
@@ -34778,12 +34784,12 @@ transform: translateY(0);
             updateKomoCardField(dateKey, slotKey, placementId, { notes: String(notes || '') });
           const updateKomoCardAttachment = (dateKey, slotKey, placementId, url) =>
             updateKomoCardField(dateKey, slotKey, placementId, { attachmentUrl: String(url || '') });
-          const handleKomoDrop = (event, dateKey, slotKey, insertBeforePlacementId = null) => {
+          const handleKomoDrop = (event, dateKey, slotKey, insertBeforePlacementId = null, timelineOrderOverride = undefined) => {
             event.preventDefault();
             try {
               const payload = getTripKomoDragPayload(event);
               if (payload?.type === 'komo-source') {
-                addKomoCardToSlot(payload.card, dateKey, slotKey, null, insertBeforePlacementId);
+                addKomoCardToSlot(payload.card, dateKey, slotKey, null, insertBeforePlacementId, timelineOrderOverride);
               }
               if (payload?.type === 'komo-slot') {
                 const movingPlacementId = String(payload?.card?.placementId || '').trim();
@@ -34793,9 +34799,9 @@ transform: translateY(0);
                   insertBeforePlacementId &&
                   movingPlacementId
                 ) {
-                  addKomoCardToSlot(payload.card, dateKey, slotKey, payload.from, insertBeforePlacementId);
+                  addKomoCardToSlot(payload.card, dateKey, slotKey, payload.from, insertBeforePlacementId, timelineOrderOverride);
                 } else {
-                  addKomoCardToSlot(payload.card, dateKey, slotKey, payload.from, insertBeforePlacementId);
+                  addKomoCardToSlot(payload.card, dateKey, slotKey, payload.from, insertBeforePlacementId, timelineOrderOverride);
                 }
               }
             } catch {}
@@ -34854,6 +34860,19 @@ transform: translateY(0);
             const activeDrag = tripKomoTouchDragRef.current;
             if (activeDrag?.card && activeDrag?.overDateKey && activeDrag?.overSlotKey) {
               const movingPlacementId = String(activeDrag?.card?.placementId || '').trim();
+              const targetSection = groupedSections.find((entry) => (
+                String(entry?.key || '') === String(activeDrag?.overSlotKey || '')
+              )) || null;
+              let nextTimelineOrder;
+              if (targetSection) {
+                const targetItems = getSectionTimelineItems(targetSection);
+                const overPlacementId = String(activeDrag?.overPlacementId || '').trim();
+                const hoveredIndex = targetItems.findIndex((item) => (
+                  item?.kind === 'card' && String(item?.placementId || '') === overPlacementId
+                ));
+                const targetIndex = hoveredIndex >= 0 ? hoveredIndex : targetItems.length;
+                nextTimelineOrder = getKomoTimelineOrderForTarget(targetSection, targetIndex, movingPlacementId);
+              }
               if (
                 activeDrag?.from?.dateKey === activeDrag.overDateKey &&
                 activeDrag?.from?.slotKey === activeDrag.overSlotKey &&
@@ -34866,6 +34885,7 @@ transform: translateY(0);
                   activeDrag.overSlotKey,
                   activeDrag.from || null,
                   activeDrag.overPlacementId,
+                  nextTimelineOrder,
                 );
               } else {
                 addKomoCardToSlot(
@@ -34874,6 +34894,7 @@ transform: translateY(0);
                   activeDrag.overSlotKey,
                   activeDrag.from || null,
                   activeDrag.overPlacementId || null,
+                  nextTimelineOrder,
                 );
               }
             }
@@ -34913,7 +34934,9 @@ transform: translateY(0);
               id: `card:${card.placementId}`,
               kind: 'card',
               placementId: String(card?.placementId || ''),
-              order: getTripTimelineOrderFromTime(card?.time) ?? getSectionFallbackOrder(section, index),
+              order: Number.isFinite(Number(card?.timelineOrder))
+                ? Number(card.timelineOrder)
+                : (getTripTimelineOrderFromTime(card?.time) ?? getSectionFallbackOrder(section, index)),
               card,
             }));
             const events = (section.events || [])
@@ -34937,6 +34960,21 @@ transform: translateY(0);
             const items = getSectionTimelineItems(section, draggingEventId);
             const previous = targetIndex > 0 ? items[targetIndex - 1] : null;
             const next = targetIndex < items.length ? items[targetIndex] : null;
+            const previousOrder = Number.isFinite(Number(previous?.order)) ? Number(previous.order) : null;
+            const nextOrder = Number.isFinite(Number(next?.order)) ? Number(next.order) : null;
+            if (previousOrder !== null && nextOrder !== null) {
+              return previousOrder < nextOrder ? previousOrder + ((nextOrder - previousOrder) / 2) : previousOrder + 1;
+            }
+            if (nextOrder !== null) return nextOrder - 1000;
+            if (previousOrder !== null) return previousOrder + 1000;
+            return getSectionFallbackOrder(section, 100);
+          };
+          const getKomoTimelineOrderForTarget = (section, targetIndex, movingPlacementId = '') => {
+            const items = getSectionTimelineItems(section)
+              .filter((item) => item.kind !== 'card' || String(item?.placementId || '') !== String(movingPlacementId || ''));
+            const normalizedTargetIndex = Math.max(0, Number(targetIndex) || 0);
+            const previous = normalizedTargetIndex > 0 ? items[normalizedTargetIndex - 1] : null;
+            const next = normalizedTargetIndex < items.length ? items[normalizedTargetIndex] : null;
             const previousOrder = Number.isFinite(Number(previous?.order)) ? Number(previous.order) : null;
             const nextOrder = Number.isFinite(Number(next?.order)) ? Number(next.order) : null;
             if (previousOrder !== null && nextOrder !== null) {
@@ -35219,8 +35257,9 @@ transform: translateY(0);
               }
             }
             const insertBeforePlacementId = getKomoInsertBeforePlacementId(section, normalizedTargetIndex, movingPlacementId);
+            const nextTimelineOrder = getKomoTimelineOrderForTarget(section, normalizedTargetIndex, movingPlacementId);
             event.stopPropagation();
-            handleKomoDrop(event, dk, section.key, insertBeforePlacementId);
+            handleKomoDrop(event, dk, section.key, insertBeforePlacementId, nextTimelineOrder);
             return true;
           };
           const handleKomoTimelineItemDragOver = (event, section, timelineIndex) => {
@@ -35252,8 +35291,10 @@ transform: translateY(0);
               event.clientY,
               movingPlacementId
             );
+            const targetIndex = getTripEventDropIndexForItem(event.currentTarget, timelineIndex, event.clientY);
+            const nextTimelineOrder = getKomoTimelineOrderForTarget(section, targetIndex, movingPlacementId);
             event.stopPropagation();
-            handleKomoDrop(event, dk, section.key, insertBeforePlacementId);
+            handleKomoDrop(event, dk, section.key, insertBeforePlacementId, nextTimelineOrder);
             return true;
           };
           const renderTripSlotCard = (card, section, timelineIndex) => (
