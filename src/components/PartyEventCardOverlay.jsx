@@ -107,20 +107,36 @@ export default function PartyEventCardOverlay({
 
       const list = [];
       const seenUserIds = new Set();
+      const seenMemberIndexByUserId = new Map();
+      const rolePriority = { host: 4, cohost: 3, player: 2, guest: 1 };
       const membersSource = includeMembers
         ? (mems || [])
         : (myMember ? [myMember] : []);
       (membersSource || []).forEach((member) => {
         const userId = String(member?.user_id || '').trim();
-        if (userId) seenUserIds.add(userId);
-        list.push({
+        const normalizedMember = {
           ...member,
           display_name: String(member?.display_name || '').trim() || 'Guest',
           photoUrl: memberPhotoUrl(member),
           photo_url: memberPhotoUrl(member),
           avatarUrl: memberPhotoUrl(member),
           avatar_url: memberPhotoUrl(member),
-        });
+        };
+        if (userId) {
+          const existingIndex = seenMemberIndexByUserId.get(userId);
+          if (typeof existingIndex === 'number') {
+            const existingRole = String(list[existingIndex]?.role || 'guest').trim().toLowerCase();
+            const nextRole = String(member?.role || 'guest').trim().toLowerCase();
+            if ((rolePriority[nextRole] || 0) > (rolePriority[existingRole] || 0)) {
+              list[existingIndex] = normalizedMember;
+            }
+            seenUserIds.add(userId);
+            return;
+          }
+          seenMemberIndexByUserId.set(userId, list.length);
+          seenUserIds.add(userId);
+        }
+        list.push(normalizedMember);
       });
 
       (signups || []).forEach((signup) => {
@@ -305,7 +321,7 @@ export default function PartyEventCardOverlay({
   };
 
   const handleJoin = async () => {
-    if (!event || isMember || isFull) return;
+    if (!event || isMember || isFull || isHost) return;
     if (!currentUserId) {
       setJoinError('Sign in to RSVP to this event.');
       return;

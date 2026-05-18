@@ -1481,6 +1481,8 @@ export default function PopupEventPanel({
         }
         const dedupedMembers = [];
         const seenSelfAliasByRole = new Set();
+        const seenMemberIndexByUserId = new Map();
+        const rolePriority = { host: 4, cohost: 3, player: 2, guest: 1 };
         const membersSource = includeMembers
           ? (mems || [])
           : (myMemberRow ? [myMemberRow] : []);
@@ -1495,14 +1497,27 @@ export default function PopupEventPanel({
             if (seenSelfAliasByRole.has(memberKey)) return;
             seenSelfAliasByRole.add(memberKey);
           }
-          dedupedMembers.push({
+          const normalizedMember = {
             ...member,
             display_name: normalizeOwnPopupLabel(memberName, memberUserId),
             photoUrl: resolvePopupMemberPhotoUrl(member),
             photo_url: resolvePopupMemberPhotoUrl(member),
             avatarUrl: resolvePopupMemberPhotoUrl(member),
             avatar_url: resolvePopupMemberPhotoUrl(member),
-          });
+          };
+          if (memberUserId) {
+            const existingIndex = seenMemberIndexByUserId.get(memberUserId);
+            if (typeof existingIndex === 'number') {
+              const existingRole = String(dedupedMembers[existingIndex]?.role || 'player').trim().toLowerCase();
+              const nextRole = memberRole.toLowerCase();
+              if ((rolePriority[nextRole] || 0) > (rolePriority[existingRole] || 0)) {
+                dedupedMembers[existingIndex] = normalizedMember;
+              }
+              return;
+            }
+            seenMemberIndexByUserId.set(memberUserId, dedupedMembers.length);
+          }
+          dedupedMembers.push(normalizedMember);
         });
         const memberList = [...dedupedMembers];
         const memberUserIds = new Set(memberList.map((m) => String(m.user_id || '')));
@@ -1595,7 +1610,7 @@ export default function PopupEventPanel({
   }, [event?.id, supabase, loadEvent]);
 
   const handleJoin = async () => {
-    if (!event || isMember || isFull) return;
+    if (!event || isMember || isFull || isEventCreator) return;
     if (!user?.id) {
       setJoinError('Sign in to RSVP to this event.');
       return;
@@ -1618,7 +1633,14 @@ export default function PopupEventPanel({
         .eq('user_id', user.id)
         .maybeSingle();
       if (existingError) throw existingError;
-      if (!existingSignup?.id) {
+      const { data: existingMember, error: existingMemberError } = await supabase
+        .from('popup_event_members')
+        .select('id')
+        .eq('event_id', event.id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (existingMemberError) throw existingMemberError;
+      if (!existingSignup?.id && !existingMember?.id) {
         const { error } = await supabase
           .from('popup_event_signups')
           .insert({
