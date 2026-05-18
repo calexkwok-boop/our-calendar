@@ -741,7 +741,14 @@ const normalizeTripPhotoRecord = (photo) => {
   if (!photo || typeof photo !== 'object') return photo;
   const localPreviewUrl = String(photo?.local_preview_url || '').trim();
   const localThumbnailPreviewUrl = String(photo?.local_thumbnail_preview_url || '').trim();
-  const normalizedUrl = normalizeTripPhotoUrl(photo?.url);
+  const normalizedUrl = normalizeTripPhotoUrl(
+    photo?.url
+    || photo?.medium_url
+    || photo?.original_url
+    || photo?.thumbnail_url
+    || photo?.thumb_url
+    || ''
+  );
   const transformedThumbUrl = buildTripPhotoTransformedUrl(normalizedUrl, {
     width: 480,
     height: 480,
@@ -37268,7 +37275,7 @@ transform: translateY(0);
                           const photoReactions = tripPhotoReactionsById[String(photo.id || '')] || {};
                           const hasPhotoReactions = Object.keys(photoReactions).length > 0;
                           const isPhotoReactionPickerOpen = tripPhotoReactionPickerId === String(photo.id || '');
-                          const previewUrl = getTripPhotoThumbnailUrl(photo);
+                          const previewUrl = getTripPhotoThumbnailUrl(photo) || getTripPhotoFallbackUrl(photo);
                           return (
                           <div
                             key={photo.id}
@@ -37400,7 +37407,7 @@ transform: translateY(0);
                           const isSelectedPhoto = selectedPhotoIds.includes(photo.id);
                           const photoReactions = tripPhotoReactionsById[String(photo.id || '')] || {};
                           const isPhotoReactionPickerOpen = tripPhotoReactionPickerId === String(photo.id || '');
-                          const displayUrl = getTripPhotoDisplayUrl(photo);
+                          const displayUrl = getTripPhotoDisplayUrl(photo) || getTripPhotoFallbackUrl(photo);
                           return (
                           <div
                             key={photo.id}
@@ -37520,7 +37527,7 @@ transform: translateY(0);
                         const photoReactions = tripPhotoReactionsById[String(photo.id || '')] || {};
                         const hasPhotoReactions = Object.keys(photoReactions).length > 0;
                         const isPhotoReactionPickerOpen = tripPhotoReactionPickerId === String(photo.id || '');
-                        const previewUrl = getTripPhotoThumbnailUrl(photo);
+                        const previewUrl = getTripPhotoThumbnailUrl(photo) || getTripPhotoFallbackUrl(photo);
                         return (
                         <div
                           key={photo.id}
