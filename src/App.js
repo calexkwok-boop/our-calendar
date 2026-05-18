@@ -37268,7 +37268,7 @@ transform: translateY(0);
                 {(() => {
                   const byDate = {};
                   tripPhotos.forEach(p => {
-                    const d = p.date || 'unlinked';
+                    const d = getTripPhotoDateKey(p) || 'unlinked';
                     if (!byDate[d]) byDate[d] = [];
                     byDate[d].push(p);
                   });
@@ -37391,7 +37391,7 @@ transform: translateY(0);
                 {(() => {
                   const byDate = {};
                   tripPhotos.forEach(p => {
-                    const d = p.date || 'unlinked';
+                    const d = getTripPhotoDateKey(p) || 'unlinked';
                     if (!byDate[d]) byDate[d] = [];
                     byDate[d].push(p);
                   });
