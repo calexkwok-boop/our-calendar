@@ -13475,6 +13475,130 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     events,
     resetHomeAddEventForm,
   ]);
+  const handleSubmitHomeAddEventOptional = React.useCallback(async () => {
+    if (!assertCanEditActiveLayer('add events to this calendar')) return;
+    const title = String(homeAddEventForm.title || '').trim();
+    const rawDateKey = String(homeAddEventForm.date || '').trim();
+    const rawTime = String(homeAddEventForm.time || '').trim();
+    const location = String(homeAddEventForm.location || '').trim();
+    if (!title || !rawDateKey) {
+      alert('Choose a date and what you are doing.');
+      return;
+    }
+
+    const dateMatch = rawDateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!dateMatch) {
+      alert('Enter the date as YYYY-MM-DD.');
+      return;
+    }
+
+    const dateKey = `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`;
+    let time = null;
+    if (rawTime) {
+      const timeMatch = rawTime.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+      if (!timeMatch) {
+        alert('Enter a valid time like 3:30 PM or 15:30.');
+        return;
+      }
+      let hours = Number(timeMatch[1] || 0);
+      const minutes = Number(timeMatch[2] || 0);
+      const period = String(timeMatch[3] || '').toLowerCase();
+      if (period === 'pm' && hours < 12) hours += 12;
+      if (period === 'am' && hours === 12) hours = 0;
+      if (hours > 23 || minutes > 59) {
+        alert('Enter a valid time like 3:30 PM or 15:30.');
+        return;
+      }
+      time = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
+
+    const [year, month, day] = dateKey.split('-').map((part) => Number(part));
+    const nextSelectedDate = new Date(year, (month || 1) - 1, day || 1);
+    const eventId = generateUuid();
+    const newEvent = {
+      id: eventId,
+      title,
+      time,
+      date: dateKey,
+      category: homeAddEventForm.inviteFriends ? (homeAddEventForm.weEventType || 'custom') : isPopupEventDraft ? 'popup_event' : (homeAddEventForm.category || 'other'),
+      description: null,
+      isPrivate: Boolean(homeAddEventForm.isPrivate),
+      isUrgent: Boolean(homeAddEventForm.isUrgent),
+      isAnnual: false,
+      recurrence: homeAddEventForm.recurrence || 'once',
+      annualMonth: null,
+      annualDay: null,
+      createdBy: currentUser,
+      createdAt: new Date().toISOString(),
+      isMultiDay: false,
+      multiDayId: null,
+      userId: user?.id || null,
+      layerId: activeLayerId,
+      layer_id: activeLayerId,
+      calendar_id: activeLayerId,
+      moderationStatus: defaultModerationStatusForNewEvent,
+      location,
+    };
+
+    const inviteFriends = Boolean(homeAddEventForm.inviteFriends);
+    const nextEvents = { ...(events || {}) };
+    const dayEvents = Array.isArray(nextEvents[dateKey]) ? [...nextEvents[dateKey]] : [];
+    dayEvents.push(newEvent);
+    nextEvents[dateKey] = dayEvents.sort((a, b) => {
+      if (!a.time) return 1;
+      if (!b.time) return -1;
+      return String(a.time).localeCompare(String(b.time));
+    });
+
+    setEvents(nextEvents);
+    setSelectedDate(nextSelectedDate);
+    setSelectedDates([]);
+    setShowHomeAddEventModal(false);
+    resetHomeAddEventForm();
+
+    if (inviteFriends || isPopupEventDraft) {
+      const shareLink = inviteFriends && typeof window !== 'undefined' ? `${window.location.origin}?popup=${eventId}` : '';
+      if (inviteFriends) {
+        try { navigator.clipboard.writeText(shareLink); } catch {}
+        setShareResultLink(shareLink);
+      }
+      const maxPeople = Math.max(1, parseInt(String(popupEventMaxPeopleDraft || '').trim(), 10) || 10);
+      saveEvents(nextEvents, { immediate: true });
+      createPopupEventRows([{
+        layer_id: activeLayerId,
+        event_id: eventId,
+        max_people: maxPeople,
+        created_by_user_id: user?.id || null,
+        created_by_name: currentUser || user?.email || user?.phone || 'Member',
+        created_at: new Date().toISOString(),
+      }]);
+      supabase.from('popup_event_details').insert({
+        id: eventId,
+        calendar_id: activeLayerId,
+        created_by: user?.id || null,
+        title,
+        date: dateKey,
+        time,
+        max_players: maxPeople,
+        is_public: !Boolean(homeAddEventForm.isPrivate),
+        event_data: inviteFriends ? {
+          category: newEvent.category,
+          popupSubtype: newEvent.category,
+        } : {},
+        status: 'open',
+      }).then(({ error }) => { if (error) console.error('popup_event_details insert error (home add):', error); });
+      return;
+    }
+
+    saveEvents(nextEvents, { immediate: true });
+  }, [
+    homeAddEventForm,
+    currentUser,
+    user?.id,
+    defaultModerationStatusForNewEvent,
+    events,
+    resetHomeAddEventForm,
+  ]);
   useEffect(() => { eventsRef.current = events; }, [events]);
   useEffect(() => {
     const handleUnload = () => {
@@ -24522,7 +24646,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }}
       formData={homeAddEventForm}
       setFormData={setHomeAddEventForm}
-      onSubmit={handleSubmitHomeAddEvent}
+      onSubmit={handleSubmitHomeAddEventOptional}
       shareLink={homeAddEventShareLink}
       PlacesAutocomplete={PlacesAutocomplete}
       darkMode={darkMode}
