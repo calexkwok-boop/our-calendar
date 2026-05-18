@@ -35020,40 +35020,80 @@ transform: translateY(0);
               itinerarySectionKey: String(sectionKey || '').trim() || null,
             });
           };
-          const renderTripEventDropZone = (section, targetIndex) => {
+          const renderMixedTimelineDropZone = (section, targetIndex) => {
             const dropKey = `${dk}:${section.key}:${targetIndex}`;
-            const isActive = tripItineraryDragTargetKey === dropKey;
-            const isDragVisible = isActive || tripItineraryNativeDragActive || Boolean(tripItineraryTouchDrag?.eventId);
+            const itineraryDragging = (
+              (tripItineraryDragPayloadRef.current?.type === 'trip-itinerary-event'
+                && String(tripItineraryDragPayloadRef.current?.dateKey || '') === dk)
+              || tripItineraryNativeDragActive
+              || Boolean(tripItineraryTouchDrag?.eventId)
+            );
+            const komoDragging = (
+              (tripKomoDragPayloadRef.current?.type === 'komo-source' || tripKomoDragPayloadRef.current?.type === 'komo-slot')
+              || tripKomoNativeDragActive
+              || Boolean(tripKomoTouchDrag?.card)
+            );
+            const isItineraryActive = tripItineraryDragTargetKey === dropKey;
+            const isKomoActive = tripKomoDragTargetKey === dropKey;
+            const isActive = isItineraryActive || isKomoActive;
+            const isVisible = isActive || itineraryDragging || komoDragging;
+            if (!isVisible) return null;
             return (
               <div
-                key={`drop-${dropKey}`}
+                key={`mixed-drop-${dropKey}`}
                 data-trip-event-drop-key={dropKey}
                 onDragOver={(event) => {
-                  const payload = tripItineraryDragPayloadRef.current;
-                  if (payload?.type !== 'trip-itinerary-event') return;
-                  if (String(payload?.dateKey || '') !== dk) return;
+                  const itineraryPayload = tripItineraryDragPayloadRef.current;
+                  if (itineraryPayload?.type === 'trip-itinerary-event' && String(itineraryPayload?.dateKey || '') === dk) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.dataTransfer.dropEffect = 'move';
+                    if (tripItineraryDragTargetKey !== dropKey) setTripItineraryDragTargetKey(dropKey);
+                    return;
+                  }
+                  const komoPayload = getTripKomoDragPayload(event);
+                  if (!komoPayload) return;
                   event.preventDefault();
                   event.stopPropagation();
-                  event.dataTransfer.dropEffect = 'move';
-                  if (tripItineraryDragTargetKey !== dropKey) setTripItineraryDragTargetKey(dropKey);
+                  event.dataTransfer.dropEffect = komoPayload.type === 'komo-slot' ? 'move' : 'copy';
+                  if (tripKomoDragTargetKey !== dropKey) setTripKomoDragTargetKey(dropKey);
                 }}
                 onDragEnter={(event) => {
+                  const itineraryPayload = tripItineraryDragPayloadRef.current;
+                  if (itineraryPayload?.type === 'trip-itinerary-event' && String(itineraryPayload?.dateKey || '') === dk) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (tripItineraryDragTargetKey !== dropKey) setTripItineraryDragTargetKey(dropKey);
+                    return;
+                  }
+                  const komoPayload = getTripKomoDragPayload(event);
+                  if (!komoPayload) return;
                   event.preventDefault();
                   event.stopPropagation();
-                  if (tripItineraryDragTargetKey !== dropKey) setTripItineraryDragTargetKey(dropKey);
+                  if (tripKomoDragTargetKey !== dropKey) setTripKomoDragTargetKey(dropKey);
                 }}
                 onDragLeave={() => {
                   if (tripItineraryDragTargetKey === dropKey) setTripItineraryDragTargetKey('');
+                  if (tripKomoDragTargetKey === dropKey) setTripKomoDragTargetKey('');
                 }}
-                onDrop={(event) => handleTripEventDrop(event, section, targetIndex)}
-                className={`transition-all ${isActive ? 'h-7' : isDragVisible ? 'h-5' : 'h-3'}`}
+                onDrop={(event) => {
+                  const itineraryPayload = tripItineraryDragPayloadRef.current;
+                  if (itineraryPayload?.type === 'trip-itinerary-event' && String(itineraryPayload?.dateKey || '') === dk) {
+                    handleTripEventDrop(event, section, targetIndex);
+                    return;
+                  }
+                  handleKomoTimelineItemDrop(event, section, targetIndex);
+                }}
+                className={`transition-all ${isActive ? 'h-7' : 'h-5'}`}
               >
                 <div className={`mx-auto h-full rounded-full border border-dashed ${
-                  isActive
+                  isItineraryActive
                     ? 'border-purple-400/80 bg-purple-100/60 dark:border-purple-300/70 dark:bg-purple-500/10'
-                    : isDragVisible
-                      ? 'border-purple-200/75 bg-purple-50/55 dark:border-purple-400/30 dark:bg-purple-500/5'
-                      : 'border-transparent bg-transparent'
+                    : isKomoActive
+                      ? 'border-emerald-400/85 bg-emerald-100/70 dark:border-emerald-300/80 dark:bg-emerald-500/15'
+                      : itineraryDragging
+                        ? 'border-purple-200/75 bg-purple-50/55 dark:border-purple-400/30 dark:bg-purple-500/5'
+                        : 'border-emerald-200/75 bg-emerald-50/55 dark:border-emerald-400/25 dark:bg-emerald-500/5'
                 }`} />
               </div>
             );
@@ -35129,6 +35169,26 @@ transform: translateY(0);
             }
             return null;
           };
+          const getKomoInsertBeforePlacementIdForItem = (section, timelineIndex, targetElement, clientY, movingPlacementId = '') => {
+            const items = getSectionTimelineItems(section);
+            const hoveredItem = items[timelineIndex] || null;
+            const insertIndex = getTripEventDropIndexForItem(targetElement, timelineIndex, clientY);
+            if (!hoveredItem) {
+              return getKomoInsertBeforePlacementId(section, insertIndex, movingPlacementId);
+            }
+            if (hoveredItem.kind === 'card') {
+              const hoveredPlacementId = String(hoveredItem?.placementId || '').trim();
+              if (insertIndex <= timelineIndex) {
+                return hoveredPlacementId || getKomoInsertBeforePlacementId(section, insertIndex, movingPlacementId);
+              }
+              return getKomoInsertBeforePlacementId(section, timelineIndex + 1, movingPlacementId);
+            }
+            return getKomoInsertBeforePlacementId(
+              section,
+              insertIndex <= timelineIndex ? timelineIndex : timelineIndex + 1,
+              movingPlacementId
+            );
+          };
           const handleKomoTimelineItemDrop = (event, section, targetIndex) => {
             const payload = getTripKomoDragPayload(event);
             if (!payload || (payload.type !== 'komo-source' && payload.type !== 'komo-slot')) return false;
@@ -35166,57 +35226,35 @@ transform: translateY(0);
           const handleKomoTimelineItemDragOver = (event, section, timelineIndex) => {
             const payload = getTripKomoDragPayload(event);
             if (!payload) return false;
-            const targetIndex = getTripEventDropIndexForItem(event.currentTarget, timelineIndex, event.clientY);
             event.preventDefault();
             event.stopPropagation();
             event.dataTransfer.dropEffect = payload.type === 'komo-slot' ? 'move' : 'copy';
-            const dropKey = `${dk}:${section.key}:${targetIndex}`;
+            const movingPlacementId = String(payload?.card?.placementId || '').trim();
+            const insertBeforePlacementId = getKomoInsertBeforePlacementIdForItem(
+              section,
+              timelineIndex,
+              event.currentTarget,
+              event.clientY,
+              movingPlacementId
+            );
+            const dropKey = `${dk}:${section.key}:${insertBeforePlacementId || '__end__'}`;
             if (tripKomoDragTargetKey !== dropKey) setTripKomoDragTargetKey(dropKey);
             return true;
           };
           const handleKomoTimelineItemDropFromPointer = (event, section, timelineIndex) => {
             const payload = getTripKomoDragPayload(event);
             if (!payload) return false;
-            const targetIndex = getTripEventDropIndexForItem(event.currentTarget, timelineIndex, event.clientY);
-            handleKomoTimelineItemDrop(event, section, targetIndex);
-            return true;
-          };
-          const renderKomoDropZone = (section, targetIndex) => {
-            const dropKey = `${dk}:${section.key}:${targetIndex}`;
-            const isActive = tripKomoDragTargetKey === dropKey;
-            const isDragVisible = isActive || tripKomoNativeDragActive || Boolean(tripKomoTouchDrag?.card);
-            if (!isDragVisible) return null;
-            return (
-              <div
-                key={`komo-drop-${dropKey}`}
-                onDragOver={(event) => {
-                  const payload = getTripKomoDragPayload(event);
-                  if (!payload) return;
-                  event.preventDefault();
-                  event.stopPropagation();
-                  event.dataTransfer.dropEffect = payload.type === 'komo-slot' ? 'move' : 'copy';
-                  if (tripKomoDragTargetKey !== dropKey) setTripKomoDragTargetKey(dropKey);
-                }}
-                onDragEnter={(event) => {
-                  const payload = getTripKomoDragPayload(event);
-                  if (!payload) return;
-                  event.preventDefault();
-                  event.stopPropagation();
-                  if (tripKomoDragTargetKey !== dropKey) setTripKomoDragTargetKey(dropKey);
-                }}
-                onDragLeave={() => {
-                  if (tripKomoDragTargetKey === dropKey) setTripKomoDragTargetKey('');
-                }}
-                onDrop={(event) => handleKomoTimelineItemDrop(event, section, targetIndex)}
-                className={`transition-all ${isActive ? 'h-7' : 'h-5'}`}
-              >
-                <div className={`mx-auto h-full rounded-full border border-dashed ${
-                  isActive
-                    ? 'border-emerald-400/85 bg-emerald-100/70 dark:border-emerald-300/80 dark:bg-emerald-500/15'
-                    : 'border-emerald-200/75 bg-emerald-50/55 dark:border-emerald-400/25 dark:bg-emerald-500/5'
-                }`} />
-              </div>
+            const movingPlacementId = String(payload?.card?.placementId || '').trim();
+            const insertBeforePlacementId = getKomoInsertBeforePlacementIdForItem(
+              section,
+              timelineIndex,
+              event.currentTarget,
+              event.clientY,
+              movingPlacementId
             );
+            event.stopPropagation();
+            handleKomoDrop(event, dk, section.key, insertBeforePlacementId);
+            return true;
           };
           const renderTripSlotCard = (card, section, timelineIndex) => (
             <div
@@ -36080,13 +36118,11 @@ transform: translateY(0);
                         >
                           {sectionTimelineItems.length > 0 ? (
                             <div className="space-y-2">
-                              {renderKomoDropZone(section, 0)}
-                              {renderTripEventDropZone(section, 0)}
+                              {renderMixedTimelineDropZone(section, 0)}
                               {sectionTimelineItems.map((item, index) => (
                                 <React.Fragment key={item.id}>
                                   {item.kind === 'card' ? renderTripSlotCard(item.card, section, index) : renderPlanCard(item.event, section, index)}
-                                  {renderKomoDropZone(section, index + 1)}
-                                  {renderTripEventDropZone(section, index + 1)}
+                                  {renderMixedTimelineDropZone(section, index + 1)}
                                 </React.Fragment>
                               ))}
                             </div>
