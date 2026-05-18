@@ -92,10 +92,33 @@ const normalizeStorageObjectPath = (value = '') => (
     .join('/')
 );
 
+const buildSupabaseTripPhotoPublicUrlFromPath = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw || !SUPABASE_URL) return '';
+  const normalizedRaw = raw.replace(/\\/g, '/').replace(/^\/+/, '');
+  if (!normalizedRaw) return '';
+  for (const bucket of TRIP_PHOTO_BUCKETS) {
+    if (normalizedRaw === bucket) continue;
+    if (normalizedRaw.startsWith(`${bucket}/`)) {
+      const objectPath = normalizeStorageObjectPath(normalizedRaw.slice(bucket.length + 1));
+      return objectPath ? `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${objectPath}` : '';
+    }
+  }
+  if (/^(?:users?|photos?|trip-photos?|trips?)\//i.test(normalizedRaw) || /\/(?:main|thumb)\.(?:jpe?g|png|webp|heic|heif)$/i.test(normalizedRaw)) {
+    const objectPath = normalizeStorageObjectPath(normalizedRaw);
+    return objectPath ? `${SUPABASE_URL}/storage/v1/object/public/${TRIP_PHOTO_BUCKETS[0]}/${objectPath}` : '';
+  }
+  return '';
+};
+
 const normalizeTripPhotoUrl = (value) => {
   const raw = String(value || '').trim();
   if (!raw) return '';
   if (/^(data:|blob:)/i.test(raw)) return raw;
+  if (!/^[a-z]+:/i.test(raw) && !raw.startsWith('//')) {
+    const publicUrl = buildSupabaseTripPhotoPublicUrlFromPath(raw);
+    if (publicUrl) return publicUrl;
+  }
   try {
     const parsed = new URL(raw, window?.location?.origin || 'http://localhost');
     const prefixes = [
@@ -103,6 +126,7 @@ const normalizeTripPhotoUrl = (value) => {
       '/storage/v1/object/sign/',
       '/object/public/',
       '/object/sign/',
+      '/storage/v1/render/image/public/',
     ];
     for (const bucket of TRIP_PHOTO_BUCKETS) {
       for (const prefix of prefixes) {
@@ -114,12 +138,16 @@ const normalizeTripPhotoUrl = (value) => {
         return `${origin}/storage/v1/object/public/${bucket}/${objectPath}`;
       }
     }
+    if (parsed.pathname) {
+      const publicUrl = buildSupabaseTripPhotoPublicUrlFromPath(parsed.pathname);
+      if (publicUrl) return publicUrl;
+    }
     if (parsed.pathname !== '/' && /\s/.test(parsed.pathname)) {
       return `${parsed.origin}${normalizeStorageObjectPath(parsed.pathname)}${parsed.search}${parsed.hash}`;
     }
     return parsed.toString();
   } catch {
-    return encodeURI(raw);
+    return buildSupabaseTripPhotoPublicUrlFromPath(raw) || encodeURI(raw);
   }
 };
 
@@ -772,6 +800,10 @@ const normalizeTripPhotoRecord = (photo) => {
     || photo?.original_url
     || photo?.thumbnail_url
     || photo?.thumb_url
+    || photo?.storage_path
+    || photo?.object_path
+    || photo?.file_path
+    || photo?.path
     || ''
   );
   const transformedThumbUrl = buildTripPhotoTransformedUrl(normalizedUrl, {
@@ -789,12 +821,14 @@ const normalizeTripPhotoRecord = (photo) => {
   const normalizedThumbnailUrl = normalizeTripPhotoUrl(
     photo?.thumbnail_url
     || photo?.thumb_url
+    || photo?.thumbnail_path
     || buildTripPhotoVariantUrl(normalizedUrl, 'thumb')
     || transformedThumbUrl
     || ''
   );
   const normalizedMediumUrl = normalizeTripPhotoUrl(
     photo?.medium_url
+    || photo?.medium_path
     || buildTripPhotoVariantUrl(normalizedUrl, 'main')
     || transformedMediumUrl
     || normalizedUrl
