@@ -800,6 +800,10 @@ const normalizeTripPhotoRecord = (photo) => {
     || photo?.original_url
     || photo?.thumbnail_url
     || photo?.thumb_url
+    || photo?.medium_path
+    || photo?.thumbnail_path
+    || photo?.main_path
+    || photo?.original_path
     || photo?.storage_path
     || photo?.object_path
     || photo?.file_path
@@ -822,6 +826,7 @@ const normalizeTripPhotoRecord = (photo) => {
     photo?.thumbnail_url
     || photo?.thumb_url
     || photo?.thumbnail_path
+    || photo?.thumb_path
     || buildTripPhotoVariantUrl(normalizedUrl, 'thumb')
     || transformedThumbUrl
     || ''
@@ -829,6 +834,7 @@ const normalizeTripPhotoRecord = (photo) => {
   const normalizedMediumUrl = normalizeTripPhotoUrl(
     photo?.medium_url
     || photo?.medium_path
+    || photo?.main_path
     || buildTripPhotoVariantUrl(normalizedUrl, 'main')
     || transformedMediumUrl
     || normalizedUrl
@@ -845,6 +851,14 @@ const normalizeTripPhotoRecord = (photo) => {
   };
 };
 
+const getNormalizedTripPhotoFieldUrl = (photo, fieldNames = []) => {
+  for (const fieldName of fieldNames) {
+    const normalized = normalizeTripPhotoUrl(photo?.[fieldName]);
+    if (normalized) return normalized;
+  }
+  return '';
+};
+
 const getTripPhotoThumbnailUrl = (photo) => String(
   (() => {
     const resolvedThumbnailUrl = String(photo?.resolved_thumbnail_url || '').trim();
@@ -854,10 +868,10 @@ const getTripPhotoThumbnailUrl = (photo) => String(
     if (resolvedThumbnailUrl || resolvedMediumUrl || resolvedMainUrl || resolvedOriginalUrl) {
       return resolvedThumbnailUrl || resolvedMediumUrl || resolvedMainUrl || resolvedOriginalUrl || '';
     }
-    const thumbnailUrl = String(photo?.thumbnail_url || photo?.thumb_url || '').trim();
-    const mediumUrl = String(photo?.medium_url || '').trim();
-    const mainUrl = String(photo?.url || '').trim();
-    const originalUrl = String(photo?.original_url || '').trim();
+    const thumbnailUrl = getNormalizedTripPhotoFieldUrl(photo, ['thumbnail_url', 'thumb_url', 'thumbnail_path', 'thumb_path']);
+    const mediumUrl = getNormalizedTripPhotoFieldUrl(photo, ['medium_url', 'medium_path', 'main_path', 'url', 'storage_path', 'object_path', 'file_path', 'path']);
+    const mainUrl = getNormalizedTripPhotoFieldUrl(photo, ['url', 'medium_url', 'medium_path', 'main_path', 'storage_path', 'object_path', 'file_path', 'path']);
+    const originalUrl = getNormalizedTripPhotoFieldUrl(photo, ['original_url', 'original_path', 'url', 'medium_url', 'storage_path', 'object_path', 'file_path', 'path']);
     const isR2Photo = Boolean(
       getR2TripPhotoStorageLocation(thumbnailUrl)
       || getR2TripPhotoStorageLocation(mediumUrl)
@@ -887,6 +901,7 @@ const getTripPhotoFallbackUrl = (photo) => String(
   || photo?.url
   || photo?.resolved_original_url
   || photo?.original_url
+  || getNormalizedTripPhotoFieldUrl(photo, ['medium_path', 'main_path', 'original_path', 'thumbnail_path', 'thumb_path', 'storage_path', 'object_path', 'file_path', 'path'])
   || ''
 ).trim();
 
@@ -898,6 +913,7 @@ const getTripPhotoDisplayUrl = (photo) => String(
   || photo?.url
   || photo?.resolved_original_url
   || photo?.original_url
+  || getNormalizedTripPhotoFieldUrl(photo, ['medium_path', 'main_path', 'original_path', 'thumbnail_path', 'thumb_path', 'storage_path', 'object_path', 'file_path', 'path'])
   || ''
 ).trim();
 
@@ -909,6 +925,7 @@ const getTripPhotoLightboxUrl = (photo) => String(
   || photo?.url
   || photo?.resolved_original_url
   || photo?.original_url
+  || getNormalizedTripPhotoFieldUrl(photo, ['medium_path', 'main_path', 'original_path', 'thumbnail_path', 'thumb_path', 'storage_path', 'object_path', 'file_path', 'path'])
   || ''
 ).trim();
 
@@ -920,6 +937,7 @@ const getTripPhotoDownloadUrl = (photo) => String(
   || photo?.thumbnail_url
   || photo?.resolved_original_url
   || photo?.original_url
+  || getNormalizedTripPhotoFieldUrl(photo, ['medium_path', 'main_path', 'original_path', 'thumbnail_path', 'thumb_path', 'storage_path', 'object_path', 'file_path', 'path'])
   || ''
 ).trim();
 
@@ -930,6 +948,7 @@ const getTripPhotoExportUrl = (photo) => String(
   || photo?.url
   || photo?.resolved_original_url
   || photo?.original_url
+  || getNormalizedTripPhotoFieldUrl(photo, ['medium_path', 'main_path', 'original_path', 'thumbnail_path', 'thumb_path', 'storage_path', 'object_path', 'file_path', 'path'])
   || ''
 ).trim();
 
@@ -34242,6 +34261,7 @@ transform: translateY(0);
                 <button
                   onClick={openTripHighlights}
                   className="rounded-full bg-purple-500/10 px-3 py-1.5 text-xs font-semibold text-purple-700 transition-colors hover:bg-purple-500/20 dark:text-purple-300"
+                  style={{ fontFamily: "'Caveat', cursive" }}
                 >
                   Highlights
                 </button>
@@ -34416,6 +34436,7 @@ transform: translateY(0);
               <button
                 onClick={openTripHighlights}
                 className="px-3 py-1.5 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-xs font-semibold hover:bg-purple-200 dark:hover:bg-purple-900/60 transition-colors"
+                style={{ fontFamily: "'Caveat', cursive" }}
               >
                 Highlights
               </button>
@@ -37266,6 +37287,7 @@ transform: translateY(0);
                       type="button"
                       onClick={openTripHighlights}
                       className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-600 via-fuchsia-500 to-indigo-500 px-3 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(124,58,237,0.24)] transition-transform hover:scale-[1.01]"
+                      style={{ fontFamily: "'Caveat', cursive" }}
                     >
                       Watch Highlight Reel
                     </button>
@@ -37274,6 +37296,7 @@ transform: translateY(0);
                     type="button"
                     onClick={openTripHighlightSelectionMode}
                     className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-600 via-fuchsia-500 to-indigo-500 px-3 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(124,58,237,0.24)] transition-transform hover:scale-[1.01]"
+                    style={{ fontFamily: "'Caveat', cursive" }}
                   >
                     {tripHighlightDefaultPhotoIds.length > 0 ? 'Edit Reel' : 'Create Reel'}
                   </button>
