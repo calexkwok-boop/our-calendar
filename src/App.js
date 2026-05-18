@@ -123,6 +123,31 @@ const normalizeTripPhotoUrl = (value) => {
   }
 };
 
+const formatDateKeyFromDate = (date) => {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
+const parseTripPhotoDateCandidate = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  const dateOnlyMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnlyMatch) {
+    return new Date(Number(dateOnlyMatch[1]), Number(dateOnlyMatch[2]) - 1, Number(dateOnlyMatch[3]));
+  }
+  const direct = new Date(raw);
+  if (!Number.isNaN(direct.getTime())) return direct;
+  const normalized = raw.replace(' ', 'T');
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(normalized);
+  if (!hasTimezone) {
+    const assumedUtc = new Date(`${normalized}Z`);
+    if (!Number.isNaN(assumedUtc.getTime())) return assumedUtc;
+  }
+  const fallback = new Date(normalized);
+  if (!Number.isNaN(fallback.getTime())) return fallback;
+  return null;
+};
+
 const normalizeProfilePhotoUrl = (value) => {
   const raw = String(value || '').trim();
   if (!raw) return '';
@@ -883,16 +908,22 @@ const getTripPhotoChronologicalValue = (photo, fallbackIndex = 0) => {
 const getTripPhotoDateKey = (photo) => {
   const explicitDate = String(photo?.date || '').trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(explicitDate)) return explicitDate;
+  if (explicitDate) {
+    const parsedExplicitDate = parseTripPhotoDateCandidate(explicitDate);
+    if (parsedExplicitDate) return formatDateKeyFromDate(parsedExplicitDate);
+  }
 
   const timestampCandidates = [
     photo?.taken_at,
     photo?.takenAt,
     photo?.created_at,
     photo?.createdAt,
+    photo?.timestamp,
+    photo?.uploaded_at,
   ];
   for (const candidate of timestampCandidates) {
-    const parsed = new Date(String(candidate || '').trim());
-    if (!Number.isNaN(parsed.getTime())) return getDateKey(parsed);
+    const parsed = parseTripPhotoDateCandidate(candidate);
+    if (parsed) return formatDateKeyFromDate(parsed);
   }
   return '';
 };
@@ -4078,6 +4109,21 @@ function App() {
     });
     return Object.values(grouped).sort((a, b) => a.label.localeCompare(b.label));
   }, [tripPhotos]);
+  const tripPhotoEventDateById = useMemo(() => {
+    const entries = {};
+    Object.entries(subCalendarEvents || {}).forEach(([dateKey, rows]) => {
+      (rows || []).forEach((event) => {
+        const eventId = String(event?.id || '').trim();
+        if (eventId && dateKey) entries[eventId] = dateKey;
+      });
+    });
+    return entries;
+  }, [subCalendarEvents]);
+  const resolveTripPhotoDateKey = useCallback((photo) => {
+    const directDateKey = getTripPhotoDateKey(photo);
+    if (directDateKey) return directDateKey;
+    return tripPhotoEventDateById[String(photo?.event_id || '').trim()] || '';
+  }, [tripPhotoEventDateById]);
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
   const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
   const CASHAPP_HANDLES_NOTE_TEXT = '__CASHAPP_HANDLES_V1__';
@@ -6020,7 +6066,7 @@ function App() {
     }).sort();
     const itineraryDateKeys = Object.keys(loadedEvents || {}).filter(Boolean).sort();
     const photoDateKeys = Array.from(new Set(
-      (loadedPhotos || []).map((photo) => String(photo?.date || '').trim()).filter(Boolean)
+      (loadedPhotos || []).map((photo) => resolveTripPhotoDateKey(photo)).filter(Boolean)
     )).sort();
     const selectedDateKey = storedDateWithinTrip
       ? storedDateKey
@@ -8326,7 +8372,7 @@ function App() {
     if (activeSubCalendar?.id !== sc?.id) return dates;
     const extraDateKeys = Array.from(new Set([
       ...Object.keys(subCalendarEvents || {}).filter(Boolean),
-      ...(tripPhotos || []).map((photo) => String(photo?.date || '').trim()).filter(Boolean),
+      ...(tripPhotos || []).map((photo) => resolveTripPhotoDateKey(photo)).filter(Boolean),
     ])).sort();
     const seen = new Set(dates.map((date) => getDateKey(date)));
     extraDateKeys.forEach((dateKey) => {
@@ -37268,7 +37314,7 @@ transform: translateY(0);
                 {(() => {
                   const byDate = {};
                   tripPhotos.forEach(p => {
-                    const d = getTripPhotoDateKey(p) || 'unlinked';
+                    const d = resolveTripPhotoDateKey(p) || 'unlinked';
                     if (!byDate[d]) byDate[d] = [];
                     byDate[d].push(p);
                   });
@@ -37391,7 +37437,7 @@ transform: translateY(0);
                 {(() => {
                   const byDate = {};
                   tripPhotos.forEach(p => {
-                    const d = getTripPhotoDateKey(p) || 'unlinked';
+                    const d = resolveTripPhotoDateKey(p) || 'unlinked';
                     if (!byDate[d]) byDate[d] = [];
                     byDate[d].push(p);
                   });
