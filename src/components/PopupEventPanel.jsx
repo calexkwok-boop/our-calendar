@@ -1120,7 +1120,6 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
         {locations.length > 0 && (
           <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {locations.map((loc) => {
-              const member = members.find((m) => m.user_id === loc.user_id);
               const isMe = loc.user_id === user?.id;
               return (
                 <div key={loc.user_id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700,
@@ -1439,15 +1438,52 @@ export default function PopupEventPanel({
   const memberByUserId = useMemo(() => new Map(
     (Array.isArray(members) ? members : []).map((member) => [String(member?.user_id || '').trim(), member])
   ), [members]);
-  const sortedMembers = useMemo(() => [...members].sort((a, b) => {
+  const effectiveMembers = useMemo(() => {
+    const rankValue = (role) => {
+      const normalizedRole = String(role || 'player').trim().toLowerCase();
+      if (normalizedRole === 'host') return 3;
+      if (normalizedRole === 'cohost') return 2;
+      return 1;
+    };
+    const byKey = new Map();
+    (Array.isArray(members) ? members : []).forEach((member) => {
+      const userId = String(member?.user_id || '').trim();
+      const displayName = String(member?.display_name || '').trim();
+      const normalizedName = displayName.toLowerCase();
+      const isCurrentUserLike = (
+        (userId && userId === String(user?.id || '').trim())
+        || (normalizedName && selfAliasSet.has(normalizedName))
+      );
+      const dedupeKey = isCurrentUserLike
+        ? '__current_user__'
+        : (userId ? `user:${userId}` : `name:${normalizedName}`);
+      const existing = byKey.get(dedupeKey);
+      if (!existing) {
+        byKey.set(dedupeKey, member);
+        return;
+      }
+      const existingRank = rankValue(existing?.role);
+      const nextRank = rankValue(member?.role);
+      const existingStructured = !existing?.is_manual && !existing?.is_signup;
+      const nextStructured = !member?.is_manual && !member?.is_signup;
+      if (nextRank > existingRank || (nextRank === existingRank && nextStructured && !existingStructured)) {
+        byKey.set(dedupeKey, member);
+      }
+    });
+    return Array.from(byKey.values());
+  }, [members, selfAliasSet, user?.id]);
+  const effectiveMemberByUserId = useMemo(() => new Map(
+    effectiveMembers.map((member) => [String(member?.user_id || '').trim(), member])
+  ), [effectiveMembers]);
+  const sortedMembers = useMemo(() => [...effectiveMembers].sort((a, b) => {
     const rank = (role) => (role === 'host' ? 0 : role === 'cohost' ? 1 : 2);
     const rankDelta = rank(a?.role) - rank(b?.role);
     if (rankDelta !== 0) return rankDelta;
     return String(a?.display_name || '').localeCompare(String(b?.display_name || ''));
-  }), [members]);
-  const hostMember = useMemo(() => members.find((m) => m.role === 'host') || null, [members]);
+  }), [effectiveMembers]);
+  const hostMember = useMemo(() => effectiveMembers.find((m) => m.role === 'host') || null, [effectiveMembers]);
   const cohostMembers = useMemo(() => sortedMembers.filter((m) => m.role === 'cohost'), [sortedMembers]);
-  const myMember = memberByUserId.get(String(user?.id || '').trim());
+  const myMember = effectiveMemberByUserId.get(String(user?.id || '').trim()) || memberByUserId.get(String(user?.id || '').trim());
   const creatorUserId = String(event?.created_by || event?.created_by_user_id || '').trim();
   const isEventCreator = Boolean(creatorUserId) && creatorUserId === String(user?.id || '').trim();
   const isHost = myMember?.role === 'host' || isEventCreator;
@@ -1455,7 +1491,7 @@ export default function PopupEventPanel({
   const isHostOrCohost = isHost || isCohost;
   const isMember = Boolean(myMember);
   const currentNoMax = Number(event?.max_players || 0) >= POPUP_NO_MAX_SENTINEL;
-  const isFull = event && !currentNoMax && members.length >= (event.max_players || 99);
+  const isFull = event && !currentNoMax && effectiveMembers.length >= (event.max_players || 99);
 
   useEffect(() => {
     setCapacityDraft(currentNoMax ? String(POPUP_NO_MAX_SENTINEL) : String(Math.max(1, Number(event?.max_players || 10))));
@@ -2364,7 +2400,7 @@ export default function PopupEventPanel({
     );
   }
 
-  const memberCount = members.length;
+  const memberCount = effectiveMembers.length;
   const eventId = String(event?.id || '').trim();
   const isLegacyInvalidEvent = !isUuid(eventId);
   const attendeeLabel = isSportsPopupEvent ? 'players' : 'guests';
@@ -2453,7 +2489,7 @@ export default function PopupEventPanel({
           darkMode={darkMode}
           border={border}
           softBg={softBg}
-          members={members}
+          members={effectiveMembers}
           embedded
         />
       );
@@ -2469,7 +2505,7 @@ export default function PopupEventPanel({
           darkMode={darkMode}
           border={border}
           softBg={softBg}
-          members={members}
+          members={effectiveMembers}
         />
       );
     }
@@ -2880,25 +2916,25 @@ export default function PopupEventPanel({
               )}
             </React.Fragment>
           ))}
-          {members.length === 0 && <div style={{ padding: '32px 20px', textAlign: 'center' }}><div style={{ fontSize: 32, marginBottom: 8 }}>{isSportsPopupEvent ? '🎾' : '👥'}</div><div style={{ fontSize: 14, fontWeight: 700, color: secondaryText }}>{isSportsPopupEvent ? 'No players yet' : 'No guests yet'}</div></div>}
+          {effectiveMembers.length === 0 && <div style={{ padding: '32px 20px', textAlign: 'center' }}><div style={{ fontSize: 32, marginBottom: 8 }}>{isSportsPopupEvent ? '🎾' : '👥'}</div><div style={{ fontSize: 14, fontWeight: 700, color: secondaryText }}>{isSportsPopupEvent ? 'No players yet' : 'No guests yet'}</div></div>}
         </div>
       )}
 
       {/* ── CHAT TAB ── */}
       {activeScreen === 'chat' && (
         <ChatRoom eventId={eventId} supabase={supabase} user={user} displayName={effectiveDisplayName}
-          accent={accent} darkMode={darkMode} border={border} softBg={softBg} members={members} />
+          accent={accent} darkMode={darkMode} border={border} softBg={softBg} members={effectiveMembers} />
       )}
 
       {/* ── MAP TAB ── */}
       {activeScreen === 'map' && (
         <LiveMap event={{ ...event, id: eventId }} supabase={supabase} user={user} displayName={displayName}
-          accent={accent} darkMode={darkMode} border={border} softBg={softBg} members={members} />
+          accent={accent} darkMode={darkMode} border={border} softBg={softBg} members={effectiveMembers} />
       )}
 
       {/* ── GAME TAB ── */}
       {isSportsPopupEvent && activeScreen === 'game' && (
-        <GameModeLauncher event={event} members={members} accent={accent} darkMode={darkMode}
+        <GameModeLauncher event={event} members={effectiveMembers} accent={accent} darkMode={darkMode}
           border={border} softBg={softBg} btnStyle={btnStyle} isHost={isHostOrCohost}
           onLaunchRoundRobin={onLaunchRoundRobin} onLaunchGauntlet={onLaunchGauntlet} onLaunchScramble={onLaunchScramble} />
       )}
