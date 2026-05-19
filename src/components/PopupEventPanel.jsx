@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   X, Plus, Users, Lock, Globe, Edit3, Crown, Send,
   Shield, UserMinus, ChevronRight, MapPin, Clock,
@@ -217,9 +217,9 @@ const CreateEventForm = ({ accent, darkMode, btnStyle, border, softBg, supabase,
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 16 }}>
       <div><F>Event Name</F><input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Saturday Pickleball" style={inp} /></div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <div><F>Date</F><input type="date" value={form.date} onChange={(e) => set('date', e.target.value)} style={inp} /></div>
-        <div><F>Time</F><input type="time" value={form.time} onChange={(e) => set('time', e.target.value)} style={inp} /></div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 10 }}>
+        <div style={{ minWidth: 0 }}><F>Date</F><input type="date" value={form.date} onChange={(e) => set('date', e.target.value)} style={inp} /></div>
+        <div style={{ minWidth: 0 }}><F>Time</F><input type="time" value={form.time} onChange={(e) => set('time', e.target.value)} style={inp} /></div>
       </div>
       <div><F>Location</F>
         <div style={{ position: 'relative' }}>
@@ -414,6 +414,9 @@ const ChatRoom = ({ eventId, supabase, user, displayName, accent, darkMode, bord
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
   const messagesRef = useRef(null);
+  const memberRoleByUserId = useMemo(() => new Map(
+    (Array.isArray(members) ? members : []).map((member) => [String(member?.user_id || ''), member?.role || 'player'])
+  ), [members]);
   const primaryText = darkMode ? '#f8fafc' : 'var(--color-text-primary)';
   const secondaryText = darkMode ? '#cbd5e1' : 'var(--color-text-secondary)';
   const effectiveChatDisplayName = String(displayName || user?.email || user?.phone || 'Player').trim() || 'Player';
@@ -530,7 +533,7 @@ const ChatRoom = ({ eventId, supabase, user, displayName, accent, darkMode, bord
   }, []);
 
   const isMe = (msg) => msg.user_id === user?.id;
-  const msgRole = (msg) => members.find((m) => m.user_id === msg.user_id)?.role || 'player';
+  const msgRole = (msg) => memberRoleByUserId.get(String(msg?.user_id || '')) || 'player';
 
   return (
     <div
@@ -652,6 +655,9 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
   const [geoError, setGeoError] = useState('');
   const [mapReady, setMapReady] = useState(false);
   const [mapFailed, setMapFailed] = useState(Boolean(typeof window !== 'undefined' && window.googleMapsAuthFailed));
+  const memberByUserId = useMemo(() => new Map(
+    (Array.isArray(members) ? members : []).map((member) => [String(member?.user_id || ''), member])
+  ), [members]);
   const hasEventCoordinates = isValidLatLng(event?.location_lat, event?.location_lng);
   const sharedSelfLocation = locations.find((loc) => loc.user_id === user?.id) || null;
   const hasSharedLocations = locations.length > 0;
@@ -915,7 +921,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
     locations.forEach((loc) => {
       seen.add(loc.user_id);
       const pos = { lat: loc.lat, lng: loc.lng };
-      const member = members.find((m) => m.user_id === loc.user_id);
+      const member = memberByUserId.get(String(loc?.user_id || ''));
       const isMe = loc.user_id === user?.id;
       if (isMe) return;
       if (markersRef.current[loc.user_id]) {
@@ -941,7 +947,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
     Object.keys(markersRef.current).forEach((uid) => {
       if (!seen.has(uid)) { markersRef.current[uid].setMap(null); delete markersRef.current[uid]; }
     });
-  }, [locations, mapReady, user?.id]);
+  }, [locations, mapReady, memberByUserId, user?.id]);
 
   const startSharing = () => {
     if (!navigator.geolocation) { setGeoError('Geolocation not supported on this device.'); return; }
@@ -1430,7 +1436,18 @@ export default function PopupEventPanel({
     includeMembersRealtimeRef.current = screen !== 'detail' || hasLoadedFullMembersRef.current;
   }, [screen, event?.id]);
 
-  const myMember = members.find((m) => String(m?.user_id || '').trim() === String(user?.id || '').trim());
+  const memberByUserId = useMemo(() => new Map(
+    (Array.isArray(members) ? members : []).map((member) => [String(member?.user_id || '').trim(), member])
+  ), [members]);
+  const sortedMembers = useMemo(() => [...members].sort((a, b) => {
+    const rank = (role) => (role === 'host' ? 0 : role === 'cohost' ? 1 : 2);
+    const rankDelta = rank(a?.role) - rank(b?.role);
+    if (rankDelta !== 0) return rankDelta;
+    return String(a?.display_name || '').localeCompare(String(b?.display_name || ''));
+  }), [members]);
+  const hostMember = useMemo(() => members.find((m) => m.role === 'host') || null, [members]);
+  const cohostMembers = useMemo(() => sortedMembers.filter((m) => m.role === 'cohost'), [sortedMembers]);
+  const myMember = memberByUserId.get(String(user?.id || '').trim());
   const creatorUserId = String(event?.created_by || event?.created_by_user_id || '').trim();
   const isEventCreator = Boolean(creatorUserId) && creatorUserId === String(user?.id || '').trim();
   const isHost = myMember?.role === 'host' || isEventCreator;
@@ -2012,7 +2029,7 @@ export default function PopupEventPanel({
             event_id: event.id,
             max_people: nextMax,
             created_by_user_id: event.created_by || user?.id,
-            created_by_name: (members.find((m) => m.role === 'host')?.display_name) || (displayName || 'Host'),
+            created_by_name: hostMember?.display_name || (displayName || 'Host'),
           }, { onConflict: 'event_id' });
       } catch {}
       setEvent((prev) => prev ? { ...prev, max_players: nextMax } : prev);
@@ -2272,14 +2289,6 @@ export default function PopupEventPanel({
   }
 
   const memberCount = members.length;
-  const sortedMembers = [...members].sort((a, b) => {
-    const rank = (role) => (role === 'host' ? 0 : role === 'cohost' ? 1 : 2);
-    const rankDelta = rank(a?.role) - rank(b?.role);
-    if (rankDelta !== 0) return rankDelta;
-    return String(a?.display_name || '').localeCompare(String(b?.display_name || ''));
-  });
-  const hostMember = members.find((m) => m.role === 'host');
-  const cohostMembers = sortedMembers.filter((m) => m.role === 'cohost');
   const eventId = String(event?.id || '').trim();
   const isLegacyInvalidEvent = !isUuid(eventId);
   const attendeeLabel = isSportsPopupEvent ? 'players' : 'guests';
