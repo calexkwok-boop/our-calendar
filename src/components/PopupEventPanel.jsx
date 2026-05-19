@@ -1623,11 +1623,18 @@ export default function PopupEventPanel({
           });
         });
         const storedManualPlayers = Array.isArray(ev?.event_data?.manualPlayers) ? ev.event_data.manualPlayers : [];
+        const staleManualPlayerIdsToDrop = [];
         storedManualPlayers.forEach((player) => {
           const manualName = String(player?.display_name || '').trim();
           if (!manualName) return;
-          const duplicate = memberList.some((entry) => String(entry?.display_name || '').trim().toLowerCase() === manualName.toLowerCase());
-          if (duplicate) return;
+          const normalizedManualName = manualName.toLowerCase();
+          const duplicate = memberList.some((entry) => String(entry?.display_name || '').trim().toLowerCase() === normalizedManualName);
+          const aliasesCurrentUser = selfAliasSet.has(normalizedManualName);
+          if (duplicate || aliasesCurrentUser) {
+            const staleId = String(player?.id || '').trim();
+            if (staleId) staleManualPlayerIdsToDrop.push(staleId);
+            return;
+          }
           memberList.push({
             id: String(player?.id || `manual-${manualName.toLowerCase()}`),
             event_id: id,
@@ -1638,6 +1645,21 @@ export default function PopupEventPanel({
             is_manual: true,
           });
         });
+        if (staleManualPlayerIdsToDrop.length > 0 && ev?.id) {
+          const staleIdSet = new Set(staleManualPlayerIdsToDrop);
+          const cleanedManualPlayers = storedManualPlayers.filter((player) => !staleIdSet.has(String(player?.id || '').trim()));
+          window.setTimeout(() => {
+            void supabase
+              .from('popup_event_details')
+              .update({
+                event_data: {
+                  ...((ev?.event_data && typeof ev.event_data === 'object' && !Array.isArray(ev.event_data)) ? ev.event_data : {}),
+                  manualPlayers: cleanedManualPlayers,
+                },
+              })
+              .eq('id', ev.id);
+          }, 0);
+        }
         const nextMembers = memberList.map((entry) => {
           const overrideKey = String(entry?.user_id || '').trim();
           const overrideRole = String(memberRoleOverridesRef.current?.[overrideKey] || '').trim();
@@ -1929,6 +1951,10 @@ export default function PopupEventPanel({
     }
     if (isFull) {
       setManualAddError('This event is already full.');
+      return;
+    }
+    if (selfAliasSet.has(nextName.toLowerCase())) {
+      setManualAddError('You are already on the roster as the host.');
       return;
     }
     const alreadyExists = members.some((member) => String(member?.display_name || '').trim().toLowerCase() === nextName.toLowerCase());
