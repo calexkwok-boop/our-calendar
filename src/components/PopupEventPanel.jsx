@@ -285,6 +285,32 @@ const RosterRow = ({
   const menuBtnRef = useRef(null);
   const RoleIcon = ROLE_ICONS[member.role];
   const secondaryText = darkMode ? '#cbd5e1' : 'var(--color-text-secondary)';
+  const menuActions = [];
+  if (canManageRoles && member.role === 'player') {
+    menuActions.push({
+      key: 'promote',
+      label: 'Make co-host',
+      icon: Shield,
+      color: accent,
+      onClick: () => onPromote(member),
+    });
+  }
+  if (canManageRoles && member.role === 'cohost') {
+    menuActions.push({
+      key: 'demote',
+      label: 'Remove co-host',
+      icon: UserMinus,
+      color: secondaryText,
+      onClick: () => onDemote(member),
+    });
+  }
+  menuActions.push({
+    key: 'kick',
+    label: 'Kick player',
+    icon: UserMinus,
+    color: '#ef4444',
+    onClick: () => onKick(member),
+  });
   const menuItemCount = 1 + (
     canManageRoles && (member.role === 'player' || member.role === 'cohost')
       ? 1
@@ -358,10 +384,32 @@ const RosterRow = ({
             •••
           </button>
           {menuOpen && (
-            <div style={{ position: 'absolute', right: 0, ...(menuFlipUp ? { bottom: '110%' } : { top: '110%' }), zIndex: 50, minWidth: 150, borderRadius: 12, background: darkMode ? '#1f2937' : '#fff', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', overflow: 'hidden' }}>
-              {canManageRoles && member.role === 'player' && <button onClick={() => { onPromote(member); setMenuOpen(false); }} style={{ width: '100%', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: 'transparent', color: accent, fontSize: 12, fontWeight: 700, textAlign: 'left' }}><Shield style={{ width: 13, height: 13 }} />Make co-host</button>}
-              {canManageRoles && member.role === 'cohost' && <button onClick={() => { onDemote(member); setMenuOpen(false); }} style={{ width: '100%', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: 'transparent', color: secondaryText, fontSize: 12, fontWeight: 700, textAlign: 'left' }}><UserMinus style={{ width: 13, height: 13 }} />Remove co-host</button>}
-              <button onClick={() => { onKick(member); setMenuOpen(false); }} style={{ width: '100%', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: 'transparent', color: '#ef4444', fontSize: 12, fontWeight: 700, textAlign: 'left' }}><UserMinus style={{ width: 13, height: 13 }} />Kick player</button>
+            <div
+              style={{
+                position: 'absolute',
+                right: 0,
+                ...(menuFlipUp ? { bottom: '110%' } : { top: '110%' }),
+                zIndex: 50,
+                minWidth: 150,
+                borderRadius: 12,
+                background: darkMode ? '#1f2937' : '#fff',
+                border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: menuFlipUp ? 'column-reverse' : 'column',
+              }}
+            >
+              {menuActions.map(({ key, label, icon: Icon, color, onClick }) => (
+                <button
+                  key={key}
+                  onClick={() => { onClick(); setMenuOpen(false); }}
+                  style={{ width: '100%', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: 'transparent', color, fontSize: 12, fontWeight: 700, textAlign: 'left' }}
+                >
+                  <Icon style={{ width: 13, height: 13 }} />
+                  {label}
+                </button>
+              ))}
             </div>
           )}
         </div>
