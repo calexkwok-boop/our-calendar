@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useState } from 'react';
 import {
   X, Plus, Users, Lock, Globe, Edit3, Crown, Send,
   Shield, UserMinus, ChevronRight, MapPin, Clock,
@@ -282,9 +281,6 @@ const RosterRow = ({
   forceMenuUp = false,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [menuFlipUp, setMenuFlipUp] = useState(false);
-  const [menuPosition, setMenuPosition] = useState(null);
-  const menuBtnRef = useRef(null);
   const RoleIcon = ROLE_ICONS[member.role];
   const secondaryText = darkMode ? '#cbd5e1' : 'var(--color-text-secondary)';
   const menuActions = [];
@@ -311,15 +307,8 @@ const RosterRow = ({
     label: 'Kick player',
     icon: UserMinus,
     color: '#ef4444',
-    onClick: () => onKick(member),
+      onClick: () => onKick(member),
   });
-  const menuItemCount = 1 + (
-    canManageRoles && (member.role === 'player' || member.role === 'cohost')
-      ? 1
-      : 0
-  );
-  const estimatedMenuHeight = (menuItemCount * 42) + 16;
-  const menuWidth = 170;
   const normalizedStatusTone = String(attendeeStatusTone || '').trim().toLowerCase();
   const statusStyles = normalizedStatusTone === 'yes'
     ? {
@@ -335,115 +324,70 @@ const RosterRow = ({
           background: darkMode ? 'rgba(148,163,184,0.16)' : 'rgba(148,163,184,0.14)',
           color: darkMode ? '#cbd5e1' : '#475569',
         };
-  const closeMenu = useCallback(() => {
-    setMenuOpen(false);
-    setMenuPosition(null);
-  }, []);
-  const updateMenuPlacement = useCallback(() => {
-    if (!menuBtnRef.current || typeof window === 'undefined') return;
-    const rect = menuBtnRef.current.getBoundingClientRect();
-    const flipUp = forceMenuUp || ((rect.bottom + estimatedMenuHeight) > (window.innerHeight - 12));
-    const top = flipUp
-      ? Math.max(12, rect.top - estimatedMenuHeight - 8)
-      : Math.min(window.innerHeight - estimatedMenuHeight - 12, rect.bottom + 8);
-    const left = Math.max(12, Math.min(window.innerWidth - menuWidth - 12, rect.right - menuWidth));
-    setMenuFlipUp(flipUp);
-    setMenuPosition({ top, left });
-  }, [estimatedMenuHeight, forceMenuUp]);
-  useEffect(() => {
-    if (!menuOpen) return undefined;
-    updateMenuPlacement();
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') closeMenu();
-    };
-    const handleResize = () => updateMenuPlacement();
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('scroll', handleResize, true);
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('scroll', handleResize, true);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [menuOpen, closeMenu, updateMenuPlacement]);
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'}` }}>
-      <Avatar name={member.display_name} photoUrl={member.photoUrl || member.photo_url || member.avatarUrl || member.avatar_url} size={34} accent={accent} role={member.role} darkMode={darkMode} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: darkMode ? '#f8fafc' : 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {member.display_name}{isMe && <span style={{ fontSize: 10, color: darkMode ? '#cbd5e1' : 'var(--color-text-secondary)', fontWeight: 500, marginLeft: 4 }}>(you)</span>}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-          {RoleIcon && <RoleIcon style={{ width: 10, height: 10, color: member.role === 'host' ? '#f59e0b' : accent }} />}
-          <span style={{ fontSize: 10, fontWeight: 700, color: member.role === 'host' ? '#f59e0b' : member.role === 'cohost' ? accent : (darkMode ? '#cbd5e1' : 'var(--color-text-secondary)') }}>
-            {member.role === 'host' ? 'Host' : member.role === 'cohost' ? 'Co-host' : attendeeRoleLabel}
-          </span>
-          {attendeeStatusLabel ? (
-            <span
-              style={{
-                marginLeft: 6,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '2px 8px',
-                borderRadius: 999,
-                fontSize: 10,
-                fontWeight: 800,
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-                ...statusStyles,
-              }}
-            >
-              {attendeeStatusLabel}
+    <div style={{ display: 'flex', flexDirection: 'column', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'}` }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px' }}>
+        <Avatar name={member.display_name} photoUrl={member.photoUrl || member.photo_url || member.avatarUrl || member.avatar_url} size={34} accent={accent} role={member.role} darkMode={darkMode} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: darkMode ? '#f8fafc' : 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {member.display_name}{isMe && <span style={{ fontSize: 10, color: darkMode ? '#cbd5e1' : 'var(--color-text-secondary)', fontWeight: 500, marginLeft: 4 }}>(you)</span>}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+            {RoleIcon && <RoleIcon style={{ width: 10, height: 10, color: member.role === 'host' ? '#f59e0b' : accent }} />}
+            <span style={{ fontSize: 10, fontWeight: 700, color: member.role === 'host' ? '#f59e0b' : member.role === 'cohost' ? accent : (darkMode ? '#cbd5e1' : 'var(--color-text-secondary)') }}>
+              {member.role === 'host' ? 'Host' : member.role === 'cohost' ? 'Co-host' : attendeeRoleLabel}
             </span>
-          ) : null}
+            {attendeeStatusLabel ? (
+              <span
+                style={{
+                  marginLeft: 6,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  fontSize: 10,
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  ...statusStyles,
+                }}
+              >
+                {attendeeStatusLabel}
+              </span>
+            ) : null}
+          </div>
         </div>
-      </div>
-      {isHost && !isMe && member.role !== 'host' && (
-        <div style={{ position: 'relative' }}>
+        {isHost && !isMe && member.role !== 'host' && (
           <button
-            ref={menuBtnRef}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              if (menuOpen) {
-                closeMenu();
-                return;
-              }
-              updateMenuPlacement();
-              window.setTimeout(() => setMenuOpen(true), 0);
+              setMenuOpen((prev) => !prev);
             }}
             style={{ padding: '4px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none', background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: secondaryText }}
           >
             •••
           </button>
-        </div>
-      )}
-      {menuOpen && menuPosition && typeof document !== 'undefined' && createPortal(
-        <div
-          onClick={closeMenu}
-          style={{ position: 'fixed', inset: 0, zIndex: 9999 }}
-        >
+        )}
+      </div>
+      {isHost && !isMe && member.role !== 'host' && menuOpen && (
+        <div style={{ padding: forceMenuUp ? '0 16px 12px 60px' : '0 16px 12px 60px' }}>
           <div
-            onClick={(e) => e.stopPropagation()}
             style={{
-              position: 'fixed',
-              top: menuPosition.top,
-              left: menuPosition.left,
-              width: menuWidth,
               borderRadius: 12,
               background: darkMode ? '#1f2937' : '#fff',
               border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
               boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
               overflow: 'hidden',
               display: 'flex',
-              flexDirection: menuFlipUp ? 'column-reverse' : 'column',
+              flexDirection: 'column',
             }}
           >
             {menuActions.map(({ key, label, icon: Icon, color, onClick }) => (
               <button
                 key={key}
-                onClick={() => { onClick(); closeMenu(); }}
+                onClick={() => { onClick(); setMenuOpen(false); }}
                 style={{ width: '100%', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: 'transparent', color, fontSize: 12, fontWeight: 700, textAlign: 'left' }}
               >
                 <Icon style={{ width: 13, height: 13 }} />
@@ -451,8 +395,7 @@ const RosterRow = ({
               </button>
             ))}
           </div>
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   );
