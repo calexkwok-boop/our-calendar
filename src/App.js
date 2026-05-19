@@ -586,6 +586,7 @@ const requestR2TripPhotoReadUrls = async (paths) => {
 const R2_TRIP_PHOTO_READ_URL_TTL_MS = 10 * 60 * 1000;
 const r2TripPhotoReadUrlCache = new Map();
 const r2TripPhotoReadUrlInFlight = new Map();
+const R2_TRIP_PHOTO_LOCAL_CACHE_TTL_MS = Math.max(60 * 1000, R2_TRIP_PHOTO_READ_URL_TTL_MS - (30 * 1000));
 
 const getCachedR2TripPhotoReadUrls = async (paths) => {
   const normalizedPaths = Array.isArray(paths)
@@ -3988,6 +3989,7 @@ function App() {
   // Sub-calendar state
   const [subCalendars, setSubCalendars] = useState([]);
   const [activeSubCalendar, setActiveSubCalendar] = useState(null);
+  const activeSubCalendarIdRef = useRef('');
   const [subCalNotes, setSubCalNotes] = useState([]); // [{id, text, checklist, createdBy, createdAt}]
   const [subCalExpenses, setSubCalExpenses] = useState([]); // [{id, payer, description, amount, createdAt}]
   const [expenseLedgerNoteId, setExpenseLedgerNoteId] = useState(null);
@@ -4251,15 +4253,21 @@ function App() {
     try {
       const raw = localStorage.getItem(getTripPhotosCacheLocalKey(subCalId));
       const parsed = raw ? JSON.parse(raw) : [];
+      const now = Date.now();
       return Array.isArray(parsed)
         ? parsed.filter((row) => row && typeof row === 'object').map((row) => {
           const nextRow = { ...row };
           delete nextRow.local_preview_url;
           delete nextRow.local_thumbnail_preview_url;
-          delete nextRow.resolved_thumbnail_url;
-          delete nextRow.resolved_medium_url;
-          delete nextRow.resolved_url;
-          delete nextRow.resolved_original_url;
+          const resolvedUrlsExpireAt = Number(nextRow.resolved_urls_expires_at || 0);
+          const canReuseResolvedUrls = resolvedUrlsExpireAt > now;
+          if (!canReuseResolvedUrls) {
+            delete nextRow.resolved_thumbnail_url;
+            delete nextRow.resolved_medium_url;
+            delete nextRow.resolved_url;
+            delete nextRow.resolved_original_url;
+            delete nextRow.resolved_urls_expires_at;
+          }
           return normalizeTripPhotoRecord(nextRow);
         })
         : [];
@@ -4281,10 +4289,21 @@ function App() {
                 const cacheSafeRow = { ...normalized };
                 delete cacheSafeRow.local_preview_url;
                 delete cacheSafeRow.local_thumbnail_preview_url;
-                delete cacheSafeRow.resolved_thumbnail_url;
-                delete cacheSafeRow.resolved_medium_url;
-                delete cacheSafeRow.resolved_url;
-                delete cacheSafeRow.resolved_original_url;
+                const hasResolvedUrls = Boolean(
+                  String(cacheSafeRow.resolved_thumbnail_url || '').trim()
+                  || String(cacheSafeRow.resolved_medium_url || '').trim()
+                  || String(cacheSafeRow.resolved_url || '').trim()
+                  || String(cacheSafeRow.resolved_original_url || '').trim()
+                );
+                if (hasResolvedUrls) {
+                  cacheSafeRow.resolved_urls_expires_at = Date.now() + R2_TRIP_PHOTO_LOCAL_CACHE_TTL_MS;
+                } else {
+                  delete cacheSafeRow.resolved_thumbnail_url;
+                  delete cacheSafeRow.resolved_medium_url;
+                  delete cacheSafeRow.resolved_url;
+                  delete cacheSafeRow.resolved_original_url;
+                  delete cacheSafeRow.resolved_urls_expires_at;
+                }
                 return cacheSafeRow;
               })
             : []
@@ -5257,6 +5276,17 @@ function App() {
     const ordered = sortTripPhotosChronologically(deduped);
     setTripPhotos(ordered);
     writeLocalTripPhotosCache(subCal?.id, ordered);
+    void (async () => {
+      try {
+        const hydrated = await hydrateR2TripPhotoDisplayUrls(ordered);
+        const hydratedOrdered = sortTripPhotosChronologically(hydrated);
+        if (String(subCal?.id || '').trim() !== activeSubCalendarIdRef.current) return;
+        setTripPhotos(hydratedOrdered);
+        writeLocalTripPhotosCache(subCal?.id, hydratedOrdered);
+      } catch (error) {
+        console.warn('Trip photo hydration deferred after initial render failed:', error);
+      }
+    })();
     return ordered;
   };
 
@@ -6668,10 +6698,9 @@ function App() {
         .limit(500);
       if (error) { console.error('Error loading photos:', error); return []; }
       const deletedSet = new Set(((deletedIdsOverride ?? deletedPhotoIds) || []).map(id => String(id)));
-      const filtered = (data || [])
+      return (data || [])
         .filter(p => !deletedSet.has(String(p.id)))
         .map((photo) => normalizeTripPhotoRecord(photo));
-      return await hydrateR2TripPhotoDisplayUrls(filtered);
     } catch (e) { console.error(e); }
     return [];
   };
@@ -12609,6 +12638,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       googleImportResumeRef.current = false;
     }
   }, [user?.id]);
+
+  useEffect(() => {
+    activeSubCalendarIdRef.current = String(activeSubCalendar?.id || '').trim();
+  }, [activeSubCalendar?.id]);
 
   useEffect(() => {
     if (isLoading || showAuth || showUserSetup) return;
@@ -20428,6 +20461,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return true;
   };
 
+  const removeEventIdsFromEventsState = (eventsState, idsToRemove = []) => {
+    const ids = new Set((idsToRemove || []).map((id) => String(id || '')).filter(Boolean));
+    if (ids.size === 0) return eventsState;
+    const nextState = {};
+    Object.entries(eventsState || {}).forEach(([dateKey, rows]) => {
+      const filteredRows = (rows || []).filter((event) => !ids.has(String(event?.id || '')));
+      if (filteredRows.length > 0) nextState[dateKey] = filteredRows;
+    });
+    return nextState;
+  };
+
   const handleDeleteEvent = async (dateKey, eventId, isVirtualAnnual = false, isVirtualRecurrence = false, skipOnce = false, sourceEvent = null) => {
     setSwipedEventKey(null);
     setEventSwipeDrag({ id: null, offset: 0 });
@@ -20490,32 +20534,43 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         }));
       } else {
         // Delete the whole recurring event
-        const ok = await deleteEventsByIds([eventId], { layerId: targetLayerId, useNullLayerId, skipLayerFilter });
-        if (!ok) return;
-        const updatedEvents = { ...events, [originalDateKey]: (events[originalDateKey] || []).filter(e => String(e.id) !== String(eventId)) };
-        if (updatedEvents[originalDateKey].length === 0) delete updatedEvents[originalDateKey];
+        const previousEvents = events;
+        const updatedEvents = removeEventIdsFromEventsState(previousEvents, [eventId]);
         setEvents(updatedEvents);
+        const ok = await deleteEventsByIds([eventId], { layerId: targetLayerId, useNullLayerId, skipLayerFilter });
+        if (!ok) {
+          setEvents(previousEvents);
+          return;
+        }
       }
       return;
     }
 
     if (eventToDelete?.isMultiDay && eventToDelete.multiDayId) {
-      const updatedEvents = { ...events };
+      const previousEvents = events;
+      const updatedEvents = { ...previousEvents };
       const idsToDelete = [];
       Object.keys(updatedEvents).forEach(key => {
         idsToDelete.push(...updatedEvents[key].filter(e => e.multiDayId === eventToDelete.multiDayId).map(e => e.id));
         updatedEvents[key] = updatedEvents[key].filter(e => e.multiDayId !== eventToDelete.multiDayId);
         if (updatedEvents[key].length === 0) delete updatedEvents[key];
       });
+      setEvents(updatedEvents);
       const ok = await deleteEventsByIds(idsToDelete, { layerId: targetLayerId, useNullLayerId, skipLayerFilter });
-      if (!ok) return;
-      setEvents(updatedEvents);
+      if (!ok) {
+        setEvents(previousEvents);
+        return;
+      }
     } else {
-      const updatedEvents = { ...events, [actualDateKey]: (events[actualDateKey] || []).filter(e => e.id !== eventId) };
+      const previousEvents = events;
+      const updatedEvents = { ...previousEvents, [actualDateKey]: (previousEvents[actualDateKey] || []).filter(e => e.id !== eventId) };
       if (updatedEvents[actualDateKey].length === 0) delete updatedEvents[actualDateKey];
-      const ok = await deleteEventsByIds([eventId], { layerId: targetLayerId, useNullLayerId, skipLayerFilter });
-      if (!ok) return;
       setEvents(updatedEvents);
+      const ok = await deleteEventsByIds([eventId], { layerId: targetLayerId, useNullLayerId, skipLayerFilter });
+      if (!ok) {
+        setEvents(previousEvents);
+        return;
+      }
     }
   };
 
