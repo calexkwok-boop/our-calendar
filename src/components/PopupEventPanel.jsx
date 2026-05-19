@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X, Plus, Users, Lock, Globe, Edit3, Crown, Send,
   Shield, UserMinus, ChevronRight, MapPin, Clock,
@@ -282,6 +283,7 @@ const RosterRow = ({
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuFlipUp, setMenuFlipUp] = useState(false);
+  const [menuPosition, setMenuPosition] = useState(null);
   const menuBtnRef = useRef(null);
   const RoleIcon = ROLE_ICONS[member.role];
   const secondaryText = darkMode ? '#cbd5e1' : 'var(--color-text-secondary)';
@@ -317,6 +319,7 @@ const RosterRow = ({
       : 0
   );
   const estimatedMenuHeight = (menuItemCount * 42) + 16;
+  const menuWidth = 170;
   const normalizedStatusTone = String(attendeeStatusTone || '').trim().toLowerCase();
   const statusStyles = normalizedStatusTone === 'yes'
     ? {
@@ -332,6 +335,37 @@ const RosterRow = ({
           background: darkMode ? 'rgba(148,163,184,0.16)' : 'rgba(148,163,184,0.14)',
           color: darkMode ? '#cbd5e1' : '#475569',
         };
+  const closeMenu = useCallback(() => {
+    setMenuOpen(false);
+    setMenuPosition(null);
+  }, []);
+  const updateMenuPlacement = useCallback(() => {
+    if (!menuBtnRef.current || typeof window === 'undefined') return;
+    const rect = menuBtnRef.current.getBoundingClientRect();
+    const flipUp = forceMenuUp || ((rect.bottom + estimatedMenuHeight) > (window.innerHeight - 12));
+    const top = flipUp
+      ? Math.max(12, rect.top - estimatedMenuHeight - 8)
+      : Math.min(window.innerHeight - estimatedMenuHeight - 12, rect.bottom + 8);
+    const left = Math.max(12, Math.min(window.innerWidth - menuWidth - 12, rect.right - menuWidth));
+    setMenuFlipUp(flipUp);
+    setMenuPosition({ top, left });
+  }, [estimatedMenuHeight, forceMenuUp]);
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    updateMenuPlacement();
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') closeMenu();
+    };
+    const handleResize = () => updateMenuPlacement();
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('scroll', handleResize, true);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleResize, true);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [menuOpen, closeMenu, updateMenuPlacement]);
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'}` }}>
       <Avatar name={member.display_name} photoUrl={member.photoUrl || member.photo_url || member.avatarUrl || member.avatar_url} size={34} accent={accent} role={member.role} darkMode={darkMode} />
@@ -370,49 +404,53 @@ const RosterRow = ({
           <button
             ref={menuBtnRef}
             onClick={() => {
-              if (!menuOpen && menuBtnRef.current) {
-                const rect = menuBtnRef.current.getBoundingClientRect();
-                const panelRoot = menuBtnRef.current.closest('#popup-event-panel-root');
-                const panelRect = panelRoot?.getBoundingClientRect?.();
-                const availableBottom = panelRect?.bottom || window.innerHeight;
-                setMenuFlipUp(forceMenuUp || ((rect.bottom + estimatedMenuHeight) > (availableBottom - 12)));
+              if (menuOpen) {
+                closeMenu();
+                return;
               }
-              setMenuOpen(!menuOpen);
+              updateMenuPlacement();
+              setMenuOpen(true);
             }}
             style={{ padding: '4px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none', background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: secondaryText }}
           >
             •••
           </button>
-          {menuOpen && (
-            <div
-              style={{
-                position: 'absolute',
-                right: 0,
-                ...(menuFlipUp ? { bottom: '110%' } : { top: '110%' }),
-                zIndex: 50,
-                minWidth: 150,
-                borderRadius: 12,
-                background: darkMode ? '#1f2937' : '#fff',
-                border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-                boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-                overflow: 'hidden',
-                display: 'flex',
-                flexDirection: menuFlipUp ? 'column-reverse' : 'column',
-              }}
-            >
-              {menuActions.map(({ key, label, icon: Icon, color, onClick }) => (
-                <button
-                  key={key}
-                  onClick={() => { onClick(); setMenuOpen(false); }}
-                  style={{ width: '100%', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: 'transparent', color, fontSize: 12, fontWeight: 700, textAlign: 'left' }}
-                >
-                  <Icon style={{ width: 13, height: 13 }} />
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
+      )}
+      {menuOpen && menuPosition && typeof document !== 'undefined' && createPortal(
+        <div
+          onClick={closeMenu}
+          style={{ position: 'fixed', inset: 0, zIndex: 9999 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'fixed',
+              top: menuPosition.top,
+              left: menuPosition.left,
+              width: menuWidth,
+              borderRadius: 12,
+              background: darkMode ? '#1f2937' : '#fff',
+              border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: menuFlipUp ? 'column-reverse' : 'column',
+            }}
+          >
+            {menuActions.map(({ key, label, icon: Icon, color, onClick }) => (
+              <button
+                key={key}
+                onClick={() => { onClick(); closeMenu(); }}
+                style={{ width: '100%', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: 'transparent', color, fontSize: 12, fontWeight: 700, textAlign: 'left' }}
+              >
+                <Icon style={{ width: 13, height: 13 }} />
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
