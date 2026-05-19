@@ -1553,6 +1553,7 @@ export default function PopupEventPanel({
         const seenSelfAliasByRole = new Set();
         const seenMemberIndexByUserId = new Map();
         const duplicateMemberIdsToDelete = [];
+        const duplicateSignupIdsToDelete = [];
         const rolePriority = { host: 4, cohost: 3, player: 2, guest: 1 };
         const membersSource = includeMembers
           ? (mems || [])
@@ -1620,6 +1621,8 @@ export default function PopupEventPanel({
             avatar_url: resolvePopupMemberPhotoUrl(s),
             role: 'player',
             joined_at: s.created_at,
+            is_signup: true,
+            signup_row_id: s.id,
           });
         });
         const storedManualPlayers = Array.isArray(ev?.event_data?.manualPlayers) ? ev.event_data.manualPlayers : [];
@@ -1660,16 +1663,63 @@ export default function PopupEventPanel({
               .eq('id', ev.id);
           }, 0);
         }
-        const nextMembers = memberList.map((entry) => {
+        const nextMembersWithOverrides = memberList.map((entry) => {
           const overrideKey = String(entry?.user_id || '').trim();
           const overrideRole = String(memberRoleOverridesRef.current?.[overrideKey] || '').trim();
           return overrideRole ? { ...entry, role: overrideRole } : entry;
         });
+        const normalizedCurrentUserId = String(user?.id || '').trim();
+        const resolvedMembers = [];
+        let keptSelfEntry = null;
+        nextMembersWithOverrides.forEach((entry) => {
+          const entryUserId = String(entry?.user_id || '').trim();
+          const entryName = String(entry?.display_name || '').trim().toLowerCase();
+          const matchesCurrentUser = (
+            (normalizedCurrentUserId && entryUserId === normalizedCurrentUserId)
+            || (entryName && selfAliasSet.has(entryName))
+          );
+          if (!matchesCurrentUser) {
+            resolvedMembers.push(entry);
+            return;
+          }
+          if (!keptSelfEntry) {
+            keptSelfEntry = entry;
+            return;
+          }
+          const keptRole = String(keptSelfEntry?.role || 'player').trim().toLowerCase();
+          const nextRole = String(entry?.role || 'player').trim().toLowerCase();
+          const keptScore = rolePriority[keptRole] || 0;
+          const nextScore = rolePriority[nextRole] || 0;
+          const keptIsStructured = !keptSelfEntry?.is_manual && !keptSelfEntry?.is_signup;
+          const nextIsStructured = !entry?.is_manual && !entry?.is_signup;
+          const shouldReplaceKept = nextScore > keptScore || (nextScore === keptScore && nextIsStructured && !keptIsStructured);
+          const redundantEntry = shouldReplaceKept ? keptSelfEntry : entry;
+          if (redundantEntry?.is_manual) {
+            const staleId = String(redundantEntry?.id || '').trim();
+            if (staleId) staleManualPlayerIdsToDrop.push(staleId);
+          } else if (redundantEntry?.is_signup) {
+            const staleSignupId = String(redundantEntry?.signup_row_id || '').trim();
+            if (staleSignupId) duplicateSignupIdsToDelete.push(staleSignupId);
+          } else {
+            const staleMemberId = String(redundantEntry?.id || '').trim();
+            if (isUuid(staleMemberId)) duplicateMemberIdsToDelete.push(staleMemberId);
+          }
+          if (shouldReplaceKept) keptSelfEntry = entry;
+        });
+        if (keptSelfEntry) resolvedMembers.push(keptSelfEntry);
         if (includeMembers) {
           hasLoadedFullMembersRef.current = true;
           includeMembersRealtimeRef.current = true;
         }
-        setMembers(nextMembers);
+        setMembers(resolvedMembers);
+        if (duplicateSignupIdsToDelete.length > 0) {
+          const uniqueSignupIds = Array.from(new Set(duplicateSignupIdsToDelete));
+          window.setTimeout(() => {
+            void Promise.all(uniqueSignupIds.map((signupId) => (
+              supabase.from('popup_event_signups').delete().eq('id', signupId)
+            )));
+          }, 0);
+        }
         return normalizedEv;
       } catch {}
       return null;
