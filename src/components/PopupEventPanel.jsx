@@ -278,6 +278,7 @@ const RosterRow = ({
   attendeeStatusLabel = '',
   attendeeStatusTone = '',
   canManageRoles = true,
+  forceMenuUp = false,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuFlipUp, setMenuFlipUp] = useState(false);
@@ -348,7 +349,7 @@ const RosterRow = ({
                 const panelRoot = menuBtnRef.current.closest('#popup-event-panel-root');
                 const panelRect = panelRoot?.getBoundingClientRect?.();
                 const availableBottom = panelRect?.bottom || window.innerHeight;
-                setMenuFlipUp((rect.bottom + estimatedMenuHeight) > (availableBottom - 12));
+                setMenuFlipUp(forceMenuUp || ((rect.bottom + estimatedMenuHeight) > (availableBottom - 12)));
               }
               setMenuOpen(!menuOpen);
             }}
@@ -2734,7 +2735,8 @@ export default function PopupEventPanel({
               <RosterRow member={m} isMe={m.id === myMember?.id}
                 isHost={isHostOrCohost} accent={accent} darkMode={darkMode}
                 onKick={handleKick} onPromote={handlePromote} onDemote={handleDemote}
-                attendeeRoleLabel={isSportsPopupEvent ? 'Player' : 'Guest'} />
+                attendeeRoleLabel={isSportsPopupEvent ? 'Player' : 'Guest'}
+                forceMenuUp />
               {isHost && !isLegacyInvalidEvent && m.role === 'host' && (
                 <div style={{ padding: '0 16px 12px 88px' }}>
                   <div style={{ padding: '10px 0 0' }}>
