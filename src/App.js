@@ -2365,6 +2365,39 @@ const readLayerCache = (uid) => {
 const writeLayerCache = (uid, layers) => {
   try { localStorage.setItem(LAYER_CACHE_KEY(uid), JSON.stringify(layers)); } catch {}
 };
+const LAYER_EVENTS_CACHE_TTL_MS = 2 * 60 * 1000;
+const LAYER_EVENTS_CACHE_KEY = (uid, layerId) => `layer-events-cache-v1:${uid}:${String(layerId || '').trim()}`;
+const readLayerEventsCache = (uid, layerId) => {
+  const normalizedLayerId = String(layerId || '').trim();
+  if (!uid || !normalizedLayerId) return null;
+  try {
+    const raw = localStorage.getItem(LAYER_EVENTS_CACHE_KEY(uid, normalizedLayerId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const expiresAt = Number(parsed?.expires_at || 0);
+    if (!expiresAt || expiresAt < Date.now()) {
+      localStorage.removeItem(LAYER_EVENTS_CACHE_KEY(uid, normalizedLayerId));
+      return null;
+    }
+    const events = parsed?.events;
+    return events && typeof events === 'object' ? events : null;
+  } catch {
+    return null;
+  }
+};
+const writeLayerEventsCache = (uid, layerId, events) => {
+  const normalizedLayerId = String(layerId || '').trim();
+  if (!uid || !normalizedLayerId || !events || typeof events !== 'object') return;
+  try {
+    localStorage.setItem(
+      LAYER_EVENTS_CACHE_KEY(uid, normalizedLayerId),
+      JSON.stringify({
+        expires_at: Date.now() + LAYER_EVENTS_CACHE_TTL_MS,
+        events,
+      })
+    );
+  } catch {}
+};
 
 // Source: ESPN Warriors 2025-26 schedule (remaining regular season), captured Mar 12, 2026.
 // Times are set in Pacific Time for this app's event time fields.
@@ -16516,6 +16549,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         if (selectedLayerId !== activeLayerId) setActiveLayerId(selectedLayerId);
         localStorage.setItem(`active-layer-${userId}`, selectedLayerId);
 
+        const cachedLayerEvents = readLayerEventsCache(userId, selectedLayerId);
+        if (cachedLayerEvents) {
+          setEvents(cachedLayerEvents);
+          if (typeof window !== 'undefined') window.events = cachedLayerEvents;
+        } else {
+          setEvents({});
+          if (typeof window !== 'undefined') window.events = {};
+        }
+
         // Fetch events and all shared_access rows for this layer in parallel (was 3 sequential round trips)
         const [layerEventsResult, allSharesResult] = await Promise.all([
           withTimeout(
@@ -16576,6 +16618,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           });
           setEvents(eventsObj);
           if (typeof window !== 'undefined') window.events = eventsObj;
+          writeLayerEventsCache(userId, selectedLayerId, eventsObj);
 
           // Fire-and-forget: load joined popup events only when they belong to the
           // currently selected layer, so one calendar does not start showing another

@@ -284,6 +284,12 @@ const RosterRow = ({
   const menuBtnRef = useRef(null);
   const RoleIcon = ROLE_ICONS[member.role];
   const secondaryText = darkMode ? '#cbd5e1' : 'var(--color-text-secondary)';
+  const menuItemCount = 1 + (
+    canManageRoles && (member.role === 'player' || member.role === 'cohost')
+      ? 1
+      : 0
+  );
+  const estimatedMenuHeight = (menuItemCount * 42) + 16;
   const normalizedStatusTone = String(attendeeStatusTone || '').trim().toLowerCase();
   const statusStyles = normalizedStatusTone === 'yes'
     ? {
@@ -334,7 +340,22 @@ const RosterRow = ({
       </div>
       {isHost && !isMe && member.role !== 'host' && (
         <div style={{ position: 'relative' }}>
-          <button ref={menuBtnRef} onClick={() => { if (!menuOpen && menuBtnRef.current) { const rect = menuBtnRef.current.getBoundingClientRect(); setMenuFlipUp(rect.bottom + 120 > window.innerHeight); } setMenuOpen(!menuOpen); }} style={{ padding: '4px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none', background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: secondaryText }}>•••</button>
+          <button
+            ref={menuBtnRef}
+            onClick={() => {
+              if (!menuOpen && menuBtnRef.current) {
+                const rect = menuBtnRef.current.getBoundingClientRect();
+                const panelRoot = menuBtnRef.current.closest('#popup-event-panel-root');
+                const panelRect = panelRoot?.getBoundingClientRect?.();
+                const availableBottom = panelRect?.bottom || window.innerHeight;
+                setMenuFlipUp((rect.bottom + estimatedMenuHeight) > (availableBottom - 12));
+              }
+              setMenuOpen(!menuOpen);
+            }}
+            style={{ padding: '4px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none', background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: secondaryText }}
+          >
+            •••
+          </button>
           {menuOpen && (
             <div style={{ position: 'absolute', right: 0, ...(menuFlipUp ? { bottom: '110%' } : { top: '110%' }), zIndex: 50, minWidth: 150, borderRadius: 12, background: darkMode ? '#1f2937' : '#fff', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', overflow: 'hidden' }}>
               {canManageRoles && member.role === 'player' && <button onClick={() => { onPromote(member); setMenuOpen(false); }} style={{ width: '100%', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: 'transparent', color: accent, fontSize: 12, fontWeight: 700, textAlign: 'left' }}><Shield style={{ width: 13, height: 13 }} />Make co-host</button>}
