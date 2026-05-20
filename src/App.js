@@ -15579,6 +15579,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return;
     }
     const signups = popupSignupsByEventId[normalizedEventId] || [];
+    const createdByMe = String(
+      popup?.createdByUserId
+      || fallbackMeta?.createdByUserId
+      || ''
+    ).trim() === String(user?.id || '').trim();
+    if (createdByMe) {
+      if (shouldRefreshPopupCollections()) await loadPopupEventData();
+      focusOnPopupEventDate(normalizedEventId, fallbackMeta?.dateKey || null);
+      return;
+    }
     const alreadyJoined = signups.some((row) => String(row?.userId || '') === String(user.id));
     if (alreadyJoined) {
       focusOnPopupEventDate(normalizedEventId, fallbackMeta?.dateKey || null);
@@ -29739,7 +29749,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                               const noMax = popupMeta ? Number(popupMeta.maxPeople || 0) >= POPUP_NO_MAX_SENTINEL : Boolean(popupInvite.noMax);
                               const maxPeople = popupMeta ? Number(popupMeta.maxPeople || 0) : Number(popupInvite.maxPeople || 0);
                               const popupUnavailable = !popupMeta;
-                              const joined = popupSignups.some((row) => String(row?.userId || '') === String(user?.id || ''));
+                              const createdByMe = String(popupMeta?.createdByUserId || '').trim() === String(user?.id || '').trim();
+                              const joined = createdByMe || popupSignups.some((row) => String(row?.userId || '') === String(user?.id || ''));
                               const full = noMax ? false : (popupSignups.length >= maxPeople);
                               return (
                                 <div className="mt-2 flex items-center justify-between gap-2">
@@ -29756,18 +29767,27 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                       Unavailable
                                     </button>
                                   ) : joined ? (
-                                    <button
-                                      onClick={() => leavePopupEvent(popupInvite.eventId)}
-                                      className={`px-2 py-1 text-[11px] rounded-md border ${mine ? 'border-indigo-200/70 bg-indigo-500/40 text-white' : 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-200'}`}
-                                    >
-                                      Leave
-                                    </button>
+                                    createdByMe ? (
+                                      <span
+                                        className={`px-2 py-1 text-[11px] rounded-md border ${mine ? 'border-indigo-200/70 bg-indigo-500/40 text-white' : 'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-200'}`}
+                                      >
+                                        Hosting
+                                      </span>
+                                    ) : (
+                                      <button
+                                        onClick={() => leavePopupEvent(popupInvite.eventId)}
+                                        className={`px-2 py-1 text-[11px] rounded-md border ${mine ? 'border-indigo-200/70 bg-indigo-500/40 text-white' : 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-200'}`}
+                                      >
+                                        Leave
+                                      </button>
+                                    )
                                   ) : (
                                     <button
                                       onClick={() => joinPopupEvent(popupInvite.eventId, {
                                         maxPeople: popupInvite.maxPeople,
                                         noMax: popupInvite.noMax,
                                         dateKey: popupInvite.dateKey,
+                                        createdByUserId: popupMeta?.createdByUserId || '',
                                       })}
                                       disabled={full}
                                       className={`px-2 py-1 text-[11px] rounded-md border disabled:opacity-50 ${mine ? 'border-indigo-200/70 bg-indigo-500/40 text-white' : 'border-purple-300 dark:border-purple-700 bg-white dark:bg-gray-800 text-purple-700 dark:text-purple-300'}`}
@@ -32033,7 +32053,8 @@ transform: translateY(0);
                   const eventCardMetaStyle = { color: darkMode ? '#94a3b8' : '#6b7280' };
                   const eventCardIconTone = darkMode ? '#fcd34d' : '#d97706';
                   const popupSignups = popupMeta ? (popupSignupsByEventId[String(event.id || '')] || []) : [];
-                  const popupJoined = popupSignups.some((row) => String(row?.userId || '') === String(user?.id || ''));
+                  const popupCreatedByMe = String(popupMeta?.createdByUserId || '').trim() === String(user?.id || '').trim();
+                  const popupJoined = popupCreatedByMe || popupSignups.some((row) => String(row?.userId || '') === String(user?.id || ''));
                   const popupNoMax = popupMeta ? Number(popupMeta.maxPeople || 0) >= POPUP_NO_MAX_SENTINEL : false;
                   const popupFull = popupMeta ? (!popupNoMax && popupSignups.length >= Number(popupMeta.maxPeople || 1)) : false;
                   const popupAttendeeLabel = (() => {
@@ -32328,12 +32349,18 @@ transform: translateY(0);
                                     Pop-up event: {popupNoMax ? `${popupSignups.length} ${popupSignups.length === 1 ? (popupAttendeeLabel === 'players' ? 'player' : 'guest') : popupAttendeeLabel} joined` : `${popupSignups.length}/${popupMeta.maxPeople} ${popupAttendeeLabel}`}
                                   </div>
                                   {popupJoined ? (
-                                    <button
-                                      onClick={() => leavePopupEvent(event.id)}
-                                      className="px-2 py-1 text-[11px] rounded-md border border-rose-300 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200"
-                                    >
-                                      Leave
-                                    </button>
+                                    popupCreatedByMe ? (
+                                      <span className="px-2 py-1 text-[11px] rounded-md border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-200">
+                                        Hosting
+                                      </span>
+                                    ) : (
+                                      <button
+                                        onClick={() => leavePopupEvent(event.id)}
+                                        className="px-2 py-1 text-[11px] rounded-md border border-rose-300 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200"
+                                      >
+                                        Leave
+                                      </button>
+                                    )
                                   ) : (
                                     <button
                                       onClick={() => joinPopupEvent(event.id, { dateKey: event.date })}
