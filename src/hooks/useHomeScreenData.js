@@ -641,7 +641,6 @@ export default function useHomeScreenData({
     ].reduce((total, event) => {
       const dateKey = String(event?.date || event?.dateKey || '').trim();
       if (!inCurrentYearRange(dateKey)) return total;
-      if (!shouldIncludeEventInPersonalOverview(event)) return total;
       const eventId = String(event?.id || '').trim();
       const dedupeKey = `${eventId || 'event'}:${dateKey}`;
       if (countedYearEventKeys.has(dedupeKey)) return total;
@@ -664,7 +663,7 @@ export default function useHomeScreenData({
       trips: tripsTakenThisYear.length,
       photos: yearPhotoCount,
     };
-  }, [events, getSubCalStartRaw, homeMemoryPhotosByMemoryId, homeResolvedMemories, shouldIncludeEventInPersonalOverview, tabTrips, toDateOnlyTs, todayTs, upcomingPopupEvents]);
+  }, [events, getSubCalStartRaw, homeMemoryPhotosByMemoryId, homeResolvedMemories, tabTrips, toDateOnlyTs, todayTs, upcomingPopupEvents]);
 
   const homeMemoryReadyCount = eligibleMemoryEvents.length;
   const homeMemoryOpportunities = eligibleMemoryEvents.slice(0, 2);

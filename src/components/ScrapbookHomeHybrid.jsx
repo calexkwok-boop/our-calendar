@@ -113,10 +113,10 @@ const getOnYourMindImageUrl = (dream) => {
   ).trim();
   const sourceType = String(dream?.type || dream?.sourceType || '').trim().toLowerCase();
   const category = String(dream?.category || dream?.categoryId || '').trim().toLowerCase();
-  const isDestinationDream = sourceType === 'destinations' || category === 'travel';
+  const isDestinationDream = sourceType === 'destinations' || category === 'travel' || category === 'places';
   if (!isDestinationDream) return fallbackImageUrl;
   return getDestinationImageOverride({
-    id: dream?.id,
+    id: dream?.destinationId || '',
     name: dream?.text,
     destination_name: dream?.text,
     title: dream?.text,

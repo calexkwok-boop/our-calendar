@@ -1865,19 +1865,33 @@ const writeTripKomoState = (userId, state) => {
     }
   } catch {}
 };
+const resolveBucketDreamImage = (dream) => {
+  const directImageUrl = String(
+    dream?.photoUrl
+    || dream?.imageUrl
+    || dream?.coverPhoto
+    || dream?.attachmentUrl
+    || dream?.photos?.[0]?.url
+    || ''
+  ).trim();
+  const sourceType = String(dream?.type || dream?.sourceType || '').trim().toLowerCase();
+  const category = String(dream?.category || dream?.categoryId || '').trim().toLowerCase();
+  const shouldTryDestinationOverride = sourceType === 'destinations' || ['travel', 'places'].includes(category);
+  if (!shouldTryDestinationOverride) return directImageUrl;
+  return getDestinationImageOverride({
+    id: dream?.destinationId || '',
+    name: dream?.text || dream?.dream || '',
+    destination_name: dream?.text || dream?.dream || '',
+    title: dream?.text || dream?.dream || '',
+    cardTitle: dream?.text || dream?.dream || '',
+  }) || directImageUrl;
+};
 const mergePersistedBucketList = (...dreamLists) => {
   const byId = new Map();
   dreamLists.forEach((list) => {
     (Array.isArray(list) ? list : []).forEach((dream, index) => {
       if (!dream || typeof dream !== 'object') return;
-      const normalizedImageUrl = String(
-        dream?.photoUrl
-        || dream?.imageUrl
-        || dream?.coverPhoto
-        || dream?.attachmentUrl
-        || dream?.photos?.[0]?.url
-        || ''
-      ).trim();
+      const normalizedImageUrl = resolveBucketDreamImage(dream);
       const idKey = String(dream?.id || '').trim();
       const fallbackKey = [
         String(dream?.text || dream?.dream || '').trim().toLowerCase(),
@@ -33222,19 +33236,6 @@ transform: translateY(0);
 
           {bottomNavTab === 'someday' && (() => {
             const catMap = { travel: 'places', food: 'food', adventure: 'experiences', culture: 'experiences', home: 'home', wellness: 'experiences', fun: 'experiences', buy: 'buy', dreamshelf: 'buy', products: 'buy', shopping: 'buy' };
-            const resolveSomedayDreamImage = (dream) => {
-              const sourceType = String(dream?.type || '').trim().toLowerCase();
-              const category = String(dream?.category || '').trim().toLowerCase();
-              const isDestinationDream = sourceType === 'destinations' || category === 'travel';
-              if (!isDestinationDream) return String(dream?.photoUrl || '').trim();
-              return getDestinationImageOverride({
-                id: dream?.id,
-                name: dream?.text,
-                destination_name: dream?.text,
-                title: dream?.text,
-                cardTitle: dream?.text,
-              }) || String(dream?.photoUrl || '').trim();
-            };
             const somedayDreams = [
               ...(Array.isArray(bucketList) ? bucketList : []).map(d => ({
                 id: d.id,
@@ -33242,7 +33243,7 @@ transform: translateY(0);
                 label: d.text,
                 text: d.text,
                 emoji: d.emoji || '✨',
-                imageUrl: resolveSomedayDreamImage(d),
+                imageUrl: resolveBucketDreamImage(d),
                 notes: d.notes || '',
                 attachmentUrl: d.attachmentUrl || '',
                 brand: d.brand || '',
@@ -34993,14 +34994,7 @@ transform: translateY(0);
               label: dream.text,
               text: dream.text,
               emoji: dream.emoji || '*',
-              imageUrl: String(
-                dream.imageUrl
-                || dream.photoUrl
-                || dream.coverPhoto
-                || dream.attachmentUrl
-                || dream.photos?.[0]?.url
-                || ''
-              ).trim(),
+              imageUrl: resolveBucketDreamImage(dream),
               categoryId: komoCategoryMap[dream.category] || 'experiences',
               chapterId: dream.chapterId,
               status: dream.status || 'dreaming',
