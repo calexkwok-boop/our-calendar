@@ -1867,7 +1867,10 @@ const writeTripKomoState = (userId, state) => {
 };
 const resolveBucketDreamImage = (dream) => {
   const directImageUrl = String(
-    dream?.photoUrl
+    dream?.photo
+    || dream?.imageUrl
+    || dream?.destination_image
+    || dream?.photoUrl
     || dream?.imageUrl
     || dream?.coverPhoto
     || dream?.attachmentUrl

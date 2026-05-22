@@ -99,12 +99,15 @@ const hashHomeShuffleKey = (value) => {
 };
 
 const getVisualPreviewUrl = (item) => String(
-  item?.coverPhoto || item?.photoUrl || item?.imageUrl || item?.attachmentUrl || item?.photos?.[0]?.url || ''
+  item?.photo || item?.imageUrl || item?.destination_image || item?.coverPhoto || item?.photoUrl || item?.imageUrl || item?.attachmentUrl || item?.photos?.[0]?.url || ''
 ).trim();
 
 const getOnYourMindImageUrl = (dream) => {
   const fallbackImageUrl = String(
-    dream?.photoUrl
+    dream?.photo
+    || dream?.imageUrl
+    || dream?.destination_image
+    || dream?.photoUrl
     || dream?.imageUrl
     || dream?.coverPhoto
     || dream?.attachmentUrl
