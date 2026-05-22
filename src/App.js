@@ -34,6 +34,8 @@ import TripsTab from "./components/TripsTab";
 import TripRatingSystem from "./components/TripRatingSystem";
 import TripHighlightReel from "./components/TripHighlightReel";
 import FriendPhotoModal from "./components/FriendPhotoModal";
+import { getAllCuratedItemsShuffled } from "./components/DreamShelfPage";
+import { CURATED_DESTINATIONS, getDestinationResolvedImage } from "./components/DestinationsPage";
 import JOURNEY_QUOTES from "./data/journeyQuotes";
 import { getDestinationImageOverride } from "./data/destinationImageOverrides";
 import { loadFriendsList as loadFriendsListLib } from "./lib/loadFriendsList";
@@ -46,6 +48,31 @@ const SomedayPage = React.lazy(() => import("./components/SomedayPage"));
 const ProfilePage = React.lazy(() => import("./components/ProfilePage"));
 
 const MemoryCreator = ImportedMemoryCreator || (() => null);
+
+const normalizeExploreMatchText = (value = '') => String(value || '')
+  .trim()
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const CURATED_DESTINATION_IMAGE_BY_NAME = Object.values(CURATED_DESTINATIONS)
+  .flat()
+  .reduce((acc, destination) => {
+    const key = normalizeExploreMatchText(destination?.name);
+    if (!key) return acc;
+    acc[key] = getDestinationResolvedImage(destination, "");
+    return acc;
+  }, {});
+
+const CURATED_PRODUCT_IMAGE_BY_NAME = getAllCuratedItemsShuffled()
+  .reduce((acc, item) => {
+    const nameKey = normalizeExploreMatchText(item?.name);
+    if (nameKey && item?.image) acc[nameKey] = String(item.image || '').trim();
+    const brandNameKey = normalizeExploreMatchText(`${item?.brand || ''} ${item?.name || ''}`);
+    if (brandNameKey && item?.image) acc[brandNameKey] = String(item.image || '').trim();
+    return acc;
+  }, {});
 
 // ─── Friends list loader ───────────────────────────────────────────────────────
 // Runs in 3 sequential round trips instead of 4 by pulling the event
@@ -1868,26 +1895,51 @@ const writeTripKomoState = (userId, state) => {
 const resolveBucketDreamImage = (dream) => {
   const directImageUrl = String(
     dream?.photo
+    || dream?.image
+    || dream?.image_url
     || dream?.imageUrl
     || dream?.destination_image
+    || dream?.photo_url
     || dream?.photoUrl
-    || dream?.imageUrl
+    || dream?.cover_photo
     || dream?.coverPhoto
+    || dream?.attachment_url
     || dream?.attachmentUrl
     || dream?.photos?.[0]?.url
     || ''
   ).trim();
   const sourceType = String(dream?.type || dream?.sourceType || '').trim().toLowerCase();
   const category = String(dream?.category || dream?.categoryId || '').trim().toLowerCase();
-  const shouldTryDestinationOverride = sourceType === 'destinations' || ['travel', 'places'].includes(category);
-  if (!shouldTryDestinationOverride) return directImageUrl;
+  const dreamName = String(dream?.text || dream?.dream || '').trim();
+  const dreamNameKey = normalizeExploreMatchText(dreamName);
+  const dreamBrandNameKey = normalizeExploreMatchText(`${dream?.brand || ''} ${dreamName}`);
+  const isDestinationDream = sourceType === 'destinations' || ['travel', 'places'].includes(category);
+  const isProductDream = ['products', 'dreamshelf'].includes(sourceType) || ['buy', 'shopping'].includes(category);
+  if (directImageUrl) return directImageUrl;
+  if (isDestinationDream) {
+    const matchedCuratedDestinationImage = CURATED_DESTINATION_IMAGE_BY_NAME[dreamNameKey];
+    if (matchedCuratedDestinationImage) return matchedCuratedDestinationImage;
+    return getDestinationImageOverride({
+      id: dream?.destinationId || dream?.destination_id || '',
+      name: dreamName,
+      destination_name: dreamName,
+      title: dreamName,
+      cardTitle: dreamName,
+    }) || '';
+  }
+  if (isProductDream) {
+    return CURATED_PRODUCT_IMAGE_BY_NAME[dreamBrandNameKey]
+      || CURATED_PRODUCT_IMAGE_BY_NAME[dreamNameKey]
+      || '';
+  }
+  if (!isDestinationDream) return '';
   return getDestinationImageOverride({
-    id: dream?.destinationId || '',
-    name: dream?.text || dream?.dream || '',
-    destination_name: dream?.text || dream?.dream || '',
-    title: dream?.text || dream?.dream || '',
-    cardTitle: dream?.text || dream?.dream || '',
-  }) || directImageUrl;
+    id: dream?.destinationId || dream?.destination_id || '',
+    name: dreamName,
+    destination_name: dreamName,
+    title: dreamName,
+    cardTitle: dreamName,
+  }) || '';
 };
 const mergePersistedBucketList = (...dreamLists) => {
   const byId = new Map();

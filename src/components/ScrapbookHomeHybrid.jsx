@@ -99,17 +99,21 @@ const hashHomeShuffleKey = (value) => {
 };
 
 const getVisualPreviewUrl = (item) => String(
-  item?.photo || item?.imageUrl || item?.destination_image || item?.coverPhoto || item?.photoUrl || item?.imageUrl || item?.attachmentUrl || item?.photos?.[0]?.url || ''
+  item?.photo || item?.image || item?.image_url || item?.imageUrl || item?.destination_image || item?.photo_url || item?.photoUrl || item?.cover_photo || item?.coverPhoto || item?.attachment_url || item?.attachmentUrl || item?.photos?.[0]?.url || ''
 ).trim();
 
 const getOnYourMindImageUrl = (dream) => {
   const fallbackImageUrl = String(
     dream?.photo
+    || dream?.image
+    || dream?.image_url
     || dream?.imageUrl
     || dream?.destination_image
+    || dream?.photo_url
     || dream?.photoUrl
-    || dream?.imageUrl
+    || dream?.cover_photo
     || dream?.coverPhoto
+    || dream?.attachment_url
     || dream?.attachmentUrl
     || dream?.photos?.[0]?.url
     || ''
@@ -119,7 +123,7 @@ const getOnYourMindImageUrl = (dream) => {
   const isDestinationDream = sourceType === 'destinations' || category === 'travel' || category === 'places';
   if (!isDestinationDream) return fallbackImageUrl;
   return getDestinationImageOverride({
-    id: dream?.destinationId || '',
+    id: dream?.destinationId || dream?.destination_id || '',
     name: dream?.text,
     destination_name: dream?.text,
     title: dream?.text,
