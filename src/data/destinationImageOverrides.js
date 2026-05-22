@@ -31,6 +31,12 @@ const RAW_DESTINATION_IMAGE_OVERRIDES = {
   santorini: 'https://www.wendyperrin.com/wp-content/uploads/2018/03/Santorini-Greece-view-shutterstock_387166810.jpg',
   'the-amazon': 'https://onetreeplanted.org/cdn/shop/files/Amazon-Rainforests-Amazonia-South-America.jpg?v=1739422746',
   'tokyo-disneyland': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Tokyo_Disneyland_Cinderella_Castle_2023-07-02.jpg/960px-Tokyo_Disneyland_Cinderella_Castle_2023-07-02.jpg',
+  disneyland: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Disneyland_Park%2C_Anaheim%2C_CA.jpg/1280px-Disneyland_Park%2C_Anaheim%2C_CA.jpg',
+  'disneyland-park': 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Disneyland_Park%2C_Anaheim%2C_CA.jpg/1280px-Disneyland_Park%2C_Anaheim%2C_CA.jpg',
+  'disneyland-anaheim-california': 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Disneyland_Park%2C_Anaheim%2C_CA.jpg/1280px-Disneyland_Park%2C_Anaheim%2C_CA.jpg',
+  'anaheim-california': 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Disneyland_Park%2C_Anaheim%2C_CA.jpg/1280px-Disneyland_Park%2C_Anaheim%2C_CA.jpg',
+  'marble-mountains': 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Marble_Mountains_Da_Nang_Vietnam.jpg/1280px-Marble_Mountains_Da_Nang_Vietnam.jpg',
+  'the-marble-mountains': 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Marble_Mountains_Da_Nang_Vietnam.jpg/1280px-Marble_Mountains_Da_Nang_Vietnam.jpg',
   trolltunga: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Trolltunga_2017.jpg/960px-Trolltunga_2017.jpg',
   tuscany: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Barga_Alps.jpg/500px-Barga_Alps.jpg',
   'ubud-bali': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Kings_Tombs%2C_Gunung_Kawi%2C_Bali_1631.jpg/500px-Kings_Tombs%2C_Gunung_Kawi%2C_Bali_1631.jpg',
@@ -88,7 +94,9 @@ export const DESTINATION_IMAGE_OVERRIDES = Object.freeze(
 );
 
 const DESTINATION_IMAGE_KEY_ALIASES = Object.freeze({
+  anaheim: 'anaheim-california',
   amazon: 'the-amazon',
+  'disneyland-anaheim': 'disneyland-anaheim-california',
   'galapagos-islands': 'the-galapagos-islands',
   'icefields-parkway': 'the-icefields-parkway',
   'the-gal-pagos-islands': 'the-galapagos-islands',

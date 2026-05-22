@@ -32,13 +32,24 @@ const DREAM_CATEGORY_MAP = {
   games: "fun",
 };
 
+const TITLE_IMAGE_OVERRIDES = {
+  "din tai fung": "https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=900&q=80",
+};
+
 const resolveRawType = (item) => {
   const rawType = String(item?.type || item?.sourceType || "").trim().toLowerCase();
   if (rawType) return rawType;
+
   const rawCategory = String(item?.category || item?.categoryId || "").trim().toLowerCase();
   const rawEmoji = String(item?.emoji || "").trim();
+
   if (rawCategory === "fun" || rawCategory === "movies" || rawEmoji === "🎬") return "movies";
   if (rawCategory === "games" || rawEmoji === "🎲") return "games";
+  if (rawCategory === "food" || ["🍜", "🍽️", "🍣", "🍕", "☕", "🍷", "🥐", "🍰"].includes(rawEmoji)) return "restaurants";
+  if (rawCategory === "travel" || rawCategory === "places" || ["✈️", "🗺️", "🌍", "🏝️", "🏖️", "🏰"].includes(rawEmoji)) return "destinations";
+  if (rawCategory === "adventure" || rawCategory === "experiences" || ["🥾", "⛰️", "🌄", "🏔️"].includes(rawEmoji)) return "hiking";
+  if (rawCategory === "buy" || rawCategory === "shopping" || ["✨", "🛍️", "🛋️"].includes(rawEmoji)) return "products";
+
   return "";
 };
 
@@ -99,10 +110,6 @@ export const getDreamImageSearchQuery = (item) => {
 };
 
 export const resolveDreamImage = (item) => {
-  const directImageUrl = readDirectDreamImageUrl(item);
-  const exploreType = inferExploreType(item);
-  if (!exploreType) return directImageUrl;
-
   const title = String(
     item?.text
     || item?.label
@@ -113,6 +120,12 @@ export const resolveDreamImage = (item) => {
     || item?.destination_name
     || ""
   ).trim();
+  const titleKey = title.toLowerCase();
+  if (TITLE_IMAGE_OVERRIDES[titleKey]) return TITLE_IMAGE_OVERRIDES[titleKey];
+
+  const directImageUrl = readDirectDreamImageUrl(item);
+  const exploreType = inferExploreType(item);
+  if (!exploreType) return directImageUrl;
 
   return getExploreCardImageUrl({
     type: exploreType,

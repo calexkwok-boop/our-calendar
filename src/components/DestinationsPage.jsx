@@ -149,6 +149,7 @@ export const getDestinationResolvedImage = (destination = {}, fetchedPhotoUrl = 
   String(destination?.photo || destination?.imageUrl || destination?.destination_image || '').trim()
   || String(fetchedPhotoUrl || '').trim()
   || getDestinationImageOverride(destination)
+  || 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?auto=format&fit=crop&w=900&q=80'
 );
 
 const destinationSomedayPayload = (post, photoUrl = '') => ({
