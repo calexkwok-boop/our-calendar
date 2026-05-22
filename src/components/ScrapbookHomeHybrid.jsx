@@ -14,7 +14,7 @@ import {
   X,
 } from 'lucide-react';
 import QuickThoughtsSection from './QuickThoughtsSection';
-import { getDestinationImageOverride } from '../data/destinationImageOverrides';
+import { getExploreCardImageUrl } from './ExplorePage';
 import useHomeSectionLayout from '../hooks/useHomeSectionLayout';
 
 const TODAY_MOMENT_CACHE_KEY = 'home-today-moment-v1';
@@ -120,15 +120,25 @@ const getOnYourMindImageUrl = (dream) => {
   ).trim();
   const sourceType = String(dream?.type || dream?.sourceType || '').trim().toLowerCase();
   const category = String(dream?.category || dream?.categoryId || '').trim().toLowerCase();
-  const isDestinationDream = sourceType === 'destinations' || category === 'travel' || category === 'places';
-  if (!isDestinationDream) return fallbackImageUrl;
-  return getDestinationImageOverride({
-    id: dream?.destinationId || dream?.destination_id || '',
-    name: dream?.text,
-    destination_name: dream?.text,
-    title: dream?.text,
-    cardTitle: dream?.text,
-  }) || fallbackImageUrl;
+  const exploreType = (
+    sourceType === 'destinations' || category === 'travel' || category === 'places' ? 'destinations'
+      : sourceType === 'products' || sourceType === 'dreamshelf' || category === 'buy' || category === 'shopping' ? 'products'
+        : sourceType === 'restaurants' || category === 'food' ? 'restaurants'
+          : sourceType === 'hiking' || category === 'adventure' || category === 'experiences' ? 'hiking'
+            : ''
+  );
+  if (!exploreType) return fallbackImageUrl;
+  return getExploreCardImageUrl({
+    type: exploreType,
+    cardTitle: String(dream?.text || '').trim(),
+    title: String(dream?.text || '').trim(),
+    name: String(dream?.text || '').trim(),
+    destination_name: String(dream?.text || '').trim(),
+    location: String(dream?.location || '').trim(),
+    imageUrl: String(dream?.imageUrl || dream?.image_url || '').trim(),
+    destination_image: String(dream?.destination_image || '').trim(),
+    photo: String(dream?.photo || '').trim(),
+  }, fallbackImageUrl || "");
 };
 
 const toLocalDateKey = (date) => {

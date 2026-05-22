@@ -20,7 +20,7 @@ import StartTripModal from "./components/StartTripModal";
 import JourneyQuoteDisplay from "./components/JourneyQuoteDisplay";
 import TrophyCase, { deriveJourneyTrophyCase } from "./components/TrophyCase";
 import WelcomeCover from "./components/WelcomeCover";
-import ExplorePage from "./components/ExplorePage";
+import ExplorePage, { getExploreCardImageUrl } from "./components/ExplorePage";
 import NewCalendarLook from "./components/Newcalendarlook";
 import SharedListPanel from "./components/SharedListPanel";
 import MemorySystem, { MemoryCreator as ImportedMemoryCreator } from "./components/MemorySystem";
@@ -34,10 +34,7 @@ import TripsTab from "./components/TripsTab";
 import TripRatingSystem from "./components/TripRatingSystem";
 import TripHighlightReel from "./components/TripHighlightReel";
 import FriendPhotoModal from "./components/FriendPhotoModal";
-import { getAllCuratedItemsShuffled } from "./components/DreamShelfPage";
-import { CURATED_DESTINATIONS, getDestinationResolvedImage } from "./components/DestinationsPage";
 import JOURNEY_QUOTES from "./data/journeyQuotes";
-import { getDestinationImageOverride } from "./data/destinationImageOverrides";
 import { loadFriendsList as loadFriendsListLib } from "./lib/loadFriendsList";
 import * as memoryPersistence from "./lib/memoryPersistence";
 
@@ -48,31 +45,6 @@ const SomedayPage = React.lazy(() => import("./components/SomedayPage"));
 const ProfilePage = React.lazy(() => import("./components/ProfilePage"));
 
 const MemoryCreator = ImportedMemoryCreator || (() => null);
-
-const normalizeExploreMatchText = (value = '') => String(value || '')
-  .trim()
-  .toLowerCase()
-  .replace(/[^a-z0-9]+/g, ' ')
-  .replace(/\s+/g, ' ')
-  .trim();
-
-const CURATED_DESTINATION_IMAGE_BY_NAME = Object.values(CURATED_DESTINATIONS)
-  .flat()
-  .reduce((acc, destination) => {
-    const key = normalizeExploreMatchText(destination?.name);
-    if (!key) return acc;
-    acc[key] = getDestinationResolvedImage(destination, "");
-    return acc;
-  }, {});
-
-const CURATED_PRODUCT_IMAGE_BY_NAME = getAllCuratedItemsShuffled()
-  .reduce((acc, item) => {
-    const nameKey = normalizeExploreMatchText(item?.name);
-    if (nameKey && item?.image) acc[nameKey] = String(item.image || '').trim();
-    const brandNameKey = normalizeExploreMatchText(`${item?.brand || ''} ${item?.name || ''}`);
-    if (brandNameKey && item?.image) acc[brandNameKey] = String(item.image || '').trim();
-    return acc;
-  }, {});
 
 // ─── Friends list loader ───────────────────────────────────────────────────────
 // Runs in 3 sequential round trips instead of 4 by pulling the event
@@ -1911,35 +1883,25 @@ const resolveBucketDreamImage = (dream) => {
   const sourceType = String(dream?.type || dream?.sourceType || '').trim().toLowerCase();
   const category = String(dream?.category || dream?.categoryId || '').trim().toLowerCase();
   const dreamName = String(dream?.text || dream?.dream || '').trim();
-  const dreamNameKey = normalizeExploreMatchText(dreamName);
-  const dreamBrandNameKey = normalizeExploreMatchText(`${dream?.brand || ''} ${dreamName}`);
-  const isDestinationDream = sourceType === 'destinations' || ['travel', 'places'].includes(category);
-  const isProductDream = ['products', 'dreamshelf'].includes(sourceType) || ['buy', 'shopping'].includes(category);
-  if (directImageUrl) return directImageUrl;
-  if (isDestinationDream) {
-    const matchedCuratedDestinationImage = CURATED_DESTINATION_IMAGE_BY_NAME[dreamNameKey];
-    if (matchedCuratedDestinationImage) return matchedCuratedDestinationImage;
-    return getDestinationImageOverride({
-      id: dream?.destinationId || dream?.destination_id || '',
-      name: dreamName,
-      destination_name: dreamName,
-      title: dreamName,
-      cardTitle: dreamName,
-    }) || '';
-  }
-  if (isProductDream) {
-    return CURATED_PRODUCT_IMAGE_BY_NAME[dreamBrandNameKey]
-      || CURATED_PRODUCT_IMAGE_BY_NAME[dreamNameKey]
-      || '';
-  }
-  if (!isDestinationDream) return '';
-  return getDestinationImageOverride({
-    id: dream?.destinationId || dream?.destination_id || '',
+  const exploreType = (
+    sourceType === 'destinations' || ['travel', 'places'].includes(category) ? 'destinations'
+      : sourceType === 'products' || sourceType === 'dreamshelf' || ['buy', 'shopping'].includes(category) ? 'products'
+        : sourceType === 'restaurants' || category === 'food' ? 'restaurants'
+          : sourceType === 'hiking' || ['adventure', 'experiences'].includes(category) ? 'hiking'
+            : ''
+  );
+  if (!exploreType) return directImageUrl;
+  return getExploreCardImageUrl({
+    type: exploreType,
+    cardTitle: dreamName,
+    title: dreamName,
     name: dreamName,
     destination_name: dreamName,
-    title: dreamName,
-    cardTitle: dreamName,
-  }) || '';
+    location: String(dream?.location || '').trim(),
+    imageUrl: String(dream?.imageUrl || dream?.image_url || '').trim(),
+    destination_image: String(dream?.destination_image || '').trim(),
+    photo: String(dream?.photo || '').trim(),
+  }, directImageUrl || "");
 };
 const mergePersistedBucketList = (...dreamLists) => {
   const byId = new Map();

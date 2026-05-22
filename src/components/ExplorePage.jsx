@@ -89,7 +89,7 @@ const EXPLORE_IMAGE_FALLBACKS = {
   destinations: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?auto=format&fit=crop&w=900&q=80",
 };
 
-function getExploreImageUrl(post = {}) {
+export function getExploreImageUrl(post = {}) {
   if (post.type === "destinations") {
     return getDestinationResolvedImage(post, "");
   }
@@ -112,7 +112,7 @@ function getExploreImageUrl(post = {}) {
   return EXPLORE_IMAGE_FALLBACKS.products;
 }
 
-function getExploreCardImageUrl(post = {}, googleImgUrl = "") {
+export function getExploreCardImageUrl(post = {}, googleImgUrl = "") {
   if (post.type === "destinations") {
     return getDestinationResolvedImage(post, googleImgUrl || "");
   }
