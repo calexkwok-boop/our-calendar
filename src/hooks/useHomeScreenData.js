@@ -629,14 +629,30 @@ export default function useHomeScreenData({
       const ts = toDateOnlyTs(value);
       return ts !== null && startOfYearTs !== null && endOfYearTs !== null && ts >= startOfYearTs && ts <= endOfYearTs;
     };
+    const countedYearEventKeys = new Set();
+    const yearEventCount = [
+      ...Object.entries(events || {}).flatMap(([dateKey, dayEvents]) => (
+        (Array.isArray(dayEvents) ? dayEvents : []).map((event) => ({
+          ...event,
+          date: String(event?.date || event?.dateKey || dateKey || '').trim(),
+        }))
+      )),
+      ...(Array.isArray(upcomingPopupEvents) ? upcomingPopupEvents : []),
+    ].reduce((total, event) => {
+      const dateKey = String(event?.date || event?.dateKey || '').trim();
+      if (!inCurrentYearRange(dateKey)) return total;
+      if (!shouldIncludeEventInPersonalOverview(event)) return total;
+      const eventId = String(event?.id || '').trim();
+      const dedupeKey = `${eventId || 'event'}:${dateKey}`;
+      if (countedYearEventKeys.has(dedupeKey)) return total;
+      countedYearEventKeys.add(dedupeKey);
+      return total + 1;
+    }, 0);
     const tripsTakenThisYear = tabTrips.filter((trip) => {
       const startRaw = getSubCalStartRaw(trip);
       const startTs = toDateOnlyTs(startRaw);
       return startTs !== null && startOfYearTs !== null && startTs >= startOfYearTs && startTs <= todayTs;
     });
-    const yearEventCount = uniqueEvents
-      .filter((event) => inCurrentYearRange(event?.date || event?.dateKey || ''))
-      .length;
     const yearMemories = homeResolvedMemories.filter((memory) => inCurrentYearRange(memory?.date || memory?.createdAt || ''));
     const yearPhotoCount = yearMemories.reduce((total, memory) => {
       const memoryKey = String(memory?.id || memory?.date || memory?.createdAt || '');
@@ -648,7 +664,7 @@ export default function useHomeScreenData({
       trips: tripsTakenThisYear.length,
       photos: yearPhotoCount,
     };
-  }, [getSubCalStartRaw, homeMemoryPhotosByMemoryId, homeResolvedMemories, tabTrips, toDateOnlyTs, todayTs, uniqueEvents]);
+  }, [events, getSubCalStartRaw, homeMemoryPhotosByMemoryId, homeResolvedMemories, shouldIncludeEventInPersonalOverview, tabTrips, toDateOnlyTs, todayTs, upcomingPopupEvents]);
 
   const homeMemoryReadyCount = eligibleMemoryEvents.length;
   const homeMemoryOpportunities = eligibleMemoryEvents.slice(0, 2);

@@ -1874,6 +1874,7 @@ const mergePersistedBucketList = (...dreamLists) => {
         dream?.photoUrl
         || dream?.imageUrl
         || dream?.coverPhoto
+        || dream?.attachmentUrl
         || dream?.photos?.[0]?.url
         || ''
       ).trim();
@@ -1890,12 +1891,20 @@ const mergePersistedBucketList = (...dreamLists) => {
         ...dream,
         id: idKey || fallbackKey,
         text: String(dream?.text || dream?.dream || '').trim(),
-        category: String(dream?.category || '').trim(),
-        emoji: String(dream?.emoji || '').trim(),
+        category: String(dream?.category || 'travel').trim() || 'travel',
+        emoji: String(dream?.emoji || '✨').trim() || '✨',
         sources: Array.isArray(dream?.sources) ? dream.sources : [],
         createdAt: String(dream?.createdAt || '').trim(),
         photoUrl: normalizedImageUrl,
         imageUrl: normalizedImageUrl,
+        coverPhoto: String(dream?.coverPhoto || normalizedImageUrl).trim(),
+        attachmentUrl: String(dream?.attachmentUrl || '').trim(),
+        notes: String(dream?.notes || '').trim(),
+        status: String(dream?.status || 'dreaming').trim() || 'dreaming',
+        chapterId: String(dream?.chapterId || '').trim(),
+        type: String(dream?.type || dream?.sourceType || '').trim(),
+        brand: String(dream?.brand || '').trim(),
+        priceRange: String(dream?.priceRange || '').trim(),
       });
     });
   });
@@ -26852,6 +26861,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       dream?.photoUrl
       || dream?.imageUrl
       || dream?.coverPhoto
+      || dream?.attachmentUrl
       || dream?.photos?.[0]?.url
       || ''
     ).trim();
@@ -34987,6 +34997,7 @@ transform: translateY(0);
                 dream.imageUrl
                 || dream.photoUrl
                 || dream.coverPhoto
+                || dream.attachmentUrl
                 || dream.photos?.[0]?.url
                 || ''
               ).trim(),
@@ -35040,6 +35051,7 @@ transform: translateY(0);
               card.imageUrl
               || card.photoUrl
               || card.coverPhoto
+              || card.attachmentUrl
               || card.photos?.[0]?.url
               || ''
             ).trim(),

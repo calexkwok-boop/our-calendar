@@ -99,7 +99,7 @@ const hashHomeShuffleKey = (value) => {
 };
 
 const getVisualPreviewUrl = (item) => String(
-  item?.coverPhoto || item?.photoUrl || item?.photos?.[0]?.url || ''
+  item?.coverPhoto || item?.photoUrl || item?.imageUrl || item?.attachmentUrl || item?.photos?.[0]?.url || ''
 ).trim();
 
 const getOnYourMindImageUrl = (dream) => {
@@ -107,6 +107,7 @@ const getOnYourMindImageUrl = (dream) => {
     dream?.photoUrl
     || dream?.imageUrl
     || dream?.coverPhoto
+    || dream?.attachmentUrl
     || dream?.photos?.[0]?.url
     || ''
   ).trim();
