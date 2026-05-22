@@ -1,4 +1,4 @@
-export const DESTINATION_IMAGE_OVERRIDES = {
+const RAW_DESTINATION_IMAGE_OVERRIDES = {
   'amalfi-coast': 'https://www.royalcaribbean.com/media-assets/pmc/content/dam/shore-x/naples-nap/np07-sorrento-and-the-amalfi-drive/stock-photo-view-of-positano-village-along-amalfi-coast-in-italy-at-dusk-1157705677.jpg?w=1440',
   amsterdam: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/KeizersgrachtReguliersgrachtAmsterdam.jpg/1280px-KeizersgrachtReguliersgrachtAmsterdam.jpg',
   'anse-source-d': 'https://worlds50beaches.com/assets/images/beaches-2026/242.webp',
@@ -78,13 +78,24 @@ export const DESTINATION_IMAGE_OVERRIDES = {
   'the-galapagos-islands': 'https://commons.wikimedia.org/wiki/Special:FilePath/Lobo_marino_%28Zalophus_californianus_wollebaeki%29%2C_Punta_Pitt%2C_isla_de_San_Crist%C3%B3bal%2C_islas_Gal%C3%A1pagos%2C_Ecuador%2C_2015-07-24%2C_DD_11.JPG'
 };
 
-const DESTINATION_IMAGE_KEY_ALIASES = {
+export const DESTINATION_IMAGE_OVERRIDES = Object.freeze(
+  Object.fromEntries(
+    Object.entries(RAW_DESTINATION_IMAGE_OVERRIDES).map(([key, value]) => [
+      key,
+      String(value || '').trim()
+    ])
+  )
+);
+
+const DESTINATION_IMAGE_KEY_ALIASES = Object.freeze({
   amazon: 'the-amazon',
   'galapagos-islands': 'the-galapagos-islands',
   'icefields-parkway': 'the-icefields-parkway',
   'the-gal-pagos-islands': 'the-galapagos-islands',
   'garden-route': 'the-garden-route'
-};
+});
+
+const resolvedDestinationImageKeyCache = new Map();
 
 const normalizeDestinationImageKey = (value = '') => String(value)
   .trim()
@@ -93,19 +104,30 @@ const normalizeDestinationImageKey = (value = '') => String(value)
   .replace(/^-|-$/g, '');
 
 const resolveDestinationImageKey = (value = '') => {
-  const key = normalizeDestinationImageKey(value);
-  if (!key) return '';
-  if (DESTINATION_IMAGE_OVERRIDES[key]) return key;
-  if (DESTINATION_IMAGE_KEY_ALIASES[key]) return DESTINATION_IMAGE_KEY_ALIASES[key];
+  const cacheKey = String(value || '');
+  if (resolvedDestinationImageKeyCache.has(cacheKey)) {
+    return resolvedDestinationImageKeyCache.get(cacheKey);
+  }
 
-  const articleVariant = key.startsWith('the-') ? key.slice(4) : `the-${key}`;
-  if (DESTINATION_IMAGE_OVERRIDES[articleVariant]) return articleVariant;
-  return '';
+  const key = normalizeDestinationImageKey(cacheKey);
+  let resolvedKey = '';
+
+  if (key && DESTINATION_IMAGE_OVERRIDES[key]) {
+    resolvedKey = key;
+  } else if (key && DESTINATION_IMAGE_KEY_ALIASES[key]) {
+    resolvedKey = DESTINATION_IMAGE_KEY_ALIASES[key];
+  } else if (key) {
+    const articleVariant = key.startsWith('the-') ? key.slice(4) : `the-${key}`;
+    if (DESTINATION_IMAGE_OVERRIDES[articleVariant]) resolvedKey = articleVariant;
+  }
+
+  resolvedDestinationImageKeyCache.set(cacheKey, resolvedKey);
+  return resolvedKey;
 };
 
 export const getDestinationImageOverride = (destination = {}) => {
   const idKey = resolveDestinationImageKey(destination?.id);
-  if (idKey) return String(DESTINATION_IMAGE_OVERRIDES[idKey]).trim();
+  if (idKey) return DESTINATION_IMAGE_OVERRIDES[idKey];
 
   const nameKey = resolveDestinationImageKey(
     destination?.name
@@ -115,6 +137,6 @@ export const getDestinationImageOverride = (destination = {}) => {
     || ''
   );
 
-  if (nameKey && DESTINATION_IMAGE_OVERRIDES[nameKey]) return String(DESTINATION_IMAGE_OVERRIDES[nameKey]).trim();
+  if (nameKey) return DESTINATION_IMAGE_OVERRIDES[nameKey];
   return '';
 };
