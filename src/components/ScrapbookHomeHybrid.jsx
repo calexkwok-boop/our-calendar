@@ -14,8 +14,8 @@ import {
   X,
 } from 'lucide-react';
 import QuickThoughtsSection from './QuickThoughtsSection';
-import { getExploreCardImageUrl } from './ExplorePage';
 import useHomeSectionLayout from '../hooks/useHomeSectionLayout';
+import { resolveDreamImage } from '../lib/resolveDreamImage';
 
 const TODAY_MOMENT_CACHE_KEY = 'home-today-moment-v1';
 const readCachedTodayMoment = (todayKey) => {
@@ -102,44 +102,7 @@ const getVisualPreviewUrl = (item) => String(
   item?.photo || item?.image || item?.image_url || item?.imageUrl || item?.destination_image || item?.photo_url || item?.photoUrl || item?.cover_photo || item?.coverPhoto || item?.attachment_url || item?.attachmentUrl || item?.photos?.[0]?.url || ''
 ).trim();
 
-const getOnYourMindImageUrl = (dream) => {
-  const fallbackImageUrl = String(
-    dream?.photo
-    || dream?.image
-    || dream?.image_url
-    || dream?.imageUrl
-    || dream?.destination_image
-    || dream?.photo_url
-    || dream?.photoUrl
-    || dream?.cover_photo
-    || dream?.coverPhoto
-    || dream?.attachment_url
-    || dream?.attachmentUrl
-    || dream?.photos?.[0]?.url
-    || ''
-  ).trim();
-  const sourceType = String(dream?.type || dream?.sourceType || '').trim().toLowerCase();
-  const category = String(dream?.category || dream?.categoryId || '').trim().toLowerCase();
-  const exploreType = (
-    sourceType === 'destinations' || category === 'travel' || category === 'places' ? 'destinations'
-      : sourceType === 'products' || sourceType === 'dreamshelf' || category === 'buy' || category === 'shopping' ? 'products'
-        : sourceType === 'restaurants' || category === 'food' ? 'restaurants'
-          : sourceType === 'hiking' || category === 'adventure' || category === 'experiences' ? 'hiking'
-            : ''
-  );
-  if (!exploreType) return fallbackImageUrl;
-  return getExploreCardImageUrl({
-    type: exploreType,
-    cardTitle: String(dream?.text || '').trim(),
-    title: String(dream?.text || '').trim(),
-    name: String(dream?.text || '').trim(),
-    destination_name: String(dream?.text || '').trim(),
-    location: String(dream?.location || '').trim(),
-    imageUrl: String(dream?.imageUrl || dream?.image_url || '').trim(),
-    destination_image: String(dream?.destination_image || '').trim(),
-    photo: String(dream?.photo || '').trim(),
-  }, fallbackImageUrl || "");
-};
+const getOnYourMindImageUrl = (dream) => resolveDreamImage(dream);
 
 const toLocalDateKey = (date) => {
   if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';

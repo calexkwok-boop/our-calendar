@@ -20,7 +20,7 @@ import StartTripModal from "./components/StartTripModal";
 import JourneyQuoteDisplay from "./components/JourneyQuoteDisplay";
 import TrophyCase, { deriveJourneyTrophyCase } from "./components/TrophyCase";
 import WelcomeCover from "./components/WelcomeCover";
-import ExplorePage, { getExploreCardImageUrl } from "./components/ExplorePage";
+import ExplorePage from "./components/ExplorePage";
 import NewCalendarLook from "./components/Newcalendarlook";
 import SharedListPanel from "./components/SharedListPanel";
 import MemorySystem, { MemoryCreator as ImportedMemoryCreator } from "./components/MemorySystem";
@@ -37,6 +37,7 @@ import FriendPhotoModal from "./components/FriendPhotoModal";
 import JOURNEY_QUOTES from "./data/journeyQuotes";
 import { loadFriendsList as loadFriendsListLib } from "./lib/loadFriendsList";
 import * as memoryPersistence from "./lib/memoryPersistence";
+import { normalizeDreamCategory, resolveDreamImage } from "./lib/resolveDreamImage";
 
 const PopupEventPanel = React.lazy(() => import("./components/PopupEventPanel"));
 const SportsEventCardOverlay = React.lazy(() => import("./components/SportsEventCardOverlay"));
@@ -1864,45 +1865,7 @@ const writeTripKomoState = (userId, state) => {
     }
   } catch {}
 };
-const resolveBucketDreamImage = (dream) => {
-  const directImageUrl = String(
-    dream?.photo
-    || dream?.image
-    || dream?.image_url
-    || dream?.imageUrl
-    || dream?.destination_image
-    || dream?.photo_url
-    || dream?.photoUrl
-    || dream?.cover_photo
-    || dream?.coverPhoto
-    || dream?.attachment_url
-    || dream?.attachmentUrl
-    || dream?.photos?.[0]?.url
-    || ''
-  ).trim();
-  const sourceType = String(dream?.type || dream?.sourceType || '').trim().toLowerCase();
-  const category = String(dream?.category || dream?.categoryId || '').trim().toLowerCase();
-  const dreamName = String(dream?.text || dream?.dream || '').trim();
-  const exploreType = (
-    sourceType === 'destinations' || ['travel', 'places'].includes(category) ? 'destinations'
-      : sourceType === 'products' || sourceType === 'dreamshelf' || ['buy', 'shopping'].includes(category) ? 'products'
-        : sourceType === 'restaurants' || category === 'food' ? 'restaurants'
-          : sourceType === 'hiking' || ['adventure', 'experiences'].includes(category) ? 'hiking'
-            : ''
-  );
-  if (!exploreType) return directImageUrl;
-  return getExploreCardImageUrl({
-    type: exploreType,
-    cardTitle: dreamName,
-    title: dreamName,
-    name: dreamName,
-    destination_name: dreamName,
-    location: String(dream?.location || '').trim(),
-    imageUrl: String(dream?.imageUrl || dream?.image_url || '').trim(),
-    destination_image: String(dream?.destination_image || '').trim(),
-    photo: String(dream?.photo || '').trim(),
-  }, directImageUrl || "");
-};
+const resolveBucketDreamImage = (dream) => resolveDreamImage(dream);
 const mergePersistedBucketList = (...dreamLists) => {
   const byId = new Map();
   dreamLists.forEach((list) => {
@@ -1911,8 +1874,8 @@ const mergePersistedBucketList = (...dreamLists) => {
       const normalizedImageUrl = resolveBucketDreamImage(dream);
       const idKey = String(dream?.id || '').trim();
       const fallbackKey = [
-        String(dream?.text || dream?.dream || '').trim().toLowerCase(),
-        String(dream?.category || '').trim().toLowerCase(),
+        String(dream?.text || dream?.dream || dream?.label || dream?.title || '').trim().toLowerCase(),
+        String(dream?.category || dream?.categoryId || '').trim().toLowerCase(),
         String(dream?.createdAt || '').trim(),
         index,
       ].join('|');
@@ -1921,8 +1884,8 @@ const mergePersistedBucketList = (...dreamLists) => {
       byId.set(key, {
         ...dream,
         id: idKey || fallbackKey,
-        text: String(dream?.text || dream?.dream || '').trim(),
-        category: String(dream?.category || 'travel').trim() || 'travel',
+        text: String(dream?.text || dream?.dream || dream?.label || dream?.title || '').trim(),
+        category: normalizeDreamCategory(dream),
         emoji: String(dream?.emoji || '✨').trim() || '✨',
         sources: Array.isArray(dream?.sources) ? dream.sources : [],
         createdAt: String(dream?.createdAt || '').trim(),
@@ -32998,7 +32961,7 @@ transform: translateY(0);
                   const text = String(post?.title || post?.movieTitle || post?.cardTitle || post?.text || '').trim();
                   if (!text) return;
                   const posterPath = post?.poster_path || '';
-                  const photoUrl = posterPath ? `https://image.tmdb.org/t/p/w342${posterPath}` : (post?.imageUrl || '');
+                  const photoUrl = posterPath ? `https://image.tmdb.org/t/p/w342${posterPath}` : resolveDreamImage(post);
                   const emoji = post?.emoji || (post?.type === 'movies' ? '🎬' : post?.type === 'hiking' ? '⛰️' : post?.type === 'restaurants' ? '🍽️' : post?.type === 'games' ? '🎲' : (post?.type === 'products' || post?.type === 'dreamshelf') ? '✨' : post?.type === 'destinations' ? '✈️' : '✨');
                   const category = post?.categoryId === 'buy' || post?.type === 'products' || post?.type === 'dreamshelf' ? 'buy' : post?.categoryId === 'travel' || post?.type === 'destinations' ? 'travel' : post?.categoryId === 'food' || post?.type === 'restaurants' ? 'food' : post?.type === 'movies' ? 'fun' : post?.type === 'hiking' ? 'adventure' : post?.type === 'games' ? 'fun' : 'fun';
                   setBucketList((prev) => {
@@ -35058,14 +35021,7 @@ transform: translateY(0);
             sourceId: String(card.sourceId || card.id || '').trim(),
             placementId: String(card.placementId || '').trim(),
             label: String(card.label || card.text || 'Komo Book idea').trim(),
-            imageUrl: String(
-              card.imageUrl
-              || card.photoUrl
-              || card.coverPhoto
-              || card.attachmentUrl
-              || card.photos?.[0]?.url
-              || ''
-            ).trim(),
+            imageUrl: resolveDreamImage(card),
             emoji: String(card.emoji || '*').trim(),
             type: String(card.type || 'photo').trim(),
             rot: Number(card.rot || 0),
