@@ -15,7 +15,8 @@ import {
 } from 'lucide-react';
 import QuickThoughtsSection from './QuickThoughtsSection';
 import useHomeSectionLayout from '../hooks/useHomeSectionLayout';
-import { resolveDreamImage } from '../lib/resolveDreamImage';
+import useGoogleImage from '../hooks/useGoogleImage';
+import { getDreamImageSearchQuery, resolveDreamImage } from '../lib/resolveDreamImage';
 
 const TODAY_MOMENT_CACHE_KEY = 'home-today-moment-v1';
 const readCachedTodayMoment = (todayKey) => {
@@ -103,6 +104,99 @@ const getVisualPreviewUrl = (item) => String(
 ).trim();
 
 const getOnYourMindImageUrl = (dream) => resolveDreamImage(dream);
+
+function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCardId, cardNotes, saveCardNote, cardAttachments, saveCardAttachment }) {
+  const resolvedImageUrl = getOnYourMindImageUrl(dream);
+  const searchedImageUrl = useGoogleImage(!resolvedImageUrl ? getDreamImageSearchQuery(dream) : null);
+  const dreamImageUrl = resolvedImageUrl || searchedImageUrl;
+
+  return (
+    <div
+      className="group flex-shrink-0 snap-start w-40 sm:w-48"
+      style={{ rotate: `${idx % 2 === 0 ? '-1.4deg' : '1.1deg'}`, perspective: '800px' }}
+    >
+      <div
+        className="relative transition-transform duration-500"
+        style={{
+          transformStyle: 'preserve-3d',
+          transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+          cursor: isFlipped ? 'default' : 'pointer',
+        }}
+        onClick={(e) => {
+          if (isFlipped) return;
+          e.stopPropagation();
+          setFlippedCardId(dream.id || idx);
+        }}
+      >
+        <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+          {dreamImageUrl ? (
+            <div className="bg-white dark:bg-slate-100 rounded-sm shadow-lg p-2 pb-0">
+              <div className="aspect-square w-full overflow-hidden rounded-[3px]">
+                <img src={dreamImageUrl} alt={dream.text} className="h-full w-full object-cover" loading="lazy" />
+              </div>
+              <div className="px-1 py-3 text-center">
+                <div className="font-handwritten text-base leading-tight text-gray-600 line-clamp-2">
+                  {dream.emoji} {dream.text}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex min-h-[216px] flex-col justify-between rounded-[22px] border border-emerald-900/10 bg-white/70 p-4 text-left shadow-lg dark:border-white/10 dark:bg-black/20">
+              <span className="text-4xl">{dream.emoji}</span>
+              <span className="font-handwritten text-2xl leading-tight text-gray-900 dark:text-white line-clamp-4">
+                {dream.text}
+              </span>
+            </div>
+          )}
+        </div>
+        <div
+          className="absolute inset-0 flex flex-col overflow-hidden rounded-sm bg-amber-50 p-3 shadow-lg dark:bg-slate-200"
+          style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setFlippedCardId(null); }}
+            className="absolute right-2 top-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/90 text-[14px] text-gray-500 shadow-sm"
+          >
+            â†©
+          </button>
+          <textarea
+            value={cardNotes[dream.id] || ''}
+            onChange={(e) => saveCardNote(dream.id, e.target.value, dream.chapterId)}
+            onClick={(e) => e.stopPropagation()}
+            placeholder="notes..."
+            className="mt-1 flex-1 w-full resize-none bg-transparent text-gray-700 placeholder-gray-400/60 outline-none dark:text-gray-800"
+            style={{ fontFamily: "'Caveat', cursive", fontSize: '14px', lineHeight: '1.45' }}
+            maxLength={500}
+          />
+          <div className="flex items-center justify-between pt-2">
+            {cardAttachments[dream.id] ? (
+              <a href={cardAttachments[dream.id]} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="block h-6 w-6 overflow-hidden rounded shadow-sm ring-1 ring-gray-200/60">
+                <img src={cardAttachments[dream.id]} alt="attachment" className="h-full w-full object-cover" />
+              </a>
+            ) : <span />}
+            <label className="cursor-pointer rounded-full bg-white/70 px-2 py-0.5 text-[11px] text-gray-500 shadow-sm" title="Attach photo" onClick={(e) => e.stopPropagation()}>
+              ðŸ“Ž
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => saveCardAttachment(dream.id, String(reader.result || ''), dream.chapterId);
+                  reader.readAsDataURL(file);
+                }}
+              />
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const toLocalDateKey = (date) => {
   if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
@@ -865,6 +959,20 @@ const ScrapbookHomeHybrid = ({
           {shuffledBucketList.length > 0 ? (
             <div className="flex gap-4 overflow-x-auto overflow-y-hidden pb-2 pl-0.5 pr-5 scrollbar-hide snap-x snap-mandatory [touch-action:pan-x]">
               {shuffledBucketList.slice(0, 4).map((dream, idx) => {
+                  return (
+                    <OnYourMindPolaroid
+                      key={dream.id || idx}
+                      dream={dream}
+                      idx={idx}
+                      isFlipped={flippedCardId === (dream.id || idx)}
+                      flippedCardId={flippedCardId}
+                      setFlippedCardId={setFlippedCardId}
+                      cardNotes={cardNotes}
+                      saveCardNote={saveCardNote}
+                      cardAttachments={cardAttachments}
+                      saveCardAttachment={saveCardAttachment}
+                    />
+                  );
                   const dreamImageUrl = getOnYourMindImageUrl(dream);
                   const isFlipped = flippedCardId === (dream.id || idx);
                   return (

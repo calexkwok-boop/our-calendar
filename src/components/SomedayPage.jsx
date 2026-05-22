@@ -2788,12 +2788,18 @@ const SomedayPage = ({
         const s = source?.status;
         const nextNotes = source?.notes;
         const nextAttachmentUrl = source?.attachmentUrl;
+        const nextImageUrl = getPinImageUrl(source);
+        const nextLabel = source?.label ?? source?.text;
+        const nextEmoji = source?.emoji;
         if (
           source
           && (
             s !== undefined && (s !== p.status || (s === 'planning' && p.pinColor !== 'purple') || (s !== 'planning' && p.pinColor === 'purple' && !p.chapterId))
             || nextNotes !== undefined && nextNotes !== p.notes
             || nextAttachmentUrl !== undefined && nextAttachmentUrl !== p.attachmentUrl
+            || nextImageUrl !== getPinImageUrl(p)
+            || nextLabel !== undefined && nextLabel !== p.label
+            || nextEmoji !== undefined && nextEmoji !== p.emoji
           )
         ) {
           changed = true;
@@ -2802,6 +2808,9 @@ const SomedayPage = ({
             ...(s !== undefined ? { status: s, pinColor: s === 'planning' ? 'purple' : (p.chapterId ? 'purple' : (p.pinColor === 'purple' ? 'teal' : p.pinColor)) } : {}),
             ...(nextNotes !== undefined ? { notes: nextNotes } : {}),
             ...(nextAttachmentUrl !== undefined ? { attachmentUrl: nextAttachmentUrl } : {}),
+            ...(nextImageUrl !== undefined ? { imageUrl: nextImageUrl, photoUrl: nextImageUrl } : {}),
+            ...(nextLabel !== undefined ? { label: nextLabel, text: source?.text ?? nextLabel } : {}),
+            ...(nextEmoji !== undefined ? { emoji: nextEmoji } : {}),
           };
         }
         return p;

@@ -28,6 +28,7 @@ import ScrapbookHomeHybrid from "./components/ScrapbookHomeHybrid";
 import AddDreamSheet from "./components/AddDreamSheet";
 import MakeItHappenSheet from "./components/MakeItHappenSheet";
 import useHomeScreenData from "./hooks/useHomeScreenData";
+import useGoogleImage from "./hooks/useGoogleImage";
 import { useAuth } from "./hooks/useAuth";
 import { useNotifications } from "./hooks/useNotifications";
 import TripsTab from "./components/TripsTab";
@@ -37,7 +38,7 @@ import FriendPhotoModal from "./components/FriendPhotoModal";
 import JOURNEY_QUOTES from "./data/journeyQuotes";
 import { loadFriendsList as loadFriendsListLib } from "./lib/loadFriendsList";
 import * as memoryPersistence from "./lib/memoryPersistence";
-import { normalizeDreamCategory, resolveDreamImage } from "./lib/resolveDreamImage";
+import { getDreamImageSearchQuery, normalizeDreamCategory, resolveDreamImage } from "./lib/resolveDreamImage";
 
 const PopupEventPanel = React.lazy(() => import("./components/PopupEventPanel"));
 const SportsEventCardOverlay = React.lazy(() => import("./components/SportsEventCardOverlay"));
@@ -1866,6 +1867,32 @@ const writeTripKomoState = (userId, state) => {
   } catch {}
 };
 const resolveBucketDreamImage = (dream) => resolveDreamImage(dream);
+function KomoPolaroidCard({ card, compact = false }) {
+  const resolvedImageUrl = resolveDreamImage(card);
+  const searchedImageUrl = useGoogleImage(!resolvedImageUrl ? getDreamImageSearchQuery(card) : null);
+  const imageUrl = resolvedImageUrl || searchedImageUrl;
+  const rotation = Number(card?.rot || 0) * (compact ? 0.35 : 0.55);
+  const label = String(card?.label || card?.text || 'Komo Book idea').trim();
+  const emoji = String(card?.emoji || '*').trim();
+
+  return (
+    <div
+      className={`relative shrink-0 rounded-[3px] bg-white p-1 shadow-md ${compact ? 'w-24' : 'w-32'} dark:bg-slate-100`}
+      style={{ transform: `rotate(${rotation}deg)` }}
+    >
+      <div className="aspect-square w-full overflow-hidden rounded-[2px] bg-emerald-50">
+        {imageUrl ? (
+          <img src={imageUrl} alt={label} className="h-full w-full object-cover" draggable={false} />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-2xl">{emoji}</div>
+        )}
+      </div>
+      <div className={`px-1 py-1 text-center text-gray-700 ${compact ? 'text-[11px]' : 'text-xs'}`} style={{ fontFamily: "'Caveat', cursive" }}>
+        <span className="line-clamp-2">{label}</span>
+      </div>
+    </div>
+  );
+}
 const mergePersistedBucketList = (...dreamLists) => {
   const byId = new Map();
   dreamLists.forEach((list) => {
@@ -35287,23 +35314,7 @@ transform: translateY(0);
           const renderKomoPolaroid = (card, options = {}) => {
             const compact = Boolean(options.compact);
             const normalized = normalizeKomoCard(card);
-            return (
-              <div
-                className={`relative shrink-0 rounded-[3px] bg-white p-1 shadow-md ${compact ? 'w-24' : 'w-32'} dark:bg-slate-100`}
-                style={{ transform: `rotate(${(normalized.rot || 0) * (compact ? 0.35 : 0.55)}deg)` }}
-              >
-                <div className="aspect-square w-full overflow-hidden rounded-[2px] bg-emerald-50">
-                  {normalized.imageUrl ? (
-                    <img src={normalized.imageUrl} alt={normalized.label} className="h-full w-full object-cover" draggable={false} />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-2xl">{normalized.emoji}</div>
-                  )}
-                </div>
-                <div className={`px-1 py-1 text-center text-gray-700 ${compact ? 'text-[11px]' : 'text-xs'}`} style={{ fontFamily: "'Caveat', cursive" }}>
-                  <span className="line-clamp-2">{normalized.label}</span>
-                </div>
-              </div>
-            );
+            return <KomoPolaroidCard card={normalized} compact={compact} />;
           };
           const getSectionFallbackOrder = (section, offset = 0) => {
             const baseHour = Number.isFinite(Number(section?.defaultHour)) ? Number(section.defaultHour) : 12;

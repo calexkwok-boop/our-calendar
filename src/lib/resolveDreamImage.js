@@ -32,6 +32,16 @@ const DREAM_CATEGORY_MAP = {
   games: "fun",
 };
 
+const resolveRawType = (item) => {
+  const rawType = String(item?.type || item?.sourceType || "").trim().toLowerCase();
+  if (rawType) return rawType;
+  const rawCategory = String(item?.category || item?.categoryId || "").trim().toLowerCase();
+  const rawEmoji = String(item?.emoji || "").trim();
+  if (rawCategory === "fun" || rawCategory === "movies" || rawEmoji === "🎬") return "movies";
+  if (rawCategory === "games" || rawEmoji === "🎲") return "games";
+  return "";
+};
+
 export const readDirectDreamImageUrl = (item) => {
   for (const field of DIRECT_IMAGE_FIELDS) {
     const value = String(item?.[field] || "").trim();
@@ -46,7 +56,7 @@ export const normalizeDreamCategory = (item) => {
 };
 
 const inferExploreType = (item) => {
-  const rawType = String(item?.type || item?.sourceType || "").trim().toLowerCase();
+  const rawType = resolveRawType(item);
   const category = normalizeDreamCategory(item);
   const rawCategoryId = String(item?.categoryId || "").trim().toLowerCase();
 
@@ -62,6 +72,24 @@ const inferExploreType = (item) => {
   if (rawCategoryId === "experiences" || category === "adventure") return "hiking";
   if (rawCategoryId === "buy" || category === "buy") return "products";
 
+  return "";
+};
+
+export const getDreamImageSearchQuery = (item) => {
+  const rawType = resolveRawType(item);
+  const title = String(
+    item?.text
+    || item?.label
+    || item?.cardTitle
+    || item?.title
+    || item?.name
+    || item?.dream
+    || item?.destination_name
+    || ""
+  ).trim();
+  if (!title) return "";
+  if (rawType === "games") return `${title} board game box`;
+  if (rawType === "movies") return `${title} movie poster`;
   return "";
 };
 
