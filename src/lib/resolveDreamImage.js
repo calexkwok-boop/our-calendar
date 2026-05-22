@@ -77,6 +77,7 @@ const inferExploreType = (item) => {
 
 export const getDreamImageSearchQuery = (item) => {
   const rawType = resolveRawType(item);
+  const category = normalizeDreamCategory(item);
   const title = String(
     item?.text
     || item?.label
@@ -90,6 +91,10 @@ export const getDreamImageSearchQuery = (item) => {
   if (!title) return "";
   if (rawType === "games") return `${title} board game box`;
   if (rawType === "movies") return `${title} movie poster`;
+  if (rawType === "destinations" || category === "travel") return `${title} travel destination`;
+  if (rawType === "restaurants" || category === "food") return `${title} restaurant`;
+  if (rawType === "hiking" || category === "adventure") return `${title} landmark travel`;
+  if (rawType === "products" || category === "buy") return `${title} product`;
   return "";
 };
 
