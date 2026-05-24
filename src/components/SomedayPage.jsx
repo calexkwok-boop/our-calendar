@@ -7,8 +7,9 @@ import { createPortal } from 'react-dom';
 import { supabase } from '../supabaseClient';
 import InvitePicker from './InvitePicker';
 import useGoogleImage from '../hooks/useGoogleImage';
+import useMoviePoster from '../hooks/useMoviePoster';
 import usePlacesImage from '../hooks/usePlacesImage';
-import { getDreamImageSearchQuery, getDreamPlacePhotoQuery, resolveDreamImage, resolveDreamImageCandidates } from '../lib/resolveDreamImage';
+import { getDreamImageSearchQuery, getDreamPlacePhotoQuery, isMovieDream, resolveDreamImage, resolveDreamImageCandidates } from '../lib/resolveDreamImage';
 
 const CAVEAT = '"Caveat", cursive';
 const SANS = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
@@ -875,16 +876,17 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
   const [imageIndex, setImageIndex] = useState(0);
   const [searchFailed, setSearchFailed] = useState(false);
   const resolvedImageUrl = candidateImageUrls[imageIndex] || '';
+  const pinTitle = String(pin?.label || pin?.text || '').trim();
+  const moviePosterUrl = useMoviePoster(!resolvedImageUrl && isMovieDream(pin) ? pinTitle : null);
   const placeImageUrl = usePlacesImage(!resolvedImageUrl ? getDreamPlacePhotoQuery(pin) : null);
-  const searchedImageUrl = useGoogleImage(!resolvedImageUrl && !placeImageUrl ? getDreamImageSearchQuery(pin) : null);
-  const imageUrl = searchFailed ? '' : (resolvedImageUrl || placeImageUrl || searchedImageUrl);
+  const searchedImageUrl = useGoogleImage(!resolvedImageUrl && !moviePosterUrl && !placeImageUrl ? getDreamImageSearchQuery(pin) : null);
+  const imageUrl = searchFailed ? '' : (resolvedImageUrl || moviePosterUrl || placeImageUrl || searchedImageUrl);
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
-  const imageFailed = exhaustedCandidates && (!(placeImageUrl || searchedImageUrl) || searchFailed);
+  const imageFailed = exhaustedCandidates && (!(moviePosterUrl || placeImageUrl || searchedImageUrl) || searchFailed);
   const showDebugFallback = !imageUrl || imageFailed;
   const cardBg  = darkMode ? '#e2e8f0' : '#ffffff';
   const labelCol = pin.status === 'done' ? '#9ca3af' : '#374151';
   const shadow  = isDragging ? '0 20px 50px rgba(0,0,0,0.5)' : '3px 5px 16px rgba(0,0,0,0.22)';
-  const pinTitle = String(pin?.label || pin?.text || '').trim();
   useEffect(() => {
     setImageIndex(0);
     setSearchFailed(false);
@@ -896,7 +898,7 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
     `category: ${String(pin?.category || '').trim() || '(blank)'}`,
     `categoryId: ${String(pin?.categoryId || '').trim() || '(blank)'}`,
     `resolved: ${resolvedImageUrl ? 'yes' : 'no'}`,
-    `search: ${(placeImageUrl || searchedImageUrl) ? 'yes' : 'no'}`,
+    `search: ${(moviePosterUrl || placeImageUrl || searchedImageUrl) ? 'yes' : 'no'}`,
     `imageUrl: ${imageUrl ? 'yes' : 'no'}`,
     `failed: ${imageFailed ? 'yes' : 'no'}`,
     `candidate: ${candidateImageUrls.length ? `${Math.min(imageIndex + 1, candidateImageUrls.length)}/${candidateImageUrls.length}` : '0/0'}`,

@@ -35,13 +35,16 @@ const DREAM_CATEGORY_MAP = {
 
 const TITLE_IMAGE_OVERRIDES = {
   "disneyland park": "https://commons.wikimedia.org/wiki/Special:FilePath/File:Disneyland%20park%20-%20Anaheim%20Los%20Angeles%20California%20USA%20%289894308516%29.jpg",
-  "gary danko": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=900&q=80",
   "old quarter street wander hanoi": "https://images.unsplash.com/photo-1557750255-c76072a7aad1?w=900&q=80",
   "old quarter street wander, hanoi": "https://images.unsplash.com/photo-1557750255-c76072a7aad1?w=900&q=80",
   "the marble mountains": "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=900&q=80",
-  "willow osteria": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=900&q=80",
-  "din tai fung": "https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=900&q=80",
   "ba na hills": "https://images.unsplash.com/photo-1504214208698-ea1916a2195a?auto=format&fit=crop&w=900&q=80",
+};
+
+const TITLE_TYPE_OVERRIDES = {
+  "oldboy": "movies",
+  "the italian job": "movies",
+  "italian job": "movies",
 };
 
 const GENERIC_RESTAURANT_IMAGE_URLS = new Set([
@@ -110,6 +113,9 @@ const inferExploreType = (item) => {
     || item?.destination_name
     || ""
   ).trim().toLowerCase();
+  const normalizedTitle = normalizeLookupTitle(title);
+  const titleTypeOverride = TITLE_TYPE_OVERRIDES[normalizedTitle];
+  if (titleTypeOverride) return titleTypeOverride;
 
   if (rawType === "destinations") return "destinations";
   if (rawType === "products" || rawType === "dreamshelf") return "products";
@@ -126,12 +132,14 @@ const inferExploreType = (item) => {
   if (/(disneyland|disney world|orlando|anaheim|boston|iceland|northern lights|mountains|mountain|beach|bay|park|island|islands|coast|canyon|falls|temple|resort|hotel|hyatt)/.test(title)) return "destinations";
   if (/(din tai fung|nobu|brodard|oiza|kitchen|bbq|grill|cafe|coffee|ramen|sushi|pizza|restaurant|eatery|bistro|diner)/.test(title)) return "restaurants";
   if (/(ray-ban|meta|wayfarer|bag|watch|bracelet|ring|shoes|sneakers|camera|whoop|oura|garmin|bike|paddle|purse)/.test(title)) return "products";
+  if (/(oldboy|italian job|movie|film|criterion|screening)/.test(title)) return "movies";
   if (/(hike|trail|summit|peak|trek|climb|camp|adventure|skydiving|parasailing)/.test(title)) return "hiking";
 
   return "";
 };
 
 export const isRestaurantDream = (item) => inferExploreType(item) === "restaurants";
+export const isMovieDream = (item) => inferExploreType(item) === "movies";
 
 export const getDreamPlacePhotoQuery = (item) => {
   if (!isRestaurantDream(item)) return "";
@@ -158,6 +166,7 @@ export const getDreamPlacePhotoQuery = (item) => {
 export const getDreamImageSearchQuery = (item) => {
   const rawType = resolveRawType(item);
   const category = normalizeDreamCategory(item);
+  const inferredType = inferExploreType(item);
   const title = String(
     item?.text
     || item?.label
@@ -169,11 +178,11 @@ export const getDreamImageSearchQuery = (item) => {
     || ""
   ).trim();
   if (!title) return "";
-  if (rawType === "games") return `${title} board game box`;
-  if (rawType === "movies") return `${title} movie poster`;
+  if (rawType === "games" || inferredType === "games") return `${title} board game box`;
+  if (rawType === "movies" || inferredType === "movies") return `${title} movie poster`;
   if (rawType === "destinations" || category === "travel") return `${title} travel destination`;
   if (rawType === "restaurants" || category === "food") return `${title} restaurant`;
-  if (rawType === "hiking" || category === "adventure") return `${title} landmark travel`;
+  if (rawType === "hiking" || inferredType === "hiking" || category === "adventure") return `${title} landmark travel`;
   if (rawType === "products" || category === "buy") return `${title} product`;
   return "";
 };
@@ -201,21 +210,19 @@ export const resolveDreamImageCandidates = (item) => {
   ).trim();
   const titleKey = title.toLowerCase();
   const candidates = [];
-  const delayedCandidates = [];
-  if (TITLE_IMAGE_OVERRIDES[titleKey]) candidates.push(TITLE_IMAGE_OVERRIDES[titleKey]);
+  const queueCandidate = (url) => {
+    const normalized = String(url || "").trim();
+    if (!normalized) return;
+    if (isRestaurantDream(item) && GENERIC_RESTAURANT_IMAGE_URLS.has(normalized)) {
+      return;
+    }
+    candidates.push(normalized);
+  };
+  if (TITLE_IMAGE_OVERRIDES[titleKey]) queueCandidate(TITLE_IMAGE_OVERRIDES[titleKey]);
 
   const directImageUrl = readDirectDreamImageUrl(item);
   const catalogImageUrl = findExploreCatalogImageUrlByTitle(title);
-  const shouldDelayGenericRestaurantImage = (
-    isRestaurantDream(item)
-    && directImageUrl
-    && GENERIC_RESTAURANT_IMAGE_URLS.has(directImageUrl)
-    && !catalogImageUrl
-  );
-  if (directImageUrl) {
-    if (shouldDelayGenericRestaurantImage) delayedCandidates.push(directImageUrl);
-    else candidates.push(directImageUrl);
-  }
+  if (directImageUrl) queueCandidate(directImageUrl);
 
   const destinationOverrideImage = getDestinationImageOverride({
     id: item?.id,
@@ -224,19 +231,19 @@ export const resolveDreamImageCandidates = (item) => {
     cardTitle: title,
     title,
   });
-  if (destinationOverrideImage) candidates.push(destinationOverrideImage);
+  if (destinationOverrideImage) queueCandidate(destinationOverrideImage);
 
   const normalizedTitle = normalizeLookupTitle(title);
   const titleOverrideEntry = Object.entries(TITLE_IMAGE_OVERRIDES).find(([key]) => (
     normalizeLookupTitle(key) === normalizedTitle
   ));
-  if (titleOverrideEntry?.[1]) candidates.push(titleOverrideEntry[1]);
+  if (titleOverrideEntry?.[1]) queueCandidate(titleOverrideEntry[1]);
 
-  if (catalogImageUrl) candidates.push(catalogImageUrl);
+  if (catalogImageUrl) queueCandidate(catalogImageUrl);
 
   const exploreType = inferExploreType(item);
   if (exploreType && exploreType !== "restaurants") {
-    candidates.push(getExploreCardImageUrl({
+    queueCandidate(getExploreCardImageUrl({
       type: exploreType,
       cardTitle: title,
       title,
@@ -249,7 +256,7 @@ export const resolveDreamImageCandidates = (item) => {
     }, ""));
   }
 
-  return dedupeImageUrls([...candidates, ...delayedCandidates]);
+  return dedupeImageUrls(candidates);
 };
 
 export const resolveDreamImage = (item) => resolveDreamImageCandidates(item)[0] || "";
