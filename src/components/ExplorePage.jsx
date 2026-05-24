@@ -131,6 +131,7 @@ export function getExploreCardImageUrl(post = {}, googleImgUrl = "") {
 export function findExploreCatalogImageUrlByTitle(title = "") {
   const normalizedTitle = normalizeExploreLookupTitle(title);
   if (!normalizedTitle) return "";
+  const titleTokens = normalizedTitle.split(" ").filter(Boolean);
 
   const catalogs = [
     ...Object.values(COMMUNITY_POOL).flat(),
@@ -149,6 +150,22 @@ export function findExploreCatalogImageUrlByTitle(title = "") {
     return itemTitle && (itemTitle.includes(normalizedTitle) || normalizedTitle.includes(itemTitle));
   });
   if (fuzzyMatch) return getExploreCardImageUrl(fuzzyMatch, "");
+
+  let bestMatch = null;
+  let bestScore = 0;
+  catalogs.forEach((item) => {
+    const itemTitle = normalizeExploreLookupTitle(item?.cardTitle || item?.title || item?.name || item?.destination_name || "");
+    if (!itemTitle) return;
+    const itemTokens = itemTitle.split(" ").filter(Boolean);
+    const sharedTokenCount = titleTokens.filter((token) => itemTokens.includes(token)).length;
+    if (sharedTokenCount < 2) return;
+    const score = sharedTokenCount * 10 + (itemTitle.includes(normalizedTitle) || normalizedTitle.includes(itemTitle) ? 25 : 0);
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = item;
+    }
+  });
+  if (bestMatch) return getExploreCardImageUrl(bestMatch, "");
 
   return "";
 }

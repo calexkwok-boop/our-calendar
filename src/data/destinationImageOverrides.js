@@ -111,6 +111,12 @@ const normalizeDestinationImageKey = (value = '') => String(value)
   .replace(/[^a-z0-9]+/g, '-')
   .replace(/^-|-$/g, '');
 
+const normalizeDestinationImageText = (value = '') => String(value)
+  .trim()
+  .toLowerCase()
+  .replace(/^(visit|see|go-to|go|stay-at|stay|explore)-+/g, '')
+  .replace(/^-+|-+$/g, '');
+
 const resolveDestinationImageKey = (value = '') => {
   const cacheKey = String(value || '');
   if (resolvedDestinationImageKeyCache.has(cacheKey)) {
@@ -146,5 +152,45 @@ export const getDestinationImageOverride = (destination = {}) => {
   );
 
   if (nameKey) return DESTINATION_IMAGE_OVERRIDES[nameKey];
+
+  const rawName = [
+    destination?.name,
+    destination?.destination_name,
+    destination?.cardTitle,
+    destination?.title,
+    destination?.text,
+    destination?.label,
+  ].find(Boolean) || '';
+  const normalizedName = normalizeDestinationImageText(normalizeDestinationImageKey(rawName));
+  if (!normalizedName) return '';
+
+  const normalizedTokens = normalizedName.split('-').filter(Boolean);
+  let bestMatch = '';
+  let bestScore = 0;
+
+  for (const [key, value] of Object.entries(DESTINATION_IMAGE_OVERRIDES)) {
+    const normalizedKey = normalizeDestinationImageText(key);
+    if (!normalizedKey) continue;
+    if (normalizedName.includes(normalizedKey) || normalizedKey.includes(normalizedName)) {
+      const score = Math.max(normalizedKey.length, normalizedName.length) + 100;
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = value;
+      }
+      continue;
+    }
+
+    const keyTokens = normalizedKey.split('-').filter(Boolean);
+    const sharedTokenCount = normalizedTokens.filter((token) => keyTokens.includes(token)).length;
+    if (sharedTokenCount >= 2) {
+      const score = sharedTokenCount * 10 + keyTokens.join('-').length;
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = value;
+      }
+    }
+  }
+
+  if (bestMatch) return bestMatch;
   return '';
 };

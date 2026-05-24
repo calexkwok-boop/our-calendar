@@ -80,6 +80,16 @@ const inferExploreType = (item) => {
   const rawType = resolveRawType(item);
   const category = normalizeDreamCategory(item);
   const rawCategoryId = String(item?.categoryId || "").trim().toLowerCase();
+  const title = String(
+    item?.text
+    || item?.label
+    || item?.cardTitle
+    || item?.title
+    || item?.name
+    || item?.dream
+    || item?.destination_name
+    || ""
+  ).trim().toLowerCase();
 
   if (rawType === "destinations") return "destinations";
   if (rawType === "products" || rawType === "dreamshelf") return "products";
@@ -92,6 +102,11 @@ const inferExploreType = (item) => {
   if (rawCategoryId === "food" || category === "food") return "restaurants";
   if (rawCategoryId === "experiences" || category === "adventure") return "hiking";
   if (rawCategoryId === "buy" || category === "buy") return "products";
+
+  if (/(disneyland|disney world|orlando|anaheim|boston|iceland|northern lights|mountains|mountain|beach|bay|park|island|islands|coast|canyon|falls|temple|resort|hotel|hyatt)/.test(title)) return "destinations";
+  if (/(din tai fung|nobu|brodard|oiza|kitchen|bbq|grill|cafe|coffee|ramen|sushi|pizza|restaurant|eatery|bistro|diner)/.test(title)) return "restaurants";
+  if (/(ray-ban|meta|wayfarer|bag|watch|bracelet|ring|shoes|sneakers|camera|whoop|oura|garmin|bike|paddle|purse)/.test(title)) return "products";
+  if (/(hike|trail|summit|peak|trek|climb|camp|adventure|skydiving|parasailing)/.test(title)) return "hiking";
 
   return "";
 };
