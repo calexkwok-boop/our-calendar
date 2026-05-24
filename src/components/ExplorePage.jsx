@@ -89,6 +89,15 @@ const EXPLORE_IMAGE_FALLBACKS = {
   destinations: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?auto=format&fit=crop&w=900&q=80",
 };
 
+const normalizeExploreLookupTitle = (value = "") => String(value)
+  .trim()
+  .toLowerCase()
+  .replace(/^(visit|see|go to|stay at|eat at|try|explore)\s+/i, "")
+  .replace(/^(the)\s+/i, "")
+  .replace(/[^a-z0-9]+/g, " ")
+  .replace(/\s+/g, " ")
+  .trim();
+
 export function getExploreImageUrl(post = {}) {
   if (post.type === "destinations") {
     return getDestinationResolvedImage(post, "");
@@ -117,6 +126,31 @@ export function getExploreCardImageUrl(post = {}, googleImgUrl = "") {
     return getDestinationResolvedImage(post, googleImgUrl || "");
   }
   return googleImgUrl || getExploreImageUrl(post);
+}
+
+export function findExploreCatalogImageUrlByTitle(title = "") {
+  const normalizedTitle = normalizeExploreLookupTitle(title);
+  if (!normalizedTitle) return "";
+
+  const catalogs = [
+    ...Object.values(COMMUNITY_POOL).flat(),
+    ...buildDestinationExplorePool(),
+    ...buildProductExplorePool(),
+  ];
+
+  const exactMatch = catalogs.find((item) => {
+    const itemTitle = normalizeExploreLookupTitle(item?.cardTitle || item?.title || item?.name || item?.destination_name || "");
+    return itemTitle && itemTitle === normalizedTitle;
+  });
+  if (exactMatch) return getExploreCardImageUrl(exactMatch, "");
+
+  const fuzzyMatch = catalogs.find((item) => {
+    const itemTitle = normalizeExploreLookupTitle(item?.cardTitle || item?.title || item?.name || item?.destination_name || "");
+    return itemTitle && (itemTitle.includes(normalizedTitle) || normalizedTitle.includes(itemTitle));
+  });
+  if (fuzzyMatch) return getExploreCardImageUrl(fuzzyMatch, "");
+
+  return "";
 }
 
 function buildDestinationExplorePool() {

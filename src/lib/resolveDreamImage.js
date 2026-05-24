@@ -1,4 +1,5 @@
-import { getExploreCardImageUrl } from "../components/ExplorePage";
+import { findExploreCatalogImageUrlByTitle, getExploreCardImageUrl } from "../components/ExplorePage";
+import { getDestinationImageOverride } from "../data/destinationImageOverrides";
 
 const DIRECT_IMAGE_FIELDS = [
   "photo",
@@ -35,6 +36,15 @@ const DREAM_CATEGORY_MAP = {
 const TITLE_IMAGE_OVERRIDES = {
   "din tai fung": "https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=900&q=80",
 };
+
+const normalizeLookupTitle = (value = "") => String(value)
+  .trim()
+  .toLowerCase()
+  .replace(/^(visit|see|go to|stay at|eat at|try|explore)\s+/i, "")
+  .replace(/^(the)\s+/i, "")
+  .replace(/[^a-z0-9]+/g, " ")
+  .replace(/\s+/g, " ")
+  .trim();
 
 const resolveRawType = (item) => {
   const rawType = String(item?.type || item?.sourceType || "").trim().toLowerCase();
@@ -124,8 +134,28 @@ export const resolveDreamImage = (item) => {
   if (TITLE_IMAGE_OVERRIDES[titleKey]) return TITLE_IMAGE_OVERRIDES[titleKey];
 
   const directImageUrl = readDirectDreamImageUrl(item);
+  if (directImageUrl) return directImageUrl;
+
+  const destinationOverrideImage = getDestinationImageOverride({
+    id: item?.id,
+    name: title,
+    destination_name: title,
+    cardTitle: title,
+    title,
+  });
+  if (destinationOverrideImage) return destinationOverrideImage;
+
+  const normalizedTitle = normalizeLookupTitle(title);
+  const titleOverrideEntry = Object.entries(TITLE_IMAGE_OVERRIDES).find(([key]) => (
+    normalizeLookupTitle(key) === normalizedTitle
+  ));
+  if (titleOverrideEntry?.[1]) return titleOverrideEntry[1];
+
+  const catalogImageUrl = findExploreCatalogImageUrlByTitle(title);
+  if (catalogImageUrl) return catalogImageUrl;
+
   const exploreType = inferExploreType(item);
-  if (!exploreType) return directImageUrl;
+  if (!exploreType) return "";
 
   return getExploreCardImageUrl({
     type: exploreType,
@@ -137,5 +167,5 @@ export const resolveDreamImage = (item) => {
     imageUrl: String(item?.imageUrl || item?.image_url || "").trim(),
     destination_image: String(item?.destination_image || "").trim(),
     photo: String(item?.photo || "").trim(),
-  }, directImageUrl || "");
+  }, "");
 };
