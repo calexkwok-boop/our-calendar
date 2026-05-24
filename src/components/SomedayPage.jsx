@@ -874,6 +874,8 @@ function SharpieX({ size = 138 }) {
 function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) {
   const candidateImageUrls = resolveDreamImageCandidates(pin);
   const [imageIndex, setImageIndex] = useState(0);
+  const [moviePosterFailed, setMoviePosterFailed] = useState(false);
+  const [placeImageFailed, setPlaceImageFailed] = useState(false);
   const [searchFailed, setSearchFailed] = useState(false);
   const resolvedImageUrl = candidateImageUrls[imageIndex] || '';
   const pinTitle = String(pin?.label || pin?.text || '').trim();
@@ -881,15 +883,25 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
   const placePhotoQuery = !resolvedImageUrl ? getDreamPlacePhotoQuery(pin) : null;
   const moviePosterUrl = useMoviePoster(moviePosterQuery);
   const placeImageUrl = usePlacesImage(placePhotoQuery);
-  const googleImageQuery = !resolvedImageUrl && !moviePosterUrl && !placeImageUrl ? getDreamImageSearchQuery(pin) : null;
+  const googleImageQuery = !resolvedImageUrl ? getDreamImageSearchQuery(pin) : null;
   const searchedImageUrl = useGoogleImage(googleImageQuery);
-  const imageUrl = searchFailed ? '' : (resolvedImageUrl || moviePosterUrl || placeImageUrl || searchedImageUrl);
+  const asyncImageUrl = (
+    (!moviePosterFailed && moviePosterUrl)
+    || (!placeImageFailed && placeImageUrl)
+    || (!searchFailed && searchedImageUrl)
+    || ''
+  );
+  const imageUrl = resolvedImageUrl || asyncImageUrl;
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
-  const imageFailed = exhaustedCandidates && (!(moviePosterUrl || placeImageUrl || searchedImageUrl) || searchFailed);
-  const isLookupPending = !resolvedImageUrl && !searchFailed && Boolean(
-    (moviePosterQuery && !moviePosterUrl)
-    || (placePhotoQuery && !placeImageUrl)
-    || (googleImageQuery && !searchedImageUrl)
+  const imageFailed = exhaustedCandidates && !imageUrl && (
+    (!moviePosterQuery || moviePosterFailed || !moviePosterUrl)
+    && (!placePhotoQuery || placeImageFailed || !placeImageUrl)
+    && (!googleImageQuery || searchFailed || !searchedImageUrl)
+  );
+  const isLookupPending = !resolvedImageUrl && !imageFailed && Boolean(
+    (moviePosterQuery && !moviePosterFailed && !moviePosterUrl)
+    || (placePhotoQuery && !placeImageFailed && !placeImageUrl)
+    || (googleImageQuery && !searchFailed && !searchedImageUrl)
   );
   const showDebugFallback = (!imageUrl || imageFailed) && !isLookupPending;
   const cardBg  = darkMode ? '#e2e8f0' : '#ffffff';
@@ -897,6 +909,8 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
   const shadow  = isDragging ? '0 20px 50px rgba(0,0,0,0.5)' : '3px 5px 16px rgba(0,0,0,0.22)';
   useEffect(() => {
     setImageIndex(0);
+    setMoviePosterFailed(false);
+    setPlaceImageFailed(false);
     setSearchFailed(false);
   }, [pin?.id, pin?.label, pin?.text, pin?.imageUrl, pin?.photoUrl]);
   const debugLines = [
@@ -928,6 +942,14 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
                 }
                 if (resolvedImageUrl && imageIndex === candidateImageUrls.length - 1) {
                   setImageIndex(candidateImageUrls.length);
+                  return;
+                }
+                if (!moviePosterFailed && imageUrl && imageUrl === moviePosterUrl) {
+                  setMoviePosterFailed(true);
+                  return;
+                }
+                if (!placeImageFailed && imageUrl && imageUrl === placeImageUrl) {
+                  setPlaceImageFailed(true);
                   return;
                 }
                 setSearchFailed(true);

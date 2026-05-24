@@ -1872,28 +1872,42 @@ const resolveBucketDreamImage = (dream) => resolveDreamImage(dream);
 function KomoPolaroidCard({ card, compact = false }) {
   const candidateImageUrls = resolveDreamImageCandidates(card);
   const [imageIndex, setImageIndex] = useState(0);
+  const [moviePosterFailed, setMoviePosterFailed] = useState(false);
+  const [placeImageFailed, setPlaceImageFailed] = useState(false);
   const [searchFailed, setSearchFailed] = useState(false);
   const resolvedImageUrl = candidateImageUrls[imageIndex] || "";
   const moviePosterQuery = !resolvedImageUrl && isMovieDream(card) ? String(card?.label || card?.text || card?.title || "").trim() : null;
   const placePhotoQuery = !resolvedImageUrl ? getDreamPlacePhotoQuery(card) : null;
   const moviePosterUrl = useMoviePoster(moviePosterQuery);
   const placeImageUrl = usePlacesImage(placePhotoQuery);
-  const googleImageQuery = !resolvedImageUrl && !moviePosterUrl && !placeImageUrl ? getDreamImageSearchQuery(card) : null;
+  const googleImageQuery = !resolvedImageUrl ? getDreamImageSearchQuery(card) : null;
   const searchedImageUrl = useGoogleImage(googleImageQuery);
-  const imageUrl = searchFailed ? "" : (resolvedImageUrl || moviePosterUrl || placeImageUrl || searchedImageUrl);
+  const asyncImageUrl = (
+    (!moviePosterFailed && moviePosterUrl)
+    || (!placeImageFailed && placeImageUrl)
+    || (!searchFailed && searchedImageUrl)
+    || ""
+  );
+  const imageUrl = resolvedImageUrl || asyncImageUrl;
   const rotation = Number(card?.rot || 0) * (compact ? 0.35 : 0.55);
   const label = String(card?.label || card?.text || 'Komo Book idea').trim();
   const emoji = String(card?.emoji || '*').trim();
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
-  const imageFailed = exhaustedCandidates && (!(moviePosterUrl || placeImageUrl || searchedImageUrl) || searchFailed);
-  const isLookupPending = !resolvedImageUrl && !searchFailed && Boolean(
-    (moviePosterQuery && !moviePosterUrl)
-    || (placePhotoQuery && !placeImageUrl)
-    || (googleImageQuery && !searchedImageUrl)
+  const imageFailed = exhaustedCandidates && !imageUrl && (
+    (!moviePosterQuery || moviePosterFailed || !moviePosterUrl)
+    && (!placePhotoQuery || placeImageFailed || !placeImageUrl)
+    && (!googleImageQuery || searchFailed || !searchedImageUrl)
+  );
+  const isLookupPending = !resolvedImageUrl && !imageFailed && Boolean(
+    (moviePosterQuery && !moviePosterFailed && !moviePosterUrl)
+    || (placePhotoQuery && !placeImageFailed && !placeImageUrl)
+    || (googleImageQuery && !searchFailed && !searchedImageUrl)
   );
   const showDebugFallback = (!imageUrl || imageFailed) && !isLookupPending;
   useEffect(() => {
     setImageIndex(0);
+    setMoviePosterFailed(false);
+    setPlaceImageFailed(false);
     setSearchFailed(false);
   }, [card?.id, card?.label, card?.text, card?.imageUrl, card?.photoUrl]);
   const debugLines = [
@@ -1928,6 +1942,14 @@ function KomoPolaroidCard({ card, compact = false }) {
               }
               if (resolvedImageUrl && imageIndex === candidateImageUrls.length - 1) {
                 setImageIndex(candidateImageUrls.length);
+                return;
+              }
+              if (!moviePosterFailed && imageUrl && imageUrl === moviePosterUrl) {
+                setMoviePosterFailed(true);
+                return;
+              }
+              if (!placeImageFailed && imageUrl && imageUrl === placeImageUrl) {
+                setPlaceImageFailed(true);
                 return;
               }
               setSearchFailed(true);
