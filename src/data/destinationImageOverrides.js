@@ -4,6 +4,8 @@ const RAW_DESTINATION_IMAGE_OVERRIDES = {
   'anse-source-d': 'https://worlds50beaches.com/assets/images/beaches-2026/242.webp',
   'anse-source-d-argent': 'https://worlds50beaches.com/assets/images/beaches-2026/242.webp',
   'banff-national-park': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Moraine_Lake_17092005.jpg/960px-Moraine_Lake_17092005.jpg',
+  'ba-na-hills': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Ba_Na_Hills_Golden_Bridge_Da_Nang_Vietnam.jpg/1280px-Ba_Na_Hills_Golden_Bridge_Da_Nang_Vietnam.jpg',
+  'bana-hills': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Ba_Na_Hills_Golden_Bridge_Da_Nang_Vietnam.jpg/1280px-Ba_Na_Hills_Golden_Bridge_Da_Nang_Vietnam.jpg',
   bruges: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Br%C3%BCgge_Blick_vom_Belfried_4.jpg/960px-Br%C3%BCgge_Blick_vom_Belfried_4.jpg',
   'cape-town': 'https://s3.amazonaws.com/cdn.micato.com/wp-content/uploads/2018/09/07232001/cape-town-1-2-1110x700.jpg',
   'costa-rica': 'https://www.thesmoothescape.com/wp-content/uploads/2020/11/Costa-Rica-featured-2a.jpg',

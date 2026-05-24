@@ -34,7 +34,9 @@ const DREAM_CATEGORY_MAP = {
 };
 
 const TITLE_IMAGE_OVERRIDES = {
+  "willow osteria": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=900&q=80",
   "din tai fung": "https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=900&q=80",
+  "ba na hills": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Ba_Na_Hills_Golden_Bridge_Da_Nang_Vietnam.jpg/1280px-Ba_Na_Hills_Golden_Bridge_Da_Nang_Vietnam.jpg",
 };
 
 const normalizeLookupTitle = (value = "") => String(value)

@@ -6,6 +6,8 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom';
 import { supabase } from '../supabaseClient';
 import InvitePicker from './InvitePicker';
+import useGoogleImage from '../hooks/useGoogleImage';
+import { getDreamImageSearchQuery, resolveDreamImage, resolveDreamImageCandidates } from '../lib/resolveDreamImage';
 
 const CAVEAT = '"Caveat", cursive';
 const SANS = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
@@ -868,16 +870,58 @@ function SharpieX({ size = 138 }) {
 
 // ─── PhotoPin ────────────────────────────────────────────────────────────────
 function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) {
+  const candidateImageUrls = resolveDreamImageCandidates(pin);
+  const [imageIndex, setImageIndex] = useState(0);
+  const [searchFailed, setSearchFailed] = useState(false);
+  const resolvedImageUrl = candidateImageUrls[imageIndex] || '';
+  const searchedImageUrl = useGoogleImage(!resolvedImageUrl ? getDreamImageSearchQuery(pin) : null);
+  const imageUrl = searchFailed ? '' : (resolvedImageUrl || searchedImageUrl);
+  const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
+  const imageFailed = exhaustedCandidates && (!searchedImageUrl || searchFailed);
+  const showDebugFallback = !imageUrl || imageFailed;
   const cardBg  = darkMode ? '#e2e8f0' : '#ffffff';
   const labelCol = pin.status === 'done' ? '#9ca3af' : '#374151';
   const shadow  = isDragging ? '0 20px 50px rgba(0,0,0,0.5)' : '3px 5px 16px rgba(0,0,0,0.22)';
+  const pinTitle = String(pin?.label || pin?.text || '').trim();
+  useEffect(() => {
+    setImageIndex(0);
+    setSearchFailed(false);
+  }, [pin?.id, pin?.label, pin?.text, pin?.imageUrl, pin?.photoUrl]);
+  const debugLines = [
+    `title: ${pinTitle || '(blank)'}`,
+    `type: ${String(pin?.type || '').trim() || '(blank)'}`,
+    `sourceType: ${String(pin?.sourceType || '').trim() || '(blank)'}`,
+    `category: ${String(pin?.category || '').trim() || '(blank)'}`,
+    `categoryId: ${String(pin?.categoryId || '').trim() || '(blank)'}`,
+    `resolved: ${resolvedImageUrl ? 'yes' : 'no'}`,
+    `search: ${searchedImageUrl ? 'yes' : 'no'}`,
+    `imageUrl: ${imageUrl ? 'yes' : 'no'}`,
+    `failed: ${imageFailed ? 'yes' : 'no'}`,
+    `candidate: ${candidateImageUrls.length ? `${Math.min(imageIndex + 1, candidateImageUrls.length)}/${candidateImageUrls.length}` : '0/0'}`,
+  ];
   return (
     <div style={{ background: cardBg, padding: '6px 6px 0', boxShadow: shadow, width: 150, borderRadius: 2, cursor: isDragging ? 'grabbing' : 'grab', position: 'relative', transition: isDragging ? 'none' : 'box-shadow 0.2s' }} onClick={onTap}>
       <Pushpin colorKey={pin.pinColor} darkMode={darkMode} />
       <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 2, position: 'relative' }}>
-        {getPinImageUrl(pin)
-          ? <img src={getPinImageUrl(pin)} alt={pin.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: pin.status === 'done' ? 'grayscale(40%) brightness(0.85)' : 'none' }} draggable={false} />
-          : <div style={{ width: '100%', height: '100%', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, filter: pin.status === 'done' ? 'grayscale(40%)' : 'none' }}>{pin.emoji || '📌'}</div>
+        {!showDebugFallback
+          ? <img
+              src={imageUrl}
+              alt={pin.label}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: pin.status === 'done' ? 'grayscale(40%) brightness(0.85)' : 'none' }}
+              draggable={false}
+              onError={() => {
+                if (resolvedImageUrl && imageIndex < candidateImageUrls.length - 1) {
+                  setImageIndex((current) => current + 1);
+                  return;
+                }
+                if (resolvedImageUrl && imageIndex === candidateImageUrls.length - 1) {
+                  setImageIndex(candidateImageUrls.length);
+                  return;
+                }
+                setSearchFailed(true);
+              }}
+            />
+          : <div style={{ width: '100%', height: '100%', background: '#f5f3ff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 6, fontSize: 36, filter: pin.status === 'done' ? 'grayscale(40%)' : 'none' }}><div>{pin.emoji || '?'}</div><div style={{ width: '100%', maxHeight: '100%', overflow: 'hidden', borderRadius: 6, background: 'rgba(255,255,255,0.9)', padding: '6px 7px', fontSize: 9, lineHeight: 1.2, color: '#374151', textAlign: 'left' }}>{debugLines.map((line) => (<div key={line} style={{ wordBreak: 'break-word' }}>{line}</div>))}</div></div>
         }
         {pin.status === 'done' && <SharpieX size={138} />}
       </div>
@@ -2578,7 +2622,9 @@ function estimatedPinHeight(pin = {}) {
 
 function getPinImageUrl(pin = {}) {
   return String(
-    pin?.imageUrl
+    pin?.resolvedImageUrl
+    || resolveDreamImage(pin)
+    || pin?.imageUrl
     || pin?.photoUrl
     || pin?.coverPhoto
     || pin?.photos?.[0]?.url
