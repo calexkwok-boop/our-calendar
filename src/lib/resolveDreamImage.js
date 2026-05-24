@@ -34,14 +34,14 @@ const DREAM_CATEGORY_MAP = {
 };
 
 const TITLE_IMAGE_OVERRIDES = {
-  "disneyland park": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Disneyland_Park%2C_Anaheim%2C_CA.jpg/1280px-Disneyland_Park%2C_Anaheim%2C_CA.jpg",
+  "disneyland park": "https://images.unsplash.com/photo-1513883049090-d0b7439799bf?auto=format&fit=crop&w=900&q=80",
   "gary danko": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=900&q=80",
   "old quarter street wander hanoi": "https://images.unsplash.com/photo-1557750255-c76072a7aad1?w=900&q=80",
   "old quarter street wander, hanoi": "https://images.unsplash.com/photo-1557750255-c76072a7aad1?w=900&q=80",
-  "the marble mountains": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Marble_Mountains_Da_Nang_Vietnam.jpg/1280px-Marble_Mountains_Da_Nang_Vietnam.jpg",
+  "the marble mountains": "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=900&q=80",
   "willow osteria": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=900&q=80",
   "din tai fung": "https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=900&q=80",
-  "ba na hills": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Ba_Na_Hills_Golden_Bridge_Da_Nang_Vietnam.jpg/1280px-Ba_Na_Hills_Golden_Bridge_Da_Nang_Vietnam.jpg",
+  "ba na hills": "https://images.unsplash.com/photo-1504214208698-ea1916a2195a?auto=format&fit=crop&w=900&q=80",
 };
 
 const normalizeLookupTitle = (value = "") => String(value)
