@@ -16,7 +16,8 @@ import {
 import QuickThoughtsSection from './QuickThoughtsSection';
 import useHomeSectionLayout from '../hooks/useHomeSectionLayout';
 import useGoogleImage from '../hooks/useGoogleImage';
-import { getDreamImageSearchQuery, resolveDreamImage, resolveDreamImageCandidates } from '../lib/resolveDreamImage';
+import usePlacesImage from '../hooks/usePlacesImage';
+import { getDreamImageSearchQuery, getDreamPlacePhotoQuery, resolveDreamImage, resolveDreamImageCandidates } from '../lib/resolveDreamImage';
 
 const TODAY_MOMENT_CACHE_KEY = 'home-today-moment-v1';
 const readCachedTodayMoment = (todayKey) => {
@@ -110,11 +111,12 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
   const [imageIndex, setImageIndex] = useState(0);
   const [searchFailed, setSearchFailed] = useState(false);
   const resolvedImageUrl = candidateImageUrls[imageIndex] || '';
-  const searchedImageUrl = useGoogleImage(!resolvedImageUrl ? getDreamImageSearchQuery(dream) : null);
-  const dreamImageUrl = searchFailed ? '' : (resolvedImageUrl || searchedImageUrl);
+  const placeImageUrl = usePlacesImage(!resolvedImageUrl ? getDreamPlacePhotoQuery(dream) : null);
+  const searchedImageUrl = useGoogleImage(!resolvedImageUrl && !placeImageUrl ? getDreamImageSearchQuery(dream) : null);
+  const dreamImageUrl = searchFailed ? '' : (resolvedImageUrl || placeImageUrl || searchedImageUrl);
   const dreamTitle = String(dream?.text || dream?.label || '').trim();
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
-  const imageFailed = exhaustedCandidates && (!searchedImageUrl || searchFailed);
+  const imageFailed = exhaustedCandidates && (!(placeImageUrl || searchedImageUrl) || searchFailed);
   const showDebugFallback = !dreamImageUrl || imageFailed;
   useEffect(() => {
     setImageIndex(0);
@@ -127,7 +129,7 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
     `category: ${String(dream?.category || '').trim() || '(blank)'}`,
     `categoryId: ${String(dream?.categoryId || '').trim() || '(blank)'}`,
     `resolved: ${resolvedImageUrl ? 'yes' : 'no'}`,
-    `search: ${searchedImageUrl ? 'yes' : 'no'}`,
+    `search: ${(placeImageUrl || searchedImageUrl) ? 'yes' : 'no'}`,
     `imageUrl: ${dreamImageUrl ? 'yes' : 'no'}`,
     `failed: ${imageFailed ? 'yes' : 'no'}`,
     `candidate: ${candidateImageUrls.length ? `${Math.min(imageIndex + 1, candidateImageUrls.length)}/${candidateImageUrls.length}` : '0/0'}`,

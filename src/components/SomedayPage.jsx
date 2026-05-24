@@ -7,7 +7,8 @@ import { createPortal } from 'react-dom';
 import { supabase } from '../supabaseClient';
 import InvitePicker from './InvitePicker';
 import useGoogleImage from '../hooks/useGoogleImage';
-import { getDreamImageSearchQuery, resolveDreamImage, resolveDreamImageCandidates } from '../lib/resolveDreamImage';
+import usePlacesImage from '../hooks/usePlacesImage';
+import { getDreamImageSearchQuery, getDreamPlacePhotoQuery, resolveDreamImage, resolveDreamImageCandidates } from '../lib/resolveDreamImage';
 
 const CAVEAT = '"Caveat", cursive';
 const SANS = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
@@ -874,10 +875,11 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
   const [imageIndex, setImageIndex] = useState(0);
   const [searchFailed, setSearchFailed] = useState(false);
   const resolvedImageUrl = candidateImageUrls[imageIndex] || '';
-  const searchedImageUrl = useGoogleImage(!resolvedImageUrl ? getDreamImageSearchQuery(pin) : null);
-  const imageUrl = searchFailed ? '' : (resolvedImageUrl || searchedImageUrl);
+  const placeImageUrl = usePlacesImage(!resolvedImageUrl ? getDreamPlacePhotoQuery(pin) : null);
+  const searchedImageUrl = useGoogleImage(!resolvedImageUrl && !placeImageUrl ? getDreamImageSearchQuery(pin) : null);
+  const imageUrl = searchFailed ? '' : (resolvedImageUrl || placeImageUrl || searchedImageUrl);
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
-  const imageFailed = exhaustedCandidates && (!searchedImageUrl || searchFailed);
+  const imageFailed = exhaustedCandidates && (!(placeImageUrl || searchedImageUrl) || searchFailed);
   const showDebugFallback = !imageUrl || imageFailed;
   const cardBg  = darkMode ? '#e2e8f0' : '#ffffff';
   const labelCol = pin.status === 'done' ? '#9ca3af' : '#374151';
@@ -894,7 +896,7 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
     `category: ${String(pin?.category || '').trim() || '(blank)'}`,
     `categoryId: ${String(pin?.categoryId || '').trim() || '(blank)'}`,
     `resolved: ${resolvedImageUrl ? 'yes' : 'no'}`,
-    `search: ${searchedImageUrl ? 'yes' : 'no'}`,
+    `search: ${(placeImageUrl || searchedImageUrl) ? 'yes' : 'no'}`,
     `imageUrl: ${imageUrl ? 'yes' : 'no'}`,
     `failed: ${imageFailed ? 'yes' : 'no'}`,
     `candidate: ${candidateImageUrls.length ? `${Math.min(imageIndex + 1, candidateImageUrls.length)}/${candidateImageUrls.length}` : '0/0'}`,

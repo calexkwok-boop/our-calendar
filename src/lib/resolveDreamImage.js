@@ -44,6 +44,14 @@ const TITLE_IMAGE_OVERRIDES = {
   "ba na hills": "https://images.unsplash.com/photo-1504214208698-ea1916a2195a?auto=format&fit=crop&w=900&q=80",
 };
 
+const GENERIC_RESTAURANT_IMAGE_URLS = new Set([
+  "https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=900&q=80",
+]);
+
 const normalizeLookupTitle = (value = "") => String(value)
   .trim()
   .toLowerCase()
@@ -123,6 +131,30 @@ const inferExploreType = (item) => {
   return "";
 };
 
+export const isRestaurantDream = (item) => inferExploreType(item) === "restaurants";
+
+export const getDreamPlacePhotoQuery = (item) => {
+  if (!isRestaurantDream(item)) return "";
+  const title = String(
+    item?.text
+    || item?.label
+    || item?.cardTitle
+    || item?.title
+    || item?.name
+    || item?.dream
+    || item?.destination_name
+    || ""
+  ).trim();
+  const location = String(
+    item?.location
+    || item?.address
+    || item?.mapQuery
+    || ""
+  ).trim();
+  if (!title) return "";
+  return `${title} ${location}`.trim();
+};
+
 export const getDreamImageSearchQuery = (item) => {
   const rawType = resolveRawType(item);
   const category = normalizeDreamCategory(item);
@@ -169,10 +201,21 @@ export const resolveDreamImageCandidates = (item) => {
   ).trim();
   const titleKey = title.toLowerCase();
   const candidates = [];
+  const delayedCandidates = [];
   if (TITLE_IMAGE_OVERRIDES[titleKey]) candidates.push(TITLE_IMAGE_OVERRIDES[titleKey]);
 
   const directImageUrl = readDirectDreamImageUrl(item);
-  if (directImageUrl) candidates.push(directImageUrl);
+  const catalogImageUrl = findExploreCatalogImageUrlByTitle(title);
+  const shouldDelayGenericRestaurantImage = (
+    isRestaurantDream(item)
+    && directImageUrl
+    && GENERIC_RESTAURANT_IMAGE_URLS.has(directImageUrl)
+    && !catalogImageUrl
+  );
+  if (directImageUrl) {
+    if (shouldDelayGenericRestaurantImage) delayedCandidates.push(directImageUrl);
+    else candidates.push(directImageUrl);
+  }
 
   const destinationOverrideImage = getDestinationImageOverride({
     id: item?.id,
@@ -189,11 +232,10 @@ export const resolveDreamImageCandidates = (item) => {
   ));
   if (titleOverrideEntry?.[1]) candidates.push(titleOverrideEntry[1]);
 
-  const catalogImageUrl = findExploreCatalogImageUrlByTitle(title);
   if (catalogImageUrl) candidates.push(catalogImageUrl);
 
   const exploreType = inferExploreType(item);
-  if (exploreType) {
+  if (exploreType && exploreType !== "restaurants") {
     candidates.push(getExploreCardImageUrl({
       type: exploreType,
       cardTitle: title,
@@ -207,7 +249,7 @@ export const resolveDreamImageCandidates = (item) => {
     }, ""));
   }
 
-  return dedupeImageUrls(candidates);
+  return dedupeImageUrls([...candidates, ...delayedCandidates]);
 };
 
 export const resolveDreamImage = (item) => resolveDreamImageCandidates(item)[0] || "";
