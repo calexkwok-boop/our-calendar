@@ -1874,16 +1874,24 @@ function KomoPolaroidCard({ card, compact = false }) {
   const [imageIndex, setImageIndex] = useState(0);
   const [searchFailed, setSearchFailed] = useState(false);
   const resolvedImageUrl = candidateImageUrls[imageIndex] || "";
-  const moviePosterUrl = useMoviePoster(!resolvedImageUrl && isMovieDream(card) ? String(card?.label || card?.text || card?.title || "").trim() : null);
-  const placeImageUrl = usePlacesImage(!resolvedImageUrl ? getDreamPlacePhotoQuery(card) : null);
-  const searchedImageUrl = useGoogleImage(!resolvedImageUrl && !moviePosterUrl && !placeImageUrl ? getDreamImageSearchQuery(card) : null);
+  const moviePosterQuery = !resolvedImageUrl && isMovieDream(card) ? String(card?.label || card?.text || card?.title || "").trim() : null;
+  const placePhotoQuery = !resolvedImageUrl ? getDreamPlacePhotoQuery(card) : null;
+  const moviePosterUrl = useMoviePoster(moviePosterQuery);
+  const placeImageUrl = usePlacesImage(placePhotoQuery);
+  const googleImageQuery = !resolvedImageUrl && !moviePosterUrl && !placeImageUrl ? getDreamImageSearchQuery(card) : null;
+  const searchedImageUrl = useGoogleImage(googleImageQuery);
   const imageUrl = searchFailed ? "" : (resolvedImageUrl || moviePosterUrl || placeImageUrl || searchedImageUrl);
   const rotation = Number(card?.rot || 0) * (compact ? 0.35 : 0.55);
   const label = String(card?.label || card?.text || 'Komo Book idea').trim();
   const emoji = String(card?.emoji || '*').trim();
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
   const imageFailed = exhaustedCandidates && (!(moviePosterUrl || placeImageUrl || searchedImageUrl) || searchFailed);
-  const showDebugFallback = !imageUrl || imageFailed;
+  const isLookupPending = !resolvedImageUrl && !searchFailed && Boolean(
+    (moviePosterQuery && !moviePosterUrl)
+    || (placePhotoQuery && !placeImageUrl)
+    || (googleImageQuery && !searchedImageUrl)
+  );
+  const showDebugFallback = (!imageUrl || imageFailed) && !isLookupPending;
   useEffect(() => {
     setImageIndex(0);
     setSearchFailed(false);
@@ -1928,11 +1936,17 @@ function KomoPolaroidCard({ card, compact = false }) {
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-amber-50 px-1 text-center">
             <div className="text-2xl">{emoji}</div>
-            <div className="max-h-full overflow-hidden rounded bg-white/90 px-1 py-1 text-left text-[8px] leading-tight text-gray-700 shadow-sm">
-              {debugLines.map((line) => (
-                <div key={line} className="break-words">{line}</div>
-              ))}
-            </div>
+            {showDebugFallback ? (
+              <div className="max-h-full overflow-hidden rounded bg-white/90 px-1 py-1 text-left text-[8px] leading-tight text-gray-700 shadow-sm">
+                {debugLines.map((line) => (
+                  <div key={line} className="break-words">{line}</div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded bg-white/75 px-2 py-2 text-center text-[8px] uppercase tracking-[0.18em] text-gray-400 shadow-sm">
+                Loading photo
+              </div>
+            )}
           </div>
         )}
       </div>

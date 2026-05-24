@@ -877,13 +877,21 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
   const [searchFailed, setSearchFailed] = useState(false);
   const resolvedImageUrl = candidateImageUrls[imageIndex] || '';
   const pinTitle = String(pin?.label || pin?.text || '').trim();
-  const moviePosterUrl = useMoviePoster(!resolvedImageUrl && isMovieDream(pin) ? pinTitle : null);
-  const placeImageUrl = usePlacesImage(!resolvedImageUrl ? getDreamPlacePhotoQuery(pin) : null);
-  const searchedImageUrl = useGoogleImage(!resolvedImageUrl && !moviePosterUrl && !placeImageUrl ? getDreamImageSearchQuery(pin) : null);
+  const moviePosterQuery = !resolvedImageUrl && isMovieDream(pin) ? pinTitle : null;
+  const placePhotoQuery = !resolvedImageUrl ? getDreamPlacePhotoQuery(pin) : null;
+  const moviePosterUrl = useMoviePoster(moviePosterQuery);
+  const placeImageUrl = usePlacesImage(placePhotoQuery);
+  const googleImageQuery = !resolvedImageUrl && !moviePosterUrl && !placeImageUrl ? getDreamImageSearchQuery(pin) : null;
+  const searchedImageUrl = useGoogleImage(googleImageQuery);
   const imageUrl = searchFailed ? '' : (resolvedImageUrl || moviePosterUrl || placeImageUrl || searchedImageUrl);
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
   const imageFailed = exhaustedCandidates && (!(moviePosterUrl || placeImageUrl || searchedImageUrl) || searchFailed);
-  const showDebugFallback = !imageUrl || imageFailed;
+  const isLookupPending = !resolvedImageUrl && !searchFailed && Boolean(
+    (moviePosterQuery && !moviePosterUrl)
+    || (placePhotoQuery && !placeImageUrl)
+    || (googleImageQuery && !searchedImageUrl)
+  );
+  const showDebugFallback = (!imageUrl || imageFailed) && !isLookupPending;
   const cardBg  = darkMode ? '#e2e8f0' : '#ffffff';
   const labelCol = pin.status === 'done' ? '#9ca3af' : '#374151';
   const shadow  = isDragging ? '0 20px 50px rgba(0,0,0,0.5)' : '3px 5px 16px rgba(0,0,0,0.22)';
@@ -925,7 +933,7 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
                 setSearchFailed(true);
               }}
             />
-          : <div style={{ width: '100%', height: '100%', background: '#f5f3ff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 6, fontSize: 36, filter: pin.status === 'done' ? 'grayscale(40%)' : 'none' }}><div>{pin.emoji || '?'}</div><div style={{ width: '100%', maxHeight: '100%', overflow: 'hidden', borderRadius: 6, background: 'rgba(255,255,255,0.9)', padding: '6px 7px', fontSize: 9, lineHeight: 1.2, color: '#374151', textAlign: 'left' }}>{debugLines.map((line) => (<div key={line} style={{ wordBreak: 'break-word' }}>{line}</div>))}</div></div>
+          : <div style={{ width: '100%', height: '100%', background: '#f5f3ff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 6, fontSize: 36, filter: pin.status === 'done' ? 'grayscale(40%)' : 'none' }}><div>{pin.emoji || '?'}</div>{showDebugFallback ? <div style={{ width: '100%', maxHeight: '100%', overflow: 'hidden', borderRadius: 6, background: 'rgba(255,255,255,0.9)', padding: '6px 7px', fontSize: 9, lineHeight: 1.2, color: '#374151', textAlign: 'left' }}>{debugLines.map((line) => (<div key={line} style={{ wordBreak: 'break-word' }}>{line}</div>))}</div> : <div style={{ width: '100%', borderRadius: 6, background: 'rgba(255,255,255,0.82)', padding: '8px 7px', fontSize: 8, lineHeight: 1.2, color: '#9ca3af', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.16em' }}>Loading photo</div>}</div>
         }
         {pin.status === 'done' && <SharpieX size={138} />}
       </div>

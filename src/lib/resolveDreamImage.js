@@ -160,7 +160,7 @@ export const getDreamPlacePhotoQuery = (item) => {
     || ""
   ).trim();
   if (!title) return "";
-  return `${title} ${location}`.trim();
+  return `${title} restaurant ${location}`.trim();
 };
 
 export const getDreamImageSearchQuery = (item) => {

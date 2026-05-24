@@ -112,14 +112,22 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
   const [imageIndex, setImageIndex] = useState(0);
   const [searchFailed, setSearchFailed] = useState(false);
   const resolvedImageUrl = candidateImageUrls[imageIndex] || '';
-  const moviePosterUrl = useMoviePoster(!resolvedImageUrl && isMovieDream(dream) ? String(dream?.text || dream?.label || '').trim() : null);
-  const placeImageUrl = usePlacesImage(!resolvedImageUrl ? getDreamPlacePhotoQuery(dream) : null);
-  const searchedImageUrl = useGoogleImage(!resolvedImageUrl && !moviePosterUrl && !placeImageUrl ? getDreamImageSearchQuery(dream) : null);
+  const moviePosterQuery = !resolvedImageUrl && isMovieDream(dream) ? String(dream?.text || dream?.label || '').trim() : null;
+  const placePhotoQuery = !resolvedImageUrl ? getDreamPlacePhotoQuery(dream) : null;
+  const moviePosterUrl = useMoviePoster(moviePosterQuery);
+  const placeImageUrl = usePlacesImage(placePhotoQuery);
+  const googleImageQuery = !resolvedImageUrl && !moviePosterUrl && !placeImageUrl ? getDreamImageSearchQuery(dream) : null;
+  const searchedImageUrl = useGoogleImage(googleImageQuery);
   const dreamImageUrl = searchFailed ? '' : (resolvedImageUrl || moviePosterUrl || placeImageUrl || searchedImageUrl);
   const dreamTitle = String(dream?.text || dream?.label || '').trim();
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
   const imageFailed = exhaustedCandidates && (!(moviePosterUrl || placeImageUrl || searchedImageUrl) || searchFailed);
-  const showDebugFallback = !dreamImageUrl || imageFailed;
+  const isLookupPending = !resolvedImageUrl && !searchFailed && Boolean(
+    (moviePosterQuery && !moviePosterUrl)
+    || (placePhotoQuery && !placeImageUrl)
+    || (googleImageQuery && !searchedImageUrl)
+  );
+  const showDebugFallback = (!dreamImageUrl || imageFailed) && !isLookupPending;
   useEffect(() => {
     setImageIndex(0);
     setSearchFailed(false);
@@ -186,11 +194,17 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
           ) : (
             <div className="flex min-h-[216px] flex-col justify-between rounded-[22px] border border-emerald-900/10 bg-white/70 p-4 text-left shadow-lg dark:border-white/10 dark:bg-black/20">
               <span className="text-4xl">{dream.emoji}</span>
-              <div className="rounded-xl bg-white/85 px-2 py-2 text-[10px] leading-tight text-gray-700 shadow-sm dark:bg-white dark:text-gray-700">
-                {debugLines.map((line) => (
-                  <div key={line} className="break-words">{line}</div>
-                ))}
-              </div>
+              {showDebugFallback ? (
+                <div className="rounded-xl bg-white/85 px-2 py-2 text-[10px] leading-tight text-gray-700 shadow-sm dark:bg-white dark:text-gray-700">
+                  {debugLines.map((line) => (
+                    <div key={line} className="break-words">{line}</div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl bg-white/75 px-2 py-3 text-center text-[10px] uppercase tracking-[0.18em] text-gray-400 shadow-sm dark:bg-white/80 dark:text-gray-500">
+                  Loading photo
+                </div>
+              )}
               <span className="font-handwritten text-2xl leading-tight text-gray-900 dark:text-white line-clamp-4">
                 {dream.text}
               </span>
