@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 const TMDB_KEY = "b66752afda91b8258d32f4388f049a22";
 const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
 const moviePosterCache = {};
+const moviePosterInflight = {};
 
 export default function useMoviePoster(query) {
   const normalizedQuery = String(query || "").trim();
@@ -13,8 +14,8 @@ export default function useMoviePoster(query) {
       setUrl("");
       return;
     }
-    if (moviePosterCache[normalizedQuery]) {
-      setUrl(moviePosterCache[normalizedQuery]);
+    if (Object.prototype.hasOwnProperty.call(moviePosterCache, normalizedQuery)) {
+      setUrl(moviePosterCache[normalizedQuery] || "");
       return;
     }
 
@@ -28,17 +29,36 @@ export default function useMoviePoster(query) {
         const data = response.ok ? await response.json() : null;
         const match = Array.isArray(data?.results) ? data.results.find((item) => item?.poster_path) : null;
         const nextUrl = match?.poster_path ? `${TMDB_IMG}${match.poster_path}` : "";
-        if (!cancelled && nextUrl) {
-          moviePosterCache[normalizedQuery] = nextUrl;
-          setUrl(nextUrl);
+        moviePosterCache[normalizedQuery] = nextUrl || "";
+        delete moviePosterInflight[normalizedQuery];
+        if (!cancelled) {
+          setUrl(nextUrl || "");
         }
+        return nextUrl || "";
       } catch {
+        delete moviePosterInflight[normalizedQuery];
+        moviePosterCache[normalizedQuery] = "";
         if (!cancelled) setUrl("");
+        return "";
       }
     }
 
     setUrl("");
-    resolvePoster();
+
+    if (moviePosterInflight[normalizedQuery]) {
+      moviePosterInflight[normalizedQuery]
+        .then((nextUrl) => {
+          if (!cancelled) setUrl(nextUrl || "");
+        })
+        .catch(() => {
+          if (!cancelled) setUrl("");
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    moviePosterInflight[normalizedQuery] = resolvePoster();
 
     return () => {
       cancelled = true;

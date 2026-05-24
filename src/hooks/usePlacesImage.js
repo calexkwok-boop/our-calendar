@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 const placesImageCache = {};
+const placesImageInflight = {};
 
 export default function usePlacesImage(query, type = "restaurant") {
   const cacheKey = query ? `${type}:${query}` : "";
@@ -11,8 +12,8 @@ export default function usePlacesImage(query, type = "restaurant") {
       setUrl("");
       return;
     }
-    if (placesImageCache[cacheKey]) {
-      setUrl(placesImageCache[cacheKey]);
+    if (Object.prototype.hasOwnProperty.call(placesImageCache, cacheKey)) {
+      setUrl(placesImageCache[cacheKey] || "");
       return;
     }
 
@@ -29,17 +30,36 @@ export default function usePlacesImage(query, type = "restaurant") {
         const nextUrl = photoRef
           ? `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800`
           : "";
-        if (!cancelled && nextUrl) {
-          placesImageCache[cacheKey] = nextUrl;
-          setUrl(nextUrl);
+        placesImageCache[cacheKey] = nextUrl || "";
+        delete placesImageInflight[cacheKey];
+        if (!cancelled) {
+          setUrl(nextUrl || "");
         }
+        return nextUrl || "";
       } catch {
+        delete placesImageInflight[cacheKey];
+        placesImageCache[cacheKey] = "";
         if (!cancelled) setUrl("");
+        return "";
       }
     }
 
     setUrl("");
-    resolveImage();
+
+    if (placesImageInflight[cacheKey]) {
+      placesImageInflight[cacheKey]
+        .then((nextUrl) => {
+          if (!cancelled) setUrl(nextUrl || "");
+        })
+        .catch(() => {
+          if (!cancelled) setUrl("");
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    placesImageInflight[cacheKey] = resolveImage();
 
     return () => {
       cancelled = true;

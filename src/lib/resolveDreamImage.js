@@ -42,6 +42,8 @@ const TITLE_IMAGE_OVERRIDES = {
 };
 
 const TITLE_TYPE_OVERRIDES = {
+  "chanel classic flap": "products",
+  "chanel classic flip": "products",
   "oldboy": "movies",
   "the italian job": "movies",
   "italian job": "movies",

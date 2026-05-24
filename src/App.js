@@ -1875,6 +1875,7 @@ function KomoPolaroidCard({ card, compact = false }) {
   const [moviePosterFailed, setMoviePosterFailed] = useState(false);
   const [placeImageFailed, setPlaceImageFailed] = useState(false);
   const [searchFailed, setSearchFailed] = useState(false);
+  const [debugDelayElapsed, setDebugDelayElapsed] = useState(false);
   const resolvedImageUrl = candidateImageUrls[imageIndex] || "";
   const moviePosterQuery = !resolvedImageUrl && isMovieDream(card) ? String(card?.label || card?.text || card?.title || "").trim() : null;
   const placePhotoQuery = !resolvedImageUrl ? getDreamPlacePhotoQuery(card) : null;
@@ -1903,13 +1904,24 @@ function KomoPolaroidCard({ card, compact = false }) {
     || (placePhotoQuery && !placeImageFailed && !placeImageUrl)
     || (googleImageQuery && !searchFailed && !searchedImageUrl)
   );
-  const showDebugFallback = (!imageUrl || imageFailed) && !isLookupPending;
+  const showDebugFallback = debugDelayElapsed && (!imageUrl || imageFailed) && !isLookupPending;
   useEffect(() => {
     setImageIndex(0);
     setMoviePosterFailed(false);
     setPlaceImageFailed(false);
     setSearchFailed(false);
+    setDebugDelayElapsed(false);
   }, [card?.id, card?.label, card?.text, card?.imageUrl, card?.photoUrl]);
+  useEffect(() => {
+    if (imageUrl || isLookupPending) {
+      setDebugDelayElapsed(false);
+      return undefined;
+    }
+    const timeoutId = window.setTimeout(() => {
+      setDebugDelayElapsed(true);
+    }, 1200);
+    return () => window.clearTimeout(timeoutId);
+  }, [imageUrl, isLookupPending, imageFailed]);
   const debugLines = [
     `title: ${label || '(blank)'}`,
     `type: ${String(card?.type || '').trim() || '(blank)'}`,

@@ -1,14 +1,22 @@
 import { useState, useEffect } from "react";
 
 const _cache = {};
+const _inflight = {};
 
 export default function useGoogleImage(query, options = {}) {
   const preferProductSearch = Boolean(options.preferProductSearch);
-  const [url, setUrl] = useState(query ? (_cache[query] || "") : "");
+  const cacheKey = query ? `${preferProductSearch ? "product" : "image"}:${query}` : "";
+  const [url, setUrl] = useState(cacheKey ? (_cache[cacheKey] || "") : "");
 
   useEffect(() => {
-    if (!query) return;
-    if (_cache[query]) { setUrl(_cache[query]); return; }
+    if (!query) {
+      setUrl("");
+      return;
+    }
+    if (Object.prototype.hasOwnProperty.call(_cache, cacheKey)) {
+      setUrl(_cache[cacheKey] || "");
+      return;
+    }
     let cancelled = false;
 
     async function resolveImage() {
@@ -50,19 +58,35 @@ export default function useGoogleImage(query, options = {}) {
         }
       }
 
-      if (result && !cancelled) {
-        _cache[query] = result;
-        setUrl(result);
+      _cache[cacheKey] = result || "";
+      delete _inflight[cacheKey];
+      if (!cancelled) {
+        setUrl(result || "");
       }
+      return result || "";
     }
 
     setUrl("");
-    resolveImage();
+
+    if (_inflight[cacheKey]) {
+      _inflight[cacheKey]
+        .then((result) => {
+          if (!cancelled) setUrl(result || "");
+        })
+        .catch(() => {
+          if (!cancelled) setUrl("");
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    _inflight[cacheKey] = resolveImage();
 
     return () => {
       cancelled = true;
     };
-  }, [preferProductSearch, query]);
+  }, [cacheKey, preferProductSearch, query]);
 
   return url;
 }

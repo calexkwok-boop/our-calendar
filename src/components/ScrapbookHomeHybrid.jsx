@@ -113,6 +113,7 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
   const [moviePosterFailed, setMoviePosterFailed] = useState(false);
   const [placeImageFailed, setPlaceImageFailed] = useState(false);
   const [searchFailed, setSearchFailed] = useState(false);
+  const [debugDelayElapsed, setDebugDelayElapsed] = useState(false);
   const resolvedImageUrl = candidateImageUrls[imageIndex] || '';
   const moviePosterQuery = !resolvedImageUrl && isMovieDream(dream) ? String(dream?.text || dream?.label || '').trim() : null;
   const placePhotoQuery = !resolvedImageUrl ? getDreamPlacePhotoQuery(dream) : null;
@@ -139,13 +140,24 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
     || (placePhotoQuery && !placeImageFailed && !placeImageUrl)
     || (googleImageQuery && !searchFailed && !searchedImageUrl)
   );
-  const showDebugFallback = (!dreamImageUrl || imageFailed) && !isLookupPending;
+  const showDebugFallback = debugDelayElapsed && (!dreamImageUrl || imageFailed) && !isLookupPending;
   useEffect(() => {
     setImageIndex(0);
     setMoviePosterFailed(false);
     setPlaceImageFailed(false);
     setSearchFailed(false);
+    setDebugDelayElapsed(false);
   }, [dream?.id, dream?.text, dream?.label, dream?.imageUrl, dream?.photoUrl]);
+  useEffect(() => {
+    if (dreamImageUrl || isLookupPending) {
+      setDebugDelayElapsed(false);
+      return undefined;
+    }
+    const timeoutId = window.setTimeout(() => {
+      setDebugDelayElapsed(true);
+    }, 1200);
+    return () => window.clearTimeout(timeoutId);
+  }, [dreamImageUrl, isLookupPending, imageFailed]);
   const debugLines = [
     `title: ${dreamTitle || '(blank)'}`,
     `type: ${String(dream?.type || '').trim() || '(blank)'}`,

@@ -877,6 +877,7 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
   const [moviePosterFailed, setMoviePosterFailed] = useState(false);
   const [placeImageFailed, setPlaceImageFailed] = useState(false);
   const [searchFailed, setSearchFailed] = useState(false);
+  const [debugDelayElapsed, setDebugDelayElapsed] = useState(false);
   const resolvedImageUrl = candidateImageUrls[imageIndex] || '';
   const pinTitle = String(pin?.label || pin?.text || '').trim();
   const moviePosterQuery = !resolvedImageUrl && isMovieDream(pin) ? pinTitle : null;
@@ -903,7 +904,7 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
     || (placePhotoQuery && !placeImageFailed && !placeImageUrl)
     || (googleImageQuery && !searchFailed && !searchedImageUrl)
   );
-  const showDebugFallback = (!imageUrl || imageFailed) && !isLookupPending;
+  const showDebugFallback = debugDelayElapsed && (!imageUrl || imageFailed) && !isLookupPending;
   const cardBg  = darkMode ? '#e2e8f0' : '#ffffff';
   const labelCol = pin.status === 'done' ? '#9ca3af' : '#374151';
   const shadow  = isDragging ? '0 20px 50px rgba(0,0,0,0.5)' : '3px 5px 16px rgba(0,0,0,0.22)';
@@ -912,7 +913,18 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
     setMoviePosterFailed(false);
     setPlaceImageFailed(false);
     setSearchFailed(false);
+    setDebugDelayElapsed(false);
   }, [pin?.id, pin?.label, pin?.text, pin?.imageUrl, pin?.photoUrl]);
+  useEffect(() => {
+    if (imageUrl || isLookupPending) {
+      setDebugDelayElapsed(false);
+      return undefined;
+    }
+    const timeoutId = window.setTimeout(() => {
+      setDebugDelayElapsed(true);
+    }, 1200);
+    return () => window.clearTimeout(timeoutId);
+  }, [imageUrl, isLookupPending, imageFailed]);
   const debugLines = [
     `title: ${pinTitle || '(blank)'}`,
     `type: ${String(pin?.type || '').trim() || '(blank)'}`,
