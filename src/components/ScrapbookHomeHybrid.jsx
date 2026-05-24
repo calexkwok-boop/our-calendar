@@ -109,6 +109,16 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
   const resolvedImageUrl = getOnYourMindImageUrl(dream);
   const searchedImageUrl = useGoogleImage(!resolvedImageUrl ? getDreamImageSearchQuery(dream) : null);
   const dreamImageUrl = resolvedImageUrl || searchedImageUrl;
+  const dreamTitle = String(dream?.text || dream?.label || '').trim();
+  const debugLines = [
+    `title: ${dreamTitle || '(blank)'}`,
+    `type: ${String(dream?.type || '').trim() || '(blank)'}`,
+    `sourceType: ${String(dream?.sourceType || '').trim() || '(blank)'}`,
+    `category: ${String(dream?.category || '').trim() || '(blank)'}`,
+    `categoryId: ${String(dream?.categoryId || '').trim() || '(blank)'}`,
+    `resolved: ${resolvedImageUrl ? 'yes' : 'no'}`,
+    `search: ${searchedImageUrl ? 'yes' : 'no'}`,
+  ];
 
   return (
     <div
@@ -143,6 +153,11 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
           ) : (
             <div className="flex min-h-[216px] flex-col justify-between rounded-[22px] border border-emerald-900/10 bg-white/70 p-4 text-left shadow-lg dark:border-white/10 dark:bg-black/20">
               <span className="text-4xl">{dream.emoji}</span>
+              <div className="rounded-xl bg-white/85 px-2 py-2 text-[10px] leading-tight text-gray-700 shadow-sm dark:bg-white dark:text-gray-700">
+                {debugLines.map((line) => (
+                  <div key={line} className="break-words">{line}</div>
+                ))}
+              </div>
               <span className="font-handwritten text-2xl leading-tight text-gray-900 dark:text-white line-clamp-4">
                 {dream.text}
               </span>

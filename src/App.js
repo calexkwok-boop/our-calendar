@@ -1874,6 +1874,15 @@ function KomoPolaroidCard({ card, compact = false }) {
   const rotation = Number(card?.rot || 0) * (compact ? 0.35 : 0.55);
   const label = String(card?.label || card?.text || 'Komo Book idea').trim();
   const emoji = String(card?.emoji || '*').trim();
+  const debugLines = [
+    `title: ${label || '(blank)'}`,
+    `type: ${String(card?.type || '').trim() || '(blank)'}`,
+    `sourceType: ${String(card?.sourceType || '').trim() || '(blank)'}`,
+    `category: ${String(card?.category || '').trim() || '(blank)'}`,
+    `categoryId: ${String(card?.categoryId || '').trim() || '(blank)'}`,
+    `resolved: ${resolvedImageUrl ? 'yes' : 'no'}`,
+    `search: ${searchedImageUrl ? 'yes' : 'no'}`,
+  ];
 
   return (
     <div
@@ -1884,7 +1893,14 @@ function KomoPolaroidCard({ card, compact = false }) {
         {imageUrl ? (
           <img src={imageUrl} alt={label} className="h-full w-full object-cover" draggable={false} />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-2xl">{emoji}</div>
+          <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-amber-50 px-1 text-center">
+            <div className="text-2xl">{emoji}</div>
+            <div className="max-h-full overflow-hidden rounded bg-white/90 px-1 py-1 text-left text-[8px] leading-tight text-gray-700 shadow-sm">
+              {debugLines.map((line) => (
+                <div key={line} className="break-words">{line}</div>
+              ))}
+            </div>
+          </div>
         )}
       </div>
       <div className={`px-1 py-1 text-center text-gray-700 ${compact ? 'text-[11px]' : 'text-xs'}`} style={{ fontFamily: "'Caveat', cursive" }}>
