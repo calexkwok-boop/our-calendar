@@ -38,7 +38,7 @@ import FriendPhotoModal from "./components/FriendPhotoModal";
 import JOURNEY_QUOTES from "./data/journeyQuotes";
 import { loadFriendsList as loadFriendsListLib } from "./lib/loadFriendsList";
 import * as memoryPersistence from "./lib/memoryPersistence";
-import { getDreamImageSearchQuery, normalizeDreamCategory, resolveDreamImage } from "./lib/resolveDreamImage";
+import { getDreamImageSearchQuery, normalizeDreamCategory, resolveDreamImage, resolveDreamImageCandidates } from "./lib/resolveDreamImage";
 
 const PopupEventPanel = React.lazy(() => import("./components/PopupEventPanel"));
 const SportsEventCardOverlay = React.lazy(() => import("./components/SportsEventCardOverlay"));
@@ -1868,14 +1868,22 @@ const writeTripKomoState = (userId, state) => {
 };
 const resolveBucketDreamImage = (dream) => resolveDreamImage(dream);
 function KomoPolaroidCard({ card, compact = false }) {
-  const [imageFailed, setImageFailed] = useState(false);
-  const resolvedImageUrl = resolveDreamImage(card);
+  const candidateImageUrls = resolveDreamImageCandidates(card);
+  const [imageIndex, setImageIndex] = useState(0);
+  const [searchFailed, setSearchFailed] = useState(false);
+  const resolvedImageUrl = candidateImageUrls[imageIndex] || "";
   const searchedImageUrl = useGoogleImage(!resolvedImageUrl ? getDreamImageSearchQuery(card) : null);
-  const imageUrl = resolvedImageUrl || searchedImageUrl;
-  const showDebugFallback = !imageUrl || imageFailed;
+  const imageUrl = searchFailed ? "" : (resolvedImageUrl || searchedImageUrl);
   const rotation = Number(card?.rot || 0) * (compact ? 0.35 : 0.55);
   const label = String(card?.label || card?.text || 'Komo Book idea').trim();
   const emoji = String(card?.emoji || '*').trim();
+  const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
+  const imageFailed = exhaustedCandidates && (!searchedImageUrl || searchFailed);
+  const showDebugFallback = !imageUrl || imageFailed;
+  useEffect(() => {
+    setImageIndex(0);
+    setSearchFailed(false);
+  }, [card?.id, card?.label, card?.text, card?.imageUrl, card?.photoUrl]);
   const debugLines = [
     `title: ${label || '(blank)'}`,
     `type: ${String(card?.type || '').trim() || '(blank)'}`,
@@ -1886,6 +1894,7 @@ function KomoPolaroidCard({ card, compact = false }) {
     `search: ${searchedImageUrl ? 'yes' : 'no'}`,
     `imageUrl: ${imageUrl ? 'yes' : 'no'}`,
     `failed: ${imageFailed ? 'yes' : 'no'}`,
+    `candidate: ${candidateImageUrls.length ? `${Math.min(imageIndex + 1, candidateImageUrls.length)}/${candidateImageUrls.length}` : '0/0'}`,
   ];
 
   return (
@@ -1900,7 +1909,17 @@ function KomoPolaroidCard({ card, compact = false }) {
             alt={label}
             className="h-full w-full object-cover"
             draggable={false}
-            onError={() => setImageFailed(true)}
+            onError={() => {
+              if (resolvedImageUrl && imageIndex < candidateImageUrls.length - 1) {
+                setImageIndex((current) => current + 1);
+                return;
+              }
+              if (resolvedImageUrl && imageIndex === candidateImageUrls.length - 1) {
+                setImageIndex(candidateImageUrls.length);
+                return;
+              }
+              setSearchFailed(true);
+            }}
           />
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-amber-50 px-1 text-center">

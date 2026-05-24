@@ -134,7 +134,17 @@ export const getDreamImageSearchQuery = (item) => {
   return "";
 };
 
-export const resolveDreamImage = (item) => {
+const dedupeImageUrls = (urls = []) => {
+  const seen = new Set();
+  return urls.filter((url) => {
+    const normalized = String(url || "").trim();
+    if (!normalized || seen.has(normalized)) return false;
+    seen.add(normalized);
+    return true;
+  });
+};
+
+export const resolveDreamImageCandidates = (item) => {
   const title = String(
     item?.text
     || item?.label
@@ -146,10 +156,11 @@ export const resolveDreamImage = (item) => {
     || ""
   ).trim();
   const titleKey = title.toLowerCase();
-  if (TITLE_IMAGE_OVERRIDES[titleKey]) return TITLE_IMAGE_OVERRIDES[titleKey];
+  const candidates = [];
+  if (TITLE_IMAGE_OVERRIDES[titleKey]) candidates.push(TITLE_IMAGE_OVERRIDES[titleKey]);
 
   const directImageUrl = readDirectDreamImageUrl(item);
-  if (directImageUrl) return directImageUrl;
+  if (directImageUrl) candidates.push(directImageUrl);
 
   const destinationOverrideImage = getDestinationImageOverride({
     id: item?.id,
@@ -158,29 +169,33 @@ export const resolveDreamImage = (item) => {
     cardTitle: title,
     title,
   });
-  if (destinationOverrideImage) return destinationOverrideImage;
+  if (destinationOverrideImage) candidates.push(destinationOverrideImage);
 
   const normalizedTitle = normalizeLookupTitle(title);
   const titleOverrideEntry = Object.entries(TITLE_IMAGE_OVERRIDES).find(([key]) => (
     normalizeLookupTitle(key) === normalizedTitle
   ));
-  if (titleOverrideEntry?.[1]) return titleOverrideEntry[1];
+  if (titleOverrideEntry?.[1]) candidates.push(titleOverrideEntry[1]);
 
   const catalogImageUrl = findExploreCatalogImageUrlByTitle(title);
-  if (catalogImageUrl) return catalogImageUrl;
+  if (catalogImageUrl) candidates.push(catalogImageUrl);
 
   const exploreType = inferExploreType(item);
-  if (!exploreType) return "";
+  if (exploreType) {
+    candidates.push(getExploreCardImageUrl({
+      type: exploreType,
+      cardTitle: title,
+      title,
+      name: title,
+      destination_name: title,
+      location: String(item?.location || item?.mapQuery || "").trim(),
+      imageUrl: String(item?.imageUrl || item?.image_url || "").trim(),
+      destination_image: String(item?.destination_image || "").trim(),
+      photo: String(item?.photo || "").trim(),
+    }, ""));
+  }
 
-  return getExploreCardImageUrl({
-    type: exploreType,
-    cardTitle: title,
-    title,
-    name: title,
-    destination_name: title,
-    location: String(item?.location || item?.mapQuery || "").trim(),
-    imageUrl: String(item?.imageUrl || item?.image_url || "").trim(),
-    destination_image: String(item?.destination_image || "").trim(),
-    photo: String(item?.photo || "").trim(),
-  }, "");
+  return dedupeImageUrls(candidates);
 };
+
+export const resolveDreamImage = (item) => resolveDreamImageCandidates(item)[0] || "";

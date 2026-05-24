@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Camera,
   Clock,
@@ -16,7 +16,7 @@ import {
 import QuickThoughtsSection from './QuickThoughtsSection';
 import useHomeSectionLayout from '../hooks/useHomeSectionLayout';
 import useGoogleImage from '../hooks/useGoogleImage';
-import { getDreamImageSearchQuery, resolveDreamImage } from '../lib/resolveDreamImage';
+import { getDreamImageSearchQuery, resolveDreamImage, resolveDreamImageCandidates } from '../lib/resolveDreamImage';
 
 const TODAY_MOMENT_CACHE_KEY = 'home-today-moment-v1';
 const readCachedTodayMoment = (todayKey) => {
@@ -106,12 +106,20 @@ const getVisualPreviewUrl = (item) => String(
 const getOnYourMindImageUrl = (dream) => resolveDreamImage(dream);
 
 function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCardId, cardNotes, saveCardNote, cardAttachments, saveCardAttachment }) {
-  const [imageFailed, setImageFailed] = useState(false);
-  const resolvedImageUrl = getOnYourMindImageUrl(dream);
+  const candidateImageUrls = resolveDreamImageCandidates(dream);
+  const [imageIndex, setImageIndex] = useState(0);
+  const [searchFailed, setSearchFailed] = useState(false);
+  const resolvedImageUrl = candidateImageUrls[imageIndex] || '';
   const searchedImageUrl = useGoogleImage(!resolvedImageUrl ? getDreamImageSearchQuery(dream) : null);
-  const dreamImageUrl = resolvedImageUrl || searchedImageUrl;
-  const showDebugFallback = !dreamImageUrl || imageFailed;
+  const dreamImageUrl = searchFailed ? '' : (resolvedImageUrl || searchedImageUrl);
   const dreamTitle = String(dream?.text || dream?.label || '').trim();
+  const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
+  const imageFailed = exhaustedCandidates && (!searchedImageUrl || searchFailed);
+  const showDebugFallback = !dreamImageUrl || imageFailed;
+  useEffect(() => {
+    setImageIndex(0);
+    setSearchFailed(false);
+  }, [dream?.id, dream?.text, dream?.label, dream?.imageUrl, dream?.photoUrl]);
   const debugLines = [
     `title: ${dreamTitle || '(blank)'}`,
     `type: ${String(dream?.type || '').trim() || '(blank)'}`,
@@ -122,6 +130,7 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
     `search: ${searchedImageUrl ? 'yes' : 'no'}`,
     `imageUrl: ${dreamImageUrl ? 'yes' : 'no'}`,
     `failed: ${imageFailed ? 'yes' : 'no'}`,
+    `candidate: ${candidateImageUrls.length ? `${Math.min(imageIndex + 1, candidateImageUrls.length)}/${candidateImageUrls.length}` : '0/0'}`,
   ];
 
   return (
@@ -151,7 +160,17 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
                   alt={dream.text}
                   className="h-full w-full object-cover"
                   loading="lazy"
-                  onError={() => setImageFailed(true)}
+                  onError={() => {
+                    if (resolvedImageUrl && imageIndex < candidateImageUrls.length - 1) {
+                      setImageIndex((current) => current + 1);
+                      return;
+                    }
+                    if (resolvedImageUrl && imageIndex === candidateImageUrls.length - 1) {
+                      setImageIndex(candidateImageUrls.length);
+                      return;
+                    }
+                    setSearchFailed(true);
+                  }}
                 />
               </div>
               <div className="px-1 py-3 text-center">
