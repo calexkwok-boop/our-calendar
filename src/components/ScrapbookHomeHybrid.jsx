@@ -106,9 +106,11 @@ const getVisualPreviewUrl = (item) => String(
 const getOnYourMindImageUrl = (dream) => resolveDreamImage(dream);
 
 function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCardId, cardNotes, saveCardNote, cardAttachments, saveCardAttachment }) {
+  const [imageFailed, setImageFailed] = useState(false);
   const resolvedImageUrl = getOnYourMindImageUrl(dream);
   const searchedImageUrl = useGoogleImage(!resolvedImageUrl ? getDreamImageSearchQuery(dream) : null);
   const dreamImageUrl = resolvedImageUrl || searchedImageUrl;
+  const showDebugFallback = !dreamImageUrl || imageFailed;
   const dreamTitle = String(dream?.text || dream?.label || '').trim();
   const debugLines = [
     `title: ${dreamTitle || '(blank)'}`,
@@ -118,6 +120,8 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
     `categoryId: ${String(dream?.categoryId || '').trim() || '(blank)'}`,
     `resolved: ${resolvedImageUrl ? 'yes' : 'no'}`,
     `search: ${searchedImageUrl ? 'yes' : 'no'}`,
+    `imageUrl: ${dreamImageUrl ? 'yes' : 'no'}`,
+    `failed: ${imageFailed ? 'yes' : 'no'}`,
   ];
 
   return (
@@ -139,10 +143,16 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
         }}
       >
         <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-          {dreamImageUrl ? (
+          {!showDebugFallback ? (
             <div className="bg-white dark:bg-slate-100 rounded-sm shadow-lg p-2 pb-0">
               <div className="aspect-square w-full overflow-hidden rounded-[3px]">
-                <img src={dreamImageUrl} alt={dream.text} className="h-full w-full object-cover" loading="lazy" />
+                <img
+                  src={dreamImageUrl}
+                  alt={dream.text}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                  onError={() => setImageFailed(true)}
+                />
               </div>
               <div className="px-1 py-3 text-center">
                 <div className="font-handwritten text-base leading-tight text-gray-600 line-clamp-2">

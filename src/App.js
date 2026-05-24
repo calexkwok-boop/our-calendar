@@ -1868,9 +1868,11 @@ const writeTripKomoState = (userId, state) => {
 };
 const resolveBucketDreamImage = (dream) => resolveDreamImage(dream);
 function KomoPolaroidCard({ card, compact = false }) {
+  const [imageFailed, setImageFailed] = useState(false);
   const resolvedImageUrl = resolveDreamImage(card);
   const searchedImageUrl = useGoogleImage(!resolvedImageUrl ? getDreamImageSearchQuery(card) : null);
   const imageUrl = resolvedImageUrl || searchedImageUrl;
+  const showDebugFallback = !imageUrl || imageFailed;
   const rotation = Number(card?.rot || 0) * (compact ? 0.35 : 0.55);
   const label = String(card?.label || card?.text || 'Komo Book idea').trim();
   const emoji = String(card?.emoji || '*').trim();
@@ -1882,6 +1884,8 @@ function KomoPolaroidCard({ card, compact = false }) {
     `categoryId: ${String(card?.categoryId || '').trim() || '(blank)'}`,
     `resolved: ${resolvedImageUrl ? 'yes' : 'no'}`,
     `search: ${searchedImageUrl ? 'yes' : 'no'}`,
+    `imageUrl: ${imageUrl ? 'yes' : 'no'}`,
+    `failed: ${imageFailed ? 'yes' : 'no'}`,
   ];
 
   return (
@@ -1890,8 +1894,14 @@ function KomoPolaroidCard({ card, compact = false }) {
       style={{ transform: `rotate(${rotation}deg)` }}
     >
       <div className="aspect-square w-full overflow-hidden rounded-[2px] bg-emerald-50">
-        {imageUrl ? (
-          <img src={imageUrl} alt={label} className="h-full w-full object-cover" draggable={false} />
+        {!showDebugFallback ? (
+          <img
+            src={imageUrl}
+            alt={label}
+            className="h-full w-full object-cover"
+            draggable={false}
+            onError={() => setImageFailed(true)}
+          />
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-amber-50 px-1 text-center">
             <div className="text-2xl">{emoji}</div>
