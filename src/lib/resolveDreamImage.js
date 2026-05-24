@@ -131,7 +131,7 @@ const inferExploreType = (item) => {
 
   if (/(disneyland|disney world|orlando|anaheim|boston|iceland|northern lights|mountains|mountain|beach|bay|park|island|islands|coast|canyon|falls|temple|resort|hotel|hyatt)/.test(title)) return "destinations";
   if (/(din tai fung|nobu|brodard|oiza|kitchen|bbq|grill|cafe|coffee|ramen|sushi|pizza|restaurant|eatery|bistro|diner)/.test(title)) return "restaurants";
-  if (/(ray-ban|meta|wayfarer|bag|watch|bracelet|ring|shoes|sneakers|camera|whoop|oura|garmin|bike|paddle|purse)/.test(title)) return "products";
+  if (/(ray-ban|meta|wayfarer|bag|handbag|flap|chanel|birkin|watch|bracelet|ring|shoes|sneakers|camera|whoop|oura|garmin|bike|paddle|purse)/.test(title)) return "products";
   if (/(oldboy|italian job|movie|film|criterion|screening)/.test(title)) return "movies";
   if (/(hike|trail|summit|peak|trek|climb|camp|adventure|skydiving|parasailing)/.test(title)) return "hiking";
 
@@ -180,10 +180,10 @@ export const getDreamImageSearchQuery = (item) => {
   if (!title) return "";
   if (rawType === "games" || inferredType === "games") return `${title} board game box`;
   if (rawType === "movies" || inferredType === "movies") return `${title} movie poster`;
-  if (rawType === "destinations" || category === "travel") return `${title} travel destination`;
-  if (rawType === "restaurants" || category === "food") return `${title} restaurant`;
+  if (rawType === "destinations" || inferredType === "destinations" || category === "travel") return `${title} travel destination`;
+  if (rawType === "restaurants" || inferredType === "restaurants" || category === "food") return `${title} restaurant`;
   if (rawType === "hiking" || inferredType === "hiking" || category === "adventure") return `${title} landmark travel`;
-  if (rawType === "products" || category === "buy") return `${title} product`;
+  if (rawType === "products" || inferredType === "products" || category === "buy") return `${title} product`;
   return "";
 };
 
