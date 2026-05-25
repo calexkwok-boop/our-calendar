@@ -101,7 +101,7 @@ export const normalizeDreamCategory = (item) => {
   return DREAM_CATEGORY_MAP[rawCategory] || rawCategory || "travel";
 };
 
-const inferExploreType = (item) => {
+export const resolveDreamContentType = (item) => {
   const rawType = resolveRawType(item);
   const category = normalizeDreamCategory(item);
   const rawCategoryId = String(item?.categoryId || "").trim().toLowerCase();
@@ -140,8 +140,8 @@ const inferExploreType = (item) => {
   return "";
 };
 
-export const isRestaurantDream = (item) => inferExploreType(item) === "restaurants";
-export const isMovieDream = (item) => inferExploreType(item) === "movies";
+export const isRestaurantDream = (item) => resolveDreamContentType(item) === "restaurants";
+export const isMovieDream = (item) => resolveDreamContentType(item) === "movies";
 
 export const getDreamPlacePhotoQuery = (item) => {
   if (!isRestaurantDream(item)) return "";
@@ -168,7 +168,7 @@ export const getDreamPlacePhotoQuery = (item) => {
 export const getDreamImageSearchQuery = (item) => {
   const rawType = resolveRawType(item);
   const category = normalizeDreamCategory(item);
-  const inferredType = inferExploreType(item);
+  const inferredType = resolveDreamContentType(item);
   const title = String(
     item?.text
     || item?.label
@@ -243,7 +243,7 @@ export const resolveDreamImageCandidates = (item) => {
 
   if (catalogImageUrl) queueCandidate(catalogImageUrl);
 
-  const exploreType = inferExploreType(item);
+  const exploreType = resolveDreamContentType(item);
   if (exploreType && exploreType !== "restaurants") {
     queueCandidate(getExploreCardImageUrl({
       type: exploreType,

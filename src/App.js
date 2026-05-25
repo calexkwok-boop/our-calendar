@@ -40,7 +40,7 @@ import FriendPhotoModal from "./components/FriendPhotoModal";
 import JOURNEY_QUOTES from "./data/journeyQuotes";
 import { loadFriendsList as loadFriendsListLib } from "./lib/loadFriendsList";
 import * as memoryPersistence from "./lib/memoryPersistence";
-import { getDreamImageSearchQuery, getDreamPlacePhotoQuery, isMovieDream, normalizeDreamCategory, resolveDreamImage, resolveDreamImageCandidates } from "./lib/resolveDreamImage";
+import { getDreamImageSearchQuery, getDreamPlacePhotoQuery, isMovieDream, normalizeDreamCategory, resolveDreamContentType, resolveDreamImage, resolveDreamImageCandidates } from "./lib/resolveDreamImage";
 
 const PopupEventPanel = React.lazy(() => import("./components/PopupEventPanel"));
 const SportsEventCardOverlay = React.lazy(() => import("./components/SportsEventCardOverlay"));
@@ -33341,7 +33341,16 @@ transform: translateY(0);
           {bottomNavTab === 'someday' && (() => {
             const catMap = { travel: 'places', food: 'food', adventure: 'experiences', culture: 'experiences', home: 'home', wellness: 'experiences', fun: 'experiences', buy: 'buy', dreamshelf: 'buy', products: 'buy', shopping: 'buy' };
             const somedayDreams = [
-              ...(Array.isArray(bucketList) ? bucketList : []).map(d => ({
+              ...(Array.isArray(bucketList) ? bucketList : []).map(d => {
+                const inferredType = resolveDreamContentType(d);
+                const mappedCategoryId = (
+                  inferredType === 'products' ? 'buy'
+                  : inferredType === 'restaurants' ? 'food'
+                  : inferredType === 'destinations' ? 'places'
+                  : inferredType === 'movies' || inferredType === 'games' ? 'experiences'
+                  : catMap[d.category] || 'experiences'
+                );
+                return ({
                 id: d.id,
                 type: 'photo',
                 label: d.text,
@@ -33352,14 +33361,15 @@ transform: translateY(0);
                 attachmentUrl: d.attachmentUrl || '',
                 brand: d.brand || '',
                 priceRange: d.priceRange || '',
-                sourceType: d.type || '',
+                sourceType: d.type || inferredType || '',
                 noteColor: 'yellow',
                 pinColor: d.status === 'planning' ? 'purple' : 'teal',
-                categoryId: catMap[d.category] || 'experiences',
+                categoryId: mappedCategoryId,
                 status: d.status || 'dreaming',
                 chapterId: d.chapterId,
                 ...(somedayPinPositions[d.id] || {}),
-              })),
+                });
+              }),
               ...(Array.isArray(quickThoughts) ? quickThoughts : []).map(t => ({
                 id: t.id,
                 type: 'note',
@@ -35092,21 +35102,31 @@ transform: translateY(0);
           const linkedChapter = (komoChapters || []).find((chapter) => String(chapter?.id || '') === linkedChapterId) || null;
           const komoCategoryMap = { travel: 'places', food: 'food', adventure: 'experiences', culture: 'experiences', home: 'home', wellness: 'experiences', fun: 'experiences', buy: 'buy', dreamshelf: 'buy', products: 'buy', shopping: 'buy' };
           const komoPins = [
-            ...(Array.isArray(bucketList) ? bucketList : []).map((dream) => ({
-              id: dream.id,
-              type: 'photo',
-              sourceType: dream.type || '',
-              label: dream.text,
-              text: dream.text,
-              emoji: dream.emoji || '*',
-              imageUrl: resolveBucketDreamImage(dream),
-              categoryId: komoCategoryMap[dream.category] || 'experiences',
-              category: dream.category || '',
-              location: dream.location || '',
-              chapterId: dream.chapterId,
-              status: dream.status || 'dreaming',
-              ...(somedayPinPositions[dream.id] || {}),
-            })),
+            ...(Array.isArray(bucketList) ? bucketList : []).map((dream) => {
+              const inferredType = resolveDreamContentType(dream);
+              const mappedCategoryId = (
+                inferredType === 'products' ? 'buy'
+                : inferredType === 'restaurants' ? 'food'
+                : inferredType === 'destinations' ? 'places'
+                : inferredType === 'movies' || inferredType === 'games' ? 'experiences'
+                : komoCategoryMap[dream.category] || 'experiences'
+              );
+              return ({
+                id: dream.id,
+                type: 'photo',
+                sourceType: dream.type || inferredType || '',
+                label: dream.text,
+                text: dream.text,
+                emoji: dream.emoji || '*',
+                imageUrl: resolveBucketDreamImage(dream),
+                categoryId: mappedCategoryId,
+                category: dream.category || '',
+                location: dream.location || '',
+                chapterId: dream.chapterId,
+                status: dream.status || 'dreaming',
+                ...(somedayPinPositions[dream.id] || {}),
+              });
+            }),
             ...(Array.isArray(quickThoughts) ? quickThoughts : []).map((thought) => ({
               id: thought.id,
               type: 'note',
