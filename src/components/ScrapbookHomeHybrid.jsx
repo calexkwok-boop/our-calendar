@@ -1239,9 +1239,9 @@ const ScrapbookHomeHybrid = ({
                   <img
                     src={url}
                     alt=""
-                    loading="lazy"
+                    loading="eager"
                     decoding="async"
-                    fetchpriority="auto"
+                    fetchpriority="high"
                     onLoad={() => {
                       setLoadedMemoryCollageUrls((prev) => {
                         if (prev.has(url)) return prev;

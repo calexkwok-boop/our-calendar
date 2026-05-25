@@ -223,10 +223,11 @@ export const resolveDreamImageCandidates = (item) => {
   ).trim();
   const titleKey = title.toLowerCase();
   const candidates = [];
-  const queueCandidate = (url) => {
+  const queueCandidate = (url, options = {}) => {
+    const { allowGenericRestaurant = false } = options;
     const normalized = String(url || "").trim();
     if (!normalized) return;
-    if (isRestaurantDream(item) && GENERIC_RESTAURANT_IMAGE_URLS.has(normalized)) {
+    if (!allowGenericRestaurant && isRestaurantDream(item) && GENERIC_RESTAURANT_IMAGE_URLS.has(normalized)) {
       return;
     }
     candidates.push(normalized);
@@ -270,7 +271,10 @@ export const resolveDreamImageCandidates = (item) => {
   }
 
   if (isRestaurantDream(item) && candidates.length === 0 && GENERIC_RESTAURANT_IMAGE_LIST.length > 0) {
-    queueCandidate(GENERIC_RESTAURANT_IMAGE_LIST[hashTitleIndex(title, GENERIC_RESTAURANT_IMAGE_LIST.length)]);
+    queueCandidate(
+      GENERIC_RESTAURANT_IMAGE_LIST[hashTitleIndex(title, GENERIC_RESTAURANT_IMAGE_LIST.length)],
+      { allowGenericRestaurant: true }
+    );
   }
 
   return dedupeImageUrls(candidates);

@@ -471,26 +471,13 @@ export default function useHomeScreenData({
   const homeResolvedMemories = personalMemories;
 
   const homeMemoryPhotosByMemoryId = useMemo(() => {
-    const toDisplayUrl = (url) => {
-      const raw = String(url || '').trim();
-      if (!raw) return '';
-      try {
-        const parsed = new URL(raw);
-        const renderMarker = '/storage/v1/render/image/public/';
-        if (parsed.pathname.startsWith(renderMarker)) {
-          return `${parsed.origin}/storage/v1/object/public/${parsed.pathname.slice(renderMarker.length)}`;
-        }
-      } catch {}
-      return raw;
-    };
-
     return Object.fromEntries(homeResolvedMemories.map((memory) => {
       const urls = [];
       const cover = getMemoryPrimaryPhotoUrl(memory);
-      if (cover) urls.push(toDisplayUrl(cover));
+      if (cover) urls.push(String(cover).trim());
       (memory?.photos || []).forEach((photo) => {
         const url = String(photo?.url || photo?.photoUrl || '').trim();
-        if (url) urls.push(toDisplayUrl(url));
+        if (url) urls.push(url);
       });
       const uniqueUrls = urls.filter((url, index, arr) => url && arr.indexOf(url) === index);
       return [String(memory?.id || memory?.date || memory?.createdAt || ''), uniqueUrls];
@@ -588,6 +575,22 @@ export default function useHomeScreenData({
     if (frozenCollageRef.current?.dayKey !== collageDayKey) return;
     // Persist so the next visit can preload before Supabase data arrives.
     try { localStorage.setItem(`collage-v1:${collageDayKey}`, JSON.stringify(_rawCollagePhotos)); } catch {}
+  }, [_rawCollagePhotos, collageDayKey]);
+
+  useEffect(() => {
+    const urls = frozenCollageRef.current?.dayKey === collageDayKey && frozenCollageRef.current?.photos?.length
+      ? frozenCollageRef.current.photos
+      : _rawCollagePhotos;
+    if (!Array.isArray(urls) || urls.length === 0) return;
+    urls.forEach((url) => {
+      if (!url) return;
+      try {
+        const img = new Image();
+        img.decoding = 'async';
+        img.fetchPriority = 'high';
+        img.src = url;
+      } catch {}
+    });
   }, [_rawCollagePhotos, collageDayKey]);
 
   // On mount (and whenever auth/day changes), kick off image preloads for yesterday's cached URLs
