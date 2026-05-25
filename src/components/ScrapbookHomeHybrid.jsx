@@ -190,7 +190,7 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
         }}
       >
         <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-          {!showDebugFallback ? (
+          {dreamImageUrl ? (
             <div className="bg-white dark:bg-slate-100 rounded-sm shadow-lg p-2 pb-0">
               <div className="aspect-square w-full overflow-hidden rounded-[3px]">
                 <img

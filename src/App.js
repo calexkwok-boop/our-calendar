@@ -1941,7 +1941,7 @@ function KomoPolaroidCard({ card, compact = false }) {
       style={{ transform: `rotate(${rotation}deg)` }}
     >
       <div className="aspect-square w-full overflow-hidden rounded-[2px] bg-emerald-50">
-        {!showDebugFallback ? (
+        {imageUrl ? (
           <img
             src={imageUrl}
             alt={label}

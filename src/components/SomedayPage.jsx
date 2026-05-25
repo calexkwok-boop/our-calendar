@@ -941,7 +941,7 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
     <div style={{ background: cardBg, padding: '6px 6px 0', boxShadow: shadow, width: 150, borderRadius: 2, cursor: isDragging ? 'grabbing' : 'grab', position: 'relative', transition: isDragging ? 'none' : 'box-shadow 0.2s' }} onClick={onTap}>
       <Pushpin colorKey={pin.pinColor} darkMode={darkMode} />
       <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 2, position: 'relative' }}>
-        {!showDebugFallback
+        {imageUrl
           ? <img
               src={imageUrl}
               alt={pin.label}
