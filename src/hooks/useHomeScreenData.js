@@ -630,13 +630,20 @@ export default function useHomeScreenData({
       return ts !== null && startOfYearTs !== null && endOfYearTs !== null && ts >= startOfYearTs && ts <= endOfYearTs;
     };
     const countedYearEventKeys = new Set();
+    const baseYearEvents = Array.isArray(userTabEvents) && userTabEvents.length > 0
+      ? userTabEvents
+      : (
+        events && Object.keys(events).length > 0
+          ? Object.entries(events || {}).flatMap(([dateKey, dayEvents]) => (
+              (Array.isArray(dayEvents) ? dayEvents : []).map((event) => ({
+                ...event,
+                date: String(event?.date || event?.dateKey || dateKey || '').trim(),
+              }))
+            ))
+          : (eventsHomeFallback || [])
+      );
     const yearEventCount = [
-      ...Object.entries(events || {}).flatMap(([dateKey, dayEvents]) => (
-        (Array.isArray(dayEvents) ? dayEvents : []).map((event) => ({
-          ...event,
-          date: String(event?.date || event?.dateKey || dateKey || '').trim(),
-        }))
-      )),
+      ...baseYearEvents,
       ...(Array.isArray(upcomingPopupEvents) ? upcomingPopupEvents : []),
     ].reduce((total, event) => {
       const dateKey = String(event?.date || event?.dateKey || '').trim();
@@ -663,7 +670,7 @@ export default function useHomeScreenData({
       trips: tripsTakenThisYear.length,
       photos: yearPhotoCount,
     };
-  }, [events, getSubCalStartRaw, homeMemoryPhotosByMemoryId, homeResolvedMemories, tabTrips, toDateOnlyTs, todayTs, upcomingPopupEvents]);
+  }, [events, eventsHomeFallback, getSubCalStartRaw, homeMemoryPhotosByMemoryId, homeResolvedMemories, tabTrips, toDateOnlyTs, todayTs, upcomingPopupEvents, userTabEvents]);
 
   const homeMemoryReadyCount = eligibleMemoryEvents.length;
   const homeMemoryOpportunities = eligibleMemoryEvents.slice(0, 2);

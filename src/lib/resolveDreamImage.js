@@ -56,6 +56,17 @@ const GENERIC_RESTAURANT_IMAGE_URLS = new Set([
   "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80",
   "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=900&q=80",
 ]);
+const GENERIC_RESTAURANT_IMAGE_LIST = Array.from(GENERIC_RESTAURANT_IMAGE_URLS);
+
+const hashTitleIndex = (value = "", modulo = 1) => {
+  const text = String(value || "");
+  let hash = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    hash = ((hash << 5) - hash) + text.charCodeAt(index);
+    hash |= 0;
+  }
+  return modulo > 0 ? Math.abs(hash) % modulo : 0;
+};
 
 const normalizeLookupTitle = (value = "") => String(value)
   .trim()
@@ -256,6 +267,10 @@ export const resolveDreamImageCandidates = (item) => {
       destination_image: String(item?.destination_image || "").trim(),
       photo: String(item?.photo || "").trim(),
     }, ""));
+  }
+
+  if (isRestaurantDream(item) && candidates.length === 0 && GENERIC_RESTAURANT_IMAGE_LIST.length > 0) {
+    queueCandidate(GENERIC_RESTAURANT_IMAGE_LIST[hashTitleIndex(title, GENERIC_RESTAURANT_IMAGE_LIST.length)]);
   }
 
   return dedupeImageUrls(candidates);
