@@ -2682,13 +2682,14 @@ function normalizeBoardPin(pin, index = 0, forcedChapterId = '', pinPositionOver
   const pos = (pin?.x == null || pin?.y == null)
     ? gridPosition(index)
     : { x: pin.x, y: pin.y, rot: pin.rot };
-  const override = pinPositionOverrides?.[pin?.id] || {};
+  const normalizedChapterId = String(forcedChapterId || pin?.chapterId || '').trim();
+  const override = normalizedChapterId ? {} : (pinPositionOverrides?.[pin?.id] || {});
   return {
     ...pin,
     ...pos,
     ...override,
     rot: override.rot ?? pos.rot ?? pin?.rot ?? (Math.random() * 6 - 3),
-    chapterId: String(forcedChapterId || pin?.chapterId || '').trim() || undefined,
+    chapterId: normalizedChapterId || undefined,
     pinColor: pin?.pinColor ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)],
     noteColor: pin?.noteColor ?? 'yellow',
     imageUrl: getPinImageUrl(pin),
@@ -2712,7 +2713,15 @@ function mergeBoardPinsWithChapterPins(basePins = [], sourceChapters = [], pinPo
       if (!pinId) return;
       const existing = byId.get(pinId);
       byId.set(pinId, existing
-        ? { ...normalized, ...existing, chapterId: existing.chapterId || normalized.chapterId }
+        ? {
+            ...existing,
+            ...normalized,
+            notes: existing.notes ?? normalized.notes,
+            attachmentUrl: existing.attachmentUrl ?? normalized.attachmentUrl,
+            sourceType: existing.sourceType || normalized.sourceType,
+            category: existing.category || normalized.category,
+            chapterId: normalized.chapterId || existing.chapterId,
+          }
         : normalized);
     });
   });
