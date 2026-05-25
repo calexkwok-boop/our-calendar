@@ -656,7 +656,7 @@ const MemoryThumbnail = ({ memory, onClick, onToggleFavorite, onDelete, deleteRe
   const photoCount = memory.photos?.length || 0;
   const peopleCount = memory.taggedPeople?.length || 0;
   const reactionCount = memory.reactionCount || 0;
-  const coverPhoto = getMemoryCoverUrl(memory, 'thumbnail');
+  const coverPhoto = getMemoryCoverUrl(memory, 'display');
   const isFavorite = Boolean(memory?.isFavorite);
   const longPressTimerRef = useRef(null);
   const longPressFiredRef = useRef(false);
@@ -1384,7 +1384,7 @@ const MemoryPhotosStep = ({
             {data.photos.map((photo, index) => (
               <div key={photo.id} className="relative group">
                 <img
-                  src={getMemoryPhotoUrl(photo, 'thumbnail')}
+                  src={getMemoryPhotoUrl(photo, 'display')}
                   alt={`Photo ${index + 1}`}
                   loading="lazy"
                   decoding="async"
@@ -1733,7 +1733,7 @@ const MemoryPreviewStep = ({ data, darkMode }) => {
                 {data.photos.slice(0, 6).map((photo, idx) => (
                   <img
                     key={photo.id}
-                    src={getMemoryPhotoUrl(photo, 'thumbnail')}
+                    src={getMemoryPhotoUrl(photo, 'display')}
                     alt={`Photo ${idx + 1}`}
                     loading="lazy"
                     decoding="async"
