@@ -9,11 +9,12 @@ export default function usePlacesImage(query, type = "restaurant") {
 
   useEffect(() => {
     if (!query || !type) {
-      setUrl("");
+      setUrl((prev) => (prev ? "" : prev));
       return;
     }
     if (Object.prototype.hasOwnProperty.call(placesImageCache, cacheKey)) {
-      setUrl(placesImageCache[cacheKey] || "");
+      const cached = placesImageCache[cacheKey] || "";
+      setUrl((prev) => (prev === cached ? prev : cached));
       return;
     }
 
@@ -33,26 +34,28 @@ export default function usePlacesImage(query, type = "restaurant") {
         placesImageCache[cacheKey] = nextUrl || "";
         delete placesImageInflight[cacheKey];
         if (!cancelled) {
-          setUrl(nextUrl || "");
+          const finalUrl = nextUrl || "";
+          setUrl((prev) => (prev === finalUrl ? prev : finalUrl));
         }
         return nextUrl || "";
       } catch {
         delete placesImageInflight[cacheKey];
         placesImageCache[cacheKey] = "";
-        if (!cancelled) setUrl("");
+        if (!cancelled) setUrl((prev) => (prev ? "" : prev));
         return "";
       }
     }
 
-    setUrl("");
-
     if (placesImageInflight[cacheKey]) {
       placesImageInflight[cacheKey]
         .then((nextUrl) => {
-          if (!cancelled) setUrl(nextUrl || "");
+          if (!cancelled) {
+            const finalUrl = nextUrl || "";
+            setUrl((prev) => (prev === finalUrl ? prev : finalUrl));
+          }
         })
         .catch(() => {
-          if (!cancelled) setUrl("");
+          if (!cancelled) setUrl((prev) => (prev ? "" : prev));
         });
       return () => {
         cancelled = true;

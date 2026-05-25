@@ -11,11 +11,12 @@ export default function useMoviePoster(query) {
 
   useEffect(() => {
     if (!normalizedQuery) {
-      setUrl("");
+      setUrl((prev) => (prev ? "" : prev));
       return;
     }
     if (Object.prototype.hasOwnProperty.call(moviePosterCache, normalizedQuery)) {
-      setUrl(moviePosterCache[normalizedQuery] || "");
+      const cached = moviePosterCache[normalizedQuery] || "";
+      setUrl((prev) => (prev === cached ? prev : cached));
       return;
     }
 
@@ -32,26 +33,28 @@ export default function useMoviePoster(query) {
         moviePosterCache[normalizedQuery] = nextUrl || "";
         delete moviePosterInflight[normalizedQuery];
         if (!cancelled) {
-          setUrl(nextUrl || "");
+          const finalUrl = nextUrl || "";
+          setUrl((prev) => (prev === finalUrl ? prev : finalUrl));
         }
         return nextUrl || "";
       } catch {
         delete moviePosterInflight[normalizedQuery];
         moviePosterCache[normalizedQuery] = "";
-        if (!cancelled) setUrl("");
+        if (!cancelled) setUrl((prev) => (prev ? "" : prev));
         return "";
       }
     }
 
-    setUrl("");
-
     if (moviePosterInflight[normalizedQuery]) {
       moviePosterInflight[normalizedQuery]
         .then((nextUrl) => {
-          if (!cancelled) setUrl(nextUrl || "");
+          if (!cancelled) {
+            const finalUrl = nextUrl || "";
+            setUrl((prev) => (prev === finalUrl ? prev : finalUrl));
+          }
         })
         .catch(() => {
-          if (!cancelled) setUrl("");
+          if (!cancelled) setUrl((prev) => (prev ? "" : prev));
         });
       return () => {
         cancelled = true;

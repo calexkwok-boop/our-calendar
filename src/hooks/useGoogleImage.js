@@ -10,11 +10,12 @@ export default function useGoogleImage(query, options = {}) {
 
   useEffect(() => {
     if (!query) {
-      setUrl("");
+      setUrl((prev) => (prev ? "" : prev));
       return;
     }
     if (Object.prototype.hasOwnProperty.call(_cache, cacheKey)) {
-      setUrl(_cache[cacheKey] || "");
+      const cached = _cache[cacheKey] || "";
+      setUrl((prev) => (prev === cached ? prev : cached));
       return;
     }
     let cancelled = false;
@@ -61,20 +62,22 @@ export default function useGoogleImage(query, options = {}) {
       _cache[cacheKey] = result || "";
       delete _inflight[cacheKey];
       if (!cancelled) {
-        setUrl(result || "");
+        const nextUrl = result || "";
+        setUrl((prev) => (prev === nextUrl ? prev : nextUrl));
       }
       return result || "";
     }
 
-    setUrl("");
-
     if (_inflight[cacheKey]) {
       _inflight[cacheKey]
         .then((result) => {
-          if (!cancelled) setUrl(result || "");
+          if (!cancelled) {
+            const nextUrl = result || "";
+            setUrl((prev) => (prev === nextUrl ? prev : nextUrl));
+          }
         })
         .catch(() => {
-          if (!cancelled) setUrl("");
+          if (!cancelled) setUrl((prev) => (prev ? "" : prev));
         });
       return () => {
         cancelled = true;

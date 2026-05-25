@@ -550,6 +550,7 @@ export default function useHomeScreenData({
   ), [homeMemoryPhotosByMemoryId, homeResolvedMemories]);
 
   const frozenCollageRef = useRef(null);
+  const preloadedCollageUrlsRef = useRef(new Set());
 
   const _rawCollagePhotos = useMemo(() => {
     return [...homeResolvedMemories]
@@ -583,12 +584,14 @@ export default function useHomeScreenData({
       : _rawCollagePhotos;
     if (!Array.isArray(urls) || urls.length === 0) return;
     urls.forEach((url) => {
-      if (!url) return;
+      const normalizedUrl = String(url || '').trim();
+      if (!normalizedUrl || preloadedCollageUrlsRef.current.has(normalizedUrl)) return;
+      preloadedCollageUrlsRef.current.add(normalizedUrl);
       try {
         const img = new Image();
         img.decoding = 'async';
         img.fetchPriority = 'high';
-        img.src = url;
+        img.src = normalizedUrl;
       } catch {}
     });
   }, [_rawCollagePhotos, collageDayKey]);
@@ -602,10 +605,12 @@ export default function useHomeScreenData({
       const cached = JSON.parse(localStorage.getItem(`collage-v1:${todayKey}:${uid}`) || '[]');
       if (!Array.isArray(cached) || cached.length === 0) return;
       cached.forEach((url) => {
-        if (!url) return;
+        const normalizedUrl = String(url || '').trim();
+        if (!normalizedUrl || preloadedCollageUrlsRef.current.has(normalizedUrl)) return;
+        preloadedCollageUrlsRef.current.add(normalizedUrl);
         const img = new Image();
         img.decoding = 'async';
-        img.src = url;
+        img.src = normalizedUrl;
       });
     } catch {}
   }, [user?.id, todayKey]); // eslint-disable-line react-hooks/exhaustive-deps
