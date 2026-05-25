@@ -27044,9 +27044,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     if (pin.type === 'label' || pin.type === 'sticker' || pin.type === 'checklist' || pin.type === 'countdown') {
       // Store the full pin data so type + style + meta fields survive page navigation.
       // Write to localStorage synchronously so a fast app-close doesn't lose the add.
-      const nextDecorPins = [...(Array.isArray(somedayDecorPins) ? somedayDecorPins : []), pin];
-      setSomedayDecorPins(nextDecorPins);
-      try { localStorage.setItem('someday-decor-pins', JSON.stringify(nextDecorPins)); } catch {}
+      setSomedayDecorPins((prev) => {
+        const nextDecorPins = [...(Array.isArray(prev) ? prev : []), pin];
+        try { localStorage.setItem('someday-decor-pins', JSON.stringify(nextDecorPins)); } catch {}
+        return nextDecorPins;
+      });
     } else if (pin.type === 'note') {
       const colors = ['yellow', 'pink', 'blue', 'green'];
       const color = colors.includes(pin.noteColor) ? pin.noteColor : 'yellow';
@@ -27078,19 +27080,23 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   const handleSomedayUpdateDream = (pin) => {
     setTimeout(() => {
       if (pin.type === 'label' || pin.type === 'sticker') {
-        setSomedayDecorPins(prev =>
-          (Array.isArray(prev) ? prev : []).map(p =>
+        setSomedayDecorPins(prev => {
+          const nextDecorPins = (Array.isArray(prev) ? prev : []).map(p =>
             p.id === pin.id ? { ...p, x: pin.x, y: pin.y, rot: pin.rot } : p
-          )
-        );
+          );
+          try { localStorage.setItem('someday-decor-pins', JSON.stringify(nextDecorPins)); } catch {}
+          return nextDecorPins;
+        });
         return;
       }
       if (pin.type === 'checklist' || pin.type === 'countdown') {
-        const nextDecorPins = (Array.isArray(somedayDecorPins) ? somedayDecorPins : []).map(p =>
-          p.id === pin.id ? { ...p, ...pin } : p
-        );
-        setSomedayDecorPins(nextDecorPins);
-        try { localStorage.setItem('someday-decor-pins', JSON.stringify(nextDecorPins)); } catch {}
+        setSomedayDecorPins((prev) => {
+          const nextDecorPins = (Array.isArray(prev) ? prev : []).map(p =>
+            p.id === pin.id ? { ...p, ...pin } : p
+          );
+          try { localStorage.setItem('someday-decor-pins', JSON.stringify(nextDecorPins)); } catch {}
+          return nextDecorPins;
+        });
         return;
       }
       if (pin.x != null) {
@@ -27245,9 +27251,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   const handleSomedayDeleteDream = (id) => {
     // Compute next value and write to localStorage synchronously before setState,
     // so a fast app-close between action and the next render doesn't lose the delete.
-    const nextDecorPins = (Array.isArray(somedayDecorPins) ? somedayDecorPins : []).filter((p) => String(p?.id || '') !== id);
-    setSomedayDecorPins(nextDecorPins);
-    try { localStorage.setItem('someday-decor-pins', JSON.stringify(nextDecorPins)); } catch {}
+    setSomedayDecorPins((prev) => {
+      const nextDecorPins = (Array.isArray(prev) ? prev : []).filter((p) => String(p?.id || '') !== id);
+      try { localStorage.setItem('someday-decor-pins', JSON.stringify(nextDecorPins)); } catch {}
+      return nextDecorPins;
+    });
     addBucketListTombstone(user?.id, id);
     setBucketList((prev) => (Array.isArray(prev) ? prev : []).filter((item) => String(item?.id || '') !== id));
     addQuickThoughtTombstone(user?.id, id);
