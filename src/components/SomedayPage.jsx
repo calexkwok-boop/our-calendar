@@ -2252,7 +2252,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
                     >
                       <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
                         <div style={{ position: 'relative', width: 162, minHeight: 185 }}>
-                          <PhotoPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={() => handleChapterPinTap(pin)} darkMode={darkMode} />
+                          <PhotoPin pin={pin} isDragging={draggingPinId === pin.id} onDelete={() => onRemovePin?.(pin.id)} onTap={handleChapterPinTap} darkMode={darkMode} />
                           <button
                             onMouseDown={(e) => e.stopPropagation()}
                             onTouchStart={(e) => e.stopPropagation()}
@@ -3934,7 +3934,7 @@ const SomedayPage = ({
                 const isNote = focusPin.type === 'note';
                 const noteScheme = isNote ? (NOTE_COLORS[focusPin.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'] : null;
                 return (
-                  <div key={`focus-${focusPin.id}`} onClick={() => setDetailPin(focusPin)} style={{ cursor: 'pointer', transform: `rotate(${(focusPin.rot ?? 0) * 0.3}deg)`, transition: 'transform 0.2s', flexShrink: 0 }}>
+                  <div key={`focus-${focusPin.id}`} onClick={() => setDetailPin({ ...focusPin, resolvedImageUrl: getPinImageUrl(focusPin) })} style={{ cursor: 'pointer', transform: `rotate(${(focusPin.rot ?? 0) * 0.3}deg)`, transition: 'transform 0.2s', flexShrink: 0 }}>
                     {isNote ? (
                       <div style={{ background: noteScheme.bg, padding: '18px 18px 20px', boxShadow: '0 10px 36px rgba(0,0,0,0.18)', width: 220, minHeight: 120, position: 'relative', borderRadius: 2 }}>
                         <div style={{ position: 'absolute', top: 0, right: 0, borderWidth: '0 26px 26px 0', borderStyle: 'solid', borderColor: `transparent ${noteScheme.fold} transparent transparent` }} />
@@ -4061,7 +4061,7 @@ const SomedayPage = ({
                     >
                       <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
                         <div style={{ position: 'relative', width: 162, minHeight: 185 }}>
-                        <PhotoPin pin={isPinInChapter(pin) ? { ...pin, pinColor: 'purple', chapterId: getPinChapterId(pin) } : pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
+                        <PhotoPin pin={isPinInChapter(pin) ? { ...pin, pinColor: 'purple', chapterId: getPinChapterId(pin) } : pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={handlePinClick} darkMode={darkMode} />
                         <button
                           onMouseDown={(e) => e.stopPropagation()}
                           onTouchStart={(e) => e.stopPropagation()}
