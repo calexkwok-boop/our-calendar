@@ -878,6 +878,7 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
   const [placeImageFailed, setPlaceImageFailed] = useState(false);
   const [searchFailed, setSearchFailed] = useState(false);
   const [debugDelayElapsed, setDebugDelayElapsed] = useState(false);
+  const [stableImageUrl, setStableImageUrl] = useState('');
   const resolvedImageUrl = candidateImageUrls[imageIndex] || '';
   const pinTitle = String(pin?.label || pin?.text || '').trim();
   const moviePosterQuery = !resolvedImageUrl && isMovieDream(pin) ? pinTitle : null;
@@ -893,8 +894,9 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
     || ''
   );
   const imageUrl = resolvedImageUrl || asyncImageUrl;
+  const displayImageUrl = imageUrl || stableImageUrl;
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
-  const imageFailed = exhaustedCandidates && !imageUrl && (
+  const imageFailed = exhaustedCandidates && !displayImageUrl && (
     (!moviePosterQuery || moviePosterFailed || !moviePosterUrl)
     && (!placePhotoQuery || placeImageFailed || !placeImageUrl)
     && (!googleImageQuery || searchFailed || !searchedImageUrl)
@@ -914,9 +916,13 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
     setPlaceImageFailed(false);
     setSearchFailed(false);
     setDebugDelayElapsed(false);
+    setStableImageUrl('');
   }, [pin?.id, pin?.label, pin?.text, pin?.imageUrl, pin?.photoUrl]);
   useEffect(() => {
-    if (imageUrl || isLookupPending) {
+    if (imageUrl) setStableImageUrl(imageUrl);
+  }, [imageUrl]);
+  useEffect(() => {
+    if (displayImageUrl || isLookupPending) {
       setDebugDelayElapsed(false);
       return undefined;
     }
@@ -924,7 +930,7 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
       setDebugDelayElapsed(true);
     }, 1200);
     return () => window.clearTimeout(timeoutId);
-  }, [imageUrl, isLookupPending, imageFailed]);
+  }, [displayImageUrl, isLookupPending, imageFailed]);
   const debugLines = [
     `title: ${pinTitle || '(blank)'}`,
     `type: ${String(pin?.type || '').trim() || '(blank)'}`,
@@ -933,17 +939,20 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
     `categoryId: ${String(pin?.categoryId || '').trim() || '(blank)'}`,
     `resolved: ${resolvedImageUrl ? 'yes' : 'no'}`,
     `search: ${(moviePosterUrl || placeImageUrl || searchedImageUrl) ? 'yes' : 'no'}`,
-    `imageUrl: ${imageUrl ? 'yes' : 'no'}`,
+    `imageUrl: ${displayImageUrl ? 'yes' : 'no'}`,
     `failed: ${imageFailed ? 'yes' : 'no'}`,
     `candidate: ${candidateImageUrls.length ? `${Math.min(imageIndex + 1, candidateImageUrls.length)}/${candidateImageUrls.length}` : '0/0'}`,
   ];
   return (
-    <div style={{ background: cardBg, padding: '6px 6px 0', boxShadow: shadow, width: 150, borderRadius: 2, cursor: isDragging ? 'grabbing' : 'grab', position: 'relative', transition: isDragging ? 'none' : 'box-shadow 0.2s' }} onClick={onTap}>
+    <div
+      style={{ background: cardBg, padding: '6px 6px 0', boxShadow: shadow, width: 150, borderRadius: 2, cursor: isDragging ? 'grabbing' : 'grab', position: 'relative', transition: isDragging ? 'none' : 'box-shadow 0.2s' }}
+      onClick={() => onTap?.({ ...pin, resolvedImageUrl: displayImageUrl })}
+    >
       <Pushpin colorKey={pin.pinColor} darkMode={darkMode} />
       <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 2, position: 'relative' }}>
-        {imageUrl
+        {displayImageUrl
           ? <img
-              src={imageUrl}
+              src={displayImageUrl}
               alt={pin.label}
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: pin.status === 'done' ? 'grayscale(40%) brightness(0.85)' : 'none' }}
               draggable={false}
@@ -956,11 +965,11 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
                   setImageIndex(candidateImageUrls.length);
                   return;
                 }
-                if (!moviePosterFailed && imageUrl && imageUrl === moviePosterUrl) {
+                if (!moviePosterFailed && displayImageUrl && displayImageUrl === moviePosterUrl) {
                   setMoviePosterFailed(true);
                   return;
                 }
-                if (!placeImageFailed && imageUrl && imageUrl === placeImageUrl) {
+                if (!placeImageFailed && displayImageUrl && displayImageUrl === placeImageUrl) {
                   setPlaceImageFailed(true);
                   return;
                 }

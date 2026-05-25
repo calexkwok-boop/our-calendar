@@ -114,6 +114,7 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
   const [placeImageFailed, setPlaceImageFailed] = useState(false);
   const [searchFailed, setSearchFailed] = useState(false);
   const [debugDelayElapsed, setDebugDelayElapsed] = useState(false);
+  const [stableImageUrl, setStableImageUrl] = useState('');
   const resolvedImageUrl = candidateImageUrls[imageIndex] || '';
   const moviePosterQuery = !resolvedImageUrl && isMovieDream(dream) ? String(dream?.text || dream?.label || '').trim() : null;
   const placePhotoQuery = !resolvedImageUrl ? getDreamPlacePhotoQuery(dream) : null;
@@ -128,9 +129,10 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
     || ''
   );
   const dreamImageUrl = resolvedImageUrl || asyncImageUrl;
+  const displayImageUrl = dreamImageUrl || stableImageUrl;
   const dreamTitle = String(dream?.text || dream?.label || '').trim();
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
-  const imageFailed = exhaustedCandidates && !dreamImageUrl && (
+  const imageFailed = exhaustedCandidates && !displayImageUrl && (
     (!moviePosterQuery || moviePosterFailed || !moviePosterUrl)
     && (!placePhotoQuery || placeImageFailed || !placeImageUrl)
     && (!googleImageQuery || searchFailed || !searchedImageUrl)
@@ -147,9 +149,13 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
     setPlaceImageFailed(false);
     setSearchFailed(false);
     setDebugDelayElapsed(false);
+    setStableImageUrl('');
   }, [dream?.id, dream?.text, dream?.label, dream?.imageUrl, dream?.photoUrl]);
   useEffect(() => {
-    if (dreamImageUrl || isLookupPending) {
+    if (dreamImageUrl) setStableImageUrl(dreamImageUrl);
+  }, [dreamImageUrl]);
+  useEffect(() => {
+    if (displayImageUrl || isLookupPending) {
       setDebugDelayElapsed(false);
       return undefined;
     }
@@ -157,7 +163,7 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
       setDebugDelayElapsed(true);
     }, 1200);
     return () => window.clearTimeout(timeoutId);
-  }, [dreamImageUrl, isLookupPending, imageFailed]);
+  }, [displayImageUrl, isLookupPending, imageFailed]);
   const debugLines = [
     `title: ${dreamTitle || '(blank)'}`,
     `type: ${String(dream?.type || '').trim() || '(blank)'}`,
@@ -166,7 +172,7 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
     `categoryId: ${String(dream?.categoryId || '').trim() || '(blank)'}`,
     `resolved: ${resolvedImageUrl ? 'yes' : 'no'}`,
     `search: ${(moviePosterUrl || placeImageUrl || searchedImageUrl) ? 'yes' : 'no'}`,
-    `imageUrl: ${dreamImageUrl ? 'yes' : 'no'}`,
+    `imageUrl: ${displayImageUrl ? 'yes' : 'no'}`,
     `failed: ${imageFailed ? 'yes' : 'no'}`,
     `candidate: ${candidateImageUrls.length ? `${Math.min(imageIndex + 1, candidateImageUrls.length)}/${candidateImageUrls.length}` : '0/0'}`,
   ];
@@ -190,11 +196,11 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
         }}
       >
         <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-          {dreamImageUrl ? (
+          {displayImageUrl ? (
             <div className="bg-white dark:bg-slate-100 rounded-sm shadow-lg p-2 pb-0">
               <div className="aspect-square w-full overflow-hidden rounded-[3px]">
                 <img
-                  src={dreamImageUrl}
+                  src={displayImageUrl}
                   alt={dream.text}
                   className="h-full w-full object-cover"
                   loading="lazy"
@@ -207,11 +213,11 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
                       setImageIndex(candidateImageUrls.length);
                       return;
                     }
-                    if (!moviePosterFailed && dreamImageUrl && dreamImageUrl === moviePosterUrl) {
+                    if (!moviePosterFailed && displayImageUrl && displayImageUrl === moviePosterUrl) {
                       setMoviePosterFailed(true);
                       return;
                     }
-                    if (!placeImageFailed && dreamImageUrl && dreamImageUrl === placeImageUrl) {
+                    if (!placeImageFailed && displayImageUrl && displayImageUrl === placeImageUrl) {
                       setPlaceImageFailed(true);
                       return;
                     }

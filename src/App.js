@@ -1876,6 +1876,7 @@ function KomoPolaroidCard({ card, compact = false }) {
   const [placeImageFailed, setPlaceImageFailed] = useState(false);
   const [searchFailed, setSearchFailed] = useState(false);
   const [debugDelayElapsed, setDebugDelayElapsed] = useState(false);
+  const [stableImageUrl, setStableImageUrl] = useState("");
   const resolvedImageUrl = candidateImageUrls[imageIndex] || "";
   const moviePosterQuery = !resolvedImageUrl && isMovieDream(card) ? String(card?.label || card?.text || card?.title || "").trim() : null;
   const placePhotoQuery = !resolvedImageUrl ? getDreamPlacePhotoQuery(card) : null;
@@ -1890,11 +1891,12 @@ function KomoPolaroidCard({ card, compact = false }) {
     || ""
   );
   const imageUrl = resolvedImageUrl || asyncImageUrl;
+  const displayImageUrl = imageUrl || stableImageUrl;
   const rotation = Number(card?.rot || 0) * (compact ? 0.35 : 0.55);
   const label = String(card?.label || card?.text || 'Komo Book idea').trim();
   const emoji = String(card?.emoji || '*').trim();
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
-  const imageFailed = exhaustedCandidates && !imageUrl && (
+  const imageFailed = exhaustedCandidates && !displayImageUrl && (
     (!moviePosterQuery || moviePosterFailed || !moviePosterUrl)
     && (!placePhotoQuery || placeImageFailed || !placeImageUrl)
     && (!googleImageQuery || searchFailed || !searchedImageUrl)
@@ -1911,9 +1913,13 @@ function KomoPolaroidCard({ card, compact = false }) {
     setPlaceImageFailed(false);
     setSearchFailed(false);
     setDebugDelayElapsed(false);
+    setStableImageUrl("");
   }, [card?.id, card?.label, card?.text, card?.imageUrl, card?.photoUrl]);
   useEffect(() => {
-    if (imageUrl || isLookupPending) {
+    if (imageUrl) setStableImageUrl(imageUrl);
+  }, [imageUrl]);
+  useEffect(() => {
+    if (displayImageUrl || isLookupPending) {
       setDebugDelayElapsed(false);
       return undefined;
     }
@@ -1921,7 +1927,7 @@ function KomoPolaroidCard({ card, compact = false }) {
       setDebugDelayElapsed(true);
     }, 1200);
     return () => window.clearTimeout(timeoutId);
-  }, [imageUrl, isLookupPending, imageFailed]);
+  }, [displayImageUrl, isLookupPending, imageFailed]);
   const debugLines = [
     `title: ${label || '(blank)'}`,
     `type: ${String(card?.type || '').trim() || '(blank)'}`,
@@ -1930,7 +1936,7 @@ function KomoPolaroidCard({ card, compact = false }) {
     `categoryId: ${String(card?.categoryId || '').trim() || '(blank)'}`,
     `resolved: ${resolvedImageUrl ? 'yes' : 'no'}`,
     `search: ${(moviePosterUrl || placeImageUrl || searchedImageUrl) ? 'yes' : 'no'}`,
-    `imageUrl: ${imageUrl ? 'yes' : 'no'}`,
+    `imageUrl: ${displayImageUrl ? 'yes' : 'no'}`,
     `failed: ${imageFailed ? 'yes' : 'no'}`,
     `candidate: ${candidateImageUrls.length ? `${Math.min(imageIndex + 1, candidateImageUrls.length)}/${candidateImageUrls.length}` : '0/0'}`,
   ];
@@ -1941,9 +1947,9 @@ function KomoPolaroidCard({ card, compact = false }) {
       style={{ transform: `rotate(${rotation}deg)` }}
     >
       <div className="aspect-square w-full overflow-hidden rounded-[2px] bg-emerald-50">
-        {imageUrl ? (
+        {displayImageUrl ? (
           <img
-            src={imageUrl}
+            src={displayImageUrl}
             alt={label}
             className="h-full w-full object-cover"
             draggable={false}
@@ -1956,11 +1962,11 @@ function KomoPolaroidCard({ card, compact = false }) {
                 setImageIndex(candidateImageUrls.length);
                 return;
               }
-              if (!moviePosterFailed && imageUrl && imageUrl === moviePosterUrl) {
+              if (!moviePosterFailed && displayImageUrl && displayImageUrl === moviePosterUrl) {
                 setMoviePosterFailed(true);
                 return;
               }
-              if (!placeImageFailed && imageUrl && imageUrl === placeImageUrl) {
+              if (!placeImageFailed && displayImageUrl && displayImageUrl === placeImageUrl) {
                 setPlaceImageFailed(true);
                 return;
               }
