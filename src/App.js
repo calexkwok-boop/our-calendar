@@ -27134,10 +27134,17 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     const chapterPinUpdates = [];
     const chapterPositionById = new Map();
     const chapterUpdatesById = new Map();
+    const pinUpdatesById = new Map();
     (Array.isArray(pins) ? pins : []).forEach((pin) => {
       if (!pin || pin.type === 'label' || pin.type === 'sticker') return;
       if (pin.x == null || pin.y == null) return;
       nextPositionPatch[pin.id] = { x: pin.x, y: pin.y, rot: pin.rot };
+      pinUpdatesById.set(String(pin.id || ''), {
+        x: pin.x,
+        y: pin.y,
+        rot: pin.rot ?? 0,
+        chapterId: pin.chapterId,
+      });
       const chapterId = String(pin.chapterId || '').trim();
       if (chapterId) {
         const nextPosition = chapterPositionById.get(chapterId) || 0;
@@ -27160,6 +27167,22 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       }
     });
     if (Object.keys(nextPositionPatch).length === 0) return;
+    setBucketList((prev) => (
+      Array.isArray(prev)
+        ? prev.map((item) => {
+            const patch = pinUpdatesById.get(String(item?.id || ''));
+            return patch ? { ...item, ...patch } : item;
+          })
+        : prev
+    ));
+    setQuickThoughts((prev) => (
+      Array.isArray(prev)
+        ? prev.map((item) => {
+            const patch = pinUpdatesById.get(String(item?.id || ''));
+            return patch ? { ...item, ...patch } : item;
+          })
+        : prev
+    ));
     setSomedayPinPositions((prev) => {
       const next = { ...prev, ...nextPositionPatch };
       try { localStorage.setItem('someday-pin-positions', JSON.stringify(next)); } catch {}
@@ -27199,7 +27222,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               })
             : prev
         );
-        if (komoOwnerKey && komoOwnerKey !== 'guest') {
+        if (komoOwnerKey) {
           writeSomedayChaptersState(komoOwnerKey, nextChapters);
         }
         return nextChapters;

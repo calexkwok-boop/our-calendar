@@ -3694,6 +3694,11 @@ const SomedayPage = ({
           }
         : entry
     )));
+    if (nextChapterPins.length > 0) {
+      window.setTimeout(() => {
+        onPersistPinLayout?.(nextChapterPins);
+      }, 0);
+    }
 
     if (removedAutoLabelIds.length > 0) {
       await supabase.from('chapter_pins').delete().in('id', removedAutoLabelIds);
