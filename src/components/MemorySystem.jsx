@@ -35,18 +35,7 @@ const createEmptyMemoryDraft = (overrides = {}) => ({
   date: normalizeMemoryDateInput(overrides?.date),
 });
 
-const toDirectStorageUrl = (url) => {
-  const raw = String(url || '').trim();
-  if (!raw) return '';
-  try {
-    const parsed = new URL(raw);
-    const renderMarker = '/storage/v1/render/image/public/';
-    if (parsed.pathname.startsWith(renderMarker)) {
-      return `${parsed.origin}/storage/v1/object/public/${parsed.pathname.slice(renderMarker.length)}`;
-    }
-  } catch {}
-  return raw;
-};
+const normalizeMemoryMediaUrl = (url) => String(url || '').trim();
 
 const getMemoryPhotoUrl = (photo, preference = 'display') => {
   if (!photo) return '';
@@ -72,7 +61,7 @@ const getMemoryPhotoUrl = (photo, preference = 'display') => {
   const orderedCandidates = preference === 'thumbnail' || preference === 'preview'
     ? [thumbnailUrl, mediumUrl, primaryUrl]
     : [mediumUrl, primaryUrl, thumbnailUrl];
-  return toDirectStorageUrl(orderedCandidates.find(Boolean) || '');
+  return normalizeMemoryMediaUrl(orderedCandidates.find(Boolean) || '');
 };
 
 const getMemoryCoverUrl = (memory, preference = 'display') => {
@@ -90,7 +79,7 @@ const getMemoryCoverUrl = (memory, preference = 'display') => {
     ].map((value) => String(value || '').trim()).filter(Boolean);
     return coverPhoto && candidates.includes(coverPhoto);
   });
-  return toDirectStorageUrl(String(
+  return normalizeMemoryMediaUrl(String(
     (matchingCoverPhoto && getMemoryPhotoUrl(matchingCoverPhoto, preference))
     || coverPhoto
     || getMemoryPhotoUrl(memory?.photos?.[0], preference)

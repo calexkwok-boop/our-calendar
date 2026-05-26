@@ -259,8 +259,10 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); setFlippedCardId(null); }}
-            className="absolute right-2 top-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/90 text-[14px] text-gray-500 shadow-sm"
+            className="absolute right-2 top-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/90 text-[0px] text-gray-500 shadow-sm"
+            aria-label="Close card back"
           >
+            <span aria-hidden="true" className="text-[14px] leading-none">x</span>
             â†©
           </button>
           <textarea
@@ -278,7 +280,8 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
                 <img src={cardAttachments[dream.id]} alt="attachment" className="h-full w-full object-cover" />
               </a>
             ) : <span />}
-            <label className="cursor-pointer rounded-full bg-white/70 px-2 py-0.5 text-[11px] text-gray-500 shadow-sm" title="Attach photo" onClick={(e) => e.stopPropagation()}>
+            <label className="cursor-pointer rounded-full bg-white/70 px-2 py-0.5 text-[0px] text-gray-500 shadow-sm" title="Attach photo" onClick={(e) => e.stopPropagation()}>
+              <span className="text-[11px]">Add photo</span>
               ðŸ“Ž
               <input
                 type="file"
@@ -1127,8 +1130,10 @@ const ScrapbookHomeHybrid = ({
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setFlippedCardId(null); }}
-                        className="absolute right-2 top-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/90 text-[14px] text-gray-500 shadow-sm"
+                        className="absolute right-2 top-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/90 text-[0px] text-gray-500 shadow-sm"
+                        aria-label="Close card back"
                       >
+                        <span aria-hidden="true" className="text-[14px] leading-none">x</span>
                         ↩
                       </button>
                       <textarea
