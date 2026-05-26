@@ -35,6 +35,7 @@ const DREAM_CATEGORY_MAP = {
 
 const TITLE_IMAGE_OVERRIDES = {
   "disneyland park": "https://commons.wikimedia.org/wiki/Special:FilePath/File:Disneyland%20park%20-%20Anaheim%20Los%20Angeles%20California%20USA%20%289894308516%29.jpg",
+  "machu pichu": "https://lh3.googleusercontent.com/gps-cs-s/APNQkAGTEX0fTBAvsYUuqtBZQfQiab4l3IOmdNZXUnRlN3GyYkmpf_8WPNepzIBK_koBg2WcwHgxlW7kwZb_RpwePJg7pcpyIOC3Z5JIZ9xti2TylAiKXLV4aLN7ODPl5yFbRWE34_g=s1360-w1360-h1020-rw",
   "old quarter street wander hanoi": "https://images.unsplash.com/photo-1557750255-c76072a7aad1?w=900&q=80",
   "old quarter street wander, hanoi": "https://images.unsplash.com/photo-1557750255-c76072a7aad1?w=900&q=80",
   "the marble mountains": "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=900&q=80",
@@ -48,6 +49,10 @@ const TITLE_TYPE_OVERRIDES = {
   "oldboy": "movies",
   "the italian job": "movies",
   "italian job": "movies",
+};
+
+const NORMALIZED_TITLE_ALIASES = {
+  "machu pichu": "machu picchu",
 };
 
 const GENERIC_RESTAURANT_IMAGE_URLS = new Set([
@@ -77,6 +82,50 @@ const normalizeLookupTitle = (value = "") => String(value)
   .replace(/[^a-z0-9]+/g, " ")
   .replace(/\s+/g, " ")
   .trim();
+
+const normalizeLookupTitleAlias = (value = "") => {
+  const normalized = normalizeLookupTitle(value);
+  return NORMALIZED_TITLE_ALIASES[normalized] || normalized;
+};
+
+const findTitleOverrideImage = (value = "") => {
+  const normalizedTitle = normalizeLookupTitleAlias(value);
+  if (!normalizedTitle) return "";
+
+  for (const [key, imageUrl] of Object.entries(TITLE_IMAGE_OVERRIDES)) {
+    const normalizedKey = normalizeLookupTitleAlias(key);
+    if (!normalizedKey) continue;
+    if (normalizedKey === normalizedTitle) return imageUrl;
+  }
+
+  const normalizedTokens = normalizedTitle.split(" ").filter(Boolean);
+  let bestMatch = "";
+  let bestScore = 0;
+
+  for (const [key, imageUrl] of Object.entries(TITLE_IMAGE_OVERRIDES)) {
+    const normalizedKey = normalizeLookupTitleAlias(key);
+    if (!normalizedKey) continue;
+    if (normalizedTitle.includes(normalizedKey) || normalizedKey.includes(normalizedTitle)) {
+      const score = Math.max(normalizedKey.length, normalizedTitle.length) + 100;
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = imageUrl;
+      }
+      continue;
+    }
+    const keyTokens = normalizedKey.split(" ").filter(Boolean);
+    const sharedTokenCount = normalizedTokens.filter((token) => keyTokens.includes(token)).length;
+    if (sharedTokenCount >= 2) {
+      const score = sharedTokenCount * 10 + normalizedKey.length;
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = imageUrl;
+      }
+    }
+  }
+
+  return bestMatch;
+};
 
 const resolveRawType = (item) => {
   const rawSourceType = String(item?.sourceType || "").trim().toLowerCase();
@@ -127,7 +176,7 @@ export const resolveDreamContentType = (item) => {
     || item?.destination_name
     || ""
   ).trim().toLowerCase();
-  const normalizedTitle = normalizeLookupTitle(title);
+  const normalizedTitle = normalizeLookupTitleAlias(title);
   const titleTypeOverride = TITLE_TYPE_OVERRIDES[normalizedTitle];
   if (titleTypeOverride) return titleTypeOverride;
 
@@ -222,7 +271,6 @@ export const resolveDreamImageCandidates = (item) => {
     || item?.destination_name
     || ""
   ).trim();
-  const titleKey = title.toLowerCase();
   const candidates = [];
   const queueCandidate = (url, options = {}) => {
     const { allowGenericRestaurant = false } = options;
@@ -233,7 +281,7 @@ export const resolveDreamImageCandidates = (item) => {
     }
     candidates.push(normalized);
   };
-  if (TITLE_IMAGE_OVERRIDES[titleKey]) queueCandidate(TITLE_IMAGE_OVERRIDES[titleKey]);
+  queueCandidate(findTitleOverrideImage(title));
 
   const directImageUrl = readDirectDreamImageUrl(item);
   const catalogImageUrl = findExploreCatalogImageUrlByTitle(title);
@@ -247,12 +295,6 @@ export const resolveDreamImageCandidates = (item) => {
     title,
   });
   if (destinationOverrideImage) queueCandidate(destinationOverrideImage);
-
-  const normalizedTitle = normalizeLookupTitle(title);
-  const titleOverrideEntry = Object.entries(TITLE_IMAGE_OVERRIDES).find(([key]) => (
-    normalizeLookupTitle(key) === normalizedTitle
-  ));
-  if (titleOverrideEntry?.[1]) queueCandidate(titleOverrideEntry[1]);
 
   if (catalogImageUrl) queueCandidate(catalogImageUrl);
 

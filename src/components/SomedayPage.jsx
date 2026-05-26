@@ -3535,6 +3535,25 @@ const SomedayPage = ({
     return String(matchedChapter?.id || '').trim();
   };
   const isPinInChapter = (pin) => Boolean(getPinChapterId(pin));
+  const activeChapters = chapters.filter((chapter) => !chapter?.completedAt);
+  const completedChapters = chapters.filter((chapter) => Boolean(chapter?.completedAt));
+  const getChapterArchivePreview = (chapter) => {
+    const chapterId = String(chapter?.id || '').trim();
+    const chapterItemIds = new Set((chapter?.itemIds || []).map((id) => String(id || '').trim()).filter(Boolean));
+    const chapterPins = pins.filter((pin) => {
+      const pinChapterId = String(pin?.chapterId || '').trim();
+      const pinId = String(pin?.id || '').trim();
+      return pinChapterId === chapterId || chapterItemIds.has(pinId);
+    });
+    const imagePins = chapterPins.filter((pin) => getPinImageUrl(pin));
+    const coverPinId = String(chapter?.cover_pin_id || chapter?.coverPinId || '').trim();
+    const coverPin = (coverPinId ? imagePins.find((pin) => String(pin?.id || '') === coverPinId) : null) || imagePins[0] || null;
+    return {
+      imageUrl: getPinImageUrl(coverPin),
+      pinCount: chapterPins.filter((pin) => pin?.type !== 'label' && pin?.type !== 'sticker').length,
+      linkedTrip: chaptersWithLinkedTrips.get(chapterId) || null,
+    };
+  };
 
   // Chapter pins excluded from category filter pills; only show in 'all'
   // Countdown pins are lifted into their own dedicated section above the board
@@ -3988,7 +4007,7 @@ const SomedayPage = ({
             <button onClick={() => setActiveChapterId(null)} style={{ flexShrink: 0, padding: '8px 14px', background: 'transparent', border: 'none', borderBottom: `2px solid ${activeChapterId === null ? '#2dd4bf' : 'transparent'}`, fontFamily: CAVEAT, fontSize: 15, color: activeChapterId === null ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'color 0.15s' }}>
               📌 Someday
             </button>
-            {chapters.map(ch => (
+            {activeChapters.map(ch => (
               <button key={ch.id} onClick={() => openChapter(ch.id)} style={{ flexShrink: 0, padding: '8px 14px', background: 'transparent', border: 'none', borderBottom: `2px solid ${activeChapterId === ch.id ? '#5eadce' : 'transparent'}`, fontFamily: CAVEAT, fontSize: 15, color: activeChapterId === ch.id ? (darkMode ? '#5eadce' : '#0e7490') : ts, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'color 0.15s' }}>
                 📖 {ch.title}
               </button>
@@ -4133,7 +4152,7 @@ const SomedayPage = ({
       <div ref={canvasRef} style={{ ...boardBg, position: 'relative', zIndex: 1, width: '100%', height: BOARD_HEIGHT, overflowX: 'hidden', touchAction: dragging ? 'none' : 'pan-y' }}>
 
         {/* Chapter cluster labels — rendered as virtual elements (not in pins state) */}
-        {filter === 'all' && chapters.map(chapter => {
+        {filter === 'all' && activeChapters.map(chapter => {
           const cl = chapterLayout[chapter.id];
           if (!cl) return null;
           const chapterItemIds = new Set((chapter.itemIds || []).map(id => String(id || '')));
@@ -4236,13 +4255,87 @@ const SomedayPage = ({
           </div>
         ))}
 
-        {displayedPins.length === 0 && (
+      {displayedPins.length === 0 && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
             <p style={{ fontFamily: CAVEAT, fontSize: 22, color: ts, fontStyle: 'italic' }}>Nothing pinned here yet</p>
             <button onClick={() => setShowAdd(true)} style={{ padding: '10px 24px', borderRadius: 16, border: `2px dashed ${darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)'}`, background: 'transparent', color: ts, fontFamily: CAVEAT, fontSize: 18, cursor: 'pointer' }}>+ Pin something</button>
           </div>
         )}
       </div>
+
+      {filter === 'all' && completedChapters.length > 0 && (
+        <div style={{ padding: '20px 16px 8px' }}>
+          <p style={{ fontSize: 10, color: darkMode ? '#fbbf24' : '#92400e', textTransform: 'uppercase', letterSpacing: '0.2em', margin: '0 0 12px', fontWeight: 700 }}>
+            Completed Chapters
+          </p>
+          <div style={{ display: 'flex', gap: 14, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 6 }}>
+            {completedChapters
+              .slice()
+              .sort((a, b) => new Date(b.completedAt || 0) - new Date(a.completedAt || 0))
+              .map((chapter) => {
+                const preview = getChapterArchivePreview(chapter);
+                const completedLabel = chapter?.completedAt
+                  ? new Date(chapter.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                  : '';
+                const tripDateRange = preview.linkedTrip
+                  ? formatTripDateRange(preview.linkedTrip.start_date, preview.linkedTrip.end_date)
+                  : '';
+                return (
+                  <div
+                    key={`completed-chapter-${chapter.id}`}
+                    onClick={() => openChapter(chapter.id)}
+                    style={{ flexShrink: 0, width: 216, cursor: 'pointer' }}
+                  >
+                    <div style={{ background: darkMode ? 'rgba(255,255,255,0.05)' : '#fffdf8', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : '#e8dcc8'}`, borderRadius: 20, overflow: 'hidden', boxShadow: darkMode ? '0 8px 26px rgba(0,0,0,0.28)' : '0 8px 24px rgba(120,90,40,0.10)' }}>
+                      <div style={{ position: 'relative', width: '100%', height: 148, background: darkMode ? '#182132' : '#f3ede3' }}>
+                        {preview.imageUrl ? (
+                          <img src={preview.imageUrl} alt={chapter.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 42, color: darkMode ? '#fde68a' : '#b45309' }}>
+                            Chapter
+                          </div>
+                        )}
+                        <div style={{ position: 'absolute', top: 10, left: 10, background: darkMode ? 'rgba(146,64,14,0.88)' : 'rgba(146,64,14,0.92)', color: '#fff7ed', borderRadius: 999, padding: '5px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                          Completed
+                        </div>
+                      </div>
+                      <div style={{ padding: '12px 14px 14px' }}>
+                        <div style={{ fontFamily: CAVEAT, fontSize: 24, lineHeight: 1.05, color: tp, marginBottom: 6 }}>{chapter.title}</div>
+                        <div style={{ fontSize: 12, color: ts, lineHeight: 1.45 }}>
+                          {completedLabel ? `Finished ${completedLabel}` : 'Completed chapter'}
+                        </div>
+                        {tripDateRange && (
+                          <div style={{ fontSize: 12, color: darkMode ? '#cbd5e1' : '#6b7280', marginTop: 4 }}>
+                            {tripDateRange}
+                          </div>
+                        )}
+                        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                          <span style={{ fontSize: 11, color: darkMode ? '#94a3b8' : '#8b7b67', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                            {preview.pinCount} item{preview.pinCount !== 1 ? 's' : ''}
+                          </span>
+                          <button
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              updateChapterCompletionState(chapter.id, {
+                                completedAt: null,
+                                completionSource: null,
+                                completionAnimationSeenAt: null,
+                                reopenedAt: new Date().toISOString(),
+                              });
+                            }}
+                            style={{ border: 'none', background: 'transparent', color: darkMode ? '#5eadce' : '#0e7490', fontFamily: CAVEAT, fontSize: 18, cursor: 'pointer', padding: 0 }}
+                          >
+                            Reopen
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
 
       {showAdd && <AddSheet onClose={() => setShowAdd(false)} onAdd={addPin} darkMode={darkMode} />}
       {editingCountdown && (

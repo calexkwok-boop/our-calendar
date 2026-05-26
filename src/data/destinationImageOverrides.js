@@ -98,11 +98,16 @@ export const DESTINATION_IMAGE_OVERRIDES = Object.freeze(
 const DESTINATION_IMAGE_KEY_ALIASES = Object.freeze({
   anaheim: 'anaheim-california',
   amazon: 'the-amazon',
+  'machu-pichu': 'machu-picchu',
   'disneyland-anaheim': 'disneyland-anaheim-california',
   'galapagos-islands': 'the-galapagos-islands',
   'icefields-parkway': 'the-icefields-parkway',
   'the-gal-pagos-islands': 'the-galapagos-islands',
   'garden-route': 'the-garden-route'
+});
+
+const DESTINATION_IMAGE_TEXT_ALIASES = Object.freeze({
+  'machu-pichu': 'machu-picchu',
 });
 
 const resolvedDestinationImageKeyCache = new Map();
@@ -118,6 +123,11 @@ const normalizeDestinationImageText = (value = '') => String(value)
   .toLowerCase()
   .replace(/^(visit|see|go-to|go|stay-at|stay|explore)-+/g, '')
   .replace(/^-+|-+$/g, '');
+
+const normalizeDestinationImageAlias = (value = '') => {
+  const normalized = normalizeDestinationImageText(value);
+  return DESTINATION_IMAGE_TEXT_ALIASES[normalized] || normalized;
+};
 
 const resolveDestinationImageKey = (value = '') => {
   const cacheKey = String(value || '');
@@ -163,7 +173,7 @@ export const getDestinationImageOverride = (destination = {}) => {
     destination?.text,
     destination?.label,
   ].find(Boolean) || '';
-  const normalizedName = normalizeDestinationImageText(normalizeDestinationImageKey(rawName));
+  const normalizedName = normalizeDestinationImageAlias(normalizeDestinationImageKey(rawName));
   if (!normalizedName) return '';
 
   const normalizedTokens = normalizedName.split('-').filter(Boolean);
@@ -171,7 +181,7 @@ export const getDestinationImageOverride = (destination = {}) => {
   let bestScore = 0;
 
   for (const [key, value] of Object.entries(DESTINATION_IMAGE_OVERRIDES)) {
-    const normalizedKey = normalizeDestinationImageText(key);
+    const normalizedKey = normalizeDestinationImageAlias(key);
     if (!normalizedKey) continue;
     if (normalizedName.includes(normalizedKey) || normalizedKey.includes(normalizedName)) {
       const score = Math.max(normalizedKey.length, normalizedName.length) + 100;

@@ -22240,10 +22240,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       if (cancelled) return;
       const mergedThoughts = mergePersistedQuickThoughts(remoteThoughts, localThoughts)
         .filter((t) => !tombstones.has(String(t?.id || '')));
+      const shouldPersistMergedThoughts = JSON.stringify(mergedThoughts) !== JSON.stringify(remoteThoughts);
       quickThoughtsRemoteSyncRef.current = true;
       setQuickThoughts(mergedThoughts);
       writeQuickThoughtsState(user?.id, mergedThoughts);
-      void memoryPersistence.persistRemoteQuickThoughtsState(user?.id, mergedThoughts);
+      if (shouldPersistMergedThoughts) {
+        void memoryPersistence.persistRemoteQuickThoughtsState(user?.id, mergedThoughts);
+      }
       setQuickThoughtsHydratedUserId(currentQuickThoughtsUserId);
     };
 
@@ -22485,10 +22488,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       if (cancelled) return;
       const mergedDreams = mergePersistedBucketList(remoteDreams, localDreams)
         .filter((d) => !bucketTombstones.has(String(d?.id || '')));
+      const shouldPersistMergedDreams = JSON.stringify(mergedDreams) !== JSON.stringify(remoteDreams);
       bucketListRemoteSyncRef.current = true;
       setBucketList(mergedDreams);
       writeBucketListState(user?.id, mergedDreams);
-      void memoryPersistence.persistRemoteBucketListState(user?.id, mergedDreams);
+      if (shouldPersistMergedDreams) {
+        void memoryPersistence.persistRemoteBucketListState(user?.id, mergedDreams);
+      }
       setBucketListHydratedUserId(currentBucketListUserId);
     };
 
