@@ -3936,6 +3936,8 @@ function App() {
   const [userTabPopupEvents, setUserTabPopupEvents] = useState([]);
   const [userTabTrips, setUserTabTrips] = useState([]);
   const [userTabEvents, setUserTabEvents] = useState([]);
+  const activeLayerEventsRequestRef = useRef(0);
+  const activeLayerMetaRequestRef = useRef(0);
   const [eventRelationships, setEventRelationships] = useState({});
   const [eventsTabHideRecurring, setEventsTabHideRecurring] = useState(false);
   const [eventsTabVisibleLayerIds, setEventsTabVisibleLayerIds] = useState([]);
@@ -8706,6 +8708,123 @@ function App() {
     const activeLayerRow = (layers || []).find((layer) => String(layer?.id || '').trim() === normalizedLayerId);
     if (activeLayerRow?.name) setCalendarTitle(activeLayerRow.name);
   }, [activeLayerId, layers, user?.id]);
+
+  useEffect(() => {
+    const normalizedLayerId = String(activeLayerId || '').trim();
+    const normalizedUserId = String(user?.id || '').trim();
+    if (!normalizedLayerId || !normalizedUserId) return undefined;
+
+    const requestId = activeLayerEventsRequestRef.current + 1;
+    activeLayerEventsRequestRef.current = requestId;
+    let cancelled = false;
+
+    const loadActiveLayerEventsFast = async () => {
+      try {
+        const result = await withTimeout(
+          supabase.from('events').select('*').eq('layer_id', normalizedLayerId),
+          4000,
+          { data: [], error: { message: 'fast layer events load timed out' } }
+        );
+        if (cancelled || requestId !== activeLayerEventsRequestRef.current) return;
+        const data = result?.data || [];
+        const error = result?.error || null;
+        if (error) {
+          console.error('Error fast-loading active layer events:', error);
+          return;
+        }
+        const eventsObj = {};
+        data.forEach((event) => {
+          if (!eventsObj[event.date]) eventsObj[event.date] = [];
+          eventsObj[event.date].push(mapSupabaseEventRow(event, normalizedUserId));
+        });
+        setEvents(eventsObj);
+        if (typeof window !== 'undefined') window.events = eventsObj;
+        writeLayerEventsCache(normalizedUserId, normalizedLayerId, eventsObj);
+      } catch (error) {
+        if (cancelled || requestId !== activeLayerEventsRequestRef.current) return;
+        console.error('Error fast-loading active layer events:', error);
+      }
+    };
+
+    void loadActiveLayerEventsFast();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeLayerId, user?.id]);
+
+  useEffect(() => {
+    const normalizedLayerId = String(activeLayerId || '').trim();
+    const normalizedUserId = String(user?.id || '').trim();
+    if (!normalizedLayerId || !normalizedUserId) {
+      setSharedCalendars([]);
+      setMyShares([]);
+      return undefined;
+    }
+
+    const requestId = activeLayerMetaRequestRef.current + 1;
+    activeLayerMetaRequestRef.current = requestId;
+    let cancelled = false;
+
+    const loadActiveLayerMetaFast = async () => {
+      const normalizedUserEmail = normalizeEmail(user?.email);
+      const normalizedUserPhone = normalizePhoneNumber(user?.phone);
+      try {
+        const sharesResult = await withTimeout(
+          supabase.from('shared_access').select('*').eq('layer_id', normalizedLayerId),
+          4000,
+          { data: [], error: null }
+        );
+        if (cancelled || requestId !== activeLayerMetaRequestRef.current) return;
+        let allSharesData = sharesResult?.data || [];
+        if (sharesResult?.error) {
+          const fallback = await withTimeout(
+            supabase.from('shared_access').select('*').eq('owner_id', normalizedUserId).eq('layer_id', normalizedLayerId),
+            4000,
+            { data: [] }
+          );
+          if (cancelled || requestId !== activeLayerMetaRequestRef.current) return;
+          allSharesData = fallback?.data || [];
+        }
+
+        const sharedWithMe = allSharesData.filter((row) => (
+          String(row?.owner_id || '') !== normalizedUserId
+          && !row?.is_banned
+          && (
+            String(row?.shared_with_id || '') === normalizedUserId
+            || (normalizedUserEmail && normalizeEmail(row?.shared_with_email) === normalizedUserEmail)
+            || (normalizedUserPhone && normalizePhoneNumber(row?.shared_with_phone) === normalizedUserPhone)
+          )
+        ));
+
+        setMyShares(allSharesData);
+        setSharedCalendars(sharedWithMe);
+        if (sharedWithMe.length > 0) {
+          void resolveSharedOwnerLabels(sharedWithMe, normalizedLayerId);
+        } else {
+          setSharedOwnerLabels({});
+        }
+      } catch (error) {
+        if (cancelled || requestId !== activeLayerMetaRequestRef.current) return;
+        console.error('Error fast-loading active layer shares:', error);
+      }
+
+      if (cancelled || requestId !== activeLayerMetaRequestRef.current) return;
+      const activeLayerRow = (layers || []).find((layer) => String(layer?.id || '').trim() === normalizedLayerId);
+      void loadCategoriesForLayer(normalizedLayerId, normalizedUserId, activeLayerRow?.owner_id || normalizedUserId);
+      void loadSubCalendars({
+        layerId: normalizedLayerId,
+        userId: normalizedUserId,
+        userEmail: user?.email,
+        userPhone: user?.phone,
+        ownerId: activeLayerRow?.owner_id || normalizedUserId,
+      });
+    };
+
+    void loadActiveLayerMetaFast();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeLayerId, layers, user?.email, user?.id, user?.phone]);
   // Stable string dep — only changes when the set of layer IDs actually changes
   const layerIdsKey = useMemo(
     () => (layers || []).map(l => String(l?.id || '').trim()).filter(Boolean).sort().join(','),
@@ -16861,7 +16980,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     loadData().finally(() => { loadDataInFlightRef.current = false; });
 
     return undefined;
-  }, [activeLayerId, layerRefreshToken]);
+  }, [layerRefreshToken, user?.id]);
 
   // When the app becomes visible again or auth resolves while layers are empty due to a prior failure, retry.
   useEffect(() => {

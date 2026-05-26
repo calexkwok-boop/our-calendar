@@ -469,6 +469,7 @@ const ScrapbookHomeHybrid = ({
   const displayMoment = todayMoment || cachedMoment;
   const readyMomentPhotoUrl = String(displayMoment?.photoUrl || cachedMoment?.url || '').trim();
   const [isMomentPhotoReady, setIsMomentPhotoReady] = useState(() => Boolean(String(cachedMoment?.url || todayMoment?.photoUrl || '').trim()));
+  const lastMomentPhotoUrlRef = React.useRef(readyMomentPhotoUrl);
   const shuffledBucketList = React.useMemo(() => (
     [...bucketList].sort((left, right) => {
       const leftKey = `${komoShuffleSeedRef.current}:${String(left?.id || left?.text || '')}`;
@@ -509,6 +510,8 @@ const ScrapbookHomeHybrid = ({
   }, [todayKey, todayMoment?.photoUrl, todayMoment?.title]);
 
   React.useEffect(() => {
+    if (lastMomentPhotoUrlRef.current === readyMomentPhotoUrl) return;
+    lastMomentPhotoUrlRef.current = readyMomentPhotoUrl;
     setIsMomentPhotoReady(!readyMomentPhotoUrl);
   }, [readyMomentPhotoUrl]);
 
