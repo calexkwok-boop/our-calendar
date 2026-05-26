@@ -2941,11 +2941,15 @@ const SomedayPage = ({
   }, []);
 
   const groups = useMemo(() => detectGroups(pins), [pins]);
+  const activeChaptersForLayout = useMemo(
+    () => (Array.isArray(chapters) ? chapters.filter((chapter) => !chapter?.completedAt) : []),
+    [chapters]
+  );
 
   // Chapter cluster layout (computed, not stored in pins)
   const { layout: chapterLayout, totalHeight: chapterTotalHeight } = useMemo(
-    () => computeChapterLayout(chapters, pins),
-    [chapters, pins]
+    () => computeChapterLayout(activeChaptersForLayout, pins),
+    [activeChaptersForLayout, pins]
   );
 
   useEffect(() => {
@@ -3020,10 +3024,10 @@ const SomedayPage = ({
     if (!autoSortPendingRef.current) return;
     autoSortPendingRef.current = false;
     const startY = chapterTotalHeight > 20 ? chapterTotalHeight + 32 : 20;
-    const nextPinsSnapshot = buildAutoSortedPins(pins, onAddDream, onDeleteDream, onUpdateDream, startY, chapters);
+    const nextPinsSnapshot = buildAutoSortedPins(pins, onAddDream, onDeleteDream, onUpdateDream, startY, activeChaptersForLayout);
     setPins(nextPinsSnapshot);
     if (nextPinsSnapshot.length > 0) onPersistPinLayout?.(nextPinsSnapshot);
-  }, [chapters, chapterTotalHeight, onAddDream, onDeleteDream, onPersistPinLayout, onUpdateDream, pins]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeChaptersForLayout, chapterTotalHeight, onAddDream, onDeleteDream, onPersistPinLayout, onUpdateDream, pins]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Supabase helpers ────────────────────────────────────────────────────────
   const pinToRow = (pin, chapterId, position = 0) => ({
@@ -3920,7 +3924,7 @@ const SomedayPage = ({
 
   function autoSort() {
     const startY = chapterTotalHeight > 20 ? chapterTotalHeight + 32 : 20;
-    const nextPinsSnapshot = buildAutoSortedPins(pins, onAddDream, onDeleteDream, onUpdateDream, startY, chapters);
+    const nextPinsSnapshot = buildAutoSortedPins(pins, onAddDream, onDeleteDream, onUpdateDream, startY, activeChaptersForLayout);
     setPins(nextPinsSnapshot);
     if (nextPinsSnapshot.length > 0) onPersistPinLayout?.(nextPinsSnapshot);
   }
