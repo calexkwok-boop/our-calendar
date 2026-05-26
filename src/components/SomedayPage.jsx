@@ -3537,6 +3537,11 @@ const SomedayPage = ({
   const isPinInChapter = (pin) => Boolean(getPinChapterId(pin));
   const activeChapters = chapters.filter((chapter) => !chapter?.completedAt);
   const completedChapters = chapters.filter((chapter) => Boolean(chapter?.completedAt));
+  const completedChapterIdSet = new Set(completedChapters.map((chapter) => String(chapter?.id || '').trim()).filter(Boolean));
+  const isPinInCompletedChapter = (pin) => {
+    const chapterId = getPinChapterId(pin);
+    return Boolean(chapterId && completedChapterIdSet.has(chapterId));
+  };
   const getChapterArchivePreview = (chapter) => {
     const chapterId = String(chapter?.id || '').trim();
     const chapterItemIds = new Set((chapter?.itemIds || []).map((id) => String(id || '').trim()).filter(Boolean));
@@ -3558,7 +3563,7 @@ const SomedayPage = ({
   // Chapter pins excluded from category filter pills; only show in 'all'
   // Countdown pins are lifted into their own dedicated section above the board
   const visiblePins = (
-    filter === 'all'  ? pins.filter(p => p.type !== 'countdown') :
+    filter === 'all'  ? pins.filter(p => p.type !== 'countdown' && !isPinInCompletedChapter(p)) :
     filter === 'done' ? pins.filter(p => p.status === 'done' && !isPinInChapter(p)) :
                         pins.filter(p => p.categoryId === filter && p.status !== 'done' && !isPinInChapter(p))
   ).filter((pin) => (
@@ -3574,8 +3579,9 @@ const SomedayPage = ({
         return { ...pin, x: Math.min(220 + col * 170, pin.x), y: 24 + row * 210 };
       });
 
-  const lowestPinBottom = pins.filter(p => !isPinInChapter(p)).reduce((max, pin) => Math.max(max, (Number(pin.y) || 0) + estimatedPinHeight(pin)), 0);
-  const BOARD_HEIGHT = Math.max(600, chapterTotalHeight + Math.ceil(pins.length / 2) * 240 + 240, chapterTotalHeight + lowestPinBottom + 120);
+  const activeBoardPins = pins.filter((pin) => !isPinInCompletedChapter(pin));
+  const lowestPinBottom = activeBoardPins.filter(p => !isPinInChapter(p)).reduce((max, pin) => Math.max(max, (Number(pin.y) || 0) + estimatedPinHeight(pin)), 0);
+  const BOARD_HEIGHT = Math.max(600, chapterTotalHeight + Math.ceil(activeBoardPins.length / 2) * 240 + 240, chapterTotalHeight + lowestPinBottom + 120);
   const focusPins = pins.filter((pin) => pin.type !== 'label' && pin.type !== 'sticker' && pin.status === 'planning' && !isPinInChapter(pin)).slice(0, 3);
 
   // ─── Drag ──────────────────────────────────────────────────────────────────
