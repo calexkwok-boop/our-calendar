@@ -1375,9 +1375,10 @@ const MemoryPhotosStep = ({
             {data.photos.map((photo, index) => (
               <div key={photo.id} className="relative group">
                 <img
-                  src={getMemoryPhotoUrl(photo, 'display')}
+                  src={getMemoryPhotoUrl(photo, 'preview')}
                   alt={`Photo ${index + 1}`}
-                  loading="lazy"
+                  loading={index < 4 ? 'eager' : 'lazy'}
+                  fetchPriority={index < 4 ? 'high' : 'auto'}
                   decoding="async"
                   className="w-full aspect-square object-cover rounded-xl"
                 />

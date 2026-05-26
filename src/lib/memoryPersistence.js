@@ -138,14 +138,47 @@ export const mergePersistedMemories = (...memoryLists) => {
 
 export const getPersonalMemoryOwnerId = (userId) => String(userId || 'guest').trim() || 'guest';
 
-export const getMemoryPrimaryPhotoUrl = (memory) => String(
-  memory?.coverPhoto
-  || memory?.photos?.[0]?.url
-  || memory?.photos?.[0]?.photoUrl
-  || memory?.photoUrl
-  || memory?.photo_url
+const getPreferredMemoryPhotoUrl = (photoLike) => String(
+  photoLike?.resolved_thumbnail_url
+  || photoLike?.thumbnail_url
+  || photoLike?.thumb_url
+  || photoLike?.local_thumbnail_preview_url
+  || photoLike?.resolved_medium_url
+  || photoLike?.medium_url
+  || photoLike?.resolved_url
+  || photoLike?.url
+  || photoLike?.photoUrl
+  || photoLike?.photo_url
   || ''
 ).trim();
+
+export const getMemoryPrimaryPhotoUrl = (memory) => {
+  const coverPhoto = String(memory?.coverPhoto || '').trim();
+  const matchingCoverPhoto = (memory?.photos || []).find((photo) => {
+    const candidates = [
+      photo?.resolved_thumbnail_url,
+      photo?.thumbnail_url,
+      photo?.thumb_url,
+      photo?.local_thumbnail_preview_url,
+      photo?.resolved_medium_url,
+      photo?.medium_url,
+      photo?.resolved_url,
+      photo?.url,
+      photo?.photoUrl,
+      photo?.photo_url,
+    ].map((value) => String(value || '').trim()).filter(Boolean);
+    return coverPhoto && candidates.includes(coverPhoto);
+  });
+
+  return String(
+    getPreferredMemoryPhotoUrl(matchingCoverPhoto)
+    || coverPhoto
+    || getPreferredMemoryPhotoUrl(memory?.photos?.[0])
+    || memory?.photoUrl
+    || memory?.photo_url
+    || ''
+  ).trim();
+};
 
 export const stampMemoryOwner = (memory, userId) => {
   if (!memory || typeof memory !== 'object') return memory;

@@ -467,7 +467,7 @@ const ScrapbookHomeHybrid = ({
 
   const [cachedMoment] = useState(() => readCachedTodayMoment(todayKey));
   const displayMoment = todayMoment || cachedMoment;
-  const [readyMomentPhotoUrl, setReadyMomentPhotoUrl] = useState(() => String(cachedMoment?.url || todayMoment?.photoUrl || '').trim());
+  const readyMomentPhotoUrl = String(displayMoment?.photoUrl || cachedMoment?.url || '').trim();
   const [isMomentPhotoReady, setIsMomentPhotoReady] = useState(() => Boolean(String(cachedMoment?.url || todayMoment?.photoUrl || '').trim()));
   const shuffledBucketList = React.useMemo(() => (
     [...bucketList].sort((left, right) => {
@@ -509,33 +509,8 @@ const ScrapbookHomeHybrid = ({
   }, [todayKey, todayMoment?.photoUrl, todayMoment?.title]);
 
   React.useEffect(() => {
-    const nextUrl = String(displayMoment?.photoUrl || cachedMoment?.url || '').trim();
-    if (!nextUrl) {
-      setReadyMomentPhotoUrl((prev) => (prev ? '' : prev));
-      setIsMomentPhotoReady(false);
-      return;
-    }
-    setIsMomentPhotoReady(false);
-    let cancelled = false;
-    const img = new Image();
-    img.decoding = 'async';
-    img.onload = () => {
-      if (cancelled) return;
-      setReadyMomentPhotoUrl((prev) => (prev === nextUrl ? prev : nextUrl));
-      setIsMomentPhotoReady(true);
-    };
-    img.onerror = () => {
-      if (cancelled) return;
-      setReadyMomentPhotoUrl((prev) => (prev === nextUrl ? prev : nextUrl));
-      setIsMomentPhotoReady(true);
-    };
-    img.src = nextUrl;
-    return () => {
-      cancelled = true;
-      img.onload = null;
-      img.onerror = null;
-    };
-  }, [cachedMoment?.url, displayMoment?.photoUrl]);
+    setIsMomentPhotoReady(!readyMomentPhotoUrl);
+  }, [readyMomentPhotoUrl]);
 
   React.useEffect(() => {
     const activeUrls = memoryCollageTiles.filter(Boolean);
@@ -778,8 +753,11 @@ const ScrapbookHomeHybrid = ({
                           src={readyMomentPhotoUrl}
                           alt="Today's moment"
                           className={`h-full w-full object-cover transition-opacity duration-300 ${isMomentPhotoReady ? 'opacity-100' : 'opacity-95'}`}
-                          fetchpriority="high"
+                          fetchPriority="high"
                           loading="eager"
+                          decoding="async"
+                          onLoad={() => setIsMomentPhotoReady(true)}
+                          onError={() => setIsMomentPhotoReady(true)}
                         />
                         {!isMomentPhotoReady && (
                           <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-violet-100/70 via-rose-50/80 to-amber-100/70 dark:from-violet-900/30 dark:via-slate-900/80 dark:to-amber-900/20" />
@@ -1249,13 +1227,13 @@ const ScrapbookHomeHybrid = ({
                 className="relative h-36 sm:h-44 overflow-hidden rounded-[14px] border border-white/40 dark:border-white/10 bg-gradient-to-br from-violet-100 via-rose-50 to-amber-100 dark:from-violet-900/30 dark:via-slate-900 dark:to-amber-900/20 active:opacity-80"
               >
                 {url ? (
-                  <img
-                    src={url}
-                    alt=""
-                    loading="eager"
-                    decoding="async"
-                    fetchpriority="high"
-                    onLoad={() => {
+                    <img
+                      src={url}
+                      alt=""
+                      loading="eager"
+                      decoding="async"
+                      fetchPriority="high"
+                      onLoad={() => {
                       setLoadedMemoryCollageUrls((prev) => {
                         if (prev.has(url)) return prev;
                         const next = new Set(prev);

@@ -16,6 +16,20 @@ const hashHomeMemoryRotationKey = (value) => {
   return Math.abs(hash);
 };
 
+const getPreferredHomeMemoryPhotoUrl = (photoLike) => String(
+  photoLike?.resolved_thumbnail_url
+  || photoLike?.thumbnail_url
+  || photoLike?.thumb_url
+  || photoLike?.local_thumbnail_preview_url
+  || photoLike?.resolved_medium_url
+  || photoLike?.medium_url
+  || photoLike?.resolved_url
+  || photoLike?.url
+  || photoLike?.photoUrl
+  || photoLike?.photo_url
+  || ''
+).trim();
+
 export default function useHomeScreenData({
   tabTrips,
   allTrips = [],
@@ -483,7 +497,7 @@ export default function useHomeScreenData({
       const cover = getMemoryPrimaryPhotoUrl(memory);
       if (cover) urls.push(String(cover).trim());
       (memory?.photos || []).forEach((photo) => {
-        const url = String(photo?.url || photo?.photoUrl || '').trim();
+        const url = getPreferredHomeMemoryPhotoUrl(photo);
         if (url) urls.push(url);
       });
       const uniqueUrls = urls.filter((url, index, arr) => url && arr.indexOf(url) === index);
