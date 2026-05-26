@@ -8691,6 +8691,21 @@ function App() {
   const [holidays, setHolidays] = useState({});
   const [layers, setLayers] = useState([]);
   const [activeLayerId, setActiveLayerId] = useState(null);
+  useEffect(() => {
+    const normalizedLayerId = String(activeLayerId || '').trim();
+    if (!normalizedLayerId) {
+      setEvents((prev) => (Object.keys(prev || {}).length ? {} : prev));
+      if (typeof window !== 'undefined') window.events = {};
+      return;
+    }
+    if (!user?.id) return;
+    const cachedLayerEvents = readLayerEventsCache(user.id, normalizedLayerId);
+    const nextEvents = cachedLayerEvents && typeof cachedLayerEvents === 'object' ? cachedLayerEvents : {};
+    setEvents(nextEvents);
+    if (typeof window !== 'undefined') window.events = nextEvents;
+    const activeLayerRow = (layers || []).find((layer) => String(layer?.id || '').trim() === normalizedLayerId);
+    if (activeLayerRow?.name) setCalendarTitle(activeLayerRow.name);
+  }, [activeLayerId, layers, user?.id]);
   // Stable string dep — only changes when the set of layer IDs actually changes
   const layerIdsKey = useMemo(
     () => (layers || []).map(l => String(l?.id || '').trim()).filter(Boolean).sort().join(','),
