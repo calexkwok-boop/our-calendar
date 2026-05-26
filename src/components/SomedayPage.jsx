@@ -3535,6 +3535,7 @@ const SomedayPage = ({
     return String(matchedChapter?.id || '').trim();
   };
   const isPinInChapter = (pin) => Boolean(getPinChapterId(pin));
+  const linkedTripByChapterId = chaptersWithLinkedTrips instanceof Map ? chaptersWithLinkedTrips : new Map();
   const activeChapters = chapters.filter((chapter) => !chapter?.completedAt);
   const completedChapters = chapters.filter((chapter) => Boolean(chapter?.completedAt));
   const completedChapterIdSet = new Set(completedChapters.map((chapter) => String(chapter?.id || '').trim()).filter(Boolean));
@@ -3556,7 +3557,7 @@ const SomedayPage = ({
     return {
       imageUrl: getPinImageUrl(coverPin),
       pinCount: chapterPins.filter((pin) => pin?.type !== 'label' && pin?.type !== 'sticker').length,
-      linkedTrip: chaptersWithLinkedTrips.get(chapterId) || null,
+      linkedTrip: linkedTripByChapterId.get(chapterId) || null,
     };
   };
 
