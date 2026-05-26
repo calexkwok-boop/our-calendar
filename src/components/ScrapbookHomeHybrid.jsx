@@ -91,6 +91,17 @@ const formatDisplayTime = (value) => {
   return `${displayHours}:${String(minutes).padStart(2, '0')} ${suffix}`;
 };
 
+const getStableMediaIdentity = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  try {
+    const parsed = new URL(raw);
+    return `${parsed.origin}${parsed.pathname}`;
+  } catch {
+    return raw.split('?')[0].split('#')[0];
+  }
+};
+
 const hashHomeShuffleKey = (value) => {
   let hash = 0;
   const text = String(value || '');
@@ -468,8 +479,13 @@ const ScrapbookHomeHybrid = ({
   const [cachedMoment] = useState(() => readCachedTodayMoment(todayKey));
   const displayMoment = todayMoment || cachedMoment;
   const readyMomentPhotoUrl = String(displayMoment?.photoUrl || cachedMoment?.url || '').trim();
+  const readyMomentPhotoIdentity = React.useMemo(
+    () => getStableMediaIdentity(readyMomentPhotoUrl),
+    [readyMomentPhotoUrl]
+  );
+  const [momentPhotoSrc, setMomentPhotoSrc] = useState(readyMomentPhotoUrl);
   const [isMomentPhotoReady, setIsMomentPhotoReady] = useState(() => Boolean(String(cachedMoment?.url || todayMoment?.photoUrl || '').trim()));
-  const lastMomentPhotoUrlRef = React.useRef(readyMomentPhotoUrl);
+  const lastMomentPhotoIdentityRef = React.useRef(readyMomentPhotoIdentity);
   const shuffledBucketList = React.useMemo(() => (
     [...bucketList].sort((left, right) => {
       const leftKey = `${komoShuffleSeedRef.current}:${String(left?.id || left?.text || '')}`;
@@ -510,10 +526,17 @@ const ScrapbookHomeHybrid = ({
   }, [todayKey, todayMoment?.photoUrl, todayMoment?.title]);
 
   React.useEffect(() => {
-    if (lastMomentPhotoUrlRef.current === readyMomentPhotoUrl) return;
-    lastMomentPhotoUrlRef.current = readyMomentPhotoUrl;
-    setIsMomentPhotoReady(!readyMomentPhotoUrl);
-  }, [readyMomentPhotoUrl]);
+    if (!readyMomentPhotoUrl) {
+      lastMomentPhotoIdentityRef.current = '';
+      setMomentPhotoSrc('');
+      setIsMomentPhotoReady(false);
+      return;
+    }
+    if (lastMomentPhotoIdentityRef.current === readyMomentPhotoIdentity) return;
+    lastMomentPhotoIdentityRef.current = readyMomentPhotoIdentity;
+    setMomentPhotoSrc(readyMomentPhotoUrl);
+    setIsMomentPhotoReady(false);
+  }, [readyMomentPhotoIdentity, readyMomentPhotoUrl]);
 
   React.useEffect(() => {
     const activeUrls = memoryCollageTiles.filter(Boolean);
@@ -750,10 +773,10 @@ const ScrapbookHomeHybrid = ({
                   className="w-full"
                 >
                   <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[2px]">
-                    {readyMomentPhotoUrl ? (
+                    {momentPhotoSrc ? (
                       <>
                         <img
-                          src={readyMomentPhotoUrl}
+                          src={momentPhotoSrc}
                           alt="Today's moment"
                           className={`h-full w-full object-cover transition-opacity duration-300 ${isMomentPhotoReady ? 'opacity-100' : 'opacity-95'}`}
                           fetchPriority="high"
