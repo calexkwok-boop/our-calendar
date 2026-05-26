@@ -1533,6 +1533,26 @@ function formatTripDateRange(start, end) {
   return `${months[sm-1]} ${sd}, ${sy} – ${months[em-1]} ${ed}, ${ey}`;
 }
 
+function toDateOnlyTimestamp(value) {
+  if (!value) return null;
+  let date = null;
+  if (value instanceof Date) {
+    date = new Date(value);
+  } else {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+      date = new Date(`${raw.slice(0, 10)}T00:00:00`);
+    } else {
+      const parsed = new Date(raw);
+      if (!Number.isNaN(parsed.getTime())) date = parsed;
+    }
+  }
+  if (!date || Number.isNaN(date.getTime())) return null;
+  date.setHours(0, 0, 0, 0);
+  return date.getTime();
+}
+
 function ChecklistEditSheet({ pin, onClose, onSave, darkMode }) {
   const tp  = darkMode ? '#e8eaf0' : '#1a1a2e';
   const ts  = darkMode ? '#4a5568' : '#9ca3af';
@@ -1684,7 +1704,7 @@ function CountdownEditSheet({ pin, onClose, onSave, darkMode }) {
   );
 }
 
-function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, onOpenLinkedTrip, darkMode, hasLinkedTrip = false, linkedTripDates = null, onInvite, onCoverChange, onPublishChange, onAddPin, onUpdatePin, onMovePin, onPinDataChange, onAutoSortPins }) {
+function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAddSuggestion, onRemovePin, onDeleteChapter, onCreateTrip, onOpenLinkedTrip, darkMode, hasLinkedTrip = false, linkedTripDates = null, onInvite, onCoverChange, onPublishChange, onAddPin, onUpdatePin, onMovePin, onPinDataChange, onAutoSortPins, onCompletionChange }) {
   const [showAddMemory, setShowAddMemory] = useState(false);
   const [memoryText, setMemoryText] = useState('');
   const [flippedPinId, setFlippedPinId] = useState(null);
@@ -1708,6 +1728,7 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
   };
   const [tripAlbumPhotos, setTripAlbumPhotos] = useState([]);
   const [showAddSheet, setShowAddSheet] = useState(false);
+  const [showCompletionTurn, setShowCompletionTurn] = useState(false);
   const [selectedPin, setSelectedPin] = useState(null);
   const [placeSearch, setPlaceSearch] = useState('');
   const [placeResults, setPlaceResults] = useState([]);
@@ -2005,6 +2026,23 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
   const cardBg = darkMode ? '#131c2e' : '#ffffff';
   const divider = darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)';
   const tripDateRange = linkedTripDates ? formatTripDateRange(linkedTripDates.start_date, linkedTripDates.end_date) : null;
+  const isCompleted = Boolean(chapter?.completedAt);
+  const completedLabel = chapter?.completedAt
+    ? new Date(chapter.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : '';
+
+  useEffect(() => {
+    if (!isCompleted || chapter?.completionAnimationSeenAt) {
+      setShowCompletionTurn(false);
+      return undefined;
+    }
+    setShowCompletionTurn(true);
+    const timeoutId = window.setTimeout(() => {
+      setShowCompletionTurn(false);
+      onCompletionChange?.(chapter.id, { completionAnimationSeenAt: new Date().toISOString() });
+    }, 1400);
+    return () => window.clearTimeout(timeoutId);
+  }, [chapter?.completionAnimationSeenAt, chapter?.id, isCompleted, onCompletionChange]);
 
   function submitMemory() {
     if (!memoryText.trim()) return;
@@ -2014,7 +2052,13 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
 
   return (
     <div style={{ minHeight: '100vh', background: pageBg, paddingBottom: 80 }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');
+        @keyframes komo-page-turn {
+          0% { transform: perspective(1400px) rotateY(0deg) scaleX(1); opacity: 1; }
+          55% { transform: perspective(1400px) rotateY(-72deg) scaleX(0.95); opacity: 0.98; }
+          100% { transform: perspective(1400px) rotateY(-90deg) translateX(-18%); opacity: 0; }
+        }
+      `}</style>
       <div style={{ position: 'sticky', top: 0, zIndex: 30, background: darkMode ? '#131c2e' : '#fff', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.05)' : '#e5e0d5'}`, padding: '16px 16px 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -2025,9 +2069,20 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
               {tripDateRange && (
                 <p style={{ fontSize: 10, color: ts, margin: '2px 0 0', fontWeight: 600, letterSpacing: '0.06em' }}>{tripDateRange}</p>
               )}
+              {isCompleted && (
+                <p style={{ fontSize: 11, color: darkMode ? '#fde68a' : '#92400e', margin: '4px 0 0', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  Completed {completedLabel ? `· ${completedLabel}` : ''}
+                </p>
+              )}
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            {isCompleted && (
+              <button
+                onClick={() => onCompletionChange?.(chapter.id, { completedAt: null, completionSource: null, completionAnimationSeenAt: null, reopenedAt: new Date().toISOString() })}
+                style={{ background: darkMode ? 'rgba(250,204,21,0.12)' : '#fffbeb', border: `1px solid ${darkMode ? 'rgba(250,204,21,0.28)' : '#fde68a'}`, borderRadius: 20, padding: '6px 14px', fontSize: 15, color: darkMode ? '#fde68a' : '#92400e', cursor: 'pointer', flexShrink: 0, fontWeight: 700, fontFamily: CAVEAT }}
+              >Reopen</button>
+            )}
             {onInvite && (
               <button
                 onClick={() => setShowInvite(true)}
@@ -2083,6 +2138,27 @@ function ChapterPage({ chapter, pins, onBack, onAddMemory, onDeleteMemory, onAdd
             <p style={{ margin: '4px 0 0', fontSize: 13, lineHeight: 1.45, color: darkMode ? '#d6d3f7' : '#5b21b6' }}>
               Other users will be able to discover this chapter and copy it into their own Komo Book.
             </p>
+          </div>
+        </div>
+      )}
+
+      {showCompletionTurn && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 10080, pointerEvents: 'none', background: 'rgba(8,15,30,0.16)' }}>
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: darkMode ? 'linear-gradient(135deg, rgba(15,23,42,0.98), rgba(30,41,59,0.94))' : 'linear-gradient(135deg, rgba(255,251,235,0.98), rgba(255,255,255,0.96))',
+              transformOrigin: 'left center',
+              animation: 'komo-page-turn 1.35s cubic-bezier(0.22, 0.61, 0.36, 1) forwards',
+              boxShadow: darkMode ? '0 0 80px rgba(0,0,0,0.45) inset' : '0 0 90px rgba(146,64,14,0.14) inset',
+            }}
+          />
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+            <div style={{ transform: 'rotate(-4deg)', borderRadius: 20, padding: '16px 26px', background: darkMode ? 'rgba(250,204,21,0.16)' : 'rgba(255,251,235,0.94)', border: `1px solid ${darkMode ? 'rgba(250,204,21,0.32)' : '#fcd34d'}`, boxShadow: '0 16px 42px rgba(0,0,0,0.18)' }}>
+              <div style={{ fontFamily: CAVEAT, fontSize: 34, fontWeight: 700, color: darkMode ? '#fde68a' : '#92400e', letterSpacing: '0.04em' }}>Completed</div>
+              <div style={{ marginTop: 4, fontSize: 12, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: darkMode ? '#fef3c7' : '#a16207', textAlign: 'center' }}>Turn the page</div>
+            </div>
           </div>
         </div>
       )}
@@ -3215,7 +3291,16 @@ const SomedayPage = ({
             const local = localPins.find(p => p.id === dbPin.id);
             return local ? { ...dbPin, ...local } : dbPin;
           });
-          return { ...c, itemIds, pins: mergedPins, loaded: true };
+          return {
+            ...c,
+            completedAt: ex?.completedAt ?? c.completedAt ?? null,
+            completionSource: ex?.completionSource ?? c.completionSource ?? null,
+            completionAnimationSeenAt: ex?.completionAnimationSeenAt ?? c.completionAnimationSeenAt ?? null,
+            reopenedAt: ex?.reopenedAt ?? c.reopenedAt ?? null,
+            itemIds,
+            pins: mergedPins,
+            loaded: true,
+          };
         }),
         ...localOnly,
       ];
@@ -3274,6 +3359,10 @@ const SomedayPage = ({
 
     setChapters(prev => prev.map(c => c.id === chapterId ? {
       ...c,
+      completedAt: c.completedAt ?? null,
+      completionSource: c.completionSource ?? null,
+      completionAnimationSeenAt: c.completionAnimationSeenAt ?? null,
+      reopenedAt: c.reopenedAt ?? null,
       pins: (() => {
         const filteredDb = loadedPins.filter(p => !deletedChapterPinIds.current.has(String(p.id)));
         const localPins = (c.pins || []).filter(p => !deletedChapterPinIds.current.has(String(p.id)));
@@ -3346,6 +3435,16 @@ const SomedayPage = ({
     )));
   }
 
+  function updateChapterCompletionState(chapterId, patch = {}) {
+    const normalizedChapterId = String(chapterId || '').trim();
+    if (!normalizedChapterId || !patch || typeof patch !== 'object') return;
+    setChapters((prev) => prev.map((chapter) => (
+      String(chapter?.id || '').trim() === normalizedChapterId
+        ? { ...chapter, ...patch }
+        : chapter
+    )));
+  }
+
   useEffect(() => {
     setPins(prev => {
       const existingIds = new Set(prev.map(p => p.id));
@@ -3388,6 +3487,29 @@ const SomedayPage = ({
       return changed ? next : prev;
     });
   }, [chapters]);
+
+  useEffect(() => {
+    const todayTs = toDateOnlyTimestamp(new Date());
+    if (!chaptersWithLinkedTrips || chaptersWithLinkedTrips.size === 0 || todayTs === null) return;
+    setChapters((prev) => {
+      let changed = false;
+      const next = prev.map((chapter) => {
+        const chapterId = String(chapter?.id || '').trim();
+        const linkedTrip = chaptersWithLinkedTrips.get(chapterId);
+        if (!linkedTrip) return chapter;
+        const tripEndTs = toDateOnlyTimestamp(linkedTrip?.end_date || linkedTrip?.start_date);
+        if (tripEndTs === null || tripEndTs > todayTs || chapter?.completedAt || chapter?.reopenedAt) return chapter;
+        changed = true;
+        return {
+          ...chapter,
+          completedAt: new Date().toISOString(),
+          completionSource: 'trip_end',
+          completionAnimationSeenAt: null,
+        };
+      });
+      return changed ? next : prev;
+    });
+  }, [chaptersWithLinkedTrips]);
 
   const pageBg      = darkMode ? '#0e1520' : '#faf8f3';
   const topbarBg    = darkMode ? '#131c2e' : '#ffffff';
@@ -3827,7 +3949,7 @@ const SomedayPage = ({
       return (
         <>
           <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
-          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={chapter.owner_id === currentUser ? () => deleteChapter(activeChapterId) : undefined} onCreateTrip={chapter.owner_id === currentUser ? onCreateTripFromChapter : undefined} onOpenLinkedTrip={onOpenTripById} darkMode={darkMode} hasLinkedTrip={chaptersWithLinkedTrips.has(String(chapter.id))} linkedTripDates={chaptersWithLinkedTrips.get(String(chapter.id)) || null} onInvite={email => inviteToChapter(activeChapterId, email)} onCoverChange={({ chapterId, coverPinId }) => setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, cover_pin_id: coverPinId } : c))} onPublishChange={updateChapterPublishState} onAddPin={(data) => addDirectPinToChapter(activeChapterId, data)} onUpdatePin={updateChapterPin} onMovePin={moveChapterPinLocally} onPinDataChange={onPinDataChange} onAutoSortPins={autoSortChapterPins} />
+          <ChapterPage chapter={chapter} pins={pins} onBack={() => setActiveChapterId(null)} onAddMemory={mem => addMemoryToChapter(activeChapterId, mem)} onDeleteMemory={memId => deleteMemoryFromChapter(activeChapterId, memId)} onAddSuggestion={s => addSuggestionToChapter(s, activeChapterId)} onRemovePin={removePinFromChapter} onDeleteChapter={chapter.owner_id === currentUser ? () => deleteChapter(activeChapterId) : undefined} onCreateTrip={chapter.owner_id === currentUser ? onCreateTripFromChapter : undefined} onOpenLinkedTrip={onOpenTripById} darkMode={darkMode} hasLinkedTrip={chaptersWithLinkedTrips.has(String(chapter.id))} linkedTripDates={chaptersWithLinkedTrips.get(String(chapter.id)) || null} onInvite={email => inviteToChapter(activeChapterId, email)} onCoverChange={({ chapterId, coverPinId }) => setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, cover_pin_id: coverPinId } : c))} onPublishChange={updateChapterPublishState} onAddPin={(data) => addDirectPinToChapter(activeChapterId, data)} onUpdatePin={updateChapterPin} onMovePin={moveChapterPinLocally} onPinDataChange={onPinDataChange} onAutoSortPins={autoSortChapterPins} onCompletionChange={updateChapterCompletionState} />
         </>
       );
     }
