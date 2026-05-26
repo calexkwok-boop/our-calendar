@@ -21865,6 +21865,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     homeReflectionStats,
   } = useHomeScreenData({
     tabTrips,
+    allTrips: subCalendars,
     todayTs,
     todayKey,
     userTabEvents,

@@ -18,6 +18,7 @@ const hashHomeMemoryRotationKey = (value) => {
 
 export default function useHomeScreenData({
   tabTrips,
+  allTrips = [],
   todayTs,
   todayKey,
   userTabEvents,
@@ -48,14 +49,20 @@ export default function useHomeScreenData({
   getMemoryPrimaryPhotoUrl,
   getJourneyGoalType,
 }) {
+  const availableTrips = useMemo(() => (
+    Array.isArray(tabTrips) && tabTrips.length > 0
+      ? tabTrips
+      : (Array.isArray(allTrips) ? allTrips : [])
+  ), [allTrips, tabTrips]);
+
   const upcomingTrips = useMemo(() => (
-    [...tabTrips]
+    [...availableTrips]
       .filter((trip) => {
         const startTs = toDateOnlyTs(getSubCalStartRaw(trip));
         return startTs !== null && startTs > todayTs;
       })
       .sort((a, b) => toDateOnlyTs(getSubCalStartRaw(a)) - toDateOnlyTs(getSubCalStartRaw(b)))
-  ), [getSubCalStartRaw, tabTrips, toDateOnlyTs, todayTs]);
+  ), [availableTrips, getSubCalStartRaw, toDateOnlyTs, todayTs]);
 
   // When userTabEvents hasn't been loaded yet (home tab), derive a flat array
   // from the events state. We include today + 14 days of direct events AND any
@@ -327,23 +334,23 @@ export default function useHomeScreenData({
   ]);
 
   const activeTrips = useMemo(() => (
-    [...tabTrips]
+    [...availableTrips]
       .filter((trip) => {
         const startTs = toDateOnlyTs(getSubCalStartRaw(trip));
         const endTs = toDateOnlyTs(getSubCalEndRaw(trip));
         return startTs !== null && endTs !== null && todayTs >= startTs && todayTs <= endTs;
       })
       .sort((a, b) => toDateOnlyTs(getSubCalStartRaw(a)) - toDateOnlyTs(getSubCalStartRaw(b)))
-  ), [getSubCalEndRaw, getSubCalStartRaw, tabTrips, toDateOnlyTs, todayTs]);
+  ), [availableTrips, getSubCalEndRaw, getSubCalStartRaw, toDateOnlyTs, todayTs]);
 
   const archivedTrips = useMemo(() => (
-    [...tabTrips]
+    [...availableTrips]
       .filter((trip) => {
         const endTs = toDateOnlyTs(getSubCalEndRaw(trip));
         return endTs !== null && endTs < todayTs;
       })
       .sort((a, b) => toDateOnlyTs(getSubCalEndRaw(b)) - toDateOnlyTs(getSubCalEndRaw(a)))
-  ), [getSubCalEndRaw, tabTrips, toDateOnlyTs, todayTs]);
+  ), [availableTrips, getSubCalEndRaw, toDateOnlyTs, todayTs]);
 
   const eligibleMemoryTrips = archivedTrips;
   const greetingHour = new Date().getHours();
@@ -662,7 +669,7 @@ export default function useHomeScreenData({
       countedYearEventKeys.add(dedupeKey);
       return total + 1;
     }, 0);
-    const tripsTakenThisYear = tabTrips.filter((trip) => {
+    const tripsTakenThisYear = availableTrips.filter((trip) => {
       const startRaw = getSubCalStartRaw(trip);
       const startTs = toDateOnlyTs(startRaw);
       return startTs !== null && startOfYearTs !== null && startTs >= startOfYearTs && startTs <= todayTs;
@@ -678,7 +685,7 @@ export default function useHomeScreenData({
       trips: tripsTakenThisYear.length,
       photos: yearPhotoCount,
     };
-  }, [events, eventsHomeFallback, getSubCalStartRaw, homeMemoryPhotosByMemoryId, homeResolvedMemories, tabTrips, toDateOnlyTs, todayTs, upcomingPopupEvents, userTabEvents]);
+  }, [availableTrips, events, eventsHomeFallback, getSubCalStartRaw, homeMemoryPhotosByMemoryId, homeResolvedMemories, toDateOnlyTs, todayTs, upcomingPopupEvents, userTabEvents]);
 
   const homeMemoryReadyCount = eligibleMemoryEvents.length;
   const homeMemoryOpportunities = eligibleMemoryEvents.slice(0, 2);

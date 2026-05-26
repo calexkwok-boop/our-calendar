@@ -35,6 +35,7 @@ const DREAM_CATEGORY_MAP = {
 
 const TITLE_IMAGE_OVERRIDES = {
   "disneyland park": "https://commons.wikimedia.org/wiki/Special:FilePath/File:Disneyland%20park%20-%20Anaheim%20Los%20Angeles%20California%20USA%20%289894308516%29.jpg",
+  "ceres": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80",
   "machu pichu": "https://lh3.googleusercontent.com/gps-cs-s/APNQkAGTEX0fTBAvsYUuqtBZQfQiab4l3IOmdNZXUnRlN3GyYkmpf_8WPNepzIBK_koBg2WcwHgxlW7kwZb_RpwePJg7pcpyIOC3Z5JIZ9xti2TylAiKXLV4aLN7ODPl5yFbRWE34_g=s1360-w1360-h1020-rw",
   "old quarter street wander hanoi": "https://images.unsplash.com/photo-1557750255-c76072a7aad1?w=900&q=80",
   "old quarter street wander, hanoi": "https://images.unsplash.com/photo-1557750255-c76072a7aad1?w=900&q=80",
