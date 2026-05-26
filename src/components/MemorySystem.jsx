@@ -69,7 +69,7 @@ const getMemoryPhotoUrl = (photo, preference = 'display') => {
     || photo?.photo_url
     || ''
   ).trim();
-  const orderedCandidates = preference === 'thumbnail'
+  const orderedCandidates = preference === 'thumbnail' || preference === 'preview'
     ? [thumbnailUrl, mediumUrl, primaryUrl]
     : [mediumUrl, primaryUrl, thumbnailUrl];
   return toDirectStorageUrl(orderedCandidates.find(Boolean) || '');
@@ -630,10 +630,11 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, onTog
           </h3>
           
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {memoriesByYear[year].map(memory => (
+            {memoriesByYear[year].map((memory, index) => (
               <MemoryThumbnail
                 key={memory.id}
                 memory={memory}
+                priority={index < 6}
                 onClick={() => onSelectMemory(memory)}
                 onToggleFavorite={() => onToggleFavorite?.(memory)}
                 onDelete={() => {
@@ -652,11 +653,11 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, onTog
   );
 };
 
-const MemoryThumbnail = ({ memory, onClick, onToggleFavorite, onDelete, deleteReady = false, onLongPress, darkMode }) => {
+const MemoryThumbnail = ({ memory, onClick, onToggleFavorite, onDelete, deleteReady = false, onLongPress, darkMode, priority = false }) => {
   const photoCount = memory.photos?.length || 0;
   const peopleCount = memory.taggedPeople?.length || 0;
   const reactionCount = memory.reactionCount || 0;
-  const coverPhoto = getMemoryCoverUrl(memory, 'display');
+  const coverPhoto = getMemoryCoverUrl(memory, 'preview');
   const isFavorite = Boolean(memory?.isFavorite);
   const longPressTimerRef = useRef(null);
   const longPressFiredRef = useRef(false);
@@ -708,7 +709,8 @@ const MemoryThumbnail = ({ memory, onClick, onToggleFavorite, onDelete, deleteRe
         <img 
           src={coverPhoto} 
           alt={memory.title}
-          loading="lazy"
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
           decoding="async"
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
         />
@@ -1662,7 +1664,7 @@ const MemoryPreviewStep = ({ data, darkMode }) => {
         {/* Cover */}
         <div className="relative h-48">
           {getMemoryCoverUrl(data) ? (
-            <img src={getMemoryCoverUrl(data, 'display')} alt={data.title} className="w-full h-full object-cover" loading="lazy" decoding="async" />
+            <img src={getMemoryCoverUrl(data, 'preview')} alt={data.title} className="w-full h-full object-cover" loading="eager" fetchPriority="high" decoding="async" />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-rose-200 via-pink-100 to-rose-100 dark:from-rose-950 dark:via-slate-900 dark:to-stone-950" />
           )}
@@ -1733,9 +1735,10 @@ const MemoryPreviewStep = ({ data, darkMode }) => {
                 {data.photos.slice(0, 6).map((photo, idx) => (
                   <img
                     key={photo.id}
-                    src={getMemoryPhotoUrl(photo, 'display')}
+                    src={getMemoryPhotoUrl(photo, 'preview')}
                     alt={`Photo ${idx + 1}`}
-                    loading="lazy"
+                    loading={idx < 3 ? "eager" : "lazy"}
+                    fetchPriority={idx < 3 ? "high" : "auto"}
                     decoding="async"
                     className="aspect-square object-cover rounded-lg"
                   />
@@ -1820,6 +1823,27 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
   useEffect(() => {
     setCurrentSlide(0);
   }, [memory?.id]);
+
+  useEffect(() => {
+    if (!slideCount) return;
+    const preloadIndexes = [currentSlide, currentSlide + 1, currentSlide + 2]
+      .map((index) => (index + slideCount) % slideCount);
+    const seen = new Set();
+    preloadIndexes.forEach((index) => {
+      const slide = slides[index];
+      if (!slide) return;
+      const url = slide.type === 'cover'
+        ? getMemoryCoverUrl(slide.data, 'display')
+        : slide.type === 'photo'
+          ? getMemoryPhotoUrl(slide.data, 'display')
+          : '';
+      if (!url || seen.has(url)) return;
+      seen.add(url);
+      const image = new Image();
+      image.decoding = 'async';
+      image.src = url;
+    });
+  }, [currentSlide, slideCount, slides]);
   
   const handleReact = async (reactionType) => {
     setUserReaction(reactionType);
@@ -1992,7 +2016,7 @@ const CoverSlide = ({ memory }) => (
 
 const PhotoSlide = ({ photo }) => (
   <div className="w-full h-full relative flex items-center justify-center bg-black px-2 pt-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))] pb-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))]">
-    <img src={getMemoryPhotoUrl(photo, 'display')} alt={photo.caption} className="max-w-full max-h-full rounded-[28px] object-contain" />
+    <img src={getMemoryPhotoUrl(photo, 'display')} alt={photo.caption} loading="eager" fetchPriority="high" decoding="async" className="max-w-full max-h-full rounded-[28px] object-contain" />
     <div className="pointer-events-none absolute inset-x-2 top-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))] h-20 rounded-t-[28px] bg-gradient-to-b from-black/50 via-black/18 to-transparent" />
     <div className="pointer-events-none absolute inset-x-2 bottom-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))] h-24 rounded-b-[28px] bg-gradient-to-t from-black/70 via-black/24 to-transparent" />
     {photo.caption && (
