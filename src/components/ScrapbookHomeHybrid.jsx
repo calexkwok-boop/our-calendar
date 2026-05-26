@@ -281,7 +281,9 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
               </a>
             ) : <span />}
             <label className="cursor-pointer rounded-full bg-white/70 px-2 py-0.5 text-[0px] text-gray-500 shadow-sm" title="Attach photo" onClick={(e) => e.stopPropagation()}>
-              <span className="text-[11px]">Add photo</span>
+              <span aria-hidden="true" className="inline-flex items-center justify-center text-[11px]">
+                <Camera size={12} strokeWidth={2} />
+              </span>
               ðŸ“Ž
               <input
                 type="file"
