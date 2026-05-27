@@ -87,12 +87,51 @@ const ROLE_COLORS = {
   player: { bg: '#f3f4f6', text: '#374151', dark_bg: 'rgba(255,255,255,0.08)',dark_text: '#9ca3af' },
 };
 const ROLE_ICONS = { host: Crown, cohost: Shield, player: null };
+const readCachedPopupProfilePhoto = (userId) => {
+  const normalizedUserId = String(userId || '').trim();
+  if (!normalizedUserId || typeof window === 'undefined') return '';
+  try {
+    return String(window.localStorage.getItem(`our-calendar-profile-photo:${normalizedUserId}`) || '').trim();
+  } catch {
+    return '';
+  }
+};
 const getPersistedRoleOverrides = (eventLike = {}) => {
   const eventData = eventLike?.event_data;
   const raw = eventData && typeof eventData === 'object' && !Array.isArray(eventData)
     ? eventData.roleOverrides
     : null;
   return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+};
+const buildSyntheticHostMember = ({
+  eventLike,
+  creatorUserId,
+  currentUserId,
+  currentUserProfilePhotoUrl,
+  fallbackDisplayName,
+}) => {
+  if (!creatorUserId) return null;
+  const displayName = String(
+    eventLike?.created_by_name
+    || fallbackDisplayName
+    || 'Host'
+  ).trim() || 'Host';
+  const cachedPhotoUrl = readCachedPopupProfilePhoto(creatorUserId);
+  const resolvedPhotoUrl = String(
+    creatorUserId === currentUserId ? currentUserProfilePhotoUrl : cachedPhotoUrl
+  ).trim();
+  return {
+    id: `host-${creatorUserId}`,
+    event_id: String(eventLike?.id || '').trim(),
+    user_id: creatorUserId,
+    display_name: displayName,
+    role: 'host',
+    photoUrl: resolvedPhotoUrl,
+    photo_url: resolvedPhotoUrl,
+    avatarUrl: resolvedPhotoUrl,
+    avatar_url: resolvedPhotoUrl,
+    is_synthetic_host: true,
+  };
 };
 const Avatar = ({ name, photoUrl, size = 32, accent, role, darkMode }) => {
   const colors = ROLE_COLORS[role || 'player'] || ROLE_COLORS.player;
@@ -1333,12 +1372,14 @@ export default function PopupEventPanel({
     const storageUrl = memberUserId && supabase?.supabaseUrl
       ? `${supabase.supabaseUrl}/storage/v1/object/public/avatars/${memberUserId}/avatar`
       : '';
+    const cachedProfileUrl = readCachedPopupProfilePhoto(memberUserId);
     return String(
       memberLike?.photoUrl
       || memberLike?.photo_url
       || memberLike?.avatarUrl
       || memberLike?.avatar_url
       || (isCurrentUser ? currentUserProfilePhotoUrl : '')
+      || cachedProfileUrl
       || storageUrl
       || ''
     ).trim();
@@ -1477,8 +1518,21 @@ export default function PopupEventPanel({
         byKey.set(dedupeKey, member);
       }
     });
-    return Array.from(byKey.values());
-  }, [members, selfAliasSet, user?.id]);
+    const nextMembers = Array.from(byKey.values());
+    const hasHostMember = nextMembers.some((member) => String(member?.role || '').trim().toLowerCase() === 'host');
+    const creatorUserId = String(event?.created_by || event?.created_by_user_id || '').trim();
+    if (!hasHostMember && creatorUserId) {
+      const syntheticHost = buildSyntheticHostMember({
+        eventLike: event,
+        creatorUserId,
+        currentUserId: String(user?.id || '').trim(),
+        currentUserProfilePhotoUrl,
+        fallbackDisplayName: effectiveDisplayName,
+      });
+      if (syntheticHost) nextMembers.unshift(syntheticHost);
+    }
+    return nextMembers;
+  }, [members, selfAliasSet, user?.id, event, currentUserProfilePhotoUrl, effectiveDisplayName]);
   const effectiveMemberByUserId = useMemo(() => new Map(
     effectiveMembers.map((member) => [String(member?.user_id || '').trim(), member])
   ), [effectiveMembers]);

@@ -9,6 +9,15 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 const POPUP_NO_MAX_SENTINEL = 1000000;
 const isUuid = (value) => UUID_RE.test(String(value || '').trim());
 const getManualPlayersStorageKey = (eventId) => `popup-manual-players:${String(eventId || '').trim()}`;
+const readCachedPopupProfilePhoto = (userId) => {
+  const normalizedUserId = String(userId || '').trim();
+  if (!normalizedUserId || typeof window === 'undefined') return '';
+  try {
+    return String(window.localStorage.getItem(`our-calendar-profile-photo:${normalizedUserId}`) || '').trim();
+  } catch {
+    return '';
+  }
+};
 const readManualPlayers = (eventId) => {
   if (typeof window === 'undefined') return [];
   const key = getManualPlayersStorageKey(eventId);
@@ -58,6 +67,36 @@ const getPersistedRoleOverrides = (eventLike = {}) => {
     ? eventData.roleOverrides
     : null;
   return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+};
+const buildSyntheticHostMember = ({
+  eventLike,
+  creatorUserId,
+  currentUserId,
+  currentUserProfilePhotoUrl,
+  fallbackDisplayName,
+}) => {
+  if (!creatorUserId) return null;
+  const displayName = String(
+    eventLike?.created_by_name
+    || fallbackDisplayName
+    || 'Host'
+  ).trim() || 'Host';
+  const cachedPhotoUrl = readCachedPopupProfilePhoto(creatorUserId);
+  const resolvedPhotoUrl = String(
+    creatorUserId === currentUserId ? currentUserProfilePhotoUrl : cachedPhotoUrl
+  ).trim();
+  return {
+    id: `host-${creatorUserId}`,
+    event_id: String(eventLike?.id || '').trim(),
+    user_id: creatorUserId,
+    display_name: displayName,
+    role: 'host',
+    photoUrl: resolvedPhotoUrl,
+    photo_url: resolvedPhotoUrl,
+    avatarUrl: resolvedPhotoUrl,
+    avatar_url: resolvedPhotoUrl,
+    is_synthetic_host: true,
+  };
 };
 
 export default function SportsEventCardOverlay({
@@ -118,12 +157,18 @@ export default function SportsEventCardOverlay({
   const memberPhotoUrl = (memberLike = {}) => {
     const memberUserId = String(memberLike?.user_id || memberLike?.userId || '').trim();
     const isCurrentUser = memberUserId && memberUserId === String(user?.id || '').trim();
+    const storageUrl = memberUserId && supabase?.supabaseUrl
+      ? `${supabase.supabaseUrl}/storage/v1/object/public/avatars/${memberUserId}/avatar`
+      : '';
+    const cachedProfileUrl = readCachedPopupProfilePhoto(memberUserId);
     return String(
       memberLike?.photoUrl
       || memberLike?.photo_url
       || memberLike?.avatarUrl
       || memberLike?.avatar_url
       || (isCurrentUser ? currentUserProfilePhotoUrl : '')
+      || cachedProfileUrl
+      || storageUrl
       || ''
     ).trim();
   };
@@ -274,17 +319,17 @@ export default function SportsEventCardOverlay({
   const creatorUserId = String(event?.created_by || event?.created_by_user_id || '').trim();
   const creatorIsCurrentUser = Boolean(creatorUserId && currentUserId && creatorUserId === currentUserId);
   const hasHostMember = members.some((member) => String(member?.role || '').trim() === 'host');
-  const displayMembers = !hasHostMember && creatorIsCurrentUser
-    ? [{
-      id: currentUserId || 'host',
-      user_id: currentUserId,
-      display_name: effectiveDisplayName || 'Player',
-      role: 'host',
-      photoUrl: currentUserProfilePhotoUrl,
-      photo_url: currentUserProfilePhotoUrl,
-      avatarUrl: currentUserProfilePhotoUrl,
-      avatar_url: currentUserProfilePhotoUrl,
-    }, ...members]
+  const syntheticHostMember = !hasHostMember && creatorUserId
+    ? buildSyntheticHostMember({
+      eventLike: event,
+      creatorUserId,
+      currentUserId,
+      currentUserProfilePhotoUrl,
+      fallbackDisplayName: effectiveDisplayName,
+    })
+    : null;
+  const displayMembers = syntheticHostMember
+    ? [syntheticHostMember, ...members]
     : members;
   const myMember = displayMembers.find((member) => String(member?.user_id || '').trim() === currentUserId);
   const isHost = myMember?.role === 'host' || creatorIsCurrentUser;
