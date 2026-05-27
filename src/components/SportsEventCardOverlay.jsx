@@ -375,7 +375,7 @@ export default function SportsEventCardOverlay({
         .from('popup_event_members')
         .insert({ event_id: event.id, user_id: currentUserId, display_name: effectiveDisplayName || 'Player', role: 'player' });
       if (error && error.code !== '23505') throw error;
-      const loadedEvent = await loadEvent(event.id);
+      const loadedEvent = await loadEvent(event.id, { includeMembers: true });
       if (typeof onJoined === 'function') onJoined(loadedEvent || event);
     } catch (error) {
       setJoinError(error?.message || 'Could not join right now.');
@@ -389,7 +389,7 @@ export default function SportsEventCardOverlay({
     try {
       const { error } = await supabase.from('popup_event_members').delete().eq('id', myMember.id);
       if (error) throw error;
-      await loadEvent(event.id);
+      await loadEvent(event.id, { includeMembers: true });
     } catch (error) {
       setJoinError(error?.message || 'Could not update your RSVP.');
     }
@@ -423,7 +423,7 @@ export default function SportsEventCardOverlay({
           .eq('event_id', event.id)
           .eq('user_id', currentUserId);
       }
-      await loadEvent(event.id);
+      await loadEvent(event.id, { includeMembers: true });
       onClose?.();
     } catch (error) {
       setJoinError(error?.message || 'Could not leave the event.');
@@ -473,7 +473,7 @@ export default function SportsEventCardOverlay({
         .eq('id', event.id);
       if (error) throw error;
       setManualPlayerName('');
-      await loadEvent(event.id);
+      await loadEvent(event.id, { includeMembers: true });
     } catch (error) {
       setManualAddError(error?.message || 'Could not add player.');
     }
@@ -488,7 +488,7 @@ export default function SportsEventCardOverlay({
       .from('popup_event_details')
       .update({ event_data: { ...(event.event_data || {}), manualPlayers: nextManualPlayers } })
       .eq('id', event.id);
-    await loadEvent(event.id);
+      await loadEvent(event.id, { includeMembers: true });
   };
 
   const handleKick = async (member) => {
@@ -497,7 +497,7 @@ export default function SportsEventCardOverlay({
     const memberId = String(member?.id || '').trim();
     if (!memberId || !isUuid(memberId)) return;
     await supabase.from('popup_event_members').delete().eq('id', memberId);
-    await loadEvent(event.id);
+    await loadEvent(event.id, { includeMembers: true });
   };
 
   const ensurePopupMemberRecord = async (member, fallbackRole = 'player') => {
@@ -560,7 +560,7 @@ export default function SportsEventCardOverlay({
       setJoinError(error.message || 'Could not promote this player to co-host.');
       return;
     }
-    await loadEvent(event.id);
+    await loadEvent(event.id, { includeMembers: true });
   };
 
   const handleDemote = async (member) => {
@@ -578,7 +578,7 @@ export default function SportsEventCardOverlay({
       setJoinError(error.message || 'Could not remove co-host status right now.');
       return;
     }
-    await loadEvent(event.id);
+    await loadEvent(event.id, { includeMembers: true });
   };
 
   const handleCopyLink = async () => {
