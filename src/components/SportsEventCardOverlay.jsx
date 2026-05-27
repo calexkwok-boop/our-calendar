@@ -52,6 +52,14 @@ const normalizeEvent = (row = {}, fallback = {}) => {
   };
 };
 
+const getPersistedRoleOverrides = (eventLike = {}) => {
+  const eventData = eventLike?.event_data;
+  const raw = eventData && typeof eventData === 'object' && !Array.isArray(eventData)
+    ? eventData.roleOverrides
+    : null;
+  return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+};
+
 export default function SportsEventCardOverlay({
   activeLayerPageTheme,
   darkMode,
@@ -212,11 +220,18 @@ export default function SportsEventCardOverlay({
         });
       });
 
+      const persistedRoleOverrides = getPersistedRoleOverrides(ev);
+      const membersWithOverrides = list.map((entry) => {
+        const overrideKey = String(entry?.user_id || '').trim();
+        const overrideRole = String(persistedRoleOverrides?.[overrideKey] || '').trim();
+        return overrideRole ? { ...entry, role: overrideRole } : entry;
+      });
+
       if (includeMembers) {
         hasLoadedFullMembersRef.current = true;
         includeMembersRealtimeRef.current = true;
       }
-      setMembers(list);
+      setMembers(membersWithOverrides);
       return normalizedEv;
     } catch {
       if (fallbackRef.current) setEvent(normalizeEvent(fallbackRef.current, fallbackRef.current));
@@ -500,6 +515,34 @@ export default function SportsEventCardOverlay({
     await loadEvent(event.id, { includeMembers: true });
   };
 
+  const persistRoleOverride = async (memberUserId, role) => {
+    if (!isUuid(event?.id) || !memberUserId) return false;
+    const existingData = (event?.event_data && typeof event.event_data === 'object' && !Array.isArray(event.event_data))
+      ? event.event_data
+      : {};
+    const currentOverrides = getPersistedRoleOverrides(event);
+    const nextOverrides = { ...currentOverrides };
+    if (role && role !== 'player') nextOverrides[memberUserId] = role;
+    else delete nextOverrides[memberUserId];
+    const nextEventData = {
+      ...existingData,
+      roleOverrides: nextOverrides,
+    };
+    const { error } = await supabase
+      .from('popup_event_details')
+      .update({ event_data: nextEventData })
+      .eq('id', event.id);
+    if (error) {
+      setJoinError(error.message || 'Could not update this player right now.');
+      return false;
+    }
+    setEvent((prev) => (prev ? {
+      ...prev,
+      event_data: nextEventData,
+    } : prev));
+    return true;
+  };
+
   const ensurePopupMemberRecord = async (member, fallbackRole = 'player') => {
     if (!isUuid(event?.id)) return null;
     const memberUserId = String(member?.user_id || '').trim();
@@ -550,15 +593,17 @@ export default function SportsEventCardOverlay({
       return;
     }
     setJoinError('');
+    const persisted = await persistRoleOverride(memberUserId, 'cohost');
+    if (!persisted) return;
     const ensured = await ensurePopupMemberRecord(member, 'cohost');
-    if (!ensured) return;
-    const { error } = await supabase.from('popup_event_members')
-      .update({ role: 'cohost', display_name: ensured.display_name })
-      .eq('event_id', event.id)
-      .eq('user_id', memberUserId);
-    if (error) {
-      setJoinError(error.message || 'Could not promote this player to co-host.');
-      return;
+    if (ensured) {
+      const { error } = await supabase.from('popup_event_members')
+        .update({ role: 'cohost', display_name: ensured.display_name })
+        .eq('event_id', event.id)
+        .eq('user_id', memberUserId);
+      if (error) {
+        console.warn('Could not persist sports cohost role to popup_event_members:', error);
+      }
     }
     await loadEvent(event.id, { includeMembers: true });
   };
@@ -568,15 +613,17 @@ export default function SportsEventCardOverlay({
     const memberUserId = String(member?.user_id || '').trim();
     if (!memberUserId) return;
     setJoinError('');
+    const persisted = await persistRoleOverride(memberUserId, 'player');
+    if (!persisted) return;
     const ensured = await ensurePopupMemberRecord(member, 'player');
-    if (!ensured) return;
-    const { error } = await supabase.from('popup_event_members')
-      .update({ role: 'player' })
-      .eq('event_id', event.id)
-      .eq('user_id', memberUserId);
-    if (error) {
-      setJoinError(error.message || 'Could not remove co-host status right now.');
-      return;
+    if (ensured) {
+      const { error } = await supabase.from('popup_event_members')
+        .update({ role: 'player' })
+        .eq('event_id', event.id)
+        .eq('user_id', memberUserId);
+      if (error) {
+        console.warn('Could not remove sports cohost role from popup_event_members:', error);
+      }
     }
     await loadEvent(event.id, { includeMembers: true });
   };

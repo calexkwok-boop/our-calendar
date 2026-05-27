@@ -87,6 +87,13 @@ const ROLE_COLORS = {
   player: { bg: '#f3f4f6', text: '#374151', dark_bg: 'rgba(255,255,255,0.08)',dark_text: '#9ca3af' },
 };
 const ROLE_ICONS = { host: Crown, cohost: Shield, player: null };
+const getPersistedRoleOverrides = (eventLike = {}) => {
+  const eventData = eventLike?.event_data;
+  const raw = eventData && typeof eventData === 'object' && !Array.isArray(eventData)
+    ? eventData.roleOverrides
+    : null;
+  return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+};
 const Avatar = ({ name, photoUrl, size = 32, accent, role, darkMode }) => {
   const colors = ROLE_COLORS[role || 'player'] || ROLE_COLORS.player;
   const cohostBg = darkMode ? hexToRgba(accent, 0.22) : hexToRgba(accent, 0.12);
@@ -1699,9 +1706,14 @@ export default function PopupEventPanel({
               .eq('id', ev.id);
           }, 0);
         }
+        const persistedRoleOverrides = getPersistedRoleOverrides(ev);
         const nextMembersWithOverrides = memberList.map((entry) => {
           const overrideKey = String(entry?.user_id || '').trim();
-          const overrideRole = String(memberRoleOverridesRef.current?.[overrideKey] || '').trim();
+          const overrideRole = String(
+            memberRoleOverridesRef.current?.[overrideKey]
+            || persistedRoleOverrides?.[overrideKey]
+            || ''
+          ).trim();
           return overrideRole ? { ...entry, role: overrideRole } : entry;
         });
         const normalizedCurrentUserId = String(user?.id || '').trim();
@@ -1917,6 +1929,33 @@ export default function PopupEventPanel({
       display_name: displayName,
     };
   };
+  const persistRoleOverride = async (memberUserId, role) => {
+    if (!isUuid(event?.id) || !memberUserId) return false;
+    const existingData = (event?.event_data && typeof event.event_data === 'object' && !Array.isArray(event.event_data))
+      ? event.event_data
+      : {};
+    const currentOverrides = getPersistedRoleOverrides(event);
+    const nextOverrides = { ...currentOverrides };
+    if (role && role !== 'player') nextOverrides[memberUserId] = role;
+    else delete nextOverrides[memberUserId];
+    const nextEventData = {
+      ...existingData,
+      roleOverrides: nextOverrides,
+    };
+    const { error } = await supabase
+      .from('popup_event_details')
+      .update({ event_data: nextEventData })
+      .eq('id', event.id);
+    if (error) {
+      setRosterActionError(error.message || 'Could not promote this player to co-host.');
+      return false;
+    }
+    setEvent((prev) => (prev ? {
+      ...prev,
+      event_data: nextEventData,
+    } : prev));
+    return true;
+  };
   const handleLeave = async () => {
     if (!myMember || isHost || !isUuid(event?.id)) return;
     setJoinError('');
@@ -1985,20 +2024,18 @@ export default function PopupEventPanel({
       setRosterActionError('Only signed-in players can be promoted to co-host.');
       return;
     }
+    const persisted = await persistRoleOverride(memberUserId, 'cohost');
+    if (!persisted) return;
     const ensured = await ensurePopupMemberRecord(member, 'cohost');
-    if (!ensured) {
-      setRosterActionError('Could not promote this player to co-host.');
-      return;
-    }
-    const { error } = await supabase
-      .from('popup_event_members')
-      .update({ role: 'cohost', display_name: ensured.display_name })
-      .eq('event_id', event.id)
-      .eq('user_id', memberUserId);
-    if (error) {
-      console.error('Could not promote popup member:', error);
-      setRosterActionError(error.message || 'Could not promote this player to co-host.');
-      return;
+    if (ensured) {
+      const { error } = await supabase
+        .from('popup_event_members')
+        .update({ role: 'cohost', display_name: ensured.display_name })
+        .eq('event_id', event.id)
+        .eq('user_id', memberUserId);
+      if (error) {
+        console.warn('Could not promote popup member in popup_event_members:', error);
+      }
     }
     setMembers((prev) => prev.map((item) => (
       String(item?.user_id || '') === memberUserId
@@ -2015,13 +2052,19 @@ export default function PopupEventPanel({
     if (!isHostOrCohost || !isUuid(event?.id)) return;
     const memberUserId = String(member?.user_id || '').trim();
     if (!memberUserId) return;
+    const persisted = await persistRoleOverride(memberUserId, 'player');
+    if (!persisted) return;
     const ensured = await ensurePopupMemberRecord(member, 'player');
-    if (!ensured) return;
-    await supabase
-      .from('popup_event_members')
-      .update({ role: 'player' })
-      .eq('event_id', event.id)
-      .eq('user_id', memberUserId);
+    if (ensured) {
+      const { error } = await supabase
+        .from('popup_event_members')
+        .update({ role: 'player' })
+        .eq('event_id', event.id)
+        .eq('user_id', memberUserId);
+      if (error) {
+        console.warn('Could not demote popup member in popup_event_members:', error);
+      }
+    }
     setMemberRoleOverrides((prev) => ({
       ...(prev || {}),
       [memberUserId]: 'player',
