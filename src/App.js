@@ -15846,11 +15846,20 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return;
     }
     const signups = popupSignupsByEventId[normalizedEventId] || [];
-    const createdByMe = String(
+    const creatorIdentity = String(
       popup?.createdByUserId
+      || popup?.created_by_user_id
+      || popup?.createdBy
+      || popup?.created_by
       || fallbackMeta?.createdByUserId
+      || fallbackMeta?.created_by_user_id
+      || fallbackMeta?.createdBy
+      || fallbackMeta?.created_by
       || ''
-    ).trim() === String(user?.id || '').trim();
+    ).trim();
+    const createdByMe = String(
+      creatorIdentity
+    ) === String(user?.id || '').trim();
     if (createdByMe) {
       if (shouldRefreshPopupCollections()) await loadPopupEventData();
       focusOnPopupEventDate(normalizedEventId, fallbackMeta?.dateKey || null);
