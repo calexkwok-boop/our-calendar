@@ -500,14 +500,66 @@ export default function SportsEventCardOverlay({
     await loadEvent(event.id);
   };
 
+  const ensurePopupMemberRecord = async (member, fallbackRole = 'player') => {
+    if (!isUuid(event?.id)) return null;
+    const memberUserId = String(member?.user_id || '').trim();
+    if (!memberUserId) return null;
+    const displayName = String(member?.display_name || 'Player').trim() || 'Player';
+    const { data: existingRows, error: existingError } = await supabase
+      .from('popup_event_members')
+      .select('id')
+      .eq('event_id', event.id)
+      .eq('user_id', memberUserId);
+    if (existingError) {
+      setJoinError(existingError.message || 'Could not update this player right now.');
+      return null;
+    }
+    const existingRow = Array.isArray(existingRows) ? existingRows[0] : existingRows;
+    if (existingRow?.id) {
+      return {
+        event_id: event.id,
+        user_id: memberUserId,
+        display_name: displayName,
+      };
+    }
+
+    const { error: insertError } = await supabase
+      .from('popup_event_members')
+      .insert({
+        event_id: event.id,
+        user_id: memberUserId,
+        display_name: displayName,
+        role: fallbackRole,
+      });
+    if (insertError && String(insertError?.code || '') !== '23505') {
+      setJoinError(insertError.message || 'Could not update this player right now.');
+      return null;
+    }
+    return {
+      event_id: event.id,
+      user_id: memberUserId,
+      display_name: displayName,
+    };
+  };
+
   const handlePromote = async (member) => {
     if (!isHost || !isUuid(event?.id)) return;
     const memberUserId = String(member?.user_id || '').trim();
-    if (!memberUserId) return;
-    await supabase.from('popup_event_members')
-      .update({ role: 'cohost' })
+    if (!memberUserId) {
+      setJoinError('Only signed-in players can be promoted to co-host.');
+      return;
+    }
+    setJoinError('');
+    const ensured = await ensurePopupMemberRecord(member, 'cohost');
+    if (!ensured) return;
+    const { error } = await supabase.from('popup_event_members')
+      .update({ role: 'cohost', display_name: ensured.display_name })
       .eq('event_id', event.id)
       .eq('user_id', memberUserId);
+    if (error) {
+      setJoinError(error.message || 'Could not promote this player to co-host.');
+      return;
+    }
     await loadEvent(event.id);
   };
 
@@ -515,10 +567,17 @@ export default function SportsEventCardOverlay({
     if (!isHost || !isUuid(event?.id)) return;
     const memberUserId = String(member?.user_id || '').trim();
     if (!memberUserId) return;
-    await supabase.from('popup_event_members')
+    setJoinError('');
+    const ensured = await ensurePopupMemberRecord(member, 'player');
+    if (!ensured) return;
+    const { error } = await supabase.from('popup_event_members')
       .update({ role: 'player' })
       .eq('event_id', event.id)
       .eq('user_id', memberUserId);
+    if (error) {
+      setJoinError(error.message || 'Could not remove co-host status right now.');
+      return;
+    }
     await loadEvent(event.id);
   };
 
