@@ -2060,15 +2060,24 @@ export default function PopupEventPanel({
       const existingData = (event.event_data && typeof event.event_data === 'object' && !Array.isArray(event.event_data)) ? event.event_data : {};
       const currentManualPlayers = Array.isArray(existingData.manualPlayers) ? existingData.manualPlayers : [];
       const nextManualPlayers = currentManualPlayers.filter((p) => String(p?.id || '') !== String(member?.id || ''));
+      setMembers((prev) => prev.filter((entry) => String(entry?.id || '') !== String(member?.id || '')));
+      setEvent((prev) => (prev ? {
+        ...prev,
+        event_data: {
+          ...((prev.event_data && typeof prev.event_data === 'object' && !Array.isArray(prev.event_data)) ? prev.event_data : {}),
+          manualPlayers: nextManualPlayers,
+        },
+      } : prev));
       await supabase
         .from('popup_event_details')
         .update({ event_data: { ...existingData, manualPlayers: nextManualPlayers } })
         .eq('id', event.id);
-      await loadEvent(event.id);
+      void loadEvent(event.id);
       return;
     }
+    setMembers((prev) => prev.filter((entry) => String(entry?.id || '') !== String(member?.id || '')));
     await supabase.from('popup_event_members').delete().eq('id', member.id);
-    await loadEvent(event.id);
+    void loadEvent(event.id);
   };
   const handlePromote = async (member) => {
     if (!isHostOrCohost || !isUuid(event?.id)) return;

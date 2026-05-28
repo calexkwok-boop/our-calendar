@@ -11863,6 +11863,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const openLayerMediaPicker = (kind) => {
     if (!canManageActiveLayer || !activeLayerId) return;
     pendingLayerMediaKindRef.current = String(kind || '');
+    if (layerMediaInputRef.current) {
+      layerMediaInputRef.current.value = '';
+    }
     layerMediaInputRef.current?.click();
   };
 
@@ -28655,6 +28658,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         const file = e.target.files?.[0];
         const kind = pendingLayerMediaKindRef.current;
         pendingLayerMediaKindRef.current = '';
+        e.target.value = '';
         if (file && kind) beginLayerMediaCrop(kind, file);
       }}
     />

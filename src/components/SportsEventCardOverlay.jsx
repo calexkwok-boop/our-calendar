@@ -544,11 +544,19 @@ export default function SportsEventCardOverlay({
     if (!isHost || !isUuid(event?.id) || !member?.is_manual) return;
     const currentManualPlayers = Array.isArray(event.event_data?.manualPlayers) ? event.event_data.manualPlayers : [];
     const nextManualPlayers = currentManualPlayers.filter((p) => String(p?.id || '') !== String(member?.id || ''));
+    setMembers((prev) => prev.filter((entry) => String(entry?.id || '') !== String(member?.id || '')));
+    setEvent((prev) => (prev ? {
+      ...prev,
+      event_data: {
+        ...((prev.event_data && typeof prev.event_data === 'object' && !Array.isArray(prev.event_data)) ? prev.event_data : {}),
+        manualPlayers: nextManualPlayers,
+      },
+    } : prev));
     await supabase
       .from('popup_event_details')
       .update({ event_data: { ...(event.event_data || {}), manualPlayers: nextManualPlayers } })
       .eq('id', event.id);
-      await loadEvent(event.id, { includeMembers: true });
+    void loadEvent(event.id, { includeMembers: true });
   };
 
   const handleKick = async (member) => {
@@ -556,8 +564,9 @@ export default function SportsEventCardOverlay({
     if (member?.is_manual) { await handleRemoveManualPlayer(member); return; }
     const memberId = String(member?.id || '').trim();
     if (!memberId || !isUuid(memberId)) return;
+    setMembers((prev) => prev.filter((entry) => String(entry?.id || '') !== memberId));
     await supabase.from('popup_event_members').delete().eq('id', memberId);
-    await loadEvent(event.id, { includeMembers: true });
+    void loadEvent(event.id, { includeMembers: true });
   };
 
   const persistRoleOverride = async (memberUserId, role) => {
