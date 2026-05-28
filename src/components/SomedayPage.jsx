@@ -10,6 +10,7 @@ import useGoogleImage from '../hooks/useGoogleImage';
 import useMoviePoster from '../hooks/useMoviePoster';
 import usePlacesImage from '../hooks/usePlacesImage';
 import { getDreamImageSearchQuery, getDreamPlacePhotoQuery, isMovieDream, resolveDreamImage, resolveDreamImageCandidates } from '../lib/resolveDreamImage';
+import { generateChapterFromPrompt, getChapterPromptExamples } from '../lib/generateChapterFromPrompt';
 
 const CAVEAT = '"Caveat", cursive';
 const SANS = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
@@ -1551,6 +1552,83 @@ function toDateOnlyTimestamp(value) {
   if (!date || Number.isNaN(date.getTime())) return null;
   date.setHours(0, 0, 0, 0);
   return date.getTime();
+}
+
+function PromptCreateChapterSheet({ onClose, onCreateBlank, onCreateFromPrompt, darkMode }) {
+  const [title, setTitle] = useState('');
+  const [prompt, setPrompt] = useState('');
+  const examples = useMemo(() => getChapterPromptExamples(), []);
+  const sheetBg  = darkMode ? '#131c2e' : '#ffffff';
+  const tp       = darkMode ? '#e8eaf0' : '#1a1a2e';
+  const ts       = darkMode ? '#4a5568' : '#9ca3af';
+  const inputBdr = darkMode ? 'rgba(255,255,255,0.08)' : '#e5e0d5';
+
+  function submitBlank() {
+    const nextTitle = title.trim();
+    if (!nextTitle) return;
+    onCreateBlank?.(nextTitle);
+    onClose?.();
+  }
+
+  function submitPrompt() {
+    const nextPrompt = prompt.trim();
+    if (!nextPrompt) return;
+    onCreateFromPrompt?.(nextPrompt);
+    onClose?.();
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 10030, background: 'rgba(0,0,0,0.52)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: sheetBg, borderRadius: '24px 24px 0 0', padding: '24px 18px max(48px, calc(env(safe-area-inset-bottom) + 48px))', width: '100%', maxWidth: 480, margin: '0 auto' }}>
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 auto 22px' }} />
+        <p style={{ fontFamily: CAVEAT, fontSize: 26, fontWeight: 700, color: tp, margin: '0 0 4px' }}>New Chapter</p>
+        <p style={{ fontSize: 12, color: ts, margin: '0 0 18px' }}>Start with one trip idea and I&apos;ll build the first page for you</p>
+        <p style={{ fontSize: 11, color: ts, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 6px' }}>Trip idea</p>
+        <textarea
+          value={prompt}
+          onChange={e => setPrompt(e.target.value)}
+          onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submitPrompt(); }}
+          placeholder='Vietnam with Pearl next spring'
+          autoFocus
+          rows={3}
+          style={{ background: darkMode ? 'rgba(255,255,255,0.06)' : '#f8f7f2', border: `1px solid ${inputBdr}`, borderRadius: 14, padding: '12px 13px', fontFamily: CAVEAT, fontSize: 20, lineHeight: 1.2, color: tp, outline: 'none', width: '100%', marginBottom: 10, boxSizing: 'border-box', resize: 'none' }}
+        />
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
+          {examples.map((example) => (
+            <button
+              key={example}
+              onClick={() => setPrompt(example)}
+              style={{ border: `1px solid ${inputBdr}`, background: darkMode ? 'rgba(255,255,255,0.04)' : '#f8f7f2', color: ts, borderRadius: 999, padding: '6px 10px', fontSize: 11, cursor: 'pointer' }}
+            >
+              {example}
+            </button>
+          ))}
+        </div>
+        <button onClick={submitPrompt} disabled={!prompt.trim()} style={{ width: '100%', padding: '12px', borderRadius: 14, background: prompt.trim() ? '#5eadce' : (darkMode ? 'rgba(94,173,206,0.3)' : '#bde0f0'), color: '#fff', border: 'none', fontFamily: CAVEAT, fontSize: 20, fontWeight: 700, cursor: prompt.trim() ? 'pointer' : 'not-allowed', marginBottom: 18 }}>
+          Build my chapter ✨
+        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+          <div style={{ flex: 1, height: 1, background: inputBdr }} />
+          <span style={{ fontSize: 10, color: ts, textTransform: 'uppercase', letterSpacing: '0.14em' }}>or start blank</span>
+          <div style={{ flex: 1, height: 1, background: inputBdr }} />
+        </div>
+        <p style={{ fontSize: 11, color: ts, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 6px' }}>Chapter title</p>
+        <input
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && submitBlank()}
+          placeholder='e.g. "Japan Someday" or "Road Trip"'
+          style={{ background: darkMode ? 'rgba(255,255,255,0.06)' : '#f8f7f2', border: `1px solid ${inputBdr}`, borderRadius: 12, padding: '10px 13px', fontFamily: CAVEAT, fontSize: 18, color: tp, outline: 'none', width: '100%', marginBottom: 20, boxSizing: 'border-box' }}
+        />
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '12px', borderRadius: 14, background: 'transparent', border: `1px solid ${inputBdr}`, color: ts, fontFamily: CAVEAT, fontSize: 16, cursor: 'pointer' }}>Cancel</button>
+          <button onClick={submitBlank} disabled={!title.trim()} style={{ flex: 2, padding: '12px', borderRadius: 14, background: title.trim() ? '#5eadce' : (darkMode ? 'rgba(94,173,206,0.3)' : '#bde0f0'), color: '#fff', border: 'none', fontFamily: CAVEAT, fontSize: 18, fontWeight: 700, cursor: title.trim() ? 'pointer' : 'not-allowed' }}>
+            Create Blank Chapter
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function ChecklistEditSheet({ pin, onClose, onSave, darkMode }) {
@@ -3652,7 +3730,8 @@ const SomedayPage = ({
     setDetailPin(pin);
   }
 
-  async function createChapter(title, itemIds = []) {
+  async function createChapter(title, itemIds = [], options = {}) {
+    const generatedPins = Array.isArray(options?.generatedPins) ? options.generatedPins : [];
     const { data: inserted } = await supabase
       .from('chapters')
       .insert({ owner_id: chapterOwnerIdentity || currentUser, title })
@@ -3679,8 +3758,26 @@ const SomedayPage = ({
       if (rows.length > 0) supabase.from('chapter_pins').insert(rows).then(() => {});
     }
 
+    const normalizedGeneratedPins = generatedPins.map((pin, index) => ({
+      ...pin,
+      id: pin.id || crypto.randomUUID(),
+      chapterId,
+      x: pin.x ?? gridPosition(index).x,
+      y: pin.y ?? gridPosition(index).y,
+      rot: pin.rot ?? gridPosition(index).rot,
+    }));
+
+    if (inserted && normalizedGeneratedPins.length > 0) {
+      const generatedRows = normalizedGeneratedPins.map((pin, idx) => pinToRow(pin, inserted.id, idx));
+      if (generatedRows.length > 0) supabase.from('chapter_pins').upsert(generatedRows).then(() => {});
+    }
+
     setChapters(prev => {
-      const updated = [...prev, newChapter];
+      const updated = [...prev, {
+        ...newChapter,
+        itemIds: [...itemIds, ...normalizedGeneratedPins.map((pin) => pin.id)],
+        pins: normalizedGeneratedPins,
+      }];
       if (itemIds.length > 0) {
         const clusterY = getChapterClusterY(updated, chapterId, pins);
         setPins(ps => ps.map(p => {
@@ -3693,11 +3790,22 @@ const SomedayPage = ({
           return updated2;
         }));
       }
+      if (normalizedGeneratedPins.length > 0) {
+        setPins(ps => [...ps, ...normalizedGeneratedPins]);
+        window.setTimeout(() => { autoSortChapterPins(chapterId); }, 0);
+      }
       return updated;
     });
     setChapterPromptGroup(null);
     setShowCreateChapter(false);
     autoSortPendingRef.current = true;
+  }
+
+  async function createChapterFromPrompt(prompt) {
+    const generated = generateChapterFromPrompt(prompt);
+    const generatedPins = [...(generated?.labels || []), ...(generated?.pins || [])];
+    const chapterTitle = String(generated?.chapter?.title || '').trim() || 'New Chapter';
+    await createChapter(chapterTitle, [], { generatedPins });
   }
 
   function addPinToChapter(pinId, chapterId) {
@@ -4398,9 +4506,10 @@ const SomedayPage = ({
         />
       )}
       {showCreateChapter && (
-        <CreateChapterSheet
+        <PromptCreateChapterSheet
           onClose={() => setShowCreateChapter(false)}
-          onCreate={(title) => createChapter(title, [])}
+          onCreateBlank={(title) => createChapter(title, [])}
+          onCreateFromPrompt={createChapterFromPrompt}
           darkMode={darkMode}
         />
       )}
