@@ -865,7 +865,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
 
         <div className={`min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-5 ${editorTheme.body}`}>
           {(config.fields || []).map((field) => (
-            <label key={field.key} className="block">
+            <label key={field.key} className="block min-w-0 w-full">
               {field.type !== 'music-link' ? (
                 <div className={`mb-1.5 text-[12px] font-bold uppercase tracking-[0.16em] ${editorTheme.label}`} style={{ fontFamily: isPartyEditor ? APP_FONT_STACK : undefined }}>{field.label}</div>
               ) : null}
@@ -1125,7 +1125,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                   value={draft[field.key] ?? ''}
                   onChange={(event) => setFieldValue(field.key, event.target.value)}
                   className={`min-w-0 max-w-full w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
-                  style={{ fontFamily: isPartyEditor ? APP_FONT_STACK : undefined, boxSizing: 'border-box' }}
+                  style={{ fontFamily: isPartyEditor ? APP_FONT_STACK : undefined, boxSizing: 'border-box', minWidth: 0, maxWidth: '100%', display: 'block' }}
                 />
               ) : field.type === 'select' ? (
                 <select
@@ -1143,8 +1143,8 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                   value={draft[field.key] ?? ''}
                   onChange={(value) => setFieldValue(field.key, value)}
                   placeholder={field.placeholder || 'Search venue...'}
-                  inputClassName={`w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
-                  inputStyle={isPartyEditor ? { fontFamily: APP_FONT_STACK } : undefined}
+                  inputClassName={`min-w-0 max-w-full w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
+                  inputStyle={isPartyEditor ? { fontFamily: APP_FONT_STACK, boxSizing: 'border-box', minWidth: 0, maxWidth: '100%', display: 'block' } : { boxSizing: 'border-box', minWidth: 0, maxWidth: '100%', display: 'block' }}
                   dropdownClassName={`overflow-hidden rounded-2xl border backdrop-blur-md ring-1 ring-black/5 shadow-[0_24px_60px_rgba(15,23,42,0.22)] ${editorAccent.dropdown}`}
                   optionClassName={`block w-full border-b px-4 py-3 text-left text-sm last:border-b-0 ${editorAccent.option}`}
                 />
@@ -1165,8 +1165,8 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                   value={draft[field.key] ?? ''}
                   onChange={(event) => setFieldValue(field.key, event.target.value)}
                   placeholder={field.placeholder || ''}
-                  className={`w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
-                  style={{ fontFamily: isPartyEditor ? APP_FONT_STACK : undefined }}
+                  className={`min-w-0 max-w-full w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
+                  style={{ fontFamily: isPartyEditor ? APP_FONT_STACK : undefined, boxSizing: 'border-box', minWidth: 0, maxWidth: '100%', display: 'block' }}
                 />
               )}
               {field.help ? <div className={`mt-1.5 text-xs leading-5 ${editorAccent.help}`}>{field.help}</div> : null}

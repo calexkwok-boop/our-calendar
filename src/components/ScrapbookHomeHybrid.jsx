@@ -1428,7 +1428,7 @@ const ScrapbookHomeHybrid = ({
       )}
       {openMemoryCollagePhoto && (
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-4"
+          className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/90 p-4"
           onClick={() => setOpenMemoryCollagePhoto(null)}
         >
           <button
