@@ -9,6 +9,7 @@ import DreamShelfPage, { getAllCuratedItemsShuffled } from "./DreamShelfPage";
 import DestinationsPage, { CURATED_DESTINATIONS, getDestinationResolvedImage } from "./DestinationsPage";
 import { getDestinationCacheKey, loadDestinationImageCache } from "../lib/destinationImageCache";
 import { supabase } from "../supabaseClient";
+import { resolveDreamImage } from "../lib/resolveDreamImage";
 
 const TMDB_KEY = "b66752afda91b8258d32f4388f049a22";
 const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
@@ -804,7 +805,7 @@ function SkeletonCard() {
   );
 }
 
-function PublishedChapterCard({ chapter, onOpen, darkMode }) {
+function PublishedChapterCard({ chapter, onOpen, darkMode, priority = false }) {
   const coverUrl = String(chapter?.coverImageUrl || "").trim();
   const creatorLabel = getPublishedChapterCreatorLabel(chapter);
   const previewCount = Array.isArray(chapter?.previewPins) ? chapter.previewPins.length : 0;
@@ -815,7 +816,14 @@ function PublishedChapterCard({ chapter, onOpen, darkMode }) {
     >
       <div className={`relative h-40 ${coverUrl ? "" : darkMode ? "bg-gradient-to-br from-violet-900/60 via-fuchsia-900/40 to-slate-900" : "bg-gradient-to-br from-fuchsia-100 via-violet-50 to-amber-50"}`}>
         {coverUrl ? (
-          <img src={coverUrl} alt={chapter.public_title || chapter.title} className="w-full h-full object-cover" loading="lazy" />
+          <img
+            src={coverUrl}
+            alt={chapter.public_title || chapter.title}
+            className="w-full h-full object-cover"
+            loading={priority ? "eager" : "lazy"}
+            fetchPriority={priority ? "high" : "auto"}
+            decoding="async"
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-5xl">📖</div>
         )}
@@ -1242,6 +1250,32 @@ export default function ExplorePage({
   const activeCom  = useMemo(() => shuffle(communityPostsWithDestinationPhotos.filter(p => sources[p.type])), [communityPostsWithDestinationPhotos, sources]);
 
   useEffect(() => {
+    if (typeof window === "undefined" || !Array.isArray(publishedChapters) || publishedChapters.length === 0) return undefined;
+    const warmUrls = publishedChapters
+      .slice(0, 4)
+      .flatMap((chapter) => {
+        const coverUrl = String(chapter?.coverImageUrl || "").trim();
+        const previewUrls = Array.isArray(chapter?.previewPins)
+          ? chapter.previewPins.slice(0, 2).map((pin) => String(pin?.imageUrl || "").trim()).filter(Boolean)
+          : [];
+        return [coverUrl, ...previewUrls].filter(Boolean);
+      });
+    const uniqueUrls = Array.from(new Set(warmUrls));
+    const preloaders = uniqueUrls.map((url) => {
+      const image = new window.Image();
+      image.decoding = "async";
+      image.src = url;
+      return image;
+    });
+    return () => {
+      preloaders.forEach((image) => {
+        image.onload = null;
+        image.onerror = null;
+      });
+    };
+  }, [publishedChapters]);
+
+  useEffect(() => {
     let cancelled = false;
     if (!sources.destinations) return undefined;
     const destinationPosts = communityPosts.filter((post) => post.type === "destinations");
@@ -1357,13 +1391,21 @@ export default function ExplorePage({
           const chapterId = String(row?.chapter_id || "").trim();
           if (!chapterId) return;
           if (!pinsByChapterId.has(chapterId)) pinsByChapterId.set(chapterId, []);
-          pinsByChapterId.get(chapterId).push({
+          const rawPin = {
             id: row.id,
             label: row.label || "",
             description: row.description || "",
             imageUrl: row.image_url || "",
             emoji: row.emoji || "",
+            categoryId: row.category_id || "",
+            status: row.status || "",
+            pinColor: row.pin_color || "",
+            noteColor: row.note_color || "",
             type: row.type || "note",
+          };
+          pinsByChapterId.get(chapterId).push({
+            ...rawPin,
+            imageUrl: String(rawPin.imageUrl || "").trim() || resolveDreamImage(rawPin),
           });
         });
         const handleByUserId = new Map((handleRows || []).map((row) => [String(row?.user_id || "").trim(), row]));
@@ -1587,12 +1629,13 @@ export default function ExplorePage({
                       <div className={`flex-shrink-0 w-72 h-[268px] rounded-[26px] animate-pulse ${darkMode ? 'bg-[#161f30]' : 'bg-white border border-stone-100'}`} />
                     </>
                   )
-                  : publishedChapters.map((chapter) => (
+                  : publishedChapters.map((chapter, index) => (
                     <PublishedChapterCard
                       key={chapter.id}
                       chapter={chapter}
                       onOpen={setSelectedPublishedChapter}
                       darkMode={darkMode}
+                      priority={index < 2}
                     />
                   ))
                 }

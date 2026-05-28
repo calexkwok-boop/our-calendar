@@ -1792,6 +1792,7 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
   ];
   const slideCount = slides.length;
   const currentSlideData = slides[currentSlide] || slides[0] || null;
+  const isPhotoSlideFocused = currentSlideData?.type === 'photo';
   
   const nextSlide = () => {
     if (slideCount <= 1) return;
@@ -1908,7 +1909,9 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
             </button>
             
             {/* Dots */}
-            <div className="pointer-events-auto absolute bottom-[max(4.2rem,calc(env(safe-area-inset-bottom)+3.1rem))] left-1/2 z-40 flex -translate-x-1/2 gap-2">
+            <div className={`pointer-events-auto absolute left-1/2 z-40 flex -translate-x-1/2 gap-2 transition-opacity duration-200 ${
+              isPhotoSlideFocused ? 'bottom-[max(1rem,calc(env(safe-area-inset-bottom)+0.75rem))] opacity-0 pointer-events-none' : 'bottom-[max(4.2rem,calc(env(safe-area-inset-bottom)+3.1rem))] opacity-100'
+            }`}>
               {slides.map((_, idx) => (
                 <button
                   key={idx}
@@ -1925,22 +1928,24 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
       </div>
       
       {/* Bottom actions */}
-      <div className="absolute bottom-0 left-0 right-0 px-4 pt-6 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)+0.35rem))] bg-gradient-to-t from-black via-black/90 to-transparent">
-        <div className="mx-auto flex w-full max-w-[14rem] items-center justify-between">
-          <ReactionButton
-            icon={<Heart className="w-6 h-6" />}
-            count={memory.reactionCount || 0}
-            active={userReaction === 'love'}
-            onClick={() => handleReact('love')}
-          />
-          
-          <ReactionButton
-            icon={<MessageCircle className="w-6 h-6" />}
-            count={memory.commentCount || 0}
-            onClick={() => setShowComments(true)}
-          />
+      {!isPhotoSlideFocused && (
+        <div className="absolute bottom-0 left-0 right-0 px-4 pt-6 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)+0.35rem))] bg-gradient-to-t from-black via-black/90 to-transparent">
+          <div className="mx-auto flex w-full max-w-[14rem] items-center justify-between">
+            <ReactionButton
+              icon={<Heart className="w-6 h-6" />}
+              count={memory.reactionCount || 0}
+              active={userReaction === 'love'}
+              onClick={() => handleReact('love')}
+            />
+            
+            <ReactionButton
+              icon={<MessageCircle className="w-6 h-6" />}
+              count={memory.commentCount || 0}
+              onClick={() => setShowComments(true)}
+            />
+          </div>
         </div>
-      </div>
+      )}
       
       {/* Comments sheet */}
       {showComments && (
