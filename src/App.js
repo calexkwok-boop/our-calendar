@@ -28174,7 +28174,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   };
 
   const memorySystemMemories = personalMemories.map((memory) => applyTripRosterToMemory(memory));
-  const memorySystemCurrentMemoryResolved = memorySystemCurrentMemory ? applyTripRosterToMemory(memorySystemCurrentMemory) : null;
+  const currentMemoryId = String(memorySystemCurrentMemory?.id || '').trim();
+  const freshestCurrentMemory = memorySystemCurrentMemory
+    ? (
+      (currentMemoryId
+        ? personalMemories.find((memory) => String(memory?.id || '').trim() === currentMemoryId)
+        : null)
+      || memorySystemCurrentMemory
+    )
+    : null;
+  const memorySystemCurrentMemoryResolved = freshestCurrentMemory ? applyTripRosterToMemory(freshestCurrentMemory) : null;
   const memorySystemCreateDraftResolved = memoryCreateDraft ? applyTripRosterToMemory(memoryCreateDraft) : null;
 
   const renderJourneyPortal = (node) => (typeof document !== 'undefined' ? createPortal(node, document.body) : null);

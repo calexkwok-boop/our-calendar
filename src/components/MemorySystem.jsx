@@ -466,10 +466,10 @@ const MemorySystem = ({
           }}
           onCreate={(memoryData) => {
             const photos = Array.isArray(memoryData?.photos) ? memoryData.photos : [];
-            onUpdateMemory(selectedMemory.id, (memory) => ({
-              ...memory,
+            const nextSelectedMemory = {
+              ...(selectedMemory || {}),
               ...memoryData,
-              title: String(memoryData?.title || memory?.title || 'Untitled memory').trim(),
+              title: String(memoryData?.title || selectedMemory?.title || 'Untitled memory').trim(),
               description: String(memoryData?.description || '').trim(),
               highlights: Array.isArray(memoryData?.highlights)
                 ? memoryData.highlights.filter((highlight) => String(highlight || '').trim())
@@ -477,15 +477,14 @@ const MemorySystem = ({
               photos,
               coverPhoto: getMemoryCoverUrl({ ...memoryData, photos }),
               taggedPeople: Array.isArray(memoryData?.taggedPeople) ? memoryData.taggedPeople : [],
-              date: normalizeMemoryDateInput(memoryData?.date || memory?.date),
+              date: normalizeMemoryDateInput(memoryData?.date || selectedMemory?.date),
               location: String(memoryData?.location || '').trim(),
+            };
+            onUpdateMemory(selectedMemory.id, (memory) => ({
+              ...memory,
+              ...nextSelectedMemory,
             }));
-            setSelectedMemory((prev) => ({
-              ...(prev || selectedMemory),
-              ...memoryData,
-              coverPhoto: getMemoryCoverUrl({ ...memoryData, photos }),
-              photos,
-            }));
+            setSelectedMemory(nextSelectedMemory);
             setEditPhotoTargetId('');
             setActiveView('viewer');
             onViewChange?.('viewer');
