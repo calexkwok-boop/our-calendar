@@ -213,7 +213,7 @@ const normalizeProfilePhotoUrl = (value) => {
         if (idx === -1) continue;
         const objectPath = normalizeStorageObjectPath(parsed.pathname.slice(idx + marker.length));
         const origin = SUPABASE_URL || `${parsed.protocol}//${parsed.host}`;
-        return `${origin}/storage/v1/object/public/${bucket}/${objectPath}`;
+        return `${origin}/storage/v1/object/public/${bucket}/${objectPath}${parsed.search}${parsed.hash}`;
       }
     }
     if (parsed.pathname !== '/' && /\s/.test(parsed.pathname)) {
@@ -11723,8 +11723,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setShowLayerModal(false);
   };
 
-  const uploadLayerMedia = async (kind, file) => {
+  const uploadLayerMedia = async (kind, file, options = {}) => {
     const mediaKind = String(kind || '').trim();
+    const alreadyOptimized = options?.alreadyOptimized === true;
     if (!file || !user?.id || !activeLayerId || !canManageActiveLayer) return false;
     if (mediaKind !== 'icon' && mediaKind !== 'header') return false;
     if (!String(file.type || '').startsWith('image/')) {
@@ -11734,7 +11735,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     setUploadingLayerMedia(true);
     try {
-      const processedFile = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 1200 });
+      const processedFile = alreadyOptimized
+        ? file
+        : await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 1200 });
       const ext = String((processedFile?.type || '').split('/')[1] || (String(file.name || '').split('.').pop() || 'jpg')).toLowerCase();
 
       // ── Avatar upload: dedicated public `avatars` bucket, user-scoped path ──
@@ -12289,7 +12292,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return;
     }
     const croppedFile = new File([blob], `layer-${kind}.jpg`, { type: 'image/jpeg' });
-    const ok = await uploadLayerMedia(kind, croppedFile);
+    const ok = await uploadLayerMedia(kind, croppedFile, { alreadyOptimized: true });
     if (ok) closeLayerMediaCropModal();
   };
 
