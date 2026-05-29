@@ -769,7 +769,13 @@ const ScrapbookHomeHybrid = ({
                 style={{ transform: 'rotate(-0.8deg)' }}
               >
                 <button
-                  onClick={() => onOpenMemory?.(todayMoment || displayMoment)}
+                  onClick={() => {
+                    if (momentPhotoSrc) {
+                      openMemoryCollageLightbox(momentPhotoSrc, todayMoment || displayMoment);
+                      return;
+                    }
+                    onOpenMemory?.(todayMoment || displayMoment);
+                  }}
                   className="w-full"
                 >
                   <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[2px]">
