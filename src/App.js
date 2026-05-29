@@ -11750,11 +11750,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         }
 
         const { data: urlData } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(avatarPath);
-        const publicUrl = String(urlData?.publicUrl || '').trim();
-        if (!publicUrl) {
+        const basePublicUrl = String(urlData?.publicUrl || '').trim();
+        if (!basePublicUrl) {
           alert('Upload succeeded but no public URL was returned.');
           return false;
         }
+        const publicUrl = `${basePublicUrl}${basePublicUrl.includes('?') ? '&' : '?'}v=${Date.now()}`;
 
         const nextMetadata = {
           ...(user?.user_metadata || {}),
