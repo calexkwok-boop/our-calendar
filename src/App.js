@@ -31518,6 +31518,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             tripsPreview={homeTripsPreviewCards}
             activeTripIds={activeTripIdsForHome}
             recentMemory={homeRecentMemory}
+            allMemories={homeResolvedMemories}
             memoryCount={memories.length}
             memoryPhotoCount={homeMemoryPhotoCount}
             memoryReadyCount={homeMemoryReadyCount}

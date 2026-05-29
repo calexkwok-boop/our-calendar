@@ -385,6 +385,7 @@ const ScrapbookHomeHybrid = ({
 
   // Memories
   recentMemory = null,
+  allMemories = [],
   memoryCollagePhotos = [],
   collageMemories = [],
   memoryReadyCount = 0,
@@ -505,6 +506,7 @@ const ScrapbookHomeHybrid = ({
     const normalizedDate = String(memory?.date || '').trim().slice(0, 10);
     const normalizedTitle = String(memory?.title || '').trim().toLowerCase();
     const candidatePools = [
+      ...(Array.isArray(allMemories) ? allMemories.filter(Boolean) : []),
       ...(Array.isArray(momentsThisWeek) ? momentsThisWeek : []),
       ...(Array.isArray(collageMemories) ? collageMemories.filter(Boolean) : []),
       recentMemory ? [recentMemory] : [],
@@ -523,7 +525,7 @@ const ScrapbookHomeHybrid = ({
     if (candidate) return { ...candidate, canEdit: candidate.canEdit !== false };
     if (memory && typeof memory === 'object') return { ...memory, canEdit: memory.canEdit !== false };
     return null;
-  }, [collageMemories, momentsThisWeek, recentMemory]);
+  }, [allMemories, collageMemories, momentsThisWeek, recentMemory]);
 
   const openMemoryCollageLightbox = React.useCallback((url, memory = null) => {
     const normalizedUrl = String(url || '').trim();
