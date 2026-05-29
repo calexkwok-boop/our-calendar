@@ -27570,10 +27570,49 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       openMemoriesGallery();
       return;
     }
+    const resolveCanonicalMemory = (memoryLike, photoLike = null) => {
+      if (!memoryLike) return null;
+      const memoryId = String(memoryLike?.id || '').trim();
+      const memoryDate = String(memoryLike?.date || memoryLike?.createdAt || '').trim().slice(0, 10);
+      const memoryTitle = String(memoryLike?.title || '').trim().toLowerCase();
+      const photoIdCandidate = String(
+        (photoLike && typeof photoLike === 'object' ? photoLike.id : photoLike) || ''
+      ).trim();
+      const photoUrlCandidate = String(
+        (photoLike && typeof photoLike === 'object' ? (photoLike.url || photoLike.photoUrl || '') : (!photoIdCandidate ? photoLike : '')) || ''
+      ).trim();
+      const candidatePools = [
+        ...(Array.isArray(personalMemories) ? personalMemories : []),
+        ...(Array.isArray(memories) ? memories : []),
+      ];
+      const canonical = candidatePools.find((entry) => {
+        if (!entry || typeof entry !== 'object') return false;
+        const entryId = String(entry?.id || '').trim();
+        if (memoryId && entryId === memoryId) return true;
+        const entryDate = String(entry?.date || entry?.createdAt || '').trim().slice(0, 10);
+        const entryTitle = String(entry?.title || '').trim().toLowerCase();
+        if (memoryDate && memoryTitle && entryDate === memoryDate && entryTitle === memoryTitle) return true;
+        if (photoUrlCandidate) {
+          const entryPhotos = Array.isArray(entry?.photos) ? entry.photos : [];
+          const entryPhotoUrls = [
+            String(entry?.coverPhoto || entry?.photoUrl || '').trim(),
+            ...entryPhotos.flatMap((photo) => [
+              String(photo?.url || '').trim(),
+              String(photo?.photoUrl || '').trim(),
+              String(photo?.photo_url || '').trim(),
+            ]),
+          ].filter(Boolean);
+          if (entryPhotoUrls.includes(photoUrlCandidate)) return true;
+        }
+        return false;
+      });
+      return canonical || memoryLike;
+    };
+    const resolvedMemory = resolveCanonicalMemory(memory);
     setMemoryCreateDraft(null);
     setMemoryDraftSourceLabel('');
     setMemorySystemEditPhotoId('');
-    setMemorySystemCurrentMemory(memory);
+    setMemorySystemCurrentMemory(resolvedMemory);
     setMemorySystemView('viewer');
     setMemorySystemOpenedDirectly(true);
     setMemorySystemSessionKey((key) => key + 1);
@@ -27585,22 +27624,65 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       openMemoriesGallery();
       return;
     }
+    const resolveCanonicalMemory = (memoryLike) => {
+      if (!memoryLike) return null;
+      const memoryId = String(memoryLike?.id || '').trim();
+      const memoryDate = String(memoryLike?.date || memoryLike?.createdAt || '').trim().slice(0, 10);
+      const memoryTitle = String(memoryLike?.title || '').trim().toLowerCase();
+      const photoIdCandidate = String(
+        (photoLike && typeof photoLike === 'object' ? photoLike.id : photoLike) || ''
+      ).trim();
+      const photoUrlCandidate = String(
+        (photoLike && typeof photoLike === 'object' ? (photoLike.url || photoLike.photoUrl || '') : (!photoIdCandidate ? photoLike : '')) || ''
+      ).trim();
+      const candidatePools = [
+        ...(Array.isArray(personalMemories) ? personalMemories : []),
+        ...(Array.isArray(memories) ? memories : []),
+      ];
+      const canonical = candidatePools.find((entry) => {
+        if (!entry || typeof entry !== 'object') return false;
+        const entryId = String(entry?.id || '').trim();
+        if (memoryId && entryId === memoryId) return true;
+        const entryDate = String(entry?.date || entry?.createdAt || '').trim().slice(0, 10);
+        const entryTitle = String(entry?.title || '').trim().toLowerCase();
+        if (memoryDate && memoryTitle && entryDate === memoryDate && entryTitle === memoryTitle) return true;
+        if (photoUrlCandidate) {
+          const entryPhotos = Array.isArray(entry?.photos) ? entry.photos : [];
+          const entryPhotoUrls = [
+            String(entry?.coverPhoto || entry?.photoUrl || '').trim(),
+            ...entryPhotos.flatMap((photo) => [
+              String(photo?.url || '').trim(),
+              String(photo?.photoUrl || '').trim(),
+              String(photo?.photo_url || '').trim(),
+            ]),
+          ].filter(Boolean);
+          if (entryPhotoUrls.includes(photoUrlCandidate)) return true;
+        }
+        return false;
+      });
+      return canonical || memoryLike;
+    };
+    const resolvedMemory = resolveCanonicalMemory(memory);
     const photoIdCandidate = String(
       (photoLike && typeof photoLike === 'object' ? photoLike.id : photoLike) || ''
     ).trim();
     const photoUrlCandidate = String(
       (photoLike && typeof photoLike === 'object' ? photoLike.url : (!photoIdCandidate ? photoLike : '')) || ''
     ).trim();
-    const memoryPhotos = Array.isArray(memory?.photos) ? memory.photos : [];
+    const memoryPhotos = Array.isArray(resolvedMemory?.photos) ? resolvedMemory.photos : [];
     const matchedPhotoId = photoIdCandidate || String(
-      (memoryPhotos.find((photo) => String(photo?.url || '').trim() === photoUrlCandidate)?.id)
+      (memoryPhotos.find((photo) => (
+        String(photo?.url || '').trim() === photoUrlCandidate
+        || String(photo?.photoUrl || '').trim() === photoUrlCandidate
+        || String(photo?.photo_url || '').trim() === photoUrlCandidate
+      ))?.id)
       || memoryPhotos[0]?.id
       || ''
     ).trim();
 
     setMemoryCreateDraft(null);
     setMemoryDraftSourceLabel('');
-    setMemorySystemCurrentMemory(memory);
+    setMemorySystemCurrentMemory(resolvedMemory);
     setMemorySystemEditPhotoId(matchedPhotoId);
     setMemorySystemView('edit');
     setMemorySystemOpenedDirectly(true);
