@@ -11039,12 +11039,12 @@ useEffect(() => {
     },
   }), [themeAccentSoftBg, themeAccentSofterBg, themeAccentBorder, themeAccentGradient, activeLayerPageTheme.accent, darkMode]);
   const currentUserProfilePhotoUrl = String(
-    getUserProfilePhotoUrl(user)
-    || getStableAvatarPublicUrl(user?.id)
-    || profilePhotoOverrideUrl
+    profilePhotoOverrideUrl
     || preservedProfilePhotoUrlRef.current
+    || getUserProfilePhotoUrl(user)
     || readCachedProfilePhotoUrl(user)
     || readCachedProfilePhotoUrl(user?.id)
+    || getStableAvatarPublicUrl(user?.id)
     || ''
   ).trim();
   useEffect(() => {
@@ -12185,7 +12185,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const ratio = (measuredW > 0 && measuredH > 0) ? (measuredW / measuredH) : 3;
     const width = 360;
     const height = Math.max(90, Math.min(220, Math.round(width / ratio)));
-    const targetW = 1800;
+    const targetW = 1280;
     const targetH = Math.max(300, Math.round(targetW / ratio));
     return { width, height, targetW, targetH };
   };
@@ -12283,7 +12283,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(img, srcX, srcY, srcCropW, srcCropH, 0, 0, metrics.targetW, metrics.targetH);
-    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.94));
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.84));
     if (!blob) {
       alert('Could not finalize cropped image.');
       return;
