@@ -153,7 +153,7 @@ const normalizeTripPhotoUrl = (value) => {
         if (idx === -1) continue;
         const objectPath = normalizeStorageObjectPath(parsed.pathname.slice(idx + marker.length));
         const origin = SUPABASE_URL || `${parsed.protocol}//${parsed.host}`;
-        return `${origin}/storage/v1/object/public/${bucket}/${objectPath}`;
+        return `${origin}/storage/v1/object/public/${bucket}/${objectPath}${parsed.search}${parsed.hash}`;
       }
     }
     if (parsed.pathname) {
@@ -2140,7 +2140,6 @@ const getUserProfilePhotoUrl = (authUser) => {
     ]))
     : [];
   const candidates = [
-    getStableAvatarPublicUrl(authUser),
     metadata?.avatar_url,
     metadata?.picture,
     metadata?.photo_url,
@@ -2155,6 +2154,7 @@ const getUserProfilePhotoUrl = (authUser) => {
     authUser?.picture,
     ...identityCandidates,
     readCachedProfilePhotoUrl(authUser),
+    getStableAvatarPublicUrl(authUser),
   ];
   for (const candidate of candidates) {
     const url = normalizeProfilePhotoUrl(candidate);
@@ -11785,7 +11785,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
       // ── Non-avatar (header/icon layer media): existing trip-photos/layer-media logic ──
       const filename = `layer-media/${activeLayerId}/${mediaKind}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
-      const buckets = PROFILE_PHOTO_BUCKETS;
+      const buckets = mediaKind === 'header' ? TRIP_PHOTO_BUCKETS : PROFILE_PHOTO_BUCKETS;
       let selectedBucket = null;
       let lastError = null;
 
