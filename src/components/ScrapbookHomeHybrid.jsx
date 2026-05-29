@@ -500,19 +500,45 @@ const ScrapbookHomeHybrid = ({
   ), [memoryCollagePhotos]);
   const [openMemoryCollagePhoto, setOpenMemoryCollagePhoto] = useState(null);
 
+  const resolveEditableMemory = React.useCallback((memory, url = '') => {
+    const normalizedUrl = String(url || memory?.photoUrl || '').trim();
+    const normalizedDate = String(memory?.date || '').trim().slice(0, 10);
+    const normalizedTitle = String(memory?.title || '').trim().toLowerCase();
+    const candidatePools = [
+      ...(Array.isArray(momentsThisWeek) ? momentsThisWeek : []),
+      ...(Array.isArray(collageMemories) ? collageMemories.filter(Boolean) : []),
+      recentMemory ? [recentMemory] : [],
+    ];
+    const candidate = candidatePools.find((entry) => {
+      if (!entry || typeof entry !== 'object') return false;
+      const entryUrl = String(entry?.photoUrl || entry?.coverPhoto || '').trim();
+      const entryDate = String(entry?.date || '').trim().slice(0, 10);
+      const entryTitle = String(entry?.title || '').trim().toLowerCase();
+      return (
+        (normalizedUrl && entryUrl === normalizedUrl)
+        || (normalizedDate && entryDate === normalizedDate && normalizedTitle && entryTitle === normalizedTitle)
+        || (normalizedDate && entryDate === normalizedDate && normalizedUrl && entryUrl === normalizedUrl)
+      );
+    });
+    if (candidate) return { ...candidate, canEdit: candidate.canEdit !== false };
+    if (memory && typeof memory === 'object') return { ...memory, canEdit: memory.canEdit !== false };
+    return null;
+  }, [collageMemories, momentsThisWeek, recentMemory]);
+
   const openMemoryCollageLightbox = React.useCallback((url, memory = null) => {
     const normalizedUrl = String(url || '').trim();
+    const resolvedMemory = resolveEditableMemory(memory, normalizedUrl);
     if (!normalizedUrl) {
-      onOpenMemory?.(memory || null);
+      onOpenMemory?.(resolvedMemory || memory || null);
       return;
     }
     setOpenMemoryCollagePhoto({
       url: normalizedUrl,
-      title: String(memory?.title || '').trim(),
-      date: String(memory?.date || '').trim(),
-      memory,
+      title: String(resolvedMemory?.title || memory?.title || '').trim(),
+      date: String(resolvedMemory?.date || memory?.date || '').trim(),
+      memory: resolvedMemory,
     });
-  }, [onOpenMemory]);
+  }, [onOpenMemory, resolveEditableMemory]);
 
   React.useEffect(() => {
     loadedMemoryCollageUrlsRef.current = loadedMemoryCollageUrls;
