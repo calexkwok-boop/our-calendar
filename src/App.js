@@ -4057,6 +4057,7 @@ function App() {
   const [showMemorySystem, setShowMemorySystem] = useState(false);
   const [memorySystemView, setMemorySystemView] = useState('gallery');
   const [memorySystemCurrentMemory, setMemorySystemCurrentMemory] = useState(null);
+  const [memorySystemEditPhotoId, setMemorySystemEditPhotoId] = useState('');
   const [memoryCreateDraft, setMemoryCreateDraft] = useState(null);
   const [memoryDraftSourceLabel, setMemoryDraftSourceLabel] = useState('');
   const [memorySystemSessionKey, setMemorySystemSessionKey] = useState(0);
@@ -27060,6 +27061,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     setShowMemorySystem(false);
     setMemorySystemView('gallery');
     setMemorySystemCurrentMemory(null);
+    setMemorySystemEditPhotoId('');
     setMemoryCreateDraft(null);
     setMemoryDraftSourceLabel('');
     setMemorySystemOpenedDirectly(false);
@@ -27067,6 +27069,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
   const openMemoriesGallery = () => {
     setMemorySystemCurrentMemory(null);
+    setMemorySystemEditPhotoId('');
     setMemoryCreateDraft(null);
     setMemoryDraftSourceLabel('');
     setMemorySystemView('gallery');
@@ -27569,8 +27572,37 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     }
     setMemoryCreateDraft(null);
     setMemoryDraftSourceLabel('');
+    setMemorySystemEditPhotoId('');
     setMemorySystemCurrentMemory(memory);
     setMemorySystemView('viewer');
+    setMemorySystemOpenedDirectly(true);
+    setMemorySystemSessionKey((key) => key + 1);
+    setShowMemorySystem(true);
+  };
+
+  const openMemoryPhotoEditor = (memory, photoLike = null) => {
+    if (!memory) {
+      openMemoriesGallery();
+      return;
+    }
+    const photoIdCandidate = String(
+      (photoLike && typeof photoLike === 'object' ? photoLike.id : photoLike) || ''
+    ).trim();
+    const photoUrlCandidate = String(
+      (photoLike && typeof photoLike === 'object' ? photoLike.url : (!photoIdCandidate ? photoLike : '')) || ''
+    ).trim();
+    const memoryPhotos = Array.isArray(memory?.photos) ? memory.photos : [];
+    const matchedPhotoId = photoIdCandidate || String(
+      (memoryPhotos.find((photo) => String(photo?.url || '').trim() === photoUrlCandidate)?.id)
+      || memoryPhotos[0]?.id
+      || ''
+    ).trim();
+
+    setMemoryCreateDraft(null);
+    setMemoryDraftSourceLabel('');
+    setMemorySystemCurrentMemory(memory);
+    setMemorySystemEditPhotoId(matchedPhotoId);
+    setMemorySystemView('edit');
     setMemorySystemOpenedDirectly(true);
     setMemorySystemSessionKey((key) => key + 1);
     setShowMemorySystem(true);
@@ -28222,6 +28254,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               closeViewerToSystem={memorySystemOpenedDirectly}
               onViewChange={setMemorySystemView}
               onSetCurrentMemory={setMemorySystemCurrentMemory}
+              initialEditPhotoId={memorySystemEditPhotoId}
               user={user}
               darkMode={darkMode}
             />
@@ -31434,6 +31467,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             onStartTrip={handleHomeStartTrip}
             onOpenMemories={openMemoriesGallery}
             onOpenMemory={openMemoryViewer}
+            onEditMemoryPhoto={openMemoryPhotoEditor}
             onCreateMemoryFromEvent={createMemoryFromEvent}
             onOpenJourney={openJourneyTab}
             onOpenExplore={() => setBottomNavTab('explore')}

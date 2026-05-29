@@ -391,6 +391,7 @@ const ScrapbookHomeHybrid = ({
   memoryPhotoCount = 0,
   memoryOpportunities = [],
   onOpenMemories,
+  onEditMemoryPhoto,
   onCreateMemoryFromEvent,
 
   // Journey (mini card)
@@ -509,6 +510,7 @@ const ScrapbookHomeHybrid = ({
       url: normalizedUrl,
       title: String(memory?.title || '').trim(),
       date: String(memory?.date || '').trim(),
+      memory,
     });
   }, [onOpenMemory]);
 
@@ -1437,20 +1439,32 @@ const ScrapbookHomeHybrid = ({
           className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/90 p-4"
           onClick={() => setOpenMemoryCollagePhoto(null)}
         >
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              setOpenMemoryCollagePhoto(null);
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setOpenMemoryCollagePhoto(null);
             }}
             className="absolute right-4 top-[max(1rem,calc(env(safe-area-inset-top)+0.5rem))] rounded-full bg-black/45 p-2 text-white transition-colors hover:bg-black/65"
             aria-label="Close memory photo"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          <div
-            className="w-full max-w-5xl"
-            onClick={(event) => event.stopPropagation()}
+            >
+              <X className="h-5 w-5" />
+            </button>
+            {openMemoryCollagePhoto.memory?.canEdit && (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onEditMemoryPhoto?.(openMemoryCollagePhoto.memory, openMemoryCollagePhoto.url);
+                }}
+                className="absolute right-16 top-[max(1rem,calc(env(safe-area-inset-top)+0.5rem))] rounded-full bg-black/45 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-black/65"
+              >
+                Edit
+              </button>
+            )}
+            <div
+              className="w-full max-w-5xl"
+              onClick={(event) => event.stopPropagation()}
           >
             <img
               src={openMemoryCollagePhoto.url}

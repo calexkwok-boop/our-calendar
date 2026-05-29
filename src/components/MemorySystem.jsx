@@ -331,6 +331,7 @@ const MemorySystem = ({
   closeViewerToSystem = false,
   onViewChange,
   onSetCurrentMemory,
+  initialEditPhotoId = '',
   
   // User
   user,
@@ -340,6 +341,7 @@ const MemorySystem = ({
 }) => {
   const [activeView, setActiveView] = useState(view);
   const [selectedMemory, setSelectedMemory] = useState(currentMemory);
+  const [editPhotoTargetId, setEditPhotoTargetId] = useState(String(initialEditPhotoId || '').trim());
 
   useEffect(() => {
     setActiveView((prev) => (prev === view ? prev : view));
@@ -348,6 +350,10 @@ const MemorySystem = ({
   useEffect(() => {
     setSelectedMemory((prev) => (prev === currentMemory ? prev : currentMemory));
   }, [currentMemory]);
+
+  useEffect(() => {
+    setEditPhotoTargetId(String(initialEditPhotoId || '').trim());
+  }, [initialEditPhotoId]);
 
   useEffect(() => {
     if (!selectedMemory?.id) return;
@@ -402,6 +408,7 @@ const MemorySystem = ({
           }}
           onCreate={(memoryData) => {
             onCreateMemory(memoryData);
+            setEditPhotoTargetId('');
             setActiveView('gallery');
             onViewChange?.('gallery');
           }}
@@ -427,6 +434,12 @@ const MemorySystem = ({
             onViewChange?.('gallery');
           }}
           onEdit={() => {
+            setEditPhotoTargetId('');
+            setActiveView('edit');
+            onViewChange?.('edit');
+          }}
+          onEditPhoto={(photoId) => {
+            setEditPhotoTargetId(String(photoId || '').trim());
             setActiveView('edit');
             onViewChange?.('edit');
           }}
@@ -447,6 +460,7 @@ const MemorySystem = ({
       {activeView === 'edit' && selectedMemory && (
         <MemoryCreator
           onCancel={() => {
+            setEditPhotoTargetId('');
             setActiveView('viewer');
             onViewChange?.('viewer');
           }}
@@ -472,6 +486,7 @@ const MemorySystem = ({
               coverPhoto: getMemoryCoverUrl({ ...memoryData, photos }),
               photos,
             }));
+            setEditPhotoTargetId('');
             setActiveView('viewer');
             onViewChange?.('viewer');
           }}
@@ -481,6 +496,7 @@ const MemorySystem = ({
           initialData={selectedMemory}
           darkMode={darkMode}
           submitLabel="Save Memory"
+          autoOpenCropPhotoId={editPhotoTargetId}
         />
       )}
     </div>
@@ -780,7 +796,7 @@ const MemoryThumbnail = ({ memory, onClick, onToggleFavorite, onDelete, deleteRe
 // MEMORY CREATOR
 // ============================================================================
 
-export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, darkMode, initialData, autoCreateOnPhotoAdd = false, submitLabel = 'Create a Memory' }) => {
+export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, darkMode, initialData, autoCreateOnPhotoAdd = false, submitLabel = 'Create a Memory', autoOpenCropPhotoId = '' }) => {
   const [step, setStep] = useState(1); // 1: photos, 2: details, 3: people, 4: preview
   const [memoryData, setMemoryData] = useState(() => createEmptyMemoryDraft(initialData || {}));
   const autoCreatedRef = useRef(false);
@@ -904,6 +920,7 @@ export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, use
           onChange={setMemoryData}
           onAddPhoto={onAddPhoto}
           darkMode={darkMode}
+          autoOpenCropPhotoId={autoOpenCropPhotoId}
           quickSaveOnPhotoAdd={photoOnlyMode}
           photoOnlyMode={photoOnlyMode}
           onTogglePhotoOnlyMode={() => setPhotoOnlyMode((prev) => !prev)}
@@ -1127,6 +1144,7 @@ const MemoryPhotosStep = ({
   onChange,
   onAddPhoto,
   darkMode,
+  autoOpenCropPhotoId = '',
   quickSaveOnPhotoAdd = false,
   photoOnlyMode = false,
   onTogglePhotoOnlyMode,
@@ -1138,6 +1156,7 @@ const MemoryPhotosStep = ({
   const [cropNatural, setCropNatural] = useState({ width: 0, height: 0 });
   const [cropZoom, setCropZoom] = useState(1);
   const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
+  const openedAutoCropPhotoIdRef = useRef('');
 
   const closeCropModal = () => {
     setCropTargetPhotoId(null);
@@ -1160,6 +1179,21 @@ const MemoryPhotosStep = ({
     setCropOffset({ x: 0, y: 0 });
     cropDragRef.current = { active: false, startX: 0, startY: 0, baseX: 0, baseY: 0 };
   };
+
+  useEffect(() => {
+    const targetPhotoId = String(autoOpenCropPhotoId || '').trim();
+    if (!targetPhotoId) {
+      openedAutoCropPhotoIdRef.current = '';
+      return;
+    }
+    if (openedAutoCropPhotoIdRef.current === targetPhotoId) return;
+    const targetPhoto = (Array.isArray(data.photos) ? data.photos : []).find(
+      (photo) => String(photo?.id || '').trim() === targetPhotoId
+    );
+    if (!targetPhoto?.url) return;
+    openedAutoCropPhotoIdRef.current = targetPhotoId;
+    openCropModalForPhoto(targetPhoto);
+  }, [autoOpenCropPhotoId, data.photos]);
 
   const startCropDragAt = (clientX, clientY) => {
     const base = clampMemoryPhotoCropOffset(cropNatural, cropZoom, cropOffset);
@@ -1778,7 +1812,7 @@ const MemoryPreviewStep = ({ data, darkMode }) => {
 // MEMORY VIEWER
 // ============================================================================
 
-const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, onShare, user, darkMode }) => {
+const MemoryViewer = ({ memory, onClose, onEdit, onEditPhoto, onDelete, onReact, onComment, onShare, user, darkMode }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
@@ -1865,12 +1899,18 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
               <Share2 className="w-5 h-5 text-white" />
             </button>
             
-            {memory.canEdit && (
-              <button
-                onClick={onEdit}
-                className="pointer-events-auto p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all">
-                <Edit2 className="w-5 h-5 text-white" />
-              </button>
+             {memory.canEdit && (
+               <button
+                 onClick={() => {
+                   if (isPhotoSlideFocused && currentSlideData?.data?.id) {
+                     onEditPhoto?.(currentSlideData.data.id);
+                     return;
+                   }
+                   onEdit?.();
+                 }}
+                 className="pointer-events-auto p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all">
+                 <Edit2 className="w-5 h-5 text-white" />
+               </button>
             )}
           </div>
         </div>
