@@ -28733,10 +28733,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           }}
           style={bottomNavTab !== 'home' && bottomNavTab !== 'events' && bottomNavTab !== 'explore' && bottomNavTab !== 'someday' && hasActiveLayerHeaderCover && effectiveCoverOpacity > 0.01
             ? {
-              backgroundImage: `linear-gradient(${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}, ${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}), url(${activeLayer.header_bg_url})`,
-              backgroundSize: 'cover',
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'center',
+              backgroundImage: `linear-gradient(${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}, ${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}), url(${activeLayer.header_bg_url}), url(${activeLayer.header_bg_url})`,
+              backgroundSize: 'auto, cover, contain',
+              backgroundRepeat: 'no-repeat, no-repeat, no-repeat',
+              backgroundPosition: 'center, center, center',
             }
               : undefined}
         >
