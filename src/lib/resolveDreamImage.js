@@ -36,6 +36,8 @@ const DREAM_CATEGORY_MAP = {
 const TITLE_IMAGE_OVERRIDES = {
   "disneyland park": "https://commons.wikimedia.org/wiki/Special:FilePath/File:Disneyland%20park%20-%20Anaheim%20Los%20Angeles%20California%20USA%20%289894308516%29.jpg",
   "ceres": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80",
+  "din tai fung": "https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=900&q=80",
+  "willow osteria": "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=900&q=80",
   "machu pichu": "https://lh3.googleusercontent.com/gps-cs-s/APNQkAGTEX0fTBAvsYUuqtBZQfQiab4l3IOmdNZXUnRlN3GyYkmpf_8WPNepzIBK_koBg2WcwHgxlW7kwZb_RpwePJg7pcpyIOC3Z5JIZ9xti2TylAiKXLV4aLN7ODPl5yFbRWE34_g=s1360-w1360-h1020-rw",
   "old quarter street wander hanoi": "https://images.unsplash.com/photo-1557750255-c76072a7aad1?w=900&q=80",
   "old quarter street wander, hanoi": "https://images.unsplash.com/photo-1557750255-c76072a7aad1?w=900&q=80",
@@ -47,6 +49,8 @@ const TITLE_IMAGE_OVERRIDES = {
 const TITLE_TYPE_OVERRIDES = {
   "chanel classic flap": "products",
   "chanel classic flip": "products",
+  "din tai fung": "restaurants",
+  "willow osteria": "restaurants",
   "oldboy": "movies",
   "the italian job": "movies",
   "italian job": "movies",
@@ -194,7 +198,7 @@ export const resolveDreamContentType = (item) => {
   if (rawCategoryId === "buy" || category === "buy") return "products";
 
   if (/(disneyland|disney world|orlando|anaheim|boston|iceland|northern lights|mountains|mountain|beach|bay|park|island|islands|coast|canyon|falls|temple|resort|hotel|hyatt)/.test(title)) return "destinations";
-  if (/(din tai fung|nobu|brodard|oiza|kitchen|bbq|grill|cafe|coffee|ramen|sushi|pizza|restaurant|eatery|bistro|diner)/.test(title)) return "restaurants";
+  if (/(din tai fung|nobu|brodard|oiza|kitchen|bbq|grill|cafe|coffee|ramen|sushi|pizza|restaurant|eatery|bistro|diner|osteria|trattoria)/.test(title)) return "restaurants";
   if (/(ray-ban|meta|wayfarer|bag|handbag|flap|chanel|birkin|watch|bracelet|ring|shoes|sneakers|camera|whoop|oura|garmin|bike|paddle|purse)/.test(title)) return "products";
   if (/(oldboy|italian job|movie|film|criterion|screening)/.test(title)) return "movies";
   if (/(hike|trail|summit|peak|trek|climb|camp|adventure|skydiving|parasailing)/.test(title)) return "hiking";
