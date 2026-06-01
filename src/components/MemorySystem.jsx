@@ -1,5 +1,5 @@
 // MemorySystem.jsx - Complete memory/keepsake system for special events
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Sparkles, Camera, Heart, MessageCircle, Share2, X,
   ChevronLeft, ChevronRight, Plus, Check, Eye, Calendar, MapPin, Edit2, Trash2, Star
@@ -87,6 +87,15 @@ const getMemoryCoverUrl = (memory, preference = 'display') => {
     || memory?.photo_url
     || ''
   ).trim());
+};
+
+const getMemoryTimelineDate = (memory) => {
+  const candidates = [memory?.date, memory?.createdAt, memory?.updatedAt];
+  for (const value of candidates) {
+    const normalized = normalizeMemoryDateInput(value);
+    if (normalized) return normalized;
+  }
+  return '';
 };
 
 const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
@@ -507,20 +516,30 @@ const MemorySystem = ({
 // ============================================================================
 
 const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, onToggleFavorite, onDeleteMemory, darkMode }) => {
-  const safeMemories = Array.isArray(memories) ? memories : [];
+  const safeMemories = useMemo(() => (
+    [...(Array.isArray(memories) ? memories : [])].sort((left, right) => (
+      Number(new Date(getMemoryTimelineDate(right) || 0)) - Number(new Date(getMemoryTimelineDate(left) || 0))
+    ))
+  ), [memories]);
   const [deleteReadyMemoryId, setDeleteReadyMemoryId] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const favoriteMemories = safeMemories.filter((memory) => Boolean(memory?.isFavorite));
   const visibleMemories = activeTab === 'favorites' ? favoriteMemories : safeMemories;
-  // Group memories by year
+  // Group memories by year, falling back to create/update timestamps for legacy rows.
   const memoriesByYear = visibleMemories.reduce((acc, memory) => {
-    const year = new Date(memory.date).getFullYear();
+    const timelineDate = getMemoryTimelineDate(memory);
+    const parsedYear = Number(new Date(timelineDate || 0).getFullYear());
+    const year = Number.isFinite(parsedYear) ? parsedYear : 'Recent';
     if (!acc[year]) acc[year] = [];
     acc[year].push(memory);
     return acc;
   }, {});
   
-  const years = Object.keys(memoriesByYear).sort((a, b) => b - a);
+  const years = Object.keys(memoriesByYear).sort((a, b) => {
+    if (a === 'Recent') return 1;
+    if (b === 'Recent') return -1;
+    return Number(b) - Number(a);
+  });
   
   return (
     <div className="memories-gallery w-full space-y-6 pb-[max(5rem,calc(env(safe-area-inset-bottom)+4.5rem))]">

@@ -28248,12 +28248,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     };
   };
 
-  const memorySystemMemories = personalMemories.map((memory) => applyTripRosterToMemory(memory));
+  const memorySystemSourceMemories = [...(Array.isArray(memories) ? memories : [])].sort((a, b) => (
+    Number(new Date(b?.date || b?.createdAt || b?.updatedAt || 0))
+    - Number(new Date(a?.date || a?.createdAt || a?.updatedAt || 0))
+  ));
+  const memorySystemMemories = memorySystemSourceMemories.map((memory) => applyTripRosterToMemory(memory));
   const currentMemoryId = String(memorySystemCurrentMemory?.id || '').trim();
   const freshestCurrentMemory = memorySystemCurrentMemory
     ? (
       (currentMemoryId
-        ? personalMemories.find((memory) => String(memory?.id || '').trim() === currentMemoryId)
+        ? memorySystemSourceMemories.find((memory) => String(memory?.id || '').trim() === currentMemoryId)
         : null)
       || memorySystemCurrentMemory
     )
