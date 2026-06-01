@@ -44,6 +44,7 @@ const TITLE_IMAGE_OVERRIDES = {
   "gary dankok": "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=900&q=80",
   "the french laundry": "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=900&q=80",
   "french laundry": "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=900&q=80",
+  "french laudry": "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=900&q=80",
   "hublot big bang": "https://images.unsplash.com/photo-1547996160-81dfa63595aa?auto=format&fit=crop&w=900&q=80",
   "old quarter street wander hanoi": "https://images.unsplash.com/photo-1557750255-c76072a7aad1?w=900&q=80",
   "old quarter street wander, hanoi": "https://images.unsplash.com/photo-1557750255-c76072a7aad1?w=900&q=80",
@@ -61,6 +62,7 @@ const TITLE_TYPE_OVERRIDES = {
   "gary dankok": "restaurants",
   "the french laundry": "restaurants",
   "french laundry": "restaurants",
+  "french laudry": "restaurants",
   "ceres": "restaurants",
   "hublot big bang": "products",
   "machu picchu": "destinations",
@@ -73,6 +75,7 @@ const TITLE_TYPE_OVERRIDES = {
 const NORMALIZED_TITLE_ALIASES = {
   "machu pichu": "machu picchu",
   "gary dankok": "gary danko",
+  "french laudry": "french laundry",
 };
 
 const GENERIC_RESTAURANT_IMAGE_URLS = new Set([
@@ -301,7 +304,10 @@ export const resolveDreamImageCandidates = (item) => {
     }
     candidates.push(normalized);
   };
-  queueCandidate(findTitleOverrideImage(title), { allowGenericRestaurant: true });
+  const titleOverrideImage = findTitleOverrideImage(title);
+  if (titleOverrideImage) {
+    return [String(titleOverrideImage).trim()];
+  }
 
   const directImageUrl = readDirectDreamImageUrl(item);
   const catalogImageUrl = findExploreCatalogImageUrlByTitle(title);
