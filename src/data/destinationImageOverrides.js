@@ -71,6 +71,11 @@ const RAW_DESTINATION_IMAGE_OVERRIDES = {
   'tuscany-road-trip': 'https://www.happy.rentals/admin/uploads/The-iconic-cypress-lined-road-in-Asciano-Province-of-Siena-Crete-Senesi-11041.jpg',
   'new-zealand-south-island': 'https://static.routesonline.com/images/cached/newsarticle-298184-scaled-620x0.jpg',
   'machu-picchu': 'https://lh3.googleusercontent.com/gps-cs-s/APNQkAGTEX0fTBAvsYUuqtBZQfQiab4l3IOmdNZXUnRlN3GyYkmpf_8WPNepzIBK_koBg2WcwHgxlW7kwZb_RpwePJg7pcpyIOC3Z5JIZ9xti2TylAiKXLV4aLN7ODPl5yFbRWE34_g=s1360-w1360-h1020-rw',
+  ceres: 'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=900&q=80',
+  'gary-danko': 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=900&q=80',
+  'the-french-laundry': 'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=900&q=80',
+  'french-laundry': 'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=900&q=80',
+  'willow-osteria': 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=80',
   'serengeti': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Serengeti_sunset-1001.jpg/500px-Serengeti_sunset-1001.jpg',
   'angkor-wat': 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Buddhist_monks_in_front_of_the_Angkor_Wat.jpg/500px-Buddhist_monks_in_front_of_the_Angkor_Wat.jpg',
   'bora-bora': 'https://digital.ihg.com/is/image/ihg/intercontinental-bora-bora-9636653008-2x1?size=700,0',
@@ -98,8 +103,10 @@ export const DESTINATION_IMAGE_OVERRIDES = Object.freeze(
 const DESTINATION_IMAGE_KEY_ALIASES = Object.freeze({
   anaheim: 'anaheim-california',
   amazon: 'the-amazon',
+  'gary-dankok': 'gary-danko',
   'machu-pichu': 'machu-picchu',
   'disneyland-anaheim': 'disneyland-anaheim-california',
+  'french-laudry': 'french-laundry',
   'galapagos-islands': 'the-galapagos-islands',
   'icefields-parkway': 'the-icefields-parkway',
   'the-gal-pagos-islands': 'the-galapagos-islands',
@@ -107,6 +114,8 @@ const DESTINATION_IMAGE_KEY_ALIASES = Object.freeze({
 });
 
 const DESTINATION_IMAGE_TEXT_ALIASES = Object.freeze({
+  'gary-dankok': 'gary-danko',
+  'french-laudry': 'french-laundry',
   'machu-pichu': 'machu-picchu',
 });
 
