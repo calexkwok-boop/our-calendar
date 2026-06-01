@@ -35,17 +35,8 @@ const DREAM_CATEGORY_MAP = {
 
 const TITLE_IMAGE_OVERRIDES = {
   "disneyland park": "https://commons.wikimedia.org/wiki/Special:FilePath/File:Disneyland%20park%20-%20Anaheim%20Los%20Angeles%20California%20USA%20%289894308516%29.jpg",
-  "ceres": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80",
-  "din tai fung": "https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=900&q=80",
-  "willow osteria": "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=900&q=80",
   "machu pichu": "https://lh3.googleusercontent.com/gps-cs-s/APNQkAGTEX0fTBAvsYUuqtBZQfQiab4l3IOmdNZXUnRlN3GyYkmpf_8WPNepzIBK_koBg2WcwHgxlW7kwZb_RpwePJg7pcpyIOC3Z5JIZ9xti2TylAiKXLV4aLN7ODPl5yFbRWE34_g=s1360-w1360-h1020-rw",
   "machu picchu": "https://lh3.googleusercontent.com/gps-cs-s/APNQkAGTEX0fTBAvsYUuqtBZQfQiab4l3IOmdNZXUnRlN3GyYkmpf_8WPNepzIBK_koBg2WcwHgxlW7kwZb_RpwePJg7pcpyIOC3Z5JIZ9xti2TylAiKXLV4aLN7ODPl5yFbRWE34_g=s1360-w1360-h1020-rw",
-  "gary danko": "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=900&q=80",
-  "gary dankok": "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=900&q=80",
-  "the french laundry": "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=900&q=80",
-  "french laundry": "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=900&q=80",
-  "french laudry": "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=900&q=80",
-  "hublot big bang": "https://images.unsplash.com/photo-1547996160-81dfa63595aa?auto=format&fit=crop&w=900&q=80",
   "old quarter street wander hanoi": "https://images.unsplash.com/photo-1557750255-c76072a7aad1?w=900&q=80",
   "old quarter street wander, hanoi": "https://images.unsplash.com/photo-1557750255-c76072a7aad1?w=900&q=80",
   "the marble mountains": "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=900&q=80",
@@ -305,7 +296,8 @@ export const resolveDreamImageCandidates = (item) => {
     candidates.push(normalized);
   };
   const titleOverrideImage = findTitleOverrideImage(title);
-  if (titleOverrideImage) {
+  const titleOverrideType = resolveDreamContentType({ ...item, text: title, label: title, title });
+  if (titleOverrideImage && !["restaurants", "products"].includes(titleOverrideType)) {
     return [String(titleOverrideImage).trim()];
   }
 
@@ -323,6 +315,11 @@ export const resolveDreamImageCandidates = (item) => {
   if (destinationOverrideImage) queueCandidate(destinationOverrideImage);
 
   if (catalogImageUrl) queueCandidate(catalogImageUrl);
+  if (titleOverrideImage) {
+    queueCandidate(titleOverrideImage, {
+      allowGenericRestaurant: !isRestaurantDream(item),
+    });
+  }
 
   const exploreType = resolveDreamContentType(item);
   if (exploreType && exploreType !== "restaurants") {
