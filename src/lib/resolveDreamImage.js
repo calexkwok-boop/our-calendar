@@ -292,6 +292,7 @@ export const resolveDreamImageCandidates = (item) => {
     || item?.destination_name
     || ""
   ).trim();
+  const restaurantDream = isRestaurantDream(item);
   const candidates = [];
   const queueCandidate = (url, options = {}) => {
     const { allowGenericRestaurant = false } = options;
@@ -319,12 +320,12 @@ export const resolveDreamImageCandidates = (item) => {
     cardTitle: title,
     title,
   });
-  if (destinationOverrideImage) queueCandidate(destinationOverrideImage);
+  if (destinationOverrideImage && !restaurantDream) queueCandidate(destinationOverrideImage);
 
   if (catalogImageUrl) queueCandidate(catalogImageUrl);
-  if (titleOverrideImage) {
+  if (titleOverrideImage && !restaurantDream) {
     queueCandidate(titleOverrideImage, {
-      allowGenericRestaurant: !isRestaurantDream(item),
+      allowGenericRestaurant: !restaurantDream,
     });
   }
 
@@ -341,13 +342,6 @@ export const resolveDreamImageCandidates = (item) => {
       destination_image: String(item?.destination_image || "").trim(),
       photo: String(item?.photo || "").trim(),
     }, ""));
-  }
-
-  if (isRestaurantDream(item) && candidates.length === 0 && GENERIC_RESTAURANT_IMAGE_LIST.length > 0) {
-    queueCandidate(
-      GENERIC_RESTAURANT_IMAGE_LIST[hashTitleIndex(title, GENERIC_RESTAURANT_IMAGE_LIST.length)],
-      { allowGenericRestaurant: true }
-    );
   }
 
   return dedupeImageUrls(candidates);
