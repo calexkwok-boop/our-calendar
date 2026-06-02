@@ -103,6 +103,19 @@ const TITLE_PLACE_QUERY_OVERRIDES = {
   "pho bo for breakfast": "pho bo Hanoi Vietnam",
 };
 
+const TITLE_IMAGE_SEARCH_OVERRIDES = {
+  "nobu": "Nobu Los Angeles West Hollywood restaurant exterior food",
+  "nobu los angeles": "Nobu Los Angeles West Hollywood restaurant exterior food",
+  "gary danko": "Restaurant Gary Danko San Francisco dining room",
+  "french laundry": "The French Laundry Yountville restaurant exterior",
+  "the french laundry": "The French Laundry Yountville restaurant exterior",
+  "willow osteria": "Willow Osteria restaurant dining",
+  "ceres": "Ceres restaurant dining",
+  "pho bo for breakfast": "pho bo Hanoi Vietnam breakfast",
+  "machu picchu": "Machu Picchu Peru travel destination",
+  "machu pichu": "Machu Picchu Peru travel destination",
+};
+
 const NORMALIZED_TITLE_ALIASES = {
   "machu pichu": "machu picchu",
   "gary dankok": "gary danko",
@@ -298,6 +311,9 @@ export const getDreamImageSearchQuery = (item) => {
     || ""
   ).trim();
   if (!title) return "";
+  const normalizedTitle = normalizeLookupTitleAlias(title);
+  const searchOverride = TITLE_IMAGE_SEARCH_OVERRIDES[normalizedTitle];
+  if (searchOverride) return searchOverride;
   if (rawType === "games" || inferredType === "games") return `${title} board game box`;
   if (rawType === "movies" || inferredType === "movies") return `${title} movie poster`;
   if (rawType === "destinations" || inferredType === "destinations" || category === "travel") return `${title} travel destination`;
