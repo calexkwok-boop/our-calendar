@@ -70,7 +70,7 @@ const RAW_DESTINATION_IMAGE_OVERRIDES = {
   'the-icefields-parkway': 'https://www.travelandleisure.com/thmb/clAPBgePJldJA7iOgkI8fYFxdIA=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/TAL-icefields-parkway-canada-GLACIERHGWAY0225-f736d5daa8d64ac6abe49df5dc283823.jpg',
   'tuscany-road-trip': 'https://www.happy.rentals/admin/uploads/The-iconic-cypress-lined-road-in-Asciano-Province-of-Siena-Crete-Senesi-11041.jpg',
   'new-zealand-south-island': 'https://static.routesonline.com/images/cached/newsarticle-298184-scaled-620x0.jpg',
-  'machu-picchu': 'https://lh3.googleusercontent.com/gps-cs-s/APNQkAGTEX0fTBAvsYUuqtBZQfQiab4l3IOmdNZXUnRlN3GyYkmpf_8WPNepzIBK_koBg2WcwHgxlW7kwZb_RpwePJg7pcpyIOC3Z5JIZ9xti2TylAiKXLV4aLN7ODPl5yFbRWE34_g=s1360-w1360-h1020-rw',
+  'machu-picchu': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Machu_Picchu%2C_Peru.jpg/1280px-Machu_Picchu%2C_Peru.jpg',
   ceres: 'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=900&q=80',
   'gary-danko': 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=900&q=80',
   'the-french-laundry': 'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=900&q=80',

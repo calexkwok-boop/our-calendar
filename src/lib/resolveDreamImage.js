@@ -53,8 +53,8 @@ const DREAM_CATEGORY_MAP = {
 
 const TITLE_IMAGE_OVERRIDES = {
   "disneyland park": "https://commons.wikimedia.org/wiki/Special:FilePath/File:Disneyland%20park%20-%20Anaheim%20Los%20Angeles%20California%20USA%20%289894308516%29.jpg",
-  "machu pichu": "https://lh3.googleusercontent.com/gps-cs-s/APNQkAGTEX0fTBAvsYUuqtBZQfQiab4l3IOmdNZXUnRlN3GyYkmpf_8WPNepzIBK_koBg2WcwHgxlW7kwZb_RpwePJg7pcpyIOC3Z5JIZ9xti2TylAiKXLV4aLN7ODPl5yFbRWE34_g=s1360-w1360-h1020-rw",
-  "machu picchu": "https://lh3.googleusercontent.com/gps-cs-s/APNQkAGTEX0fTBAvsYUuqtBZQfQiab4l3IOmdNZXUnRlN3GyYkmpf_8WPNepzIBK_koBg2WcwHgxlW7kwZb_RpwePJg7pcpyIOC3Z5JIZ9xti2TylAiKXLV4aLN7ODPl5yFbRWE34_g=s1360-w1360-h1020-rw",
+  "machu pichu": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Machu_Picchu%2C_Peru.jpg/1280px-Machu_Picchu%2C_Peru.jpg",
+  "machu picchu": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Machu_Picchu%2C_Peru.jpg/1280px-Machu_Picchu%2C_Peru.jpg",
   "ceres": "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=900&q=80",
   "nobu": "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=900&q=80",
   "nobu los angeles": "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=900&q=80",
@@ -90,6 +90,17 @@ const TITLE_TYPE_OVERRIDES = {
   "oldboy": "movies",
   "the italian job": "movies",
   "italian job": "movies",
+};
+
+const TITLE_PLACE_QUERY_OVERRIDES = {
+  "nobu": "Nobu Los Angeles West Hollywood CA restaurant",
+  "nobu los angeles": "Nobu Los Angeles West Hollywood CA restaurant",
+  "gary danko": "Restaurant Gary Danko San Francisco CA",
+  "french laundry": "The French Laundry Yountville CA",
+  "the french laundry": "The French Laundry Yountville CA",
+  "willow osteria": "Willow Osteria restaurant",
+  "ceres": "Ceres restaurant",
+  "pho bo for breakfast": "pho bo Hanoi Vietnam",
 };
 
 const NORMALIZED_TITLE_ALIASES = {
@@ -266,6 +277,9 @@ export const getDreamPlacePhotoQuery = (item) => {
     || ""
   ).trim();
   if (!title) return "";
+  const normalizedTitle = normalizeLookupTitleAlias(title);
+  const queryOverride = TITLE_PLACE_QUERY_OVERRIDES[normalizedTitle];
+  if (queryOverride) return queryOverride;
   return `${title} restaurant ${location}`.trim();
 };
 
@@ -327,18 +341,17 @@ export const resolveDreamImageCandidates = (item) => {
   };
   const titleOverrideImage = findTitleOverrideImage(title);
   const titleOverrideType = resolveDreamContentType({ ...item, text: title, label: title, title });
-  const titleOverrideIsSpecificRestaurantImage = Boolean(
-    titleOverrideImage
-    && restaurantDream
-    && !GENERIC_RESTAURANT_IMAGE_URLS.has(String(titleOverrideImage).trim())
-  );
   if (titleOverrideImage && !["restaurants", "products"].includes(titleOverrideType)) {
     return [String(titleOverrideImage).trim()];
   }
 
   const directImageUrl = readDirectDreamImageUrl(item);
   const catalogImageUrl = findExploreCatalogImageUrlByTitle(title);
-  if (directImageUrl) queueCandidate(directImageUrl);
+  const shouldSkipStaticRestaurantFallback = restaurantDream && (
+    (titleOverrideImage && directImageUrl === String(titleOverrideImage).trim())
+    || GENERIC_RESTAURANT_IMAGE_URLS.has(String(directImageUrl || "").trim())
+  );
+  if (directImageUrl && !shouldSkipStaticRestaurantFallback) queueCandidate(directImageUrl);
 
   const destinationOverrideImage = getDestinationImageOverride({
     id: item?.id,
@@ -349,10 +362,10 @@ export const resolveDreamImageCandidates = (item) => {
   });
   if (destinationOverrideImage && !restaurantDream) queueCandidate(destinationOverrideImage);
 
-  if (catalogImageUrl) queueCandidate(catalogImageUrl);
-  if (titleOverrideImage && (!restaurantDream || titleOverrideIsSpecificRestaurantImage)) {
+  if (catalogImageUrl && !restaurantDream) queueCandidate(catalogImageUrl);
+  if (titleOverrideImage && !restaurantDream) {
     queueCandidate(titleOverrideImage, {
-      allowGenericRestaurant: !restaurantDream || titleOverrideIsSpecificRestaurantImage,
+      allowGenericRestaurant: true,
     });
   }
 
