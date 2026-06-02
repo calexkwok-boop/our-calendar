@@ -15,6 +15,24 @@ const DIRECT_IMAGE_FIELDS = [
   "attachmentUrl",
 ];
 
+const normalizeDreamImageUrl = (value = "") => {
+  const normalized = String(value || "").trim();
+  if (!normalized) return "";
+  const lower = normalized.toLowerCase();
+  if (
+    lower === "?"
+    || lower === "??"
+    || lower === "null"
+    || lower === "undefined"
+    || lower === "[object object]"
+    || lower === "n/a"
+    || lower === "na"
+  ) {
+    return "";
+  }
+  return normalized;
+};
+
 const DREAM_CATEGORY_MAP = {
   places: "travel",
   travel: "travel",
@@ -38,6 +56,8 @@ const TITLE_IMAGE_OVERRIDES = {
   "machu pichu": "https://lh3.googleusercontent.com/gps-cs-s/APNQkAGTEX0fTBAvsYUuqtBZQfQiab4l3IOmdNZXUnRlN3GyYkmpf_8WPNepzIBK_koBg2WcwHgxlW7kwZb_RpwePJg7pcpyIOC3Z5JIZ9xti2TylAiKXLV4aLN7ODPl5yFbRWE34_g=s1360-w1360-h1020-rw",
   "machu picchu": "https://lh3.googleusercontent.com/gps-cs-s/APNQkAGTEX0fTBAvsYUuqtBZQfQiab4l3IOmdNZXUnRlN3GyYkmpf_8WPNepzIBK_koBg2WcwHgxlW7kwZb_RpwePJg7pcpyIOC3Z5JIZ9xti2TylAiKXLV4aLN7ODPl5yFbRWE34_g=s1360-w1360-h1020-rw",
   "ceres": "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=900&q=80",
+  "nobu": "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=900&q=80",
+  "nobu los angeles": "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=900&q=80",
   "gary danko": "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=900&q=80",
   "gary dankok": "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=900&q=80",
   "willow osteria": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=80",
@@ -56,6 +76,8 @@ const TITLE_TYPE_OVERRIDES = {
   "chanel classic flip": "products",
   "din tai fung": "restaurants",
   "willow osteria": "restaurants",
+  "nobu": "restaurants",
+  "nobu los angeles": "restaurants",
   "gary danko": "restaurants",
   "gary dankok": "restaurants",
   "the french laundry": "restaurants",
@@ -172,10 +194,10 @@ const resolveRawType = (item) => {
 
 export const readDirectDreamImageUrl = (item) => {
   for (const field of DIRECT_IMAGE_FIELDS) {
-    const value = String(item?.[field] || "").trim();
+    const value = normalizeDreamImageUrl(item?.[field]);
     if (value) return value;
   }
-  return String(item?.photos?.[0]?.url || "").trim();
+  return normalizeDreamImageUrl(item?.photos?.[0]?.url);
 };
 
 export const normalizeDreamCategory = (item) => {
@@ -305,6 +327,11 @@ export const resolveDreamImageCandidates = (item) => {
   };
   const titleOverrideImage = findTitleOverrideImage(title);
   const titleOverrideType = resolveDreamContentType({ ...item, text: title, label: title, title });
+  const titleOverrideIsSpecificRestaurantImage = Boolean(
+    titleOverrideImage
+    && restaurantDream
+    && !GENERIC_RESTAURANT_IMAGE_URLS.has(String(titleOverrideImage).trim())
+  );
   if (titleOverrideImage && !["restaurants", "products"].includes(titleOverrideType)) {
     return [String(titleOverrideImage).trim()];
   }
@@ -323,9 +350,9 @@ export const resolveDreamImageCandidates = (item) => {
   if (destinationOverrideImage && !restaurantDream) queueCandidate(destinationOverrideImage);
 
   if (catalogImageUrl) queueCandidate(catalogImageUrl);
-  if (titleOverrideImage && !restaurantDream) {
+  if (titleOverrideImage && (!restaurantDream || titleOverrideIsSpecificRestaurantImage)) {
     queueCandidate(titleOverrideImage, {
-      allowGenericRestaurant: !restaurantDream,
+      allowGenericRestaurant: !restaurantDream || titleOverrideIsSpecificRestaurantImage,
     });
   }
 
