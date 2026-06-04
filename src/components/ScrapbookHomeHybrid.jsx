@@ -18,7 +18,7 @@ import useHomeSectionLayout from '../hooks/useHomeSectionLayout';
 import useGoogleImage from '../hooks/useGoogleImage';
 import useMoviePoster from '../hooks/useMoviePoster';
 import usePlacesImage from '../hooks/usePlacesImage';
-import { getDreamImageSearchQuery, getDreamPlacePhotoQuery, isMovieDream, resolveDreamImage, resolveDreamImageCandidates } from '../lib/resolveDreamImage';
+import { getDreamImageSearchQuery, getDreamPlacePhotoQuery, isFallbackRestaurantDreamImage, isMovieDream, resolveDreamImage, resolveDreamImageCandidates } from '../lib/resolveDreamImage';
 
 const TODAY_MOMENT_CACHE_KEY = 'home-today-moment-v1';
 const readCachedTodayMoment = (todayKey) => {
@@ -127,11 +127,12 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
   const [debugDelayElapsed, setDebugDelayElapsed] = useState(false);
   const [stableImageUrl, setStableImageUrl] = useState('');
   const resolvedImageUrl = candidateImageUrls[imageIndex] || '';
-  const moviePosterQuery = !resolvedImageUrl && isMovieDream(dream) ? String(dream?.text || dream?.label || '').trim() : null;
-  const placePhotoQuery = !resolvedImageUrl ? getDreamPlacePhotoQuery(dream) : null;
+  const shouldPreferLiveRestaurantPhoto = isFallbackRestaurantDreamImage(dream, resolvedImageUrl);
+  const moviePosterQuery = (!resolvedImageUrl || shouldPreferLiveRestaurantPhoto) && isMovieDream(dream) ? String(dream?.text || dream?.label || '').trim() : null;
+  const placePhotoQuery = (!resolvedImageUrl || shouldPreferLiveRestaurantPhoto) ? getDreamPlacePhotoQuery(dream) : null;
   const moviePosterUrl = useMoviePoster(moviePosterQuery);
   const placeImageUrl = usePlacesImage(placePhotoQuery);
-  const googleImageQuery = !resolvedImageUrl ? getDreamImageSearchQuery(dream) : null;
+  const googleImageQuery = (!resolvedImageUrl || shouldPreferLiveRestaurantPhoto) ? getDreamImageSearchQuery(dream) : null;
   const searchedImageUrl = useGoogleImage(googleImageQuery);
   const asyncImageUrl = (
     (!moviePosterFailed && moviePosterUrl)
@@ -139,7 +140,9 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
     || (!searchFailed && searchedImageUrl)
     || ''
   );
-  const dreamImageUrl = resolvedImageUrl || asyncImageUrl;
+  const dreamImageUrl = shouldPreferLiveRestaurantPhoto
+    ? (asyncImageUrl || resolvedImageUrl)
+    : (resolvedImageUrl || asyncImageUrl);
   const displayImageUrl = dreamImageUrl || stableImageUrl;
   const dreamTitle = String(dream?.text || dream?.label || '').trim();
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
@@ -148,7 +151,7 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
     && (!placePhotoQuery || placeImageFailed || !placeImageUrl)
     && (!googleImageQuery || searchFailed || !searchedImageUrl)
   );
-  const isLookupPending = !resolvedImageUrl && !imageFailed && Boolean(
+  const isLookupPending = (!resolvedImageUrl || shouldPreferLiveRestaurantPhoto) && !imageFailed && Boolean(
     (moviePosterQuery && !moviePosterFailed && !moviePosterUrl)
     || (placePhotoQuery && !placeImageFailed && !placeImageUrl)
     || (googleImageQuery && !searchFailed && !searchedImageUrl)

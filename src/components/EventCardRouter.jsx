@@ -865,7 +865,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
 
         <div className={`min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-5 ${editorTheme.body}`}>
           {(config.fields || []).map((field) => (
-            <label key={field.key} className="block min-w-0 w-full">
+            <label key={field.key} className="block min-w-0 w-full overflow-hidden">
               {field.type !== 'music-link' ? (
                 <div className={`mb-1.5 text-[12px] font-bold uppercase tracking-[0.16em] ${editorTheme.label}`} style={{ fontFamily: isPartyEditor ? APP_FONT_STACK : undefined }}>{field.label}</div>
               ) : null}
@@ -1125,7 +1125,20 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                   value={draft[field.key] ?? ''}
                   onChange={(event) => setFieldValue(field.key, event.target.value)}
                   className={`min-w-0 max-w-full w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
-                  style={{ fontFamily: isPartyEditor ? APP_FONT_STACK : undefined, boxSizing: 'border-box', minWidth: 0, maxWidth: '100%', display: 'block' }}
+                  style={{
+                    fontFamily: isPartyEditor ? APP_FONT_STACK : undefined,
+                    boxSizing: 'border-box',
+                    minWidth: 0,
+                    width: '100%',
+                    maxWidth: '100%',
+                    display: 'block',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    appearance: 'none',
+                    WebkitAppearance: 'none',
+                    WebkitMinLogicalWidth: 0,
+                  }}
                 />
               ) : field.type === 'select' ? (
                 <select

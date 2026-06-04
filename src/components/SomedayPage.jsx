@@ -9,7 +9,7 @@ import InvitePicker from './InvitePicker';
 import useGoogleImage from '../hooks/useGoogleImage';
 import useMoviePoster from '../hooks/useMoviePoster';
 import usePlacesImage from '../hooks/usePlacesImage';
-import { getDreamImageSearchQuery, getDreamPlacePhotoQuery, isMovieDream, resolveDreamImage, resolveDreamImageCandidates } from '../lib/resolveDreamImage';
+import { getDreamImageSearchQuery, getDreamPlacePhotoQuery, isFallbackRestaurantDreamImage, isMovieDream, resolveDreamImage, resolveDreamImageCandidates } from '../lib/resolveDreamImage';
 import { generateChapterFromPrompt, getChapterPromptExamples } from '../lib/generateChapterFromPrompt';
 
 const CAVEAT = '"Caveat", cursive';
@@ -882,11 +882,12 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
   const [stableImageUrl, setStableImageUrl] = useState('');
   const resolvedImageUrl = candidateImageUrls[imageIndex] || '';
   const pinTitle = String(pin?.label || pin?.text || '').trim();
-  const moviePosterQuery = !resolvedImageUrl && isMovieDream(pin) ? pinTitle : null;
-  const placePhotoQuery = !resolvedImageUrl ? getDreamPlacePhotoQuery(pin) : null;
+  const shouldPreferLiveRestaurantPhoto = isFallbackRestaurantDreamImage(pin, resolvedImageUrl);
+  const moviePosterQuery = (!resolvedImageUrl || shouldPreferLiveRestaurantPhoto) && isMovieDream(pin) ? pinTitle : null;
+  const placePhotoQuery = (!resolvedImageUrl || shouldPreferLiveRestaurantPhoto) ? getDreamPlacePhotoQuery(pin) : null;
   const moviePosterUrl = useMoviePoster(moviePosterQuery);
   const placeImageUrl = usePlacesImage(placePhotoQuery);
-  const googleImageQuery = !resolvedImageUrl ? getDreamImageSearchQuery(pin) : null;
+  const googleImageQuery = (!resolvedImageUrl || shouldPreferLiveRestaurantPhoto) ? getDreamImageSearchQuery(pin) : null;
   const searchedImageUrl = useGoogleImage(googleImageQuery);
   const asyncImageUrl = (
     (!moviePosterFailed && moviePosterUrl)
@@ -894,7 +895,9 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
     || (!searchFailed && searchedImageUrl)
     || ''
   );
-  const imageUrl = resolvedImageUrl || asyncImageUrl;
+  const imageUrl = shouldPreferLiveRestaurantPhoto
+    ? (asyncImageUrl || resolvedImageUrl)
+    : (resolvedImageUrl || asyncImageUrl);
   const displayImageUrl = imageUrl || stableImageUrl;
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
   const imageFailed = exhaustedCandidates && !displayImageUrl && (
@@ -902,7 +905,7 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
     && (!placePhotoQuery || placeImageFailed || !placeImageUrl)
     && (!googleImageQuery || searchFailed || !searchedImageUrl)
   );
-  const isLookupPending = !resolvedImageUrl && !imageFailed && Boolean(
+  const isLookupPending = (!resolvedImageUrl || shouldPreferLiveRestaurantPhoto) && !imageFailed && Boolean(
     (moviePosterQuery && !moviePosterFailed && !moviePosterUrl)
     || (placePhotoQuery && !placeImageFailed && !placeImageUrl)
     || (googleImageQuery && !searchFailed && !searchedImageUrl)

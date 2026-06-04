@@ -194,6 +194,26 @@ const findTitleOverrideImage = (value = "") => {
   return bestMatch;
 };
 
+export const isFallbackRestaurantDreamImage = (item, url = "") => {
+  if (!isRestaurantDream(item)) return false;
+  const normalizedUrl = String(url || "").trim();
+  if (!normalizedUrl) return false;
+  if (GENERIC_RESTAURANT_IMAGE_URLS.has(normalizedUrl)) return true;
+  const titleOverrideImage = findTitleOverrideImage(
+    String(
+      item?.text
+      || item?.label
+      || item?.cardTitle
+      || item?.title
+      || item?.name
+      || item?.dream
+      || item?.destination_name
+      || ""
+    ).trim()
+  );
+  return Boolean(titleOverrideImage && normalizedUrl === String(titleOverrideImage).trim());
+};
+
 const resolveRawType = (item) => {
   const rawSourceType = String(item?.sourceType || "").trim().toLowerCase();
   if (rawSourceType) return rawSourceType;
