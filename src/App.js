@@ -40,7 +40,7 @@ import FriendPhotoModal from "./components/FriendPhotoModal";
 import JOURNEY_QUOTES from "./data/journeyQuotes";
 import { loadFriendsList as loadFriendsListLib } from "./lib/loadFriendsList";
 import * as memoryPersistence from "./lib/memoryPersistence";
-import { getDreamImageSearchQuery, getDreamPlacePhotoQuery, isMovieDream, normalizeDreamCategory, resolveDreamContentType, resolveDreamImage, resolveDreamImageCandidates } from "./lib/resolveDreamImage";
+import { getDreamImageSearchQuery, getDreamPlacePhotoQuery, isFallbackRestaurantDreamImage, isMovieDream, normalizeDreamCategory, resolveDreamContentType, resolveDreamImage, resolveDreamImageCandidates } from "./lib/resolveDreamImage";
 
 const PopupEventPanel = React.lazy(() => import("./components/PopupEventPanel"));
 const SportsEventCardOverlay = React.lazy(() => import("./components/SportsEventCardOverlay"));
@@ -1878,11 +1878,12 @@ function KomoPolaroidCard({ card, compact = false }) {
   const [debugDelayElapsed, setDebugDelayElapsed] = useState(false);
   const [stableImageUrl, setStableImageUrl] = useState("");
   const resolvedImageUrl = candidateImageUrls[imageIndex] || "";
-  const moviePosterQuery = !resolvedImageUrl && isMovieDream(card) ? String(card?.label || card?.text || card?.title || "").trim() : null;
-  const placePhotoQuery = !resolvedImageUrl ? getDreamPlacePhotoQuery(card) : null;
+  const shouldPreferLiveRestaurantPhoto = isFallbackRestaurantDreamImage(card, resolvedImageUrl);
+  const moviePosterQuery = (!resolvedImageUrl || shouldPreferLiveRestaurantPhoto) && isMovieDream(card) ? String(card?.label || card?.text || card?.title || "").trim() : null;
+  const placePhotoQuery = (!resolvedImageUrl || shouldPreferLiveRestaurantPhoto) ? getDreamPlacePhotoQuery(card) : null;
   const moviePosterUrl = useMoviePoster(moviePosterQuery);
   const placeImageUrl = usePlacesImage(placePhotoQuery);
-  const googleImageQuery = !resolvedImageUrl ? getDreamImageSearchQuery(card) : null;
+  const googleImageQuery = (!resolvedImageUrl || shouldPreferLiveRestaurantPhoto) ? getDreamImageSearchQuery(card) : null;
   const searchedImageUrl = useGoogleImage(googleImageQuery);
   const asyncImageUrl = (
     (!moviePosterFailed && moviePosterUrl)
@@ -1890,22 +1891,28 @@ function KomoPolaroidCard({ card, compact = false }) {
     || (!searchFailed && searchedImageUrl)
     || ""
   );
-  const imageUrl = resolvedImageUrl || asyncImageUrl;
-  const displayImageUrl = imageUrl || stableImageUrl;
+  const imageUrl = shouldPreferLiveRestaurantPhoto
+    ? (asyncImageUrl || "")
+    : (resolvedImageUrl || asyncImageUrl);
+  const restaurantFallbackImageUrl = shouldPreferLiveRestaurantPhoto ? resolvedImageUrl : "";
   const rotation = Number(card?.rot || 0) * (compact ? 0.35 : 0.55);
   const label = String(card?.label || card?.text || 'Komo Book idea').trim();
   const emoji = String(card?.emoji || '*').trim();
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
-  const imageFailed = exhaustedCandidates && !displayImageUrl && (
+  const provisionalImageUrl = imageUrl || stableImageUrl;
+  const imageFailed = exhaustedCandidates && !provisionalImageUrl && (
     (!moviePosterQuery || moviePosterFailed || !moviePosterUrl)
     && (!placePhotoQuery || placeImageFailed || !placeImageUrl)
     && (!googleImageQuery || searchFailed || !searchedImageUrl)
   );
-  const isLookupPending = !resolvedImageUrl && !imageFailed && Boolean(
+  const isLookupPending = (!resolvedImageUrl || shouldPreferLiveRestaurantPhoto) && !imageFailed && Boolean(
     (moviePosterQuery && !moviePosterFailed && !moviePosterUrl)
     || (placePhotoQuery && !placeImageFailed && !placeImageUrl)
     || (googleImageQuery && !searchFailed && !searchedImageUrl)
   );
+  const displayImageUrl = imageUrl
+    || stableImageUrl
+    || ((!isLookupPending && (imageFailed || debugDelayElapsed)) ? restaurantFallbackImageUrl : "");
   const showDebugFallback = debugDelayElapsed && (!imageUrl || imageFailed) && !isLookupPending;
   useEffect(() => {
     setImageIndex(0);
@@ -1916,8 +1923,10 @@ function KomoPolaroidCard({ card, compact = false }) {
     setStableImageUrl("");
   }, [card?.id, card?.label, card?.text, card?.imageUrl, card?.photoUrl]);
   useEffect(() => {
-    if (imageUrl) setStableImageUrl(imageUrl);
-  }, [imageUrl]);
+    if (!imageUrl) return;
+    if (shouldPreferLiveRestaurantPhoto && imageUrl === restaurantFallbackImageUrl) return;
+    setStableImageUrl(imageUrl);
+  }, [imageUrl, shouldPreferLiveRestaurantPhoto, restaurantFallbackImageUrl]);
   useEffect(() => {
     if (displayImageUrl || isLookupPending) {
       setDebugDelayElapsed(false);
