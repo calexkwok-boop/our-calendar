@@ -144,9 +144,6 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
     ? (asyncImageUrl || '')
     : (resolvedImageUrl || asyncImageUrl);
   const restaurantFallbackImageUrl = shouldPreferLiveRestaurantPhoto ? resolvedImageUrl : '';
-  const displayImageUrl = dreamImageUrl
-    || stableImageUrl
-    || ((!isLookupPending && (imageFailed || debugDelayElapsed)) ? restaurantFallbackImageUrl : '');
   const dreamTitle = String(dream?.text || dream?.label || '').trim();
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
   const imageFailed = exhaustedCandidates && !displayImageUrl && (
@@ -159,6 +156,9 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
     || (placePhotoQuery && !placeImageFailed && !placeImageUrl)
     || (googleImageQuery && !searchFailed && !searchedImageUrl)
   );
+  const displayImageUrl = dreamImageUrl
+    || stableImageUrl
+    || ((!isLookupPending && (imageFailed || debugDelayElapsed)) ? restaurantFallbackImageUrl : '');
   const showDebugFallback = debugDelayElapsed && (!dreamImageUrl || imageFailed) && !isLookupPending;
   useEffect(() => {
     setImageIndex(0);

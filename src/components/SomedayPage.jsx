@@ -899,9 +899,6 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
     ? (asyncImageUrl || '')
     : (resolvedImageUrl || asyncImageUrl);
   const restaurantFallbackImageUrl = shouldPreferLiveRestaurantPhoto ? resolvedImageUrl : '';
-  const displayImageUrl = imageUrl
-    || stableImageUrl
-    || ((!isLookupPending && (imageFailed || debugDelayElapsed)) ? restaurantFallbackImageUrl : '');
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
   const imageFailed = exhaustedCandidates && !displayImageUrl && (
     (!moviePosterQuery || moviePosterFailed || !moviePosterUrl)
@@ -913,6 +910,9 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
     || (placePhotoQuery && !placeImageFailed && !placeImageUrl)
     || (googleImageQuery && !searchFailed && !searchedImageUrl)
   );
+  const displayImageUrl = imageUrl
+    || stableImageUrl
+    || ((!isLookupPending && (imageFailed || debugDelayElapsed)) ? restaurantFallbackImageUrl : '');
   const showDebugFallback = debugDelayElapsed && (!imageUrl || imageFailed) && !isLookupPending;
   const cardBg  = darkMode ? '#e2e8f0' : '#ffffff';
   const labelCol = pin.status === 'done' ? '#9ca3af' : '#374151';
