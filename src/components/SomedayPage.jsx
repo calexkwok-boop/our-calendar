@@ -900,7 +900,8 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
     : (resolvedImageUrl || asyncImageUrl);
   const restaurantFallbackImageUrl = shouldPreferLiveRestaurantPhoto ? resolvedImageUrl : '';
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
-  const imageFailed = exhaustedCandidates && !displayImageUrl && (
+  const provisionalImageUrl = imageUrl || stableImageUrl;
+  const imageFailed = exhaustedCandidates && !provisionalImageUrl && (
     (!moviePosterQuery || moviePosterFailed || !moviePosterUrl)
     && (!placePhotoQuery || placeImageFailed || !placeImageUrl)
     && (!googleImageQuery || searchFailed || !searchedImageUrl)

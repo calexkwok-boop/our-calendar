@@ -146,7 +146,8 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
   const restaurantFallbackImageUrl = shouldPreferLiveRestaurantPhoto ? resolvedImageUrl : '';
   const dreamTitle = String(dream?.text || dream?.label || '').trim();
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
-  const imageFailed = exhaustedCandidates && !displayImageUrl && (
+  const provisionalImageUrl = dreamImageUrl || stableImageUrl;
+  const imageFailed = exhaustedCandidates && !provisionalImageUrl && (
     (!moviePosterQuery || moviePosterFailed || !moviePosterUrl)
     && (!placePhotoQuery || placeImageFailed || !placeImageUrl)
     && (!googleImageQuery || searchFailed || !searchedImageUrl)
