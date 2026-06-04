@@ -5,7 +5,13 @@ const placesImageInflight = {};
 
 export default function usePlacesImage(query, type = "restaurant") {
   const cacheKey = query ? `${type}:${query}` : "";
-  const [url, setUrl] = useState(cacheKey ? (placesImageCache[cacheKey] || "") : "");
+  const [url, setUrl] = useState(() => {
+    if (!cacheKey) return "";
+    if (Object.prototype.hasOwnProperty.call(placesImageCache, cacheKey)) {
+      return placesImageCache[cacheKey] || "";
+    }
+    return undefined;
+  });
 
   useEffect(() => {
     if (!query || !type) {
@@ -47,6 +53,7 @@ export default function usePlacesImage(query, type = "restaurant") {
     }
 
     if (placesImageInflight[cacheKey]) {
+      setUrl((prev) => (prev === undefined ? prev : undefined));
       placesImageInflight[cacheKey]
         .then((nextUrl) => {
           if (!cancelled) {
@@ -62,6 +69,7 @@ export default function usePlacesImage(query, type = "restaurant") {
       };
     }
 
+    setUrl((prev) => (prev === undefined ? prev : undefined));
     placesImageInflight[cacheKey] = resolveImage();
 
     return () => {

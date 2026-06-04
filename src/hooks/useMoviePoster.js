@@ -7,7 +7,13 @@ const moviePosterInflight = {};
 
 export default function useMoviePoster(query) {
   const normalizedQuery = String(query || "").trim();
-  const [url, setUrl] = useState(normalizedQuery ? (moviePosterCache[normalizedQuery] || "") : "");
+  const [url, setUrl] = useState(() => {
+    if (!normalizedQuery) return "";
+    if (Object.prototype.hasOwnProperty.call(moviePosterCache, normalizedQuery)) {
+      return moviePosterCache[normalizedQuery] || "";
+    }
+    return undefined;
+  });
 
   useEffect(() => {
     if (!normalizedQuery) {
@@ -46,6 +52,7 @@ export default function useMoviePoster(query) {
     }
 
     if (moviePosterInflight[normalizedQuery]) {
+      setUrl((prev) => (prev === undefined ? prev : undefined));
       moviePosterInflight[normalizedQuery]
         .then((nextUrl) => {
           if (!cancelled) {
@@ -61,6 +68,7 @@ export default function useMoviePoster(query) {
       };
     }
 
+    setUrl((prev) => (prev === undefined ? prev : undefined));
     moviePosterInflight[normalizedQuery] = resolvePoster();
 
     return () => {

@@ -889,6 +889,9 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
   const placeImageUrl = usePlacesImage(placePhotoQuery);
   const googleImageQuery = (!resolvedImageUrl || shouldPreferLiveRestaurantPhoto) ? getDreamImageSearchQuery(pin) : null;
   const searchedImageUrl = useGoogleImage(googleImageQuery);
+  const moviePosterPending = Boolean(moviePosterQuery) && moviePosterUrl === undefined;
+  const placeImagePending = Boolean(placePhotoQuery) && placeImageUrl === undefined;
+  const searchImagePending = Boolean(googleImageQuery) && searchedImageUrl === undefined;
   const asyncImageUrl = (
     (!moviePosterFailed && moviePosterUrl)
     || (!placeImageFailed && placeImageUrl)
@@ -902,18 +905,18 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
   const provisionalImageUrl = imageUrl || stableImageUrl;
   const imageFailed = exhaustedCandidates && !provisionalImageUrl && (
-    (!moviePosterQuery || moviePosterFailed || !moviePosterUrl)
-    && (!placePhotoQuery || placeImageFailed || !placeImageUrl)
-    && (!googleImageQuery || searchFailed || !searchedImageUrl)
+    (!moviePosterQuery || moviePosterFailed || (!moviePosterPending && !moviePosterUrl))
+    && (!placePhotoQuery || placeImageFailed || (!placeImagePending && !placeImageUrl))
+    && (!googleImageQuery || searchFailed || (!searchImagePending && !searchedImageUrl))
   );
-  const isLookupPending = (!resolvedImageUrl || shouldPreferLiveRestaurantPhoto) && !imageFailed && Boolean(
-    (moviePosterQuery && !moviePosterFailed && !moviePosterUrl)
-    || (placePhotoQuery && !placeImageFailed && !placeImageUrl)
-    || (googleImageQuery && !searchFailed && !searchedImageUrl)
+  const isLookupPending = (!resolvedImageUrl || shouldPreferLiveRestaurantPhoto) && !imageFailed && (
+    moviePosterPending
+    || placeImagePending
+    || searchImagePending
   );
   const displayImageUrl = imageUrl
     || stableImageUrl
-    || ((!isLookupPending && (imageFailed || debugDelayElapsed)) ? restaurantFallbackImageUrl : '');
+    || restaurantFallbackImageUrl;
   const showDebugFallback = debugDelayElapsed && (!imageUrl || imageFailed) && !isLookupPending;
   const cardBg  = darkMode ? '#e2e8f0' : '#ffffff';
   const labelCol = pin.status === 'done' ? '#9ca3af' : '#374151';
@@ -3693,6 +3696,9 @@ const SomedayPage = ({
 
   const onMove = useCallback((e) => {
     if (!dragging) return;
+    if (typeof e.preventDefault === 'function' && e.cancelable) {
+      e.preventDefault();
+    }
     const touch = e.touches?.[0] ?? e;
     const dx = touch.clientX - dragStartPoint.current.x, dy = touch.clientY - dragStartPoint.current.y;
     if (!didDrag.current && Math.hypot(dx, dy) < 6) return;
@@ -3721,12 +3727,26 @@ const SomedayPage = ({
   }, [dragging, pins, onPersistPinLayout, onUpdateDream]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (!dragging) return undefined;
+    const previousBodyTouchAction = document.body.style.touchAction;
+    const previousDocTouchAction = document.documentElement.style.touchAction;
+    document.body.style.touchAction = 'none';
+    document.documentElement.style.touchAction = 'none';
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', stopDrag);
     window.addEventListener('touchmove', onMove, { passive: false });
     window.addEventListener('touchend', stopDrag);
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', stopDrag); window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', stopDrag); };
-  }, [onMove, stopDrag]);
+    window.addEventListener('touchcancel', stopDrag);
+    return () => {
+      document.body.style.touchAction = previousBodyTouchAction;
+      document.documentElement.style.touchAction = previousDocTouchAction;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', stopDrag);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', stopDrag);
+      window.removeEventListener('touchcancel', stopDrag);
+    };
+  }, [dragging, onMove, stopDrag]);
 
   function handlePinClick(pin) {
     if (didDrag.current) return;

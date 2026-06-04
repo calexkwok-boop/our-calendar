@@ -6,7 +6,13 @@ const _inflight = {};
 export default function useGoogleImage(query, options = {}) {
   const preferProductSearch = Boolean(options.preferProductSearch);
   const cacheKey = query ? `${preferProductSearch ? "product" : "image"}:${query}` : "";
-  const [url, setUrl] = useState(cacheKey ? (_cache[cacheKey] || "") : "");
+  const [url, setUrl] = useState(() => {
+    if (!cacheKey) return "";
+    if (Object.prototype.hasOwnProperty.call(_cache, cacheKey)) {
+      return _cache[cacheKey] || "";
+    }
+    return undefined;
+  });
 
   useEffect(() => {
     if (!query) {
@@ -69,6 +75,7 @@ export default function useGoogleImage(query, options = {}) {
     }
 
     if (_inflight[cacheKey]) {
+      setUrl((prev) => (prev === undefined ? prev : undefined));
       _inflight[cacheKey]
         .then((result) => {
           if (!cancelled) {
@@ -84,6 +91,7 @@ export default function useGoogleImage(query, options = {}) {
       };
     }
 
+    setUrl((prev) => (prev === undefined ? prev : undefined));
     _inflight[cacheKey] = resolveImage();
 
     return () => {

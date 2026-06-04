@@ -1885,6 +1885,9 @@ function KomoPolaroidCard({ card, compact = false }) {
   const placeImageUrl = usePlacesImage(placePhotoQuery);
   const googleImageQuery = (!resolvedImageUrl || shouldPreferLiveRestaurantPhoto) ? getDreamImageSearchQuery(card) : null;
   const searchedImageUrl = useGoogleImage(googleImageQuery);
+  const moviePosterPending = Boolean(moviePosterQuery) && moviePosterUrl === undefined;
+  const placeImagePending = Boolean(placePhotoQuery) && placeImageUrl === undefined;
+  const searchImagePending = Boolean(googleImageQuery) && searchedImageUrl === undefined;
   const asyncImageUrl = (
     (!moviePosterFailed && moviePosterUrl)
     || (!placeImageFailed && placeImageUrl)
@@ -1901,18 +1904,18 @@ function KomoPolaroidCard({ card, compact = false }) {
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
   const provisionalImageUrl = imageUrl || stableImageUrl;
   const imageFailed = exhaustedCandidates && !provisionalImageUrl && (
-    (!moviePosterQuery || moviePosterFailed || !moviePosterUrl)
-    && (!placePhotoQuery || placeImageFailed || !placeImageUrl)
-    && (!googleImageQuery || searchFailed || !searchedImageUrl)
+    (!moviePosterQuery || moviePosterFailed || (!moviePosterPending && !moviePosterUrl))
+    && (!placePhotoQuery || placeImageFailed || (!placeImagePending && !placeImageUrl))
+    && (!googleImageQuery || searchFailed || (!searchImagePending && !searchedImageUrl))
   );
-  const isLookupPending = (!resolvedImageUrl || shouldPreferLiveRestaurantPhoto) && !imageFailed && Boolean(
-    (moviePosterQuery && !moviePosterFailed && !moviePosterUrl)
-    || (placePhotoQuery && !placeImageFailed && !placeImageUrl)
-    || (googleImageQuery && !searchFailed && !searchedImageUrl)
+  const isLookupPending = (!resolvedImageUrl || shouldPreferLiveRestaurantPhoto) && !imageFailed && (
+    moviePosterPending
+    || placeImagePending
+    || searchImagePending
   );
   const displayImageUrl = imageUrl
     || stableImageUrl
-    || ((!isLookupPending && (imageFailed || debugDelayElapsed)) ? restaurantFallbackImageUrl : "");
+    || restaurantFallbackImageUrl;
   const showDebugFallback = debugDelayElapsed && (!imageUrl || imageFailed) && !isLookupPending;
   useEffect(() => {
     setImageIndex(0);

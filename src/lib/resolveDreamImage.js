@@ -6,6 +6,17 @@ const DIRECT_IMAGE_FIELDS = [
   "image",
   "image_url",
   "imageUrl",
+  "restaurant_image",
+  "restaurantImage",
+  "thumbnail",
+  "thumbnail_url",
+  "thumbnailUrl",
+  "displayUrl",
+  "display_url",
+  "main_path",
+  "mainPath",
+  "original_path",
+  "originalPath",
   "destination_image",
   "photo_url",
   "photoUrl",
@@ -237,11 +248,37 @@ const resolveRawType = (item) => {
 };
 
 export const readDirectDreamImageUrl = (item) => {
-  for (const field of DIRECT_IMAGE_FIELDS) {
-    const value = normalizeDreamImageUrl(item?.[field]);
-    if (value) return value;
+  const readFromObject = (candidate) => {
+    if (!candidate || typeof candidate !== "object") return "";
+    for (const field of DIRECT_IMAGE_FIELDS) {
+      const value = normalizeDreamImageUrl(candidate?.[field]);
+      if (value) return value;
+    }
+    return normalizeDreamImageUrl(
+      candidate?.photos?.[0]?.url
+      || candidate?.photos?.[0]?.photoUrl
+      || candidate?.photos?.[0]?.photo_url
+    );
+  };
+
+  const topLevel = readFromObject(item);
+  if (topLevel) return topLevel;
+
+  const metaImage = readFromObject(item?.meta);
+  if (metaImage) return metaImage;
+
+  const sources = Array.isArray(item?.sources) ? item.sources : [];
+  for (const source of sources) {
+    if (typeof source === "string") {
+      const value = normalizeDreamImageUrl(source);
+      if (value) return value;
+      continue;
+    }
+    const sourceImage = readFromObject(source);
+    if (sourceImage) return sourceImage;
   }
-  return normalizeDreamImageUrl(item?.photos?.[0]?.url);
+
+  return "";
 };
 
 export const normalizeDreamCategory = (item) => {
