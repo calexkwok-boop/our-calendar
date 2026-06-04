@@ -379,6 +379,9 @@ export const resolveDreamImageCandidates = (item) => {
   if (destinationOverrideImage && !restaurantDream) queueCandidate(destinationOverrideImage);
 
   if (catalogImageUrl && !restaurantDream) queueCandidate(catalogImageUrl);
+  if (titleOverrideImage && restaurantDream && titleOverrideType === "restaurants") {
+    queueCandidate(titleOverrideImage, { allowGenericRestaurant: true });
+  }
   if (titleOverrideImage && !restaurantDream) {
     queueCandidate(titleOverrideImage, {
       allowGenericRestaurant: true,
