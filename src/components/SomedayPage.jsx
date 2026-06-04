@@ -896,9 +896,12 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
     || ''
   );
   const imageUrl = shouldPreferLiveRestaurantPhoto
-    ? (asyncImageUrl || resolvedImageUrl)
+    ? (asyncImageUrl || '')
     : (resolvedImageUrl || asyncImageUrl);
-  const displayImageUrl = imageUrl || stableImageUrl;
+  const restaurantFallbackImageUrl = shouldPreferLiveRestaurantPhoto ? resolvedImageUrl : '';
+  const displayImageUrl = imageUrl
+    || stableImageUrl
+    || ((!isLookupPending && (imageFailed || debugDelayElapsed)) ? restaurantFallbackImageUrl : '');
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
   const imageFailed = exhaustedCandidates && !displayImageUrl && (
     (!moviePosterQuery || moviePosterFailed || !moviePosterUrl)
@@ -923,8 +926,10 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode, chapterTitle }) 
     setStableImageUrl('');
   }, [pin?.id, pin?.label, pin?.text, pin?.imageUrl, pin?.photoUrl]);
   useEffect(() => {
-    if (imageUrl) setStableImageUrl(imageUrl);
-  }, [imageUrl]);
+    if (!imageUrl) return;
+    if (shouldPreferLiveRestaurantPhoto && imageUrl === restaurantFallbackImageUrl) return;
+    setStableImageUrl(imageUrl);
+  }, [imageUrl, shouldPreferLiveRestaurantPhoto, restaurantFallbackImageUrl]);
   useEffect(() => {
     if (displayImageUrl || isLookupPending) {
       setDebugDelayElapsed(false);

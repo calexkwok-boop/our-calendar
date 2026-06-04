@@ -141,9 +141,12 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
     || ''
   );
   const dreamImageUrl = shouldPreferLiveRestaurantPhoto
-    ? (asyncImageUrl || resolvedImageUrl)
+    ? (asyncImageUrl || '')
     : (resolvedImageUrl || asyncImageUrl);
-  const displayImageUrl = dreamImageUrl || stableImageUrl;
+  const restaurantFallbackImageUrl = shouldPreferLiveRestaurantPhoto ? resolvedImageUrl : '';
+  const displayImageUrl = dreamImageUrl
+    || stableImageUrl
+    || ((!isLookupPending && (imageFailed || debugDelayElapsed)) ? restaurantFallbackImageUrl : '');
   const dreamTitle = String(dream?.text || dream?.label || '').trim();
   const exhaustedCandidates = imageIndex >= candidateImageUrls.length;
   const imageFailed = exhaustedCandidates && !displayImageUrl && (
@@ -166,8 +169,10 @@ function OnYourMindPolaroid({ dream, idx, isFlipped, flippedCardId, setFlippedCa
     setStableImageUrl('');
   }, [dream?.id, dream?.text, dream?.label, dream?.imageUrl, dream?.photoUrl]);
   useEffect(() => {
-    if (dreamImageUrl) setStableImageUrl(dreamImageUrl);
-  }, [dreamImageUrl]);
+    if (!dreamImageUrl) return;
+    if (shouldPreferLiveRestaurantPhoto && dreamImageUrl === restaurantFallbackImageUrl) return;
+    setStableImageUrl(dreamImageUrl);
+  }, [dreamImageUrl, shouldPreferLiveRestaurantPhoto, restaurantFallbackImageUrl]);
   useEffect(() => {
     if (displayImageUrl || isLookupPending) {
       setDebugDelayElapsed(false);
