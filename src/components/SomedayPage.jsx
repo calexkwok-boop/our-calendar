@@ -470,6 +470,31 @@ function buildLiveSuggestionQueryVariants(category, anchor) {
   });
 }
 
+async function resolveSuggestionAnchorLocation(anchors = []) {
+  for (const anchor of anchors) {
+    const trimmed = String(anchor || '').trim();
+    if (!trimmed) continue;
+    try {
+      const res = await fetch(`/api/geocode?address=${encodeURIComponent(trimmed)}`);
+      if (!res.ok) continue;
+      const data = await res.json();
+      const result = Array.isArray(data?.results) ? data.results[0] : null;
+      const lat = Number(result?.geometry?.location?.lat);
+      const lng = Number(result?.geometry?.location?.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+      return {
+        anchor: trimmed,
+        lat,
+        lng,
+        formattedAddress: String(result?.formatted_address || trimmed).trim(),
+      };
+    } catch {
+      // try next anchor
+    }
+  }
+  return null;
+}
+
 function generateSuggestions(chapter, chapterPins, seed = 0) {
   const theme = detectSuggestionTheme(chapter, chapterPins);
   const pool = theme === 'generic'
@@ -676,47 +701,86 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
       try {
         const found = [];
         const seenPlaces = new Set();
+        const resolvedAnchorLocation = await resolveSuggestionAnchorLocation(orderedAnchors);
 
         for (const category of categoriesToUse) {
           if (found.length >= 3) break;
           let matched = null;
 
-          for (const anchor of orderedAnchors) {
+          if (resolvedAnchorLocation) {
             try {
-              const queryVariants = buildLiveSuggestionQueryVariants(category, anchor);
-              for (const q of queryVariants) {
-                const res = await fetch(`/api/places?action=textsearch&query=${encodeURIComponent(q)}&type=${encodeURIComponent(category.type)}`);
-                if (!res.ok) continue;
-                const data = await res.json();
-                const result = (data.results || []).find((item) => {
+              const nearbyRes = await fetch(
+                `/api/places?lat=${encodeURIComponent(resolvedAnchorLocation.lat)}&lng=${encodeURIComponent(resolvedAnchorLocation.lng)}&query=${encodeURIComponent(category.query)}&type=${encodeURIComponent(category.type)}&radius=12000`
+              );
+              if (nearbyRes.ok) {
+                const nearbyData = await nearbyRes.json();
+                const nearbyResult = (nearbyData.results || []).find((item) => {
                   const placeName = normalizeSuggestionText(item?.name || '');
                   const placeKey = String(item?.place_id || placeName);
                   return placeName && !existingLabels.has(placeName) && !seenPlaces.has(placeKey);
                 });
-
-                if (!result) continue;
-
-                const placeName = normalizeSuggestionText(result?.name || '');
-                const placeKey = String(result?.place_id || placeName);
-                seenPlaces.add(placeKey);
-                const photoRef = result?.photos?.[0]?.photo_reference;
-                matched = {
-                  id: `live-${category.key}-${placeKey}`,
-                  label: result.name,
-                  emoji: category.emoji,
-                  categoryId: category.categoryId,
-                  imageUrl: photoRef ? `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800` : '',
-                  description: `${result.formatted_address || result.vicinity || ''}`.trim() || `${category.label} near ${anchor}.`,
-                  tip: buildPlaceSuggestionTip(result, anchor, category),
-                  whyItFits: buildPlaceSuggestionWhy(result, anchor, category),
-                  mapQuery: `${result.name} ${result.formatted_address || result.vicinity || anchor}`.trim(),
-                  rot: (((initialSeed + found.length * 7 + refreshCount) % 11) - 5) * 0.55,
-                };
-                break;
+                if (nearbyResult) {
+                  const placeName = normalizeSuggestionText(nearbyResult?.name || '');
+                  const placeKey = String(nearbyResult?.place_id || placeName);
+                  seenPlaces.add(placeKey);
+                  const photoRef = nearbyResult?.photos?.[0]?.photo_reference;
+                  matched = {
+                    id: `live-${category.key}-${placeKey}`,
+                    label: nearbyResult.name,
+                    emoji: category.emoji,
+                    categoryId: category.categoryId,
+                    imageUrl: photoRef ? `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800` : '',
+                    description: `${nearbyResult.formatted_address || nearbyResult.vicinity || ''}`.trim() || `${category.label} near ${resolvedAnchorLocation.formattedAddress}.`,
+                    tip: buildPlaceSuggestionTip(nearbyResult, resolvedAnchorLocation.anchor, category),
+                    whyItFits: buildPlaceSuggestionWhy(nearbyResult, resolvedAnchorLocation.anchor, category),
+                    mapQuery: `${nearbyResult.name} ${nearbyResult.formatted_address || nearbyResult.vicinity || resolvedAnchorLocation.formattedAddress}`.trim(),
+                    rot: (((initialSeed + found.length * 7 + refreshCount) % 11) - 5) * 0.55,
+                  };
+                }
               }
-              if (matched) break;
             } catch {
-              // try next anchor
+              // fall through to text search anchors below
+            }
+          }
+
+          if (!matched) {
+            for (const anchor of orderedAnchors) {
+              try {
+                const queryVariants = buildLiveSuggestionQueryVariants(category, anchor);
+                for (const q of queryVariants) {
+                  const res = await fetch(`/api/places?action=textsearch&query=${encodeURIComponent(q)}&type=${encodeURIComponent(category.type)}`);
+                  if (!res.ok) continue;
+                  const data = await res.json();
+                  const result = (data.results || []).find((item) => {
+                    const placeName = normalizeSuggestionText(item?.name || '');
+                    const placeKey = String(item?.place_id || placeName);
+                    return placeName && !existingLabels.has(placeName) && !seenPlaces.has(placeKey);
+                  });
+
+                  if (!result) continue;
+
+                  const placeName = normalizeSuggestionText(result?.name || '');
+                  const placeKey = String(result?.place_id || placeName);
+                  seenPlaces.add(placeKey);
+                  const photoRef = result?.photos?.[0]?.photo_reference;
+                  matched = {
+                    id: `live-${category.key}-${placeKey}`,
+                    label: result.name,
+                    emoji: category.emoji,
+                    categoryId: category.categoryId,
+                    imageUrl: photoRef ? `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800` : '',
+                    description: `${result.formatted_address || result.vicinity || ''}`.trim() || `${category.label} near ${anchor}.`,
+                    tip: buildPlaceSuggestionTip(result, anchor, category),
+                    whyItFits: buildPlaceSuggestionWhy(result, anchor, category),
+                    mapQuery: `${result.name} ${result.formatted_address || result.vicinity || anchor}`.trim(),
+                    rot: (((initialSeed + found.length * 7 + refreshCount) % 11) - 5) * 0.55,
+                  };
+                  break;
+                }
+                if (matched) break;
+              } catch {
+                // try next anchor
+              }
             }
           }
 
