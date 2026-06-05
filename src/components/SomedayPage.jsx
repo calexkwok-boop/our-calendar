@@ -363,7 +363,10 @@ function scoreAnchorCandidate(value, disneyContext) {
   if (words.length >= 2) score += 4;
   if (/[,-]/.test(raw)) score += 2;
   if (/\b(in|at|near)\b/i.test(raw)) score += 1;
+  if (words.length > 8) score -= 10;
+  if (words.length > 12) score -= 20;
   if (WEAK_ANCHOR_TERMS.some((term) => normalized.includes(term))) score -= 6;
+  if (/\b(best|hidden gem|walking tour|cooking class|lantern town|egg coffee|breakfast|brunch|coffee|bar|restaurant|bakery|dessert|market)\b/i.test(raw)) score -= 8;
 
   const hasDisney = normalized.includes('disney');
   const hasAnaheim = ['anaheim', 'disneyland', 'california adventure', 'orange county'].some((term) => normalized.includes(term));
@@ -396,26 +399,30 @@ function getLiveSuggestionCategories(chapter, chapterPins, refreshCount = 0) {
 function inferChapterAnchorCandidates(chapter, chapterPins) {
   const disneyContext = inferDisneyDestinationContext(chapter, chapterPins);
   const values = [
-    ...disneyContext.forcedAnchors,
-    chapter?.title,
-    chapter?.public_title,
-    ...(Array.isArray(chapter?.public_tags) ? chapter.public_tags : []),
-    ...chapterPins.flatMap((pin) => [
-      pin?.mapQuery,
-      pin?.label,
-      pin?.text,
-      pin?.description,
-    ]),
+    ...disneyContext.forcedAnchors.map((value) => ({ value, bonus: 60 })),
+    { value: chapter?.title, bonus: 35 },
+    { value: chapter?.public_title, bonus: 35 },
+    ...(Array.isArray(chapter?.public_tags) ? chapter.public_tags.map((value) => ({ value, bonus: 28 })) : []),
+    ...chapterPins.flatMap((pin) => ([
+      { value: pin?.mapQuery, bonus: 55 },
+      { value: pin?.address, bonus: 45 },
+      { value: pin?.location, bonus: 40 },
+      { value: pin?.label, bonus: 12 },
+      { value: pin?.text, bonus: 8 },
+    ])),
   ]
-    .map((value) => String(value || '').trim())
-    .filter(Boolean);
+    .map(({ value, bonus = 0 }) => ({
+      value: String(value || '').trim(),
+      bonus,
+    }))
+    .filter(({ value }) => Boolean(value));
 
   const seen = new Set();
   return values
-    .map((value) => ({
+    .map(({ value, bonus }) => ({
       value,
       normalized: normalizeSuggestionText(value),
-      score: scoreAnchorCandidate(value, disneyContext),
+      score: scoreAnchorCandidate(value, disneyContext) + Number(bonus || 0),
     }))
     .filter(({ normalized, score }) => {
       if (!normalized || score === -Infinity) return false;
