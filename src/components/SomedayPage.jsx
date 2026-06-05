@@ -470,8 +470,59 @@ function buildLiveSuggestionQueryVariants(category, anchor) {
   });
 }
 
-async function resolveSuggestionAnchorLocation(anchors = []) {
+function buildNearbySearchKeywords(category) {
+  const key = String(category?.key || '').trim().toLowerCase();
+  const type = String(category?.type || '').trim().toLowerCase();
+  const query = String(category?.query || '').trim().toLowerCase();
+
+  const byKey = {
+    coffee: ['coffee', 'cafe'],
+    breakfast: ['breakfast', 'brunch'],
+    dessert: ['dessert', 'ice cream', 'gelato', 'bakery'],
+    bakery: ['bakery', 'pastry'],
+    food: ['restaurant', 'food'],
+    drinks: ['bar', 'cocktail bar', 'wine bar'],
+    cocktail: ['cocktail bar', 'bar'],
+    ramen: ['ramen', 'noodles'],
+    fish: ['seafood', 'restaurant'],
+    diner: ['diner', 'restaurant'],
+    market: ['market', 'food hall'],
+    temple: ['temple', 'shrine'],
+    view: ['viewpoint', 'scenic'],
+    photo: ['photo spot', 'viewpoint', 'landmark'],
+    walk: ['park', 'walk', 'garden'],
+    water: ['waterfall', 'park'],
+    outdoors: ['park', 'garden'],
+    sights: ['landmark', 'museum', 'attraction'],
+    shopping: ['shopping', 'boutique', 'store'],
+  };
+
+  const candidates = [
+    ...(byKey[key] || []),
+    type === 'cafe' ? 'coffee' : '',
+    type === 'bar' ? 'bar' : '',
+    type === 'bakery' ? 'bakery' : '',
+    type === 'park' ? 'park' : '',
+    type === 'store' ? 'store' : '',
+    type === 'restaurant' ? 'restaurant' : '',
+    type === 'tourist_attraction' ? 'attraction' : '',
+    query,
+  ].filter(Boolean);
+
+  const seen = new Set();
+  return candidates.filter((value) => {
+    const normalized = normalizeSuggestionText(value);
+    if (!normalized || seen.has(normalized)) return false;
+    seen.add(normalized);
+    return true;
+  });
+}
+
+async function resolveSuggestionAnchorLocations(anchors = [], limit = 4) {
+  const resolved = [];
+  const seenAddresses = new Set();
   for (const anchor of anchors) {
+    if (resolved.length >= limit) break;
     const trimmed = String(anchor || '').trim();
     if (!trimmed) continue;
     try {
@@ -482,17 +533,21 @@ async function resolveSuggestionAnchorLocation(anchors = []) {
       const lat = Number(result?.geometry?.location?.lat);
       const lng = Number(result?.geometry?.location?.lng);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-      return {
+      const formattedAddress = String(result?.formatted_address || trimmed).trim();
+      const normalizedAddress = normalizeSuggestionText(formattedAddress);
+      if (!normalizedAddress || seenAddresses.has(normalizedAddress)) continue;
+      seenAddresses.add(normalizedAddress);
+      resolved.push({
         anchor: trimmed,
         lat,
         lng,
-        formattedAddress: String(result?.formatted_address || trimmed).trim(),
-      };
+        formattedAddress,
+      });
     } catch {
       // try next anchor
     }
   }
-  return null;
+  return resolved;
 }
 
 function generateSuggestions(chapter, chapterPins, seed = 0) {
@@ -701,25 +756,29 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
       try {
         const found = [];
         const seenPlaces = new Set();
-        const resolvedAnchorLocation = await resolveSuggestionAnchorLocation(orderedAnchors);
+        const resolvedAnchorLocations = await resolveSuggestionAnchorLocations(orderedAnchors);
 
         for (const category of categoriesToUse) {
           if (found.length >= 3) break;
           let matched = null;
 
-          if (resolvedAnchorLocation) {
-            try {
-              const nearbyRes = await fetch(
-                `/api/places?lat=${encodeURIComponent(resolvedAnchorLocation.lat)}&lng=${encodeURIComponent(resolvedAnchorLocation.lng)}&query=${encodeURIComponent(category.query)}&type=${encodeURIComponent(category.type)}&radius=12000`
-              );
-              if (nearbyRes.ok) {
-                const nearbyData = await nearbyRes.json();
-                const nearbyResult = (nearbyData.results || []).find((item) => {
-                  const placeName = normalizeSuggestionText(item?.name || '');
-                  const placeKey = String(item?.place_id || placeName);
-                  return placeName && !existingLabels.has(placeName) && !seenPlaces.has(placeKey);
-                });
-                if (nearbyResult) {
+          if (resolvedAnchorLocations.length > 0) {
+            for (const resolvedAnchorLocation of resolvedAnchorLocations) {
+              try {
+                const nearbyKeywords = buildNearbySearchKeywords(category);
+                for (const keyword of nearbyKeywords) {
+                  const nearbyRes = await fetch(
+                    `/api/places?lat=${encodeURIComponent(resolvedAnchorLocation.lat)}&lng=${encodeURIComponent(resolvedAnchorLocation.lng)}&query=${encodeURIComponent(keyword)}&type=${encodeURIComponent(category.type)}&radius=12000`
+                  );
+                  if (!nearbyRes.ok) continue;
+                  const nearbyData = await nearbyRes.json();
+                  const nearbyResult = (nearbyData.results || []).find((item) => {
+                    const placeName = normalizeSuggestionText(item?.name || '');
+                    const placeKey = String(item?.place_id || placeName);
+                    return placeName && !existingLabels.has(placeName) && !seenPlaces.has(placeKey);
+                  });
+                  if (!nearbyResult) continue;
+
                   const placeName = normalizeSuggestionText(nearbyResult?.name || '');
                   const placeKey = String(nearbyResult?.place_id || placeName);
                   seenPlaces.add(placeKey);
@@ -736,10 +795,16 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
                     mapQuery: `${nearbyResult.name} ${nearbyResult.formatted_address || nearbyResult.vicinity || resolvedAnchorLocation.formattedAddress}`.trim(),
                     rot: (((initialSeed + found.length * 7 + refreshCount) % 11) - 5) * 0.55,
                   };
+                  break;
                 }
+                if (matched) break;
+              } catch {
+                // try next resolved anchor
               }
-            } catch {
-              // fall through to text search anchors below
+            }
+            if (matched) {
+              found.push(matched);
+              continue;
             }
           }
 
