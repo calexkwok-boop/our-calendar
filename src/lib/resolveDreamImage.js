@@ -44,6 +44,13 @@ const normalizeDreamImageUrl = (value = "") => {
   return normalized;
 };
 
+const proxiedRemoteImageUrl = (value = "") => {
+  const normalized = normalizeDreamImageUrl(value);
+  if (!normalized) return "";
+  if (!/^https?:\/\//i.test(normalized)) return normalized;
+  return `/api/image-proxy?url=${encodeURIComponent(normalized)}`;
+};
+
 const DREAM_CATEGORY_MAP = {
   places: "travel",
   travel: "travel",
@@ -66,20 +73,22 @@ const TITLE_IMAGE_OVERRIDES = {
   "disneyland park": "https://commons.wikimedia.org/wiki/Special:FilePath/File:Disneyland%20park%20-%20Anaheim%20Los%20Angeles%20California%20USA%20%289894308516%29.jpg",
   "machu pichu": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Machu_Picchu%2C_Peru.jpg/1280px-Machu_Picchu%2C_Peru.jpg",
   "machu picchu": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Machu_Picchu%2C_Peru.jpg/1280px-Machu_Picchu%2C_Peru.jpg",
-  "ceres": "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=900&q=80",
+  "ceres": proxiedRemoteImageUrl("https://static.wixstatic.com/media/d832cc_6aebeb1e54344fc4a7a679d62645db78~mv2.jpg/v1/fill/w_980%2Ch_588%2Cal_c%2Cq_85%2Cusm_0.66_1.00_0.01%2Cenc_avif%2Cquality_auto/d832cc_6aebeb1e54344fc4a7a679d62645db78~mv2.jpg"),
   "nobu": "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=900&q=80",
   "nobu los angeles": "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=900&q=80",
-  "gary danko": "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=900&q=80",
-  "gary dankok": "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=900&q=80",
-  "willow osteria": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=80",
-  "the french laundry": "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=900&q=80",
-  "french laundry": "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=900&q=80",
-  "french laudry": "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=900&q=80",
+  "gary danko": proxiedRemoteImageUrl("https://garydanko.com/wp-content/uploads/garydanko/bg-about.jpg"),
+  "gary dankok": proxiedRemoteImageUrl("https://garydanko.com/wp-content/uploads/garydanko/bg-about.jpg"),
+  "willow osteria": proxiedRemoteImageUrl("https://www.fresnobee.com/public/latest-news/6tjlcv/picture312864400/alternates/FREE_1200/FRS_EPZ_WILLOW_OSTERIA_03.JPG"),
+  "willow osteria clovis": proxiedRemoteImageUrl("https://www.fresnobee.com/public/latest-news/6tjlcv/picture312864400/alternates/FREE_1200/FRS_EPZ_WILLOW_OSTERIA_03.JPG"),
+  "the french laundry": proxiedRemoteImageUrl("https://images.squarespace-cdn.com/content/v1/638931dddf47a848a9e6fa5b/1719259694095-52NCG4U8PBFU0AIVLX11/TheFrenchLaundry1-Restaurant-Bar-Napa-California.jpg"),
+  "french laundry": proxiedRemoteImageUrl("https://images.squarespace-cdn.com/content/v1/638931dddf47a848a9e6fa5b/1719259694095-52NCG4U8PBFU0AIVLX11/TheFrenchLaundry1-Restaurant-Bar-Napa-California.jpg"),
+  "french laudry": proxiedRemoteImageUrl("https://images.squarespace-cdn.com/content/v1/638931dddf47a848a9e6fa5b/1719259694095-52NCG4U8PBFU0AIVLX11/TheFrenchLaundry1-Restaurant-Bar-Napa-California.jpg"),
   "old quarter street wander hanoi": "https://images.unsplash.com/photo-1557750255-c76072a7aad1?w=900&q=80",
   "old quarter street wander, hanoi": "https://images.unsplash.com/photo-1557750255-c76072a7aad1?w=900&q=80",
   "the marble mountains": "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=900&q=80",
   "ba na hills": "https://images.unsplash.com/photo-1504214208698-ea1916a2195a?auto=format&fit=crop&w=900&q=80",
   "pho bo for breakfast": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=900&q=80",
+  "pho bo breakfast": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=900&q=80",
 };
 
 const TITLE_TYPE_OVERRIDES = {
@@ -131,6 +140,12 @@ const NORMALIZED_TITLE_ALIASES = {
   "machu pichu": "machu picchu",
   "gary dankok": "gary danko",
   "french laudry": "french laundry",
+  "restaurant gary danko": "gary danko",
+  "gary danko san francisco": "gary danko",
+  "the french laundry yountville": "the french laundry",
+  "french laundry yountville": "french laundry",
+  "willow osteria clovis": "willow osteria",
+  "pho bo breakfast": "pho bo for breakfast",
 };
 
 const GENERIC_RESTAURANT_IMAGE_URLS = new Set([
