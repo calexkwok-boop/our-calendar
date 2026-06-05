@@ -664,8 +664,8 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
 
           for (const anchor of orderedAnchors) {
             try {
-              const q = encodeURIComponent(`${category.query} near ${anchor}`);
-              const res = await fetch(`/api/places?action=textsearch&query=${q}&type=${encodeURIComponent(category.type)}`);
+              const q = `${category.query} near ${anchor}`;
+              const res = await fetch(`/api/places?action=textsearch&query=${encodeURIComponent(q)}&type=${encodeURIComponent(category.type)}`);
               const data = await res.json();
               const result = (data.results || []).find((item) => {
                 const placeName = normalizeSuggestionText(item?.name || '');
