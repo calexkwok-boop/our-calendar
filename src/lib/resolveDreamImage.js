@@ -423,6 +423,10 @@ export const resolveDreamImageCandidates = (item) => {
     return [String(titleOverrideImage).trim()];
   }
 
+  if (titleOverrideIsRestaurantFallback) {
+    queueCandidate(titleOverrideImage, { allowGenericRestaurant: true });
+  }
+
   const directImageUrl = readDirectDreamImageUrl(item);
   const catalogImageUrl = findExploreCatalogImageUrlByTitle(title);
   const shouldSkipStaticRestaurantFallback = restaurantDream && (
@@ -460,10 +464,6 @@ export const resolveDreamImageCandidates = (item) => {
       destination_image: String(item?.destination_image || "").trim(),
       photo: String(item?.photo || "").trim(),
     }, ""));
-  }
-
-  if (titleOverrideIsRestaurantFallback) {
-    queueCandidate(titleOverrideImage, { allowGenericRestaurant: true });
   }
 
   return dedupeImageUrls(candidates);
