@@ -14,6 +14,7 @@ import { generateChapterFromPrompt, getChapterPromptExamples } from '../lib/gene
 
 const CAVEAT = '"Caveat", cursive';
 const SANS = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
+const GOOGLE_MAPS_BROWSER_KEY = String(process.env.REACT_APP_GOOGLE_MAPS_KEY || '').trim();
 
 const SAMPLE_PINS = [
   { id: '1', type: 'photo', x: 18,  y: 70,  rot: -2.5, label: 'Trek in Patagonia',      emoji: '🏔️', imageUrl: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=400&q=80', pinColor: 'teal',   categoryId: 'places',      status: 'dreaming' },
@@ -877,6 +878,12 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
           const photoRef = result?.photos?.[0]?.photo_reference;
           if (photoRef) {
             return `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800`;
+          }
+
+          const lat = Number(result?.geometry?.location?.lat);
+          const lng = Number(result?.geometry?.location?.lng);
+          if (GOOGLE_MAPS_BROWSER_KEY && Number.isFinite(lat) && Number.isFinite(lng)) {
+            return `https://maps.googleapis.com/maps/api/streetview?size=800x800&location=${encodeURIComponent(`${lat},${lng}`)}&key=${encodeURIComponent(GOOGLE_MAPS_BROWSER_KEY)}`;
           }
 
           const query = [
