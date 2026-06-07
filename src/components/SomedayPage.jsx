@@ -575,6 +575,21 @@ const DEFAULT_LOCAL_SUGGESTION_CATEGORIES = [
   { key: 'dessert', label: 'Dessert nearby', query: 'dessert', type: 'restaurant', emoji: '🍨', categoryId: 'food' },
 ];
 
+const KNOWN_SUGGESTION_ANCHOR_COORDS = {
+  'hanoi vietnam': { lat: 21.027763, lng: 105.83416, formattedAddress: 'Hanoi, Vietnam' },
+  'hoi an vietnam': { lat: 15.8800584, lng: 108.3380469, formattedAddress: 'Hoi An, Vietnam' },
+  'da nang vietnam': { lat: 16.0544068, lng: 108.2021667, formattedAddress: 'Da Nang, Vietnam' },
+  'ha long vietnam': { lat: 20.9100512, lng: 107.1839024, formattedAddress: 'Ha Long, Vietnam' },
+  'hue vietnam': { lat: 16.4637139, lng: 107.590866, formattedAddress: 'Hue, Vietnam' },
+  'ho chi minh city vietnam': { lat: 10.8230989, lng: 106.6296638, formattedAddress: 'Ho Chi Minh City, Vietnam' },
+  'ha giang vietnam': { lat: 22.8233345, lng: 104.9835794, formattedAddress: 'Ha Giang, Vietnam' },
+  'sa pa vietnam': { lat: 22.3363922, lng: 103.8437852, formattedAddress: 'Sa Pa, Vietnam' },
+  'anaheim california': { lat: 33.8365932, lng: -117.9143012, formattedAddress: 'Anaheim, California' },
+  'disneyland anaheim california': { lat: 33.8120918, lng: -117.9189742, formattedAddress: 'Disneyland, Anaheim, California' },
+  'walt disney world orlando florida': { lat: 28.385233, lng: -81.563874, formattedAddress: 'Walt Disney World, Orlando, Florida' },
+  'orlando florida': { lat: 28.5383832, lng: -81.3789269, formattedAddress: 'Orlando, Florida' },
+};
+
 async function resolveSuggestionAnchorLocations(anchors = [], limit = 4) {
   const resolved = [];
   const seenAddresses = new Set();
@@ -582,6 +597,20 @@ async function resolveSuggestionAnchorLocations(anchors = [], limit = 4) {
     if (resolved.length >= limit) break;
     const trimmed = String(anchor || '').trim();
     if (!trimmed) continue;
+    const normalizedAnchor = normalizeSuggestionText(trimmed);
+    const knownCoords = KNOWN_SUGGESTION_ANCHOR_COORDS[normalizedAnchor];
+    if (knownCoords) {
+      if (!seenAddresses.has(normalizedAnchor)) {
+        seenAddresses.add(normalizedAnchor);
+        resolved.push({
+          anchor: trimmed,
+          lat: knownCoords.lat,
+          lng: knownCoords.lng,
+          formattedAddress: knownCoords.formattedAddress,
+        });
+      }
+      continue;
+    }
     try {
       const res = await fetch(`/api/geocode?address=${encodeURIComponent(trimmed)}`);
       if (!res.ok) continue;
