@@ -525,6 +525,21 @@ function buildNearbySearchKeywords(category) {
   });
 }
 
+const LOCAL_BUSINESS_FALLBACK_TYPES = [
+  { key: 'coffee-fallback', label: 'Coffee nearby', query: 'coffee', type: 'cafe', emoji: '☕', categoryId: 'food' },
+  { key: 'food-fallback', label: 'Restaurant nearby', query: 'restaurant', type: 'restaurant', emoji: '🍽️', categoryId: 'food' },
+  { key: 'drinks-fallback', label: 'Bar nearby', query: 'bar', type: 'bar', emoji: '🍸', categoryId: 'food' },
+  { key: 'bakery-fallback', label: 'Bakery nearby', query: 'bakery', type: 'bakery', emoji: '🥐', categoryId: 'food' },
+];
+
+const DEFAULT_LOCAL_SUGGESTION_CATEGORIES = [
+  { key: 'coffee', label: 'Coffee nearby', query: 'coffee', type: 'cafe', emoji: '☕', categoryId: 'food' },
+  { key: 'food', label: 'Restaurant nearby', query: 'restaurant', type: 'restaurant', emoji: '🍽️', categoryId: 'food' },
+  { key: 'drinks', label: 'Bar nearby', query: 'bar', type: 'bar', emoji: '🍸', categoryId: 'food' },
+  { key: 'bakery', label: 'Bakery nearby', query: 'bakery', type: 'bakery', emoji: '🥐', categoryId: 'food' },
+  { key: 'dessert', label: 'Dessert nearby', query: 'dessert', type: 'restaurant', emoji: '🍨', categoryId: 'food' },
+];
+
 async function resolveSuggestionAnchorLocations(anchors = [], limit = 4) {
   const resolved = [];
   const seenAddresses = new Set();
@@ -756,7 +771,13 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
           emoji: activePill.emoji,
           categoryId: activePill.categoryId,
         }))
-      : getLiveSuggestionCategories(chapter, chapterPins, refreshCount);
+      : (() => {
+          const offset = refreshCount % DEFAULT_LOCAL_SUGGESTION_CATEGORIES.length;
+          return [
+            ...DEFAULT_LOCAL_SUGGESTION_CATEGORIES.slice(offset),
+            ...DEFAULT_LOCAL_SUGGESTION_CATEGORIES.slice(0, offset),
+          ];
+        })();
 
     const loadNearbySuggestions = async () => {
       setLoadingLiveSuggestions(true);
@@ -764,6 +785,25 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
         const found = [];
         const seenPlaces = new Set();
         const resolvedAnchorLocations = await resolveSuggestionAnchorLocations(orderedAnchors);
+        const buildSuggestionFromPlace = (result, category, resolvedAnchorLocation, indexOffset = 0) => {
+          const placeName = normalizeSuggestionText(result?.name || '');
+          const placeKey = String(result?.place_id || placeName);
+          if (!placeName || existingLabels.has(placeName) || seenPlaces.has(placeKey)) return null;
+          seenPlaces.add(placeKey);
+          const photoRef = result?.photos?.[0]?.photo_reference;
+          return {
+            id: `live-${category.key}-${placeKey}`,
+            label: result.name,
+            emoji: category.emoji,
+            categoryId: category.categoryId,
+            imageUrl: photoRef ? `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800` : '',
+            description: `${result.formatted_address || result.vicinity || ''}`.trim() || `${category.label} near ${resolvedAnchorLocation?.formattedAddress || resolvedAnchorLocation?.anchor || ''}.`,
+            tip: buildPlaceSuggestionTip(result, resolvedAnchorLocation?.anchor || '', category),
+            whyItFits: buildPlaceSuggestionWhy(result, resolvedAnchorLocation?.anchor || '', category),
+            mapQuery: `${result.name} ${result.formatted_address || result.vicinity || resolvedAnchorLocation?.formattedAddress || resolvedAnchorLocation?.anchor || ''}`.trim(),
+            rot: (((initialSeed + (found.length + indexOffset) * 7 + refreshCount) % 11) - 5) * 0.55,
+          };
+        };
 
         for (const category of categoriesToUse) {
           if (found.length >= 3) break;
@@ -857,6 +897,32 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
           }
 
           if (matched) found.push(matched);
+        }
+
+        if (found.length === 0 && resolvedAnchorLocations.length > 0) {
+          for (const resolvedAnchorLocation of resolvedAnchorLocations) {
+            if (found.length >= 3) break;
+            for (const category of LOCAL_BUSINESS_FALLBACK_TYPES) {
+              if (found.length >= 3) break;
+              try {
+                const res = await fetch(
+                  `/api/places?lat=${encodeURIComponent(resolvedAnchorLocation.lat)}&lng=${encodeURIComponent(resolvedAnchorLocation.lng)}&query=${encodeURIComponent(category.query)}&type=${encodeURIComponent(category.type)}&radius=10000`
+                );
+                if (!res.ok) continue;
+                const data = await res.json();
+                const candidates = Array.isArray(data?.results) ? data.results : [];
+                const result = candidates.find((item) => {
+                  const suggestion = buildSuggestionFromPlace(item, category, resolvedAnchorLocation, found.length);
+                  if (!suggestion) return false;
+                  found.push(suggestion);
+                  return true;
+                });
+                if (result && found.length >= 3) break;
+              } catch {
+                // continue local business fallback
+              }
+            }
+          }
         }
 
         if (!cancelled) setLiveSuggestions(found);
