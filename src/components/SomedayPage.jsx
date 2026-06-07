@@ -892,6 +892,26 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
             rot: (((initialSeed + (found.length + indexOffset) * 7 + refreshCount) % 11) - 5) * 0.55,
           };
         };
+        const fetchLocalNearbyFallback = async (resolvedAnchorLocation, category, debugBucket) => {
+          const res = await fetch(
+            `/api/local-nearby?lat=${encodeURIComponent(resolvedAnchorLocation.lat)}&lng=${encodeURIComponent(resolvedAnchorLocation.lng)}&type=${encodeURIComponent(category.type)}&radius=8000`
+          );
+          if (!res.ok) return [];
+          const data = await res.json();
+          const results = Array.isArray(data?.results) ? data.results : [];
+          if (Array.isArray(debugBucket)) {
+            debugBucket.push({
+              anchor: resolvedAnchorLocation.anchor,
+              formattedAddress: resolvedAnchorLocation.formattedAddress,
+              category: category.key,
+              query: category.query,
+              resultCount: results.length,
+              firstResult: results?.[0]?.name || '',
+              source: 'osm',
+            });
+          }
+          return results;
+        };
 
         for (const category of categoriesToUse) {
           if (found.length >= 3) break;
@@ -915,7 +935,15 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
                     resultCount: Array.isArray(nearbyData?.results) ? nearbyData.results.length : 0,
                     firstResult: nearbyData?.results?.[0]?.name || '',
                   });
-                  const nearbyResult = (nearbyData.results || []).find((item) => {
+                  let nearbyCandidates = Array.isArray(nearbyData?.results) ? nearbyData.results : [];
+                  if (nearbyCandidates.length === 0) {
+                    nearbyCandidates = await fetchLocalNearbyFallback(
+                      resolvedAnchorLocation,
+                      category,
+                      debugSnapshot.localFallbackAttempts
+                    );
+                  }
+                  const nearbyResult = nearbyCandidates.find((item) => {
                     const placeName = normalizeSuggestionText(item?.name || '');
                     const placeKey = String(item?.place_id || placeName);
                     return placeName && !existingLabels.has(placeName) && !seenPlaces.has(placeKey);
@@ -1013,7 +1041,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
                 );
                 if (!res.ok) continue;
                 const data = await res.json();
-                const candidates = Array.isArray(data?.results) ? data.results : [];
+                let candidates = Array.isArray(data?.results) ? data.results : [];
                 debugSnapshot.localFallbackAttempts.push({
                   anchor: resolvedAnchorLocation.anchor,
                   formattedAddress: resolvedAnchorLocation.formattedAddress,
@@ -1021,7 +1049,15 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
                   query: category.query,
                   resultCount: candidates.length,
                   firstResult: candidates?.[0]?.name || '',
+                  source: 'google',
                 });
+                if (candidates.length === 0) {
+                  candidates = await fetchLocalNearbyFallback(
+                    resolvedAnchorLocation,
+                    category,
+                    debugSnapshot.localFallbackAttempts
+                  );
+                }
                 const result = candidates.find((item) => {
                   const suggestion = buildSuggestionFromPlace(item, category, resolvedAnchorLocation, found.length);
                   if (!suggestion) return false;
