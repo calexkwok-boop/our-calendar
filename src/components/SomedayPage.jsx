@@ -757,6 +757,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
   const [liveSuggestions, setLiveSuggestions] = useState([]);
   const [loadingLiveSuggestions, setLoadingLiveSuggestions] = useState(false);
   const [selectedSuggestion, setSelectedSuggestion] = useState(null);
+  const [debugInfo, setDebugInfo] = useState(null);
 
   const pinLabelKey = chapterPins.map(p => (p.label || p.text || '').toLowerCase()).join('\x00');
   const suggestionAnchorKey = chapterPins.map((pin) => ([
@@ -782,6 +783,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
     const next = activePillKey === pillKey ? null : pillKey;
     setActivePillKey(next);
     setLiveSuggestions([]);
+    setDebugInfo(null);
     setAddedIds(new Set());
     setRefreshCount(0);
   }
@@ -830,6 +832,18 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
         const found = [];
         const seenPlaces = new Set();
         const resolvedAnchorLocations = await resolveSuggestionAnchorLocations(orderedAnchors);
+        const debugSnapshot = {
+          orderedAnchors: [...orderedAnchors],
+          resolvedAnchorLocations: resolvedAnchorLocations.map((item) => ({
+            anchor: item.anchor,
+            formattedAddress: item.formattedAddress,
+            lat: item.lat,
+            lng: item.lng,
+          })),
+          nearbyAttempts: [],
+          textAttempts: [],
+          localFallbackAttempts: [],
+        };
         const buildSuggestionFromPlace = (result, category, resolvedAnchorLocation, indexOffset = 0) => {
           const placeName = normalizeSuggestionText(result?.name || '');
           const placeKey = String(result?.place_id || placeName);
@@ -864,6 +878,14 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
                   );
                   if (!nearbyRes.ok) continue;
                   const nearbyData = await nearbyRes.json();
+                  debugSnapshot.nearbyAttempts.push({
+                    anchor: resolvedAnchorLocation.anchor,
+                    formattedAddress: resolvedAnchorLocation.formattedAddress,
+                    category: category.key,
+                    keyword,
+                    resultCount: Array.isArray(nearbyData?.results) ? nearbyData.results.length : 0,
+                    firstResult: nearbyData?.results?.[0]?.name || '',
+                  });
                   const nearbyResult = (nearbyData.results || []).find((item) => {
                     const placeName = normalizeSuggestionText(item?.name || '');
                     const placeKey = String(item?.place_id || placeName);
@@ -908,6 +930,13 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
                   const res = await fetch(`/api/places?action=textsearch&query=${encodeURIComponent(q)}&type=${encodeURIComponent(category.type)}`);
                   if (!res.ok) continue;
                   const data = await res.json();
+                  debugSnapshot.textAttempts.push({
+                    anchor,
+                    category: category.key,
+                    query: q,
+                    resultCount: Array.isArray(data?.results) ? data.results.length : 0,
+                    firstResult: data?.results?.[0]?.name || '',
+                  });
                   const result = (data.results || []).find((item) => {
                     const placeName = normalizeSuggestionText(item?.name || '');
                     const placeKey = String(item?.place_id || placeName);
@@ -956,6 +985,14 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
                 if (!res.ok) continue;
                 const data = await res.json();
                 const candidates = Array.isArray(data?.results) ? data.results : [];
+                debugSnapshot.localFallbackAttempts.push({
+                  anchor: resolvedAnchorLocation.anchor,
+                  formattedAddress: resolvedAnchorLocation.formattedAddress,
+                  category: category.key,
+                  query: category.query,
+                  resultCount: candidates.length,
+                  firstResult: candidates?.[0]?.name || '',
+                });
                 const result = candidates.find((item) => {
                   const suggestion = buildSuggestionFromPlace(item, category, resolvedAnchorLocation, found.length);
                   if (!suggestion) return false;
@@ -970,7 +1007,13 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
           }
         }
 
-        if (!cancelled) setLiveSuggestions(found);
+        if (!cancelled) {
+          setLiveSuggestions(found);
+          setDebugInfo({
+            ...debugSnapshot,
+            foundLabels: found.map((item) => item.label),
+          });
+        }
       } finally {
         if (!cancelled) setLoadingLiveSuggestions(false);
       }
@@ -1026,9 +1069,28 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
       </div>
 
       {visible.length === 0 ? (
-        <p style={{ fontFamily: CAVEAT, fontSize: 14, color: ts, fontStyle: 'italic', margin: '0 0 8px' }}>
-          {loadingLiveSuggestions ? 'Finding nearby spots...' : 'No nearby spots found. Try refreshing or pick a pill.'}
-        </p>
+        <>
+          <p style={{ fontFamily: CAVEAT, fontSize: 14, color: ts, fontStyle: 'italic', margin: '0 0 8px' }}>
+            {loadingLiveSuggestions ? 'Finding nearby spots...' : 'No nearby spots found. Try refreshing or pick a pill.'}
+          </p>
+          {!loadingLiveSuggestions && debugInfo && (
+            <pre style={{
+              margin: '0 0 8px',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              fontSize: 10,
+              lineHeight: 1.45,
+              color: darkMode ? '#94a3b8' : '#64748b',
+              background: darkMode ? 'rgba(15,23,42,0.75)' : '#f8fafc',
+              border: `1px solid ${darkMode ? 'rgba(148,163,184,0.18)' : '#e2e8f0'}`,
+              borderRadius: 12,
+              padding: '10px 12px',
+              overflowX: 'auto',
+            }}>
+              {JSON.stringify(debugInfo, null, 2)}
+            </pre>
+          )}
+        </>
       ) : (
         <div style={{ display: 'flex', gap: 14, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 18, paddingTop: 14 }}>
           {visible.map((s) => (
