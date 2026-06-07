@@ -660,12 +660,17 @@ function generateSuggestions(chapter, chapterPins, seed = 0) {
 // ─── Suggestion Strip ─────────────────────────────────────────────────────────
 function SuggestionCardInner({ s, darkMode, shadow }) {
   const cardBg = darkMode ? '#e2e8f0' : '#ffffff';
+  const [imageFailed, setImageFailed] = useState(false);
+  useEffect(() => {
+    setImageFailed(false);
+  }, [s?.id, s?.imageUrl]);
+  const displayImageUrl = imageFailed ? '' : String(s?.imageUrl || '').trim();
   return (
     <div style={{ background: cardBg, padding: '6px 6px 0', width: 120, borderRadius: 2, boxShadow: shadow, position: 'relative' }}>
       <Pushpin colorKey="teal" darkMode={false} />
       <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 1, background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34 }}>
-        {s.imageUrl
-          ? <img src={s.imageUrl} alt={s.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} draggable={false} />
+        {displayImageUrl
+          ? <img src={displayImageUrl} alt={s.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} draggable={false} onError={() => setImageFailed(true)} />
           : s.emoji}
       </div>
       <div style={{ padding: '5px 3px 7px', textAlign: 'center', fontFamily: CAVEAT, fontSize: 13, color: '#1a1a2e', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{s.label}</div>
@@ -679,9 +684,15 @@ function SuggestionPreviewSheet({ suggestion, onClose, onAdd, darkMode }) {
   const tp = darkMode ? '#e8eaf0' : '#1a1a2e';
   const ts = darkMode ? '#64748b' : '#9ca3af';
   const divider = darkMode ? 'rgba(255,255,255,0.07)' : '#f0ece4';
+  const [imageFailed, setImageFailed] = useState(false);
   const mapsUrl = suggestion?.mapQuery
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(suggestion.mapQuery)}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(suggestion?.label || '')}`;
+  const displayImageUrl = imageFailed ? '' : String(suggestion?.imageUrl || '').trim();
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [suggestion?.id, suggestion?.imageUrl]);
 
   if (!suggestion) return null;
 
@@ -692,9 +703,9 @@ function SuggestionPreviewSheet({ suggestion, onClose, onAdd, darkMode }) {
           <div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
         </div>
 
-        {suggestion.imageUrl && (
+        {displayImageUrl && (
           <div style={{ width: '100%', height: 210, overflow: 'hidden', position: 'relative' }}>
-            <img src={suggestion.imageUrl} alt={suggestion.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            <img src={displayImageUrl} alt={suggestion.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={() => setImageFailed(true)} />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.48))' }} />
           </div>
         )}
