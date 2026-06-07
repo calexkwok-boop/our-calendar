@@ -724,6 +724,21 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
   const [selectedSuggestion, setSelectedSuggestion] = useState(null);
 
   const pinLabelKey = chapterPins.map(p => (p.label || p.text || '').toLowerCase()).join('\x00');
+  const suggestionAnchorKey = chapterPins.map((pin) => ([
+    pin?.id,
+    pin?.mapQuery,
+    pin?.address,
+    pin?.location,
+    pin?.label,
+    pin?.text,
+    pin?.description,
+  ].map((value) => String(value || '').trim()).join('|'))).join('\x00');
+  const chapterSuggestionKey = [
+    chapter?.id,
+    chapter?.title,
+    chapter?.public_title,
+    Array.isArray(chapter?.public_tags) ? chapter.public_tags.join('|') : '',
+  ].map((value) => String(value || '').trim()).join('\x00');
   const suggestions = liveSuggestions;
   const visible = suggestions.filter(s => !addedIds.has(s.id)).slice(0, 3);
   const ts = darkMode ? '#64748b' : '#9ca3af';
@@ -928,7 +943,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
 
     loadNearbySuggestions();
     return () => { cancelled = true; };
-  }, [chapter.id, chapter.title, chapterPins, initialSeed, pinLabelKey, refreshCount, activePillKey]);
+  }, [chapterSuggestionKey, suggestionAnchorKey, initialSeed, pinLabelKey, refreshCount, activePillKey]);
 
   function handleAdd(s) {
     setAddedIds(prev => new Set([...prev, s.id]));
