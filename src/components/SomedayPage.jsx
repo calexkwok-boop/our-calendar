@@ -724,12 +724,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
   const [selectedSuggestion, setSelectedSuggestion] = useState(null);
 
   const pinLabelKey = chapterPins.map(p => (p.label || p.text || '').toLowerCase()).join('\x00');
-  const fallbackSuggestions = React.useMemo(
-    () => generateSuggestions(chapter, chapterPins, initialSeed + refreshCount * 97),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [chapter.id, pinLabelKey, initialSeed, refreshCount],
-  );
-  const suggestions = liveSuggestions.length > 0 ? liveSuggestions : fallbackSuggestions;
+  const suggestions = liveSuggestions;
   const visible = suggestions.filter(s => !addedIds.has(s.id)).slice(0, 3);
   const ts = darkMode ? '#64748b' : '#9ca3af';
 
@@ -982,7 +977,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
 
       {visible.length === 0 ? (
         <p style={{ fontFamily: CAVEAT, fontSize: 14, color: ts, fontStyle: 'italic', margin: '0 0 8px' }}>
-          {loadingLiveSuggestions ? 'Finding nearby spots...' : 'No results found. Try refreshing!'}
+          {loadingLiveSuggestions ? 'Finding nearby spots...' : 'No nearby spots found. Try refreshing or pick a pill.'}
         </p>
       ) : (
         <div style={{ display: 'flex', gap: 14, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 18, paddingTop: 14 }}>
