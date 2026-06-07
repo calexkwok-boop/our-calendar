@@ -883,7 +883,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
           const lat = Number(result?.geometry?.location?.lat);
           const lng = Number(result?.geometry?.location?.lng);
           if (GOOGLE_MAPS_BROWSER_KEY && Number.isFinite(lat) && Number.isFinite(lng)) {
-            return `https://maps.googleapis.com/maps/api/streetview?size=800x800&location=${encodeURIComponent(`${lat},${lng}`)}&key=${encodeURIComponent(GOOGLE_MAPS_BROWSER_KEY)}`;
+            return `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(`${lat},${lng}`)}&zoom=16&size=800x800&scale=2&maptype=roadmap&markers=color:red%7C${encodeURIComponent(`${lat},${lng}`)}&key=${encodeURIComponent(GOOGLE_MAPS_BROWSER_KEY)}`;
           }
 
           const query = [
