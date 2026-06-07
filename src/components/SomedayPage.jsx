@@ -352,6 +352,39 @@ function inferDisneyDestinationContext(chapter, chapterPins) {
   return { mode: null, forcedAnchors: [] };
 }
 
+function inferVietnamDestinationContext(chapter, chapterPins) {
+  const haystack = getSuggestionSearchText(chapter, chapterPins);
+  const forcedAnchors = [];
+
+  const locationSignals = [
+    { terms: ['hanoi', 'old quarter', 'cafe giang'], anchor: 'Hanoi, Vietnam' },
+    { terms: ['hoi an', 'ancient town', 'lantern town'], anchor: 'Hoi An, Vietnam' },
+    { terms: ['da nang', 'danang', 'ba na hills', 'marble mountains'], anchor: 'Da Nang, Vietnam' },
+    { terms: ['ha long', 'halong'], anchor: 'Ha Long, Vietnam' },
+    { terms: ['hue', 'imperial city'], anchor: 'Hue, Vietnam' },
+    { terms: ['saigon', 'ho chi minh'], anchor: 'Ho Chi Minh City, Vietnam' },
+    { terms: ['ha giang'], anchor: 'Ha Giang, Vietnam' },
+    { terms: ['sapa'], anchor: 'Sa Pa, Vietnam' },
+  ];
+
+  locationSignals.forEach(({ terms, anchor }) => {
+    if (terms.some((term) => haystack.includes(term))) {
+      forcedAnchors.push(anchor);
+    }
+  });
+
+  const seen = new Set();
+  return {
+    mode: forcedAnchors.length > 0 ? 'vietnam' : null,
+    forcedAnchors: forcedAnchors.filter((anchor) => {
+      const normalized = normalizeSuggestionText(anchor);
+      if (!normalized || seen.has(normalized)) return false;
+      seen.add(normalized);
+      return true;
+    }),
+  };
+}
+
 function scoreAnchorCandidate(value, disneyContext) {
   const raw = String(value || '').trim();
   const normalized = normalizeSuggestionText(raw);
@@ -398,8 +431,10 @@ function getLiveSuggestionCategories(chapter, chapterPins, refreshCount = 0) {
 
 function inferChapterAnchorCandidates(chapter, chapterPins) {
   const disneyContext = inferDisneyDestinationContext(chapter, chapterPins);
+  const vietnamContext = inferVietnamDestinationContext(chapter, chapterPins);
   const values = [
     ...disneyContext.forcedAnchors.map((value) => ({ value, bonus: 60 })),
+    ...vietnamContext.forcedAnchors.map((value) => ({ value, bonus: 58 })),
     { value: chapter?.title, bonus: 35 },
     { value: chapter?.public_title, bonus: 35 },
     ...(Array.isArray(chapter?.public_tags) ? chapter.public_tags.map((value) => ({ value, bonus: 28 })) : []),
