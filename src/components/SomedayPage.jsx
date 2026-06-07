@@ -873,18 +873,41 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
           textAttempts: [],
           localFallbackAttempts: [],
         };
-        const buildSuggestionFromPlace = (result, category, resolvedAnchorLocation, indexOffset = 0) => {
+        const resolveSuggestionImageUrl = async (result, resolvedAnchorLocation) => {
+          const photoRef = result?.photos?.[0]?.photo_reference;
+          if (photoRef) {
+            return `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800`;
+          }
+
+          const query = [
+            result?.name,
+            result?.formatted_address || result?.vicinity || resolvedAnchorLocation?.formattedAddress || resolvedAnchorLocation?.anchor || '',
+          ].filter(Boolean).join(' ');
+
+          if (!query) return '';
+
+          try {
+            const res = await fetch(`/api/google-image-search?query=${encodeURIComponent(query)}&num=1`);
+            if (!res.ok) return '';
+            const data = await res.json();
+            return String(data?.results?.[0]?.url || data?.results?.[0]?.displayUrl || '').trim();
+          } catch {
+            return '';
+          }
+        };
+
+        const buildSuggestionFromPlace = async (result, category, resolvedAnchorLocation, indexOffset = 0) => {
           const placeName = normalizeSuggestionText(result?.name || '');
           const placeKey = String(result?.place_id || placeName);
           if (!placeName || existingLabels.has(placeName) || seenPlaces.has(placeKey)) return null;
           seenPlaces.add(placeKey);
-          const photoRef = result?.photos?.[0]?.photo_reference;
+          const imageUrl = await resolveSuggestionImageUrl(result, resolvedAnchorLocation);
           return {
             id: `live-${category.key}-${placeKey}`,
             label: result.name,
             emoji: category.emoji,
             categoryId: category.categoryId,
-            imageUrl: photoRef ? `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800` : '',
+            imageUrl,
             description: `${result.formatted_address || result.vicinity || ''}`.trim() || `${category.label} near ${resolvedAnchorLocation?.formattedAddress || resolvedAnchorLocation?.anchor || ''}.`,
             tip: buildPlaceSuggestionTip(result, resolvedAnchorLocation?.anchor || '', category),
             whyItFits: buildPlaceSuggestionWhy(result, resolvedAnchorLocation?.anchor || '', category),
@@ -950,22 +973,12 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
                   });
                   if (!nearbyResult) continue;
 
-                  const placeName = normalizeSuggestionText(nearbyResult?.name || '');
-                  const placeKey = String(nearbyResult?.place_id || placeName);
-                  seenPlaces.add(placeKey);
-                  const photoRef = nearbyResult?.photos?.[0]?.photo_reference;
-                  matched = {
-                    id: `live-${category.key}-${placeKey}`,
-                    label: nearbyResult.name,
-                    emoji: category.emoji,
-                    categoryId: category.categoryId,
-                    imageUrl: photoRef ? `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800` : '',
-                    description: `${nearbyResult.formatted_address || nearbyResult.vicinity || ''}`.trim() || `${category.label} near ${resolvedAnchorLocation.formattedAddress}.`,
-                    tip: buildPlaceSuggestionTip(nearbyResult, resolvedAnchorLocation.anchor, category),
-                    whyItFits: buildPlaceSuggestionWhy(nearbyResult, resolvedAnchorLocation.anchor, category),
-                    mapQuery: `${nearbyResult.name} ${nearbyResult.formatted_address || nearbyResult.vicinity || resolvedAnchorLocation.formattedAddress}`.trim(),
-                    rot: (((initialSeed + found.length * 7 + refreshCount) % 11) - 5) * 0.55,
-                  };
+                  matched = await buildSuggestionFromPlace(
+                    nearbyResult,
+                    category,
+                    resolvedAnchorLocation,
+                    found.length
+                  );
                   break;
                 }
                 if (matched) break;
@@ -1002,22 +1015,12 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
 
                   if (!result) continue;
 
-                  const placeName = normalizeSuggestionText(result?.name || '');
-                  const placeKey = String(result?.place_id || placeName);
-                  seenPlaces.add(placeKey);
-                  const photoRef = result?.photos?.[0]?.photo_reference;
-                  matched = {
-                    id: `live-${category.key}-${placeKey}`,
-                    label: result.name,
-                    emoji: category.emoji,
-                    categoryId: category.categoryId,
-                    imageUrl: photoRef ? `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800` : '',
-                    description: `${result.formatted_address || result.vicinity || ''}`.trim() || `${category.label} near ${anchor}.`,
-                    tip: buildPlaceSuggestionTip(result, anchor, category),
-                    whyItFits: buildPlaceSuggestionWhy(result, anchor, category),
-                    mapQuery: `${result.name} ${result.formatted_address || result.vicinity || anchor}`.trim(),
-                    rot: (((initialSeed + found.length * 7 + refreshCount) % 11) - 5) * 0.55,
-                  };
+                  matched = await buildSuggestionFromPlace(
+                    result,
+                    category,
+                    { anchor, formattedAddress: anchor },
+                    found.length
+                  );
                   break;
                 }
                 if (matched) break;
@@ -1058,13 +1061,13 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
                     debugSnapshot.localFallbackAttempts
                   );
                 }
-                const result = candidates.find((item) => {
-                  const suggestion = buildSuggestionFromPlace(item, category, resolvedAnchorLocation, found.length);
-                  if (!suggestion) return false;
+                for (const item of candidates) {
+                  const suggestion = await buildSuggestionFromPlace(item, category, resolvedAnchorLocation, found.length);
+                  if (!suggestion) continue;
                   found.push(suggestion);
-                  return true;
-                });
-                if (result && found.length >= 3) break;
+                  break;
+                }
+                if (found.length >= 3) break;
               } catch {
                 // continue local business fallback
               }
