@@ -576,6 +576,14 @@ const DEFAULT_LOCAL_SUGGESTION_CATEGORIES = [
   { key: 'dessert', label: 'Dessert nearby', query: 'dessert', type: 'restaurant', emoji: '🍨', categoryId: 'food' },
 ];
 
+const LOCAL_NEARBY_AMENITY_BY_TYPE = {
+  cafe: ['cafe', 'coffee_shop'],
+  restaurant: ['restaurant', 'fast_food'],
+  bar: ['bar', 'pub'],
+  bakery: ['bakery'],
+  store: ['marketplace', 'mall'],
+};
+
 const CHAPTER_SUGGESTIONS_CACHE_PREFIX = 'komo-chapter-suggestions-v1:';
 const CHAPTER_SUGGESTIONS_CACHE_TTL_MS = 1000 * 60 * 30;
 
@@ -1020,23 +1028,44 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
           }
           return results;
         };
+        const fetchBundledLocalNearby = async (resolvedAnchorLocation, categories, debugBucket) => {
+          const requestedTypes = Array.from(new Set(categories.map((category) => category.type).filter(Boolean)));
+          const res = await fetch(
+            `/api/local-nearby?lat=${encodeURIComponent(resolvedAnchorLocation.lat)}&lng=${encodeURIComponent(resolvedAnchorLocation.lng)}&types=${encodeURIComponent(requestedTypes.join(','))}&radius=8000`
+          );
+          if (!res.ok) return [];
+          const data = await res.json();
+          const results = Array.isArray(data?.results) ? data.results : [];
+          if (Array.isArray(debugBucket)) {
+            debugBucket.push({
+              anchor: resolvedAnchorLocation.anchor,
+              formattedAddress: resolvedAnchorLocation.formattedAddress,
+              category: 'bundle',
+              query: requestedTypes.join(','),
+              resultCount: results.length,
+              firstResult: results?.[0]?.name || '',
+              source: 'osm-bundle',
+            });
+          }
+          return results;
+        };
 
         if (!activePill && resolvedAnchorLocations.length > 0) {
           const primaryAnchor = resolvedAnchorLocations[0];
           const fastCategories = categoriesToUse.slice(0, 3);
-          const fastResults = await Promise.all(
-            fastCategories.map((category) =>
-              fetchLocalNearbyFallback(primaryAnchor, category, debugSnapshot.localFallbackAttempts)
-                .then((results) => ({ category, results }))
-                .catch(() => ({ category, results: [] }))
-            )
-          );
+          const bundledResults = await fetchBundledLocalNearby(
+            primaryAnchor,
+            fastCategories,
+            debugSnapshot.localFallbackAttempts
+          ).catch(() => []);
 
-          for (const { category, results } of fastResults) {
-            const fastMatch = results.find((item) => {
+          for (const category of fastCategories) {
+            const fastMatch = bundledResults.find((item) => {
               const placeName = normalizeSuggestionText(item?.name || '');
               const placeKey = String(item?.place_id || placeName);
-              return placeName && !existingLabels.has(placeName) && !seenPlaces.has(placeKey);
+              const amenity = String(item?.amenity || '').toLowerCase();
+              const amenityMatches = (LOCAL_NEARBY_AMENITY_BY_TYPE[category.type] || [category.type]).includes(amenity);
+              return amenityMatches && placeName && !existingLabels.has(placeName) && !seenPlaces.has(placeKey);
             });
             if (!fastMatch) continue;
             const suggestion = buildSuggestionFromPlace(

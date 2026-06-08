@@ -48,6 +48,10 @@ export default async function handler(req, res) {
   const lng = sanitizeNumber(req.query?.lng, NaN);
   const radius = Math.max(500, Math.min(20000, sanitizeNumber(req.query?.radius, 6000)));
   const type = String(req.query?.type || '').trim().toLowerCase();
+  const types = String(req.query?.types || '')
+    .split(',')
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
 
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return res.status(400).json({ error: 'lat and lng required' });
@@ -58,6 +62,7 @@ export default async function handler(req, res) {
     lng: Number(lng.toFixed(3)),
     radius,
     type,
+    types,
   });
   const cached = localNearbyCache.get(cacheKey);
   if (cached && (Date.now() - cached.ts) < LOCAL_NEARBY_CACHE_TTL_MS) {
@@ -65,7 +70,10 @@ export default async function handler(req, res) {
     return res.json(cached.payload);
   }
 
-  const amenities = AMENITY_BY_TYPE[type] || [type || 'cafe'];
+  const requestedTypes = types.length > 0 ? types : [type || 'cafe'];
+  const amenities = Array.from(new Set(
+    requestedTypes.flatMap((requestedType) => AMENITY_BY_TYPE[requestedType] || [requestedType])
+  ));
   const ql = [
     '[out:json][timeout:25];',
     '(',
