@@ -43,41 +43,7 @@ function normalizeElement(element = {}) {
   };
 }
 
-async function enrichResultsWithGooglePhotos(results, type, key) {
-  if (!key || !Array.isArray(results) || results.length === 0) return results;
-
-  const topResults = results.slice(0, 8);
-  const remainder = results.slice(8);
-
-  const enrichedTop = await Promise.all(topResults.map(async (item) => {
-    const name = String(item?.name || '').trim();
-    const address = String(item?.formatted_address || item?.vicinity || '').trim();
-    if (!name) return item;
-
-    const query = [name, address].filter(Boolean).join(' ');
-    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&type=${encodeURIComponent(type || 'restaurant')}&key=${key}`;
-
-    try {
-      const upstream = await fetch(url);
-      if (!upstream.ok) return item;
-      const data = await upstream.json();
-      const match = Array.isArray(data?.results) ? data.results[0] : null;
-      const photoRef = match?.photos?.[0]?.photo_reference;
-      if (!photoRef) return item;
-      return {
-        ...item,
-        photos: [{ photo_reference: photoRef }],
-      };
-    } catch {
-      return item;
-    }
-  }));
-
-  return [...enrichedTop, ...remainder];
-}
-
 export default async function handler(req, res) {
-  const googlePlacesKey = process.env.GOOGLE_PLACES_KEY;
   const lat = sanitizeNumber(req.query?.lat, NaN);
   const lng = sanitizeNumber(req.query?.lng, NaN);
   const radius = Math.max(500, Math.min(20000, sanitizeNumber(req.query?.radius, 6000)));
@@ -132,7 +98,7 @@ export default async function handler(req, res) {
           .map(normalizeElement)
           .filter((item) => String(item?.name || '').trim())
       : [];
-    const results = await enrichResultsWithGooglePhotos(rawResults, type, googlePlacesKey);
+    const results = rawResults;
     const payload = { results };
 
     localNearbyCache.set(cacheKey, {

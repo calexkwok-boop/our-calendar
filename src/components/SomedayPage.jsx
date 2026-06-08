@@ -1021,6 +1021,55 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
           return results;
         };
 
+        if (!activePill && resolvedAnchorLocations.length > 0) {
+          const primaryAnchor = resolvedAnchorLocations[0];
+          const fastCategories = categoriesToUse.slice(0, 3);
+          const fastResults = await Promise.all(
+            fastCategories.map((category) =>
+              fetchLocalNearbyFallback(primaryAnchor, category, debugSnapshot.localFallbackAttempts)
+                .then((results) => ({ category, results }))
+                .catch(() => ({ category, results: [] }))
+            )
+          );
+
+          for (const { category, results } of fastResults) {
+            const fastMatch = results.find((item) => {
+              const placeName = normalizeSuggestionText(item?.name || '');
+              const placeKey = String(item?.place_id || placeName);
+              return placeName && !existingLabels.has(placeName) && !seenPlaces.has(placeKey);
+            });
+            if (!fastMatch) continue;
+            const suggestion = buildSuggestionFromPlace(
+              fastMatch,
+              category,
+              primaryAnchor,
+              found.length
+            );
+            if (!suggestion) continue;
+            found.push(suggestion);
+            if (found.length >= 3) break;
+          }
+        }
+
+        if (found.length >= 3) {
+          if (!cancelled) {
+            setLiveSuggestions(found);
+            try {
+              localStorage.setItem(suggestionCacheKey, JSON.stringify({
+                ts: Date.now(),
+                items: found,
+              }));
+            } catch {
+              // Ignore cache write errors.
+            }
+            setDebugInfo({
+              ...debugSnapshot,
+              foundLabels: found.map((item) => item.label),
+            });
+          }
+          return;
+        }
+
         for (const category of categoriesToUse) {
           if (found.length >= 3) break;
           let matched = null;
