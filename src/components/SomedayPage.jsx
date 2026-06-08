@@ -1059,23 +1059,43 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
           }
           return results;
         };
+        const fetchFastGoogleNearby = async (resolvedAnchorLocation, category, debugBucket) => {
+          const res = await fetch(
+            `/api/places?lat=${encodeURIComponent(resolvedAnchorLocation.lat)}&lng=${encodeURIComponent(resolvedAnchorLocation.lng)}&type=${encodeURIComponent(category.type)}&radius=6000`
+          );
+          if (!res.ok) return [];
+          const data = await res.json();
+          const results = Array.isArray(data?.results) ? data.results : [];
+          if (Array.isArray(debugBucket)) {
+            debugBucket.push({
+              anchor: resolvedAnchorLocation.anchor,
+              formattedAddress: resolvedAnchorLocation.formattedAddress,
+              category: category.key,
+              keyword: '(none)',
+              resultCount: results.length,
+              firstResult: results?.[0]?.name || '',
+              source: 'google-fast',
+            });
+          }
+          return results;
+        };
 
         if (!activePill && resolvedAnchorLocations.length > 0) {
           const primaryAnchor = resolvedAnchorLocations[0];
           const fastCategories = categoriesToUse.slice(0, 3);
-          const bundledResults = await fetchBundledLocalNearby(
-            primaryAnchor,
-            fastCategories,
-            debugSnapshot.localFallbackAttempts
-          ).catch(() => []);
+          const fastGoogleResults = await Promise.all(
+            fastCategories.map((category) =>
+              fetchFastGoogleNearby(primaryAnchor, category, debugSnapshot.nearbyAttempts)
+                .then((results) => ({ category, results }))
+                .catch(() => ({ category, results: [] }))
+            )
+          );
 
-          for (const category of fastCategories) {
-            const fastMatch = bundledResults.find((item) => {
+          for (const { category, results } of fastGoogleResults) {
+            const fastMatch = results.find((item) => {
               const placeName = normalizeSuggestionText(item?.name || '');
               const placeKey = String(item?.place_id || placeName);
-              const amenity = String(item?.amenity || '').toLowerCase();
-              const amenityMatches = (LOCAL_NEARBY_AMENITY_BY_TYPE[category.type] || [category.type]).includes(amenity);
-              return amenityMatches && placeName && !existingLabels.has(placeName) && !seenPlaces.has(placeKey);
+              return placeName && !existingLabels.has(placeName) && !seenPlaces.has(placeKey);
             });
             if (!fastMatch) continue;
             const suggestion = buildSuggestionFromPlace(
@@ -1087,6 +1107,34 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
             if (!suggestion) continue;
             found.push(suggestion);
             if (found.length >= 3) break;
+          }
+
+          if (found.length === 0) {
+            const bundledResults = await fetchBundledLocalNearby(
+              primaryAnchor,
+              fastCategories,
+              debugSnapshot.localFallbackAttempts
+            ).catch(() => []);
+
+            for (const category of fastCategories) {
+              const fastMatch = bundledResults.find((item) => {
+                const placeName = normalizeSuggestionText(item?.name || '');
+                const placeKey = String(item?.place_id || placeName);
+                const amenity = String(item?.amenity || '').toLowerCase();
+                const amenityMatches = (LOCAL_NEARBY_AMENITY_BY_TYPE[category.type] || [category.type]).includes(amenity);
+                return amenityMatches && placeName && !existingLabels.has(placeName) && !seenPlaces.has(placeKey);
+              });
+              if (!fastMatch) continue;
+              const suggestion = buildSuggestionFromPlace(
+                fastMatch,
+                category,
+                primaryAnchor,
+                found.length
+              );
+              if (!suggestion) continue;
+              found.push(suggestion);
+              if (found.length >= 3) break;
+            }
           }
 
           if (found.length > 0) {
