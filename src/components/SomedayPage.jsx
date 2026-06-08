@@ -1153,7 +1153,9 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
                 foundLabels: found.map((item) => item.label),
               });
             }
-            return;
+            if (found.length >= 3) {
+              return;
+            }
           }
         }
 
