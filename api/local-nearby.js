@@ -6,6 +6,9 @@ const AMENITY_BY_TYPE = {
   store: ['marketplace', 'mall'],
 };
 
+const LOCAL_NEARBY_CACHE_TTL_MS = 1000 * 60 * 30;
+const localNearbyCache = new Map();
+
 function sanitizeNumber(value, fallback) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -40,7 +43,41 @@ function normalizeElement(element = {}) {
   };
 }
 
+async function enrichResultsWithGooglePhotos(results, type, key) {
+  if (!key || !Array.isArray(results) || results.length === 0) return results;
+
+  const topResults = results.slice(0, 8);
+  const remainder = results.slice(8);
+
+  const enrichedTop = await Promise.all(topResults.map(async (item) => {
+    const name = String(item?.name || '').trim();
+    const address = String(item?.formatted_address || item?.vicinity || '').trim();
+    if (!name) return item;
+
+    const query = [name, address].filter(Boolean).join(' ');
+    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&type=${encodeURIComponent(type || 'restaurant')}&key=${key}`;
+
+    try {
+      const upstream = await fetch(url);
+      if (!upstream.ok) return item;
+      const data = await upstream.json();
+      const match = Array.isArray(data?.results) ? data.results[0] : null;
+      const photoRef = match?.photos?.[0]?.photo_reference;
+      if (!photoRef) return item;
+      return {
+        ...item,
+        photos: [{ photo_reference: photoRef }],
+      };
+    } catch {
+      return item;
+    }
+  }));
+
+  return [...enrichedTop, ...remainder];
+}
+
 export default async function handler(req, res) {
+  const googlePlacesKey = process.env.GOOGLE_PLACES_KEY;
   const lat = sanitizeNumber(req.query?.lat, NaN);
   const lng = sanitizeNumber(req.query?.lng, NaN);
   const radius = Math.max(500, Math.min(20000, sanitizeNumber(req.query?.radius, 6000)));
@@ -48,6 +85,18 @@ export default async function handler(req, res) {
 
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return res.status(400).json({ error: 'lat and lng required' });
+  }
+
+  const cacheKey = JSON.stringify({
+    lat: Number(lat.toFixed(3)),
+    lng: Number(lng.toFixed(3)),
+    radius,
+    type,
+  });
+  const cached = localNearbyCache.get(cacheKey);
+  if (cached && (Date.now() - cached.ts) < LOCAL_NEARBY_CACHE_TTL_MS) {
+    res.setHeader('Cache-Control', 's-maxage=1800');
+    return res.json(cached.payload);
   }
 
   const amenities = AMENITY_BY_TYPE[type] || [type || 'cafe'];
@@ -78,14 +127,21 @@ export default async function handler(req, res) {
     }
 
     const data = await upstream.json();
-    const results = Array.isArray(data?.elements)
+    const rawResults = Array.isArray(data?.elements)
       ? data.elements
           .map(normalizeElement)
           .filter((item) => String(item?.name || '').trim())
       : [];
+    const results = await enrichResultsWithGooglePhotos(rawResults, type, googlePlacesKey);
+    const payload = { results };
+
+    localNearbyCache.set(cacheKey, {
+      ts: Date.now(),
+      payload,
+    });
 
     res.setHeader('Cache-Control', 's-maxage=1800');
-    return res.json({ results });
+    return res.json(payload);
   } catch {
     return res.status(500).json({ error: 'local nearby lookup failed' });
   }

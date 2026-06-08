@@ -1014,6 +1014,26 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
           if (resolvedAnchorLocations.length > 0) {
             for (const resolvedAnchorLocation of resolvedAnchorLocations) {
               try {
+                const localFallbackCandidates = await fetchLocalNearbyFallback(
+                  resolvedAnchorLocation,
+                  category,
+                  debugSnapshot.localFallbackAttempts
+                );
+                const localFallbackResult = localFallbackCandidates.find((item) => {
+                  const placeName = normalizeSuggestionText(item?.name || '');
+                  const placeKey = String(item?.place_id || placeName);
+                  return placeName && !existingLabels.has(placeName) && !seenPlaces.has(placeKey);
+                });
+                if (localFallbackResult) {
+                  matched = buildSuggestionFromPlace(
+                    localFallbackResult,
+                    category,
+                    resolvedAnchorLocation,
+                    found.length
+                  );
+                }
+                if (matched) break;
+
                 const nearbyKeywords = buildNearbySearchKeywords(category);
                 for (const keyword of nearbyKeywords) {
                   const nearbyRes = await fetch(
