@@ -676,20 +676,39 @@ function buildSuggestionStaticMapUrl(item) {
   return `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(`${lat},${lng}`)}&zoom=16&size=800x800&scale=2&maptype=roadmap&markers=color:red%7C${encodeURIComponent(`${lat},${lng}`)}&key=${encodeURIComponent(GOOGLE_MAPS_BROWSER_KEY)}`;
 }
 
+function isStaticMapSuggestionUrl(url) {
+  const normalized = String(url || '').trim().toLowerCase();
+  return normalized.includes('maps.googleapis.com/maps/api/staticmap');
+}
+
 function SuggestionCardInner({ s, darkMode, shadow }) {
   const cardBg = darkMode ? '#e2e8f0' : '#ffffff';
   const [imageFailed, setImageFailed] = useState(false);
+  const savedImageUrl = String(s?.imageUrl || '').trim();
+  const weakSavedImage = isStaticMapSuggestionUrl(savedImageUrl);
   const placePhotoQuery = useMemo(() => {
-    if (String(s?.imageUrl || '').trim()) return '';
+    if (savedImageUrl && !weakSavedImage) return '';
     return String(s?.mapQuery || s?.label || '').trim();
-  }, [s?.imageUrl, s?.label, s?.mapQuery]);
+  }, [savedImageUrl, weakSavedImage, s?.label, s?.mapQuery]);
   const placeImageType = s?.categoryId === 'food' ? 'restaurant' : 'tourist_attraction';
   const placeImageUrl = usePlacesImage(placePhotoQuery, placeImageType);
+  const googleImageQuery = useMemo(() => {
+    if (savedImageUrl && !weakSavedImage) return '';
+    return String(s?.mapQuery || s?.label || '').trim();
+  }, [savedImageUrl, weakSavedImage, s?.label, s?.mapQuery]);
+  const googleImageUrl = useGoogleImage(googleImageQuery);
   const staticMapUrl = useMemo(() => buildSuggestionStaticMapUrl(s), [s]);
   useEffect(() => {
     setImageFailed(false);
-  }, [s?.id, s?.imageUrl, placeImageUrl]);
-  const resolvedImageUrl = String(s?.imageUrl || placeImageUrl || staticMapUrl || '').trim();
+  }, [s?.id, savedImageUrl, placeImageUrl, googleImageUrl, staticMapUrl]);
+  const resolvedImageUrl = String(
+    (weakSavedImage ? '' : savedImageUrl) ||
+    placeImageUrl ||
+    googleImageUrl ||
+    staticMapUrl ||
+    savedImageUrl ||
+    ''
+  ).trim();
   const displayImageUrl = imageFailed ? '' : resolvedImageUrl;
   return (
     <div style={{ background: cardBg, padding: '6px 6px 0', width: 120, borderRadius: 2, boxShadow: shadow, position: 'relative' }}>
@@ -711,22 +730,36 @@ function SuggestionPreviewSheet({ suggestion, onClose, onAdd, darkMode }) {
   const ts = darkMode ? '#64748b' : '#9ca3af';
   const divider = darkMode ? 'rgba(255,255,255,0.07)' : '#f0ece4';
   const [imageFailed, setImageFailed] = useState(false);
+  const savedImageUrl = String(suggestion?.imageUrl || '').trim();
+  const weakSavedImage = isStaticMapSuggestionUrl(savedImageUrl);
   const placePhotoQuery = useMemo(() => {
-    if (String(suggestion?.imageUrl || '').trim()) return '';
+    if (savedImageUrl && !weakSavedImage) return '';
     return String(suggestion?.mapQuery || suggestion?.label || '').trim();
-  }, [suggestion?.imageUrl, suggestion?.label, suggestion?.mapQuery]);
+  }, [savedImageUrl, weakSavedImage, suggestion?.label, suggestion?.mapQuery]);
   const placeImageType = suggestion?.categoryId === 'food' ? 'restaurant' : 'tourist_attraction';
   const placeImageUrl = usePlacesImage(placePhotoQuery, placeImageType);
+  const googleImageQuery = useMemo(() => {
+    if (savedImageUrl && !weakSavedImage) return '';
+    return String(suggestion?.mapQuery || suggestion?.label || '').trim();
+  }, [savedImageUrl, weakSavedImage, suggestion?.label, suggestion?.mapQuery]);
+  const googleImageUrl = useGoogleImage(googleImageQuery);
   const staticMapUrl = useMemo(() => buildSuggestionStaticMapUrl(suggestion), [suggestion]);
   const mapsUrl = suggestion?.mapQuery
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(suggestion.mapQuery)}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(suggestion?.label || '')}`;
-  const resolvedImageUrl = String(suggestion?.imageUrl || placeImageUrl || staticMapUrl || '').trim();
+  const resolvedImageUrl = String(
+    (weakSavedImage ? '' : savedImageUrl) ||
+    placeImageUrl ||
+    googleImageUrl ||
+    staticMapUrl ||
+    savedImageUrl ||
+    ''
+  ).trim();
   const displayImageUrl = imageFailed ? '' : resolvedImageUrl;
 
   useEffect(() => {
     setImageFailed(false);
-  }, [suggestion?.id, suggestion?.imageUrl, placeImageUrl]);
+  }, [suggestion?.id, savedImageUrl, placeImageUrl, googleImageUrl, staticMapUrl]);
 
   if (!suggestion) return null;
 
