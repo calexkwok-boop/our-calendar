@@ -820,6 +820,47 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
   const visible = suggestions.filter(s => !addedIds.has(s.id)).slice(0, 3);
   const ts = darkMode ? '#64748b' : '#9ca3af';
 
+  useEffect(() => {
+    let cancelled = false;
+    const needsImageUpgrade = liveSuggestions.some((suggestion) => !String(suggestion?.imageUrl || '').trim());
+    if (!needsImageUpgrade) return undefined;
+
+    const upgradeSuggestionImages = async () => {
+      const upgraded = await Promise.all(liveSuggestions.map(async (suggestion) => {
+        if (String(suggestion?.imageUrl || '').trim()) return suggestion;
+        const query = [
+          suggestion?.label,
+          suggestion?.mapQuery,
+          suggestion?.categoryId === 'food' ? 'restaurant cafe bar bakery food' : 'travel place landmark',
+        ].filter(Boolean).join(' ');
+
+        if (!query) return suggestion;
+
+        try {
+          const res = await fetch(`/api/google-image-search?query=${encodeURIComponent(query)}&num=1`);
+          if (!res.ok) return suggestion;
+          const data = await res.json();
+          const imageUrl = String(data?.results?.[0]?.url || data?.results?.[0]?.displayUrl || '').trim();
+          if (!imageUrl) return suggestion;
+          return { ...suggestion, imageUrl };
+        } catch {
+          return suggestion;
+        }
+      }));
+
+      if (cancelled) return;
+      const changed = upgraded.some((item, index) => String(item?.imageUrl || '') !== String(liveSuggestions[index]?.imageUrl || ''));
+      if (changed) {
+        setLiveSuggestions(upgraded);
+      }
+    };
+
+    upgradeSuggestionImages();
+    return () => {
+      cancelled = true;
+    };
+  }, [liveSuggestions]);
+
   function handlePillClick(pillKey) {
     const next = activePillKey === pillKey ? null : pillKey;
     setActivePillKey(next);
