@@ -584,7 +584,7 @@ const LOCAL_NEARBY_AMENITY_BY_TYPE = {
   store: ['marketplace', 'mall'],
 };
 
-const CHAPTER_SUGGESTIONS_CACHE_PREFIX = 'komo-chapter-suggestions-v1:';
+const CHAPTER_SUGGESTIONS_CACHE_PREFIX = 'komo-chapter-suggestions-v2:';
 const CHAPTER_SUGGESTIONS_CACHE_TTL_MS = 1000 * 60 * 30;
 
 const KNOWN_SUGGESTION_ANCHOR_COORDS = {
@@ -669,19 +669,27 @@ function generateSuggestions(chapter, chapterPins, seed = 0) {
 }
 
 // ─── Suggestion Strip ─────────────────────────────────────────────────────────
+function buildSuggestionStaticMapUrl(item) {
+  const lat = Number(item?.geometry?.location?.lat);
+  const lng = Number(item?.geometry?.location?.lng);
+  if (!GOOGLE_MAPS_BROWSER_KEY || !Number.isFinite(lat) || !Number.isFinite(lng)) return '';
+  return `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(`${lat},${lng}`)}&zoom=16&size=800x800&scale=2&maptype=roadmap&markers=color:red%7C${encodeURIComponent(`${lat},${lng}`)}&key=${encodeURIComponent(GOOGLE_MAPS_BROWSER_KEY)}`;
+}
+
 function SuggestionCardInner({ s, darkMode, shadow }) {
   const cardBg = darkMode ? '#e2e8f0' : '#ffffff';
   const [imageFailed, setImageFailed] = useState(false);
   const placePhotoQuery = useMemo(() => {
     if (String(s?.imageUrl || '').trim()) return '';
-    return [s?.label, s?.mapQuery].filter(Boolean).join(' ').trim();
+    return String(s?.mapQuery || s?.label || '').trim();
   }, [s?.imageUrl, s?.label, s?.mapQuery]);
   const placeImageType = s?.categoryId === 'food' ? 'restaurant' : 'tourist_attraction';
   const placeImageUrl = usePlacesImage(placePhotoQuery, placeImageType);
+  const staticMapUrl = useMemo(() => buildSuggestionStaticMapUrl(s), [s]);
   useEffect(() => {
     setImageFailed(false);
   }, [s?.id, s?.imageUrl, placeImageUrl]);
-  const resolvedImageUrl = String(s?.imageUrl || placeImageUrl || '').trim();
+  const resolvedImageUrl = String(s?.imageUrl || placeImageUrl || staticMapUrl || '').trim();
   const displayImageUrl = imageFailed ? '' : resolvedImageUrl;
   return (
     <div style={{ background: cardBg, padding: '6px 6px 0', width: 120, borderRadius: 2, boxShadow: shadow, position: 'relative' }}>
@@ -705,14 +713,15 @@ function SuggestionPreviewSheet({ suggestion, onClose, onAdd, darkMode }) {
   const [imageFailed, setImageFailed] = useState(false);
   const placePhotoQuery = useMemo(() => {
     if (String(suggestion?.imageUrl || '').trim()) return '';
-    return [suggestion?.label, suggestion?.mapQuery].filter(Boolean).join(' ').trim();
+    return String(suggestion?.mapQuery || suggestion?.label || '').trim();
   }, [suggestion?.imageUrl, suggestion?.label, suggestion?.mapQuery]);
   const placeImageType = suggestion?.categoryId === 'food' ? 'restaurant' : 'tourist_attraction';
   const placeImageUrl = usePlacesImage(placePhotoQuery, placeImageType);
+  const staticMapUrl = useMemo(() => buildSuggestionStaticMapUrl(suggestion), [suggestion]);
   const mapsUrl = suggestion?.mapQuery
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(suggestion.mapQuery)}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(suggestion?.label || '')}`;
-  const resolvedImageUrl = String(suggestion?.imageUrl || placeImageUrl || '').trim();
+  const resolvedImageUrl = String(suggestion?.imageUrl || placeImageUrl || staticMapUrl || '').trim();
   const displayImageUrl = imageFailed ? '' : resolvedImageUrl;
 
   useEffect(() => {
@@ -1001,6 +1010,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
             emoji: category.emoji,
             categoryId: category.categoryId,
             imageUrl,
+            geometry: result?.geometry || null,
             description: `${result.formatted_address || result.vicinity || ''}`.trim() || `${category.label} near ${resolvedAnchorLocation?.formattedAddress || resolvedAnchorLocation?.anchor || ''}.`,
             tip: buildPlaceSuggestionTip(result, resolvedAnchorLocation?.anchor || '', category),
             whyItFits: buildPlaceSuggestionWhy(result, resolvedAnchorLocation?.anchor || '', category),
@@ -1077,6 +1087,25 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
             if (!suggestion) continue;
             found.push(suggestion);
             if (found.length >= 3) break;
+          }
+
+          if (found.length > 0) {
+            if (!cancelled) {
+              setLiveSuggestions(found);
+              try {
+                localStorage.setItem(suggestionCacheKey, JSON.stringify({
+                  ts: Date.now(),
+                  items: found,
+                }));
+              } catch {
+                // Ignore cache write errors.
+              }
+              setDebugInfo({
+                ...debugSnapshot,
+                foundLabels: found.map((item) => item.label),
+              });
+            }
+            return;
           }
         }
 
