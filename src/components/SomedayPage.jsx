@@ -576,6 +576,9 @@ const DEFAULT_LOCAL_SUGGESTION_CATEGORIES = [
   { key: 'dessert', label: 'Dessert nearby', query: 'dessert', type: 'restaurant', emoji: '🍨', categoryId: 'food' },
 ];
 
+const CHAPTER_SUGGESTIONS_CACHE_PREFIX = 'komo-chapter-suggestions-v1:';
+const CHAPTER_SUGGESTIONS_CACHE_TTL_MS = 1000 * 60 * 30;
+
 const KNOWN_SUGGESTION_ANCHOR_COORDS = {
   'hanoi vietnam': { lat: 21.027763, lng: 105.83416, formattedAddress: 'Hanoi, Vietnam' },
   'hoi an vietnam': { lat: 15.8800584, lng: 108.3380469, formattedAddress: 'Hoi An, Vietnam' },
@@ -816,9 +819,26 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
     chapter?.public_title,
     Array.isArray(chapter?.public_tags) ? chapter.public_tags.join('|') : '',
   ].map((value) => String(value || '').trim()).join('\x00');
+  const suggestionCacheKey = `${CHAPTER_SUGGESTIONS_CACHE_PREFIX}${chapterSuggestionKey}::${suggestionAnchorKey}::${String(activePillKey || '')}`;
   const suggestions = liveSuggestions;
   const visible = suggestions.filter(s => !addedIds.has(s.id)).slice(0, 3);
   const ts = darkMode ? '#64748b' : '#9ca3af';
+
+  useEffect(() => {
+    if (!suggestionCacheKey) return undefined;
+    try {
+      const raw = localStorage.getItem(suggestionCacheKey);
+      if (!raw) return undefined;
+      const parsed = JSON.parse(raw);
+      const ageMs = Date.now() - Number(parsed?.ts || 0);
+      if (!Array.isArray(parsed?.items) || ageMs > CHAPTER_SUGGESTIONS_CACHE_TTL_MS) return undefined;
+      setLiveSuggestions((prev) => (prev.length > 0 ? prev : parsed.items));
+      setLoadingLiveSuggestions(false);
+    } catch {
+      // Ignore bad cache entries.
+    }
+    return undefined;
+  }, [suggestionCacheKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -828,24 +848,31 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
     const upgradeSuggestionImages = async () => {
       const upgraded = await Promise.all(liveSuggestions.map(async (suggestion) => {
         if (String(suggestion?.imageUrl || '').trim()) return suggestion;
-        const query = [
+        const placeQuery = [
           suggestion?.label,
           suggestion?.mapQuery,
-          suggestion?.categoryId === 'food' ? 'restaurant cafe bar bakery food' : 'travel place landmark',
         ].filter(Boolean).join(' ');
 
-        if (!query) return suggestion;
+        if (!placeQuery) return suggestion;
 
         try {
-          const res = await fetch(`/api/google-image-search?query=${encodeURIComponent(query)}&num=1`);
-          if (!res.ok) return suggestion;
-          const data = await res.json();
-          const imageUrl = String(data?.results?.[0]?.url || data?.results?.[0]?.displayUrl || '').trim();
-          if (!imageUrl) return suggestion;
-          return { ...suggestion, imageUrl };
+          const type = suggestion?.categoryId === 'food' ? 'restaurant' : 'tourist_attraction';
+          const res = await fetch(`/api/places?action=textsearch&query=${encodeURIComponent(placeQuery)}&type=${encodeURIComponent(type)}`);
+          if (res.ok) {
+            const data = await res.json();
+            const match = Array.isArray(data?.results) ? data.results[0] : null;
+            const photoRef = match?.photos?.[0]?.photo_reference;
+            if (photoRef) {
+              return {
+                ...suggestion,
+                imageUrl: `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800`,
+              };
+            }
+          }
         } catch {
           return suggestion;
         }
+        return suggestion;
       }));
 
       if (cancelled) return;
@@ -1121,6 +1148,14 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
 
         if (!cancelled) {
           setLiveSuggestions(found);
+          try {
+            localStorage.setItem(suggestionCacheKey, JSON.stringify({
+              ts: Date.now(),
+              items: found,
+            }));
+          } catch {
+            // Ignore cache write errors.
+          }
           setDebugInfo({
             ...debugSnapshot,
             foundLabels: found.map((item) => item.label),
@@ -1133,7 +1168,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
 
     loadNearbySuggestions();
     return () => { cancelled = true; };
-  }, [chapterSuggestionKey, suggestionAnchorKey, initialSeed, pinLabelKey, refreshCount, activePillKey]);
+  }, [chapterSuggestionKey, suggestionAnchorKey, suggestionCacheKey, initialSeed, pinLabelKey, refreshCount, activePillKey]);
 
   function handleAdd(s) {
     setAddedIds(prev => new Set([...prev, s.id]));
