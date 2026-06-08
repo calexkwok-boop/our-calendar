@@ -664,10 +664,17 @@ function generateSuggestions(chapter, chapterPins, seed = 0) {
 function SuggestionCardInner({ s, darkMode, shadow }) {
   const cardBg = darkMode ? '#e2e8f0' : '#ffffff';
   const [imageFailed, setImageFailed] = useState(false);
+  const placePhotoQuery = useMemo(() => {
+    if (String(s?.imageUrl || '').trim()) return '';
+    return [s?.label, s?.mapQuery].filter(Boolean).join(' ').trim();
+  }, [s?.imageUrl, s?.label, s?.mapQuery]);
+  const placeImageType = s?.categoryId === 'food' ? 'restaurant' : 'tourist_attraction';
+  const placeImageUrl = usePlacesImage(placePhotoQuery, placeImageType);
   useEffect(() => {
     setImageFailed(false);
-  }, [s?.id, s?.imageUrl]);
-  const displayImageUrl = imageFailed ? '' : String(s?.imageUrl || '').trim();
+  }, [s?.id, s?.imageUrl, placeImageUrl]);
+  const resolvedImageUrl = String(s?.imageUrl || placeImageUrl || '').trim();
+  const displayImageUrl = imageFailed ? '' : resolvedImageUrl;
   return (
     <div style={{ background: cardBg, padding: '6px 6px 0', width: 120, borderRadius: 2, boxShadow: shadow, position: 'relative' }}>
       <Pushpin colorKey="teal" darkMode={false} />
@@ -688,14 +695,21 @@ function SuggestionPreviewSheet({ suggestion, onClose, onAdd, darkMode }) {
   const ts = darkMode ? '#64748b' : '#9ca3af';
   const divider = darkMode ? 'rgba(255,255,255,0.07)' : '#f0ece4';
   const [imageFailed, setImageFailed] = useState(false);
+  const placePhotoQuery = useMemo(() => {
+    if (String(suggestion?.imageUrl || '').trim()) return '';
+    return [suggestion?.label, suggestion?.mapQuery].filter(Boolean).join(' ').trim();
+  }, [suggestion?.imageUrl, suggestion?.label, suggestion?.mapQuery]);
+  const placeImageType = suggestion?.categoryId === 'food' ? 'restaurant' : 'tourist_attraction';
+  const placeImageUrl = usePlacesImage(placePhotoQuery, placeImageType);
   const mapsUrl = suggestion?.mapQuery
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(suggestion.mapQuery)}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(suggestion?.label || '')}`;
-  const displayImageUrl = imageFailed ? '' : String(suggestion?.imageUrl || '').trim();
+  const resolvedImageUrl = String(suggestion?.imageUrl || placeImageUrl || '').trim();
+  const displayImageUrl = imageFailed ? '' : resolvedImageUrl;
 
   useEffect(() => {
     setImageFailed(false);
-  }, [suggestion?.id, suggestion?.imageUrl]);
+  }, [suggestion?.id, suggestion?.imageUrl, placeImageUrl]);
 
   if (!suggestion) return null;
 
