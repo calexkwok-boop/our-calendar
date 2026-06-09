@@ -21,13 +21,13 @@
  */
 
 export default async function handler(req, res) {
-  const key = process.env.GOOGLE_PLACES_KEY;
+  const key = process.env.GOOGLE_PLACES_KEY || process.env.REACT_APP_GOOGLE_MAPS_KEY;
 
   if (!key) {
     return res.status(500).json({ error: 'GOOGLE_PLACES_KEY not configured' });
   }
 
-  const { lat, lng, query = '', input = '', type = 'restaurant', types = '', place_id, action, ref, maxwidth = '400', radius = '10000' } = req.query;
+  const { lat, lng, query = '', input = '', type = 'restaurant', types = '', place_id, action, ref, maxwidth = '400', radius = '10000', no_paginate = '' } = req.query;
 
   // ── Photo proxy ───────────────────────────────────────────────────────────
   if (action === 'photo') {
@@ -114,13 +114,15 @@ export default async function handler(req, res) {
     const r = await fetch(url);
     const data = await r.json();
 
+    const shouldPaginate = !['1', 'true', 'yes'].includes(String(no_paginate).trim().toLowerCase());
+
     // Paginate up to 2 more pages (max 60 results total).
     // Google requires a ~2 s delay before a next_page_token becomes valid.
     let allResults = data.results || [];
     let nextToken = data.next_page_token;
     let pages = 0;
 
-    while (nextToken && pages < 2) {
+    while (shouldPaginate && nextToken && pages < 2) {
       await new Promise(resolve => setTimeout(resolve, 2000));
       const pageUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?pagetoken=${encodeURIComponent(nextToken)}&key=${key}`;
       const pr = await fetch(pageUrl);

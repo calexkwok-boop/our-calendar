@@ -10,7 +10,7 @@
  */
 
 export default async function handler(req, res) {
-  const key = process.env.GOOGLE_PLACES_KEY;
+  const key = process.env.GOOGLE_PLACES_KEY || process.env.REACT_APP_GOOGLE_MAPS_KEY;
 
   if (!key) {
     return res.status(500).json({ error: 'GOOGLE_PLACES_KEY not configured' });

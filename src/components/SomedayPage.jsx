@@ -1135,7 +1135,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
         };
         const fetchFastGoogleNearby = async (resolvedAnchorLocation, category, debugBucket) => {
           const res = await fetch(
-            `/api/places?lat=${encodeURIComponent(resolvedAnchorLocation.lat)}&lng=${encodeURIComponent(resolvedAnchorLocation.lng)}&type=${encodeURIComponent(category.type)}&radius=6000`
+            `/api/places?lat=${encodeURIComponent(resolvedAnchorLocation.lat)}&lng=${encodeURIComponent(resolvedAnchorLocation.lng)}&type=${encodeURIComponent(category.type)}&radius=6000&no_paginate=1`
           );
           if (!res.ok) return [];
           const data = await res.json();
