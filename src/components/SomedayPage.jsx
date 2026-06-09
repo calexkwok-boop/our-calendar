@@ -759,6 +759,15 @@ function SuggestionCardInner({ s, darkMode, shadow }) {
     setFailedImageUrls([]);
   }, [s?.id, imageCandidates]);
   const displayImageUrl = imageCandidates.find((url) => !failedImageUrls.includes(url)) || '';
+  const debugImageState = !displayImageUrl ? [
+    `saved:${savedImageUrl ? 'y' : 'n'}`,
+    `places:${placeImageUrl ? 'y' : 'n'}`,
+    `details:${detailsPhotoUrl ? 'y' : 'n'}`,
+    `google:${googleImageUrl ? 'y' : 'n'}`,
+    `map:${staticMapUrl ? 'y' : 'n'}`,
+    `pid:${s?.placeId ? 'y' : 'n'}`,
+    `geo:${s?.geometry?.location?.lat && s?.geometry?.location?.lng ? 'y' : 'n'}`,
+  ].join(' ') : '';
   return (
     <div style={{ background: cardBg, padding: '6px 6px 0', width: 120, borderRadius: 2, boxShadow: shadow, position: 'relative' }}>
       <Pushpin colorKey="teal" darkMode={false} />
@@ -768,6 +777,11 @@ function SuggestionCardInner({ s, darkMode, shadow }) {
           : s.emoji}
       </div>
       <div style={{ padding: '5px 3px 7px', textAlign: 'center', fontFamily: CAVEAT, fontSize: 13, color: '#1a1a2e', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{s.label}</div>
+      {!displayImageUrl && (
+        <div style={{ padding: '0 4px 6px', fontSize: 8, lineHeight: 1.2, color: '#94a3b8', textAlign: 'center', wordBreak: 'break-word' }}>
+          {debugImageState}
+        </div>
+      )}
     </div>
   );
 }
