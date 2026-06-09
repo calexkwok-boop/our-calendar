@@ -676,6 +676,15 @@ function buildSuggestionStaticMapUrl(item) {
   return `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(`${lat},${lng}`)}&zoom=16&size=800x800&scale=2&maptype=roadmap&markers=color:red%7C${encodeURIComponent(`${lat},${lng}`)}&key=${encodeURIComponent(GOOGLE_MAPS_BROWSER_KEY)}`;
 }
 
+function buildSuggestionPlacePhotoUrl(photoRef, maxwidth = 800) {
+  const ref = String(photoRef || '').trim();
+  if (!ref) return '';
+  if (GOOGLE_MAPS_BROWSER_KEY) {
+    return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${encodeURIComponent(String(maxwidth))}&photoreference=${encodeURIComponent(ref)}&key=${encodeURIComponent(GOOGLE_MAPS_BROWSER_KEY)}`;
+  }
+  return `/api/places?action=photo&ref=${encodeURIComponent(ref)}&maxwidth=${encodeURIComponent(String(maxwidth))}`;
+}
+
 function useSuggestionDetailsPhoto(suggestion) {
   const placeId = String(suggestion?.placeId || '').trim();
   const [url, setUrl] = useState('');
@@ -693,7 +702,7 @@ function useSuggestionDetailsPhoto(suggestion) {
         const data = res.ok ? await res.json() : null;
         const photoRef = data?.result?.photos?.[0]?.photo_reference;
         const nextUrl = photoRef
-          ? `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800`
+          ? buildSuggestionPlacePhotoUrl(photoRef, 800)
           : '';
         if (!cancelled) {
           setUrl((prev) => (prev === nextUrl ? prev : nextUrl));
@@ -1064,7 +1073,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
         const resolveSuggestionImageUrl = (result, resolvedAnchorLocation) => {
           const photoRef = result?.photos?.[0]?.photo_reference;
           if (photoRef) {
-            return `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800`;
+            return buildSuggestionPlacePhotoUrl(photoRef, 800);
           }
 
           const lat = Number(result?.geometry?.location?.lat);
