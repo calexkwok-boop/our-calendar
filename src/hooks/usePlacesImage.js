@@ -8,7 +8,8 @@ export default function usePlacesImage(query, type = "restaurant") {
   const [url, setUrl] = useState(() => {
     if (!cacheKey) return "";
     if (Object.prototype.hasOwnProperty.call(placesImageCache, cacheKey)) {
-      return placesImageCache[cacheKey] || "";
+      const cached = placesImageCache[cacheKey] || "";
+      return cached || undefined;
     }
     return undefined;
   });
@@ -20,8 +21,12 @@ export default function usePlacesImage(query, type = "restaurant") {
     }
     if (Object.prototype.hasOwnProperty.call(placesImageCache, cacheKey)) {
       const cached = placesImageCache[cacheKey] || "";
-      setUrl((prev) => (prev === cached ? prev : cached));
-      return;
+      if (!cached) {
+        delete placesImageCache[cacheKey];
+      } else {
+        setUrl((prev) => (prev === cached ? prev : cached));
+        return;
+      }
     }
 
     let cancelled = false;
@@ -37,7 +42,11 @@ export default function usePlacesImage(query, type = "restaurant") {
         const nextUrl = photoRef
           ? `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800`
           : "";
-        placesImageCache[cacheKey] = nextUrl || "";
+        if (nextUrl) {
+          placesImageCache[cacheKey] = nextUrl;
+        } else {
+          delete placesImageCache[cacheKey];
+        }
         delete placesImageInflight[cacheKey];
         if (!cancelled) {
           const finalUrl = nextUrl || "";
@@ -46,7 +55,7 @@ export default function usePlacesImage(query, type = "restaurant") {
         return nextUrl || "";
       } catch {
         delete placesImageInflight[cacheKey];
-        placesImageCache[cacheKey] = "";
+        delete placesImageCache[cacheKey];
         if (!cancelled) setUrl((prev) => (prev ? "" : prev));
         return "";
       }

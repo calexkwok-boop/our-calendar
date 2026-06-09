@@ -16,7 +16,8 @@ export default function useGoogleImage(query, options = {}) {
   const [url, setUrl] = useState(() => {
     if (!cacheKey) return "";
     if (Object.prototype.hasOwnProperty.call(_cache, cacheKey)) {
-      return _cache[cacheKey] || "";
+      const cached = _cache[cacheKey] || "";
+      return cached || undefined;
     }
     return undefined;
   });
@@ -28,8 +29,12 @@ export default function useGoogleImage(query, options = {}) {
     }
     if (Object.prototype.hasOwnProperty.call(_cache, cacheKey)) {
       const cached = _cache[cacheKey] || "";
-      setUrl((prev) => (prev === cached ? prev : cached));
-      return;
+      if (!cached) {
+        delete _cache[cacheKey];
+      } else {
+        setUrl((prev) => (prev === cached ? prev : cached));
+        return;
+      }
     }
     let cancelled = false;
 
@@ -73,7 +78,11 @@ export default function useGoogleImage(query, options = {}) {
       }
 
       const proxiedResult = toProxyImageUrl(result);
-      _cache[cacheKey] = proxiedResult || "";
+      if (proxiedResult) {
+        _cache[cacheKey] = proxiedResult;
+      } else {
+        delete _cache[cacheKey];
+      }
       delete _inflight[cacheKey];
       if (!cancelled) {
         const nextUrl = proxiedResult || "";
