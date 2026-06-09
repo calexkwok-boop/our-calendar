@@ -1105,6 +1105,37 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
             rot: (((initialSeed + (found.length + indexOffset) * 7 + refreshCount) % 11) - 5) * 0.55,
           };
         };
+        const selectBestSuggestionCandidate = (items = [], category) => {
+          const normalizedItems = Array.isArray(items) ? items : [];
+          const scored = normalizedItems
+            .filter((item) => {
+              const placeName = normalizeSuggestionText(item?.name || '');
+              const placeKey = String(item?.place_id || placeName);
+              return placeName && !existingLabels.has(placeName) && !seenPlaces.has(placeKey);
+            })
+            .map((item, index) => {
+              const photoRef = item?.photos?.[0]?.photo_reference;
+              const hasPhoto = Boolean(photoRef);
+              const hasPlaceId = Boolean(String(item?.place_id || '').trim());
+              const hasGeometry = Number.isFinite(Number(item?.geometry?.location?.lat)) && Number.isFinite(Number(item?.geometry?.location?.lng));
+              const rating = Number(item?.rating || 0);
+              const amenity = String(item?.amenity || '').toLowerCase();
+              const amenityMatches = category
+                ? (LOCAL_NEARBY_AMENITY_BY_TYPE[category.type] || [category.type]).includes(amenity)
+                : true;
+              const score = (
+                (hasPhoto ? 1000 : 0) +
+                (amenityMatches ? 250 : 0) +
+                (hasPlaceId ? 120 : 0) +
+                (hasGeometry ? 80 : 0) +
+                Math.round(rating * 10) -
+                index
+              );
+              return { item, score };
+            })
+            .sort((a, b) => b.score - a.score);
+          return scored[0]?.item || null;
+        };
         const fetchLocalNearbyFallback = async (resolvedAnchorLocation, category, debugBucket) => {
           const res = await fetch(
             `/api/local-nearby?lat=${encodeURIComponent(resolvedAnchorLocation.lat)}&lng=${encodeURIComponent(resolvedAnchorLocation.lng)}&type=${encodeURIComponent(category.type)}&radius=8000`
@@ -1179,11 +1210,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
           );
 
           for (const { category, results } of fastGoogleResults) {
-            const fastMatch = results.find((item) => {
-              const placeName = normalizeSuggestionText(item?.name || '');
-              const placeKey = String(item?.place_id || placeName);
-              return placeName && !existingLabels.has(placeName) && !seenPlaces.has(placeKey);
-            });
+            const fastMatch = selectBestSuggestionCandidate(results, category);
             if (!fastMatch) continue;
             const suggestion = buildSuggestionFromPlace(
               fastMatch,
@@ -1204,13 +1231,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
             ).catch(() => []);
 
             for (const category of fastCategories) {
-              const fastMatch = bundledResults.find((item) => {
-                const placeName = normalizeSuggestionText(item?.name || '');
-                const placeKey = String(item?.place_id || placeName);
-                const amenity = String(item?.amenity || '').toLowerCase();
-                const amenityMatches = (LOCAL_NEARBY_AMENITY_BY_TYPE[category.type] || [category.type]).includes(amenity);
-                return amenityMatches && placeName && !existingLabels.has(placeName) && !seenPlaces.has(placeKey);
-              });
+              const fastMatch = selectBestSuggestionCandidate(bundledResults, category);
               if (!fastMatch) continue;
               const suggestion = buildSuggestionFromPlace(
                 fastMatch,
@@ -1277,11 +1298,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
                   category,
                   debugSnapshot.localFallbackAttempts
                 );
-                const localFallbackResult = localFallbackCandidates.find((item) => {
-                  const placeName = normalizeSuggestionText(item?.name || '');
-                  const placeKey = String(item?.place_id || placeName);
-                  return placeName && !existingLabels.has(placeName) && !seenPlaces.has(placeKey);
-                });
+                const localFallbackResult = selectBestSuggestionCandidate(localFallbackCandidates, category);
                 if (localFallbackResult) {
                   matched = buildSuggestionFromPlace(
                     localFallbackResult,
@@ -1315,11 +1332,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
                       debugSnapshot.localFallbackAttempts
                     );
                   }
-                  const nearbyResult = nearbyCandidates.find((item) => {
-                    const placeName = normalizeSuggestionText(item?.name || '');
-                    const placeKey = String(item?.place_id || placeName);
-                    return placeName && !existingLabels.has(placeName) && !seenPlaces.has(placeKey);
-                  });
+                  const nearbyResult = selectBestSuggestionCandidate(nearbyCandidates, category);
                   if (!nearbyResult) continue;
 
                   matched = buildSuggestionFromPlace(
@@ -1356,11 +1369,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
                     resultCount: Array.isArray(data?.results) ? data.results.length : 0,
                     firstResult: data?.results?.[0]?.name || '',
                   });
-                  const result = (data.results || []).find((item) => {
-                    const placeName = normalizeSuggestionText(item?.name || '');
-                    const placeKey = String(item?.place_id || placeName);
-                    return placeName && !existingLabels.has(placeName) && !seenPlaces.has(placeKey);
-                  });
+                  const result = selectBestSuggestionCandidate(data.results || [], category);
 
                   if (!result) continue;
 
@@ -1410,11 +1419,10 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
                     debugSnapshot.localFallbackAttempts
                   );
                 }
-                for (const item of candidates) {
-                  const suggestion = buildSuggestionFromPlace(item, category, resolvedAnchorLocation, found.length);
-                  if (!suggestion) continue;
-                  found.push(suggestion);
-                  break;
+                const bestLocalFallback = selectBestSuggestionCandidate(candidates, category);
+                if (bestLocalFallback) {
+                  const suggestion = buildSuggestionFromPlace(bestLocalFallback, category, resolvedAnchorLocation, found.length);
+                  if (suggestion) found.push(suggestion);
                 }
                 if (found.length >= 3) break;
               } catch {
