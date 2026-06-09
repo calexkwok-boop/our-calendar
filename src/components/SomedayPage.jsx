@@ -584,7 +584,7 @@ const LOCAL_NEARBY_AMENITY_BY_TYPE = {
   store: ['marketplace', 'mall'],
 };
 
-const CHAPTER_SUGGESTIONS_CACHE_PREFIX = 'komo-chapter-suggestions-v3:';
+const CHAPTER_SUGGESTIONS_CACHE_PREFIX = 'komo-chapter-suggestions-v4:';
 const CHAPTER_SUGGESTIONS_CACHE_TTL_MS = 1000 * 60 * 30;
 
 const KNOWN_SUGGESTION_ANCHOR_COORDS = {
@@ -672,8 +672,8 @@ function generateSuggestions(chapter, chapterPins, seed = 0) {
 function buildSuggestionStaticMapUrl(item) {
   const lat = Number(item?.geometry?.location?.lat);
   const lng = Number(item?.geometry?.location?.lng);
-  if (!GOOGLE_MAPS_BROWSER_KEY || !Number.isFinite(lat) || !Number.isFinite(lng)) return '';
-  return `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(`${lat},${lng}`)}&zoom=16&size=800x800&scale=2&maptype=roadmap&markers=color:red%7C${encodeURIComponent(`${lat},${lng}`)}&key=${encodeURIComponent(GOOGLE_MAPS_BROWSER_KEY)}`;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return '';
+  return `https://staticmap.openstreetmap.de/staticmap.php?center=${encodeURIComponent(`${lat},${lng}`)}&zoom=16&size=800x800&markers=${encodeURIComponent(`${lat},${lng},red-pushpin`)}`;
 }
 
 function buildSuggestionPlacePhotoUrl(photoRef, maxwidth = 800) {
