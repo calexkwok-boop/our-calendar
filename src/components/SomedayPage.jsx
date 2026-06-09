@@ -677,6 +677,42 @@ function buildSuggestionStaticMapUrl(item) {
   return `/api/image-proxy?url=${encodeURIComponent(rawUrl)}`;
 }
 
+function useSuggestionDetailsPhoto(suggestion) {
+  const placeId = String(suggestion?.placeId || '').trim();
+  const [url, setUrl] = useState('');
+
+  useEffect(() => {
+    if (!placeId) {
+      setUrl('');
+      return;
+    }
+    let cancelled = false;
+
+    async function loadPhoto() {
+      try {
+        const res = await fetch(`/api/places?action=details&place_id=${encodeURIComponent(placeId)}`);
+        const data = res.ok ? await res.json() : null;
+        const photoRef = data?.result?.photos?.[0]?.photo_reference;
+        const nextUrl = photoRef
+          ? `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800`
+          : '';
+        if (!cancelled) {
+          setUrl((prev) => (prev === nextUrl ? prev : nextUrl));
+        }
+      } catch {
+        if (!cancelled) setUrl('');
+      }
+    }
+
+    loadPhoto();
+    return () => {
+      cancelled = true;
+    };
+  }, [placeId]);
+
+  return url;
+}
+
 function isStaticMapSuggestionUrl(url) {
   const normalized = String(url || '').trim().toLowerCase();
   return normalized.includes('maps.googleapis.com/maps/api/staticmap');
@@ -693,6 +729,7 @@ function SuggestionCardInner({ s, darkMode, shadow }) {
   }, [savedImageUrl, weakSavedImage, s?.label, s?.mapQuery]);
   const placeImageType = s?.categoryId === 'food' ? 'restaurant' : 'tourist_attraction';
   const placeImageUrl = usePlacesImage(placePhotoQuery, placeImageType);
+  const detailsPhotoUrl = useSuggestionDetailsPhoto(s);
   const googleImageQuery = useMemo(() => {
     if (savedImageUrl && !weakSavedImage) return '';
     return String(s?.mapQuery || s?.label || '').trim();
@@ -701,10 +738,11 @@ function SuggestionCardInner({ s, darkMode, shadow }) {
   const staticMapUrl = useMemo(() => buildSuggestionStaticMapUrl(s), [s]);
   useEffect(() => {
     setImageFailed(false);
-  }, [s?.id, savedImageUrl, placeImageUrl, googleImageUrl, staticMapUrl]);
+  }, [s?.id, savedImageUrl, placeImageUrl, detailsPhotoUrl, googleImageUrl, staticMapUrl]);
   const resolvedImageUrl = String(
     (weakSavedImage ? '' : savedImageUrl) ||
     placeImageUrl ||
+    detailsPhotoUrl ||
     googleImageUrl ||
     staticMapUrl ||
     savedImageUrl ||
@@ -739,6 +777,7 @@ function SuggestionPreviewSheet({ suggestion, onClose, onAdd, darkMode }) {
   }, [savedImageUrl, weakSavedImage, suggestion?.label, suggestion?.mapQuery]);
   const placeImageType = suggestion?.categoryId === 'food' ? 'restaurant' : 'tourist_attraction';
   const placeImageUrl = usePlacesImage(placePhotoQuery, placeImageType);
+  const detailsPhotoUrl = useSuggestionDetailsPhoto(suggestion);
   const googleImageQuery = useMemo(() => {
     if (savedImageUrl && !weakSavedImage) return '';
     return String(suggestion?.mapQuery || suggestion?.label || '').trim();
@@ -751,6 +790,7 @@ function SuggestionPreviewSheet({ suggestion, onClose, onAdd, darkMode }) {
   const resolvedImageUrl = String(
     (weakSavedImage ? '' : savedImageUrl) ||
     placeImageUrl ||
+    detailsPhotoUrl ||
     googleImageUrl ||
     staticMapUrl ||
     savedImageUrl ||
@@ -760,7 +800,7 @@ function SuggestionPreviewSheet({ suggestion, onClose, onAdd, darkMode }) {
 
   useEffect(() => {
     setImageFailed(false);
-  }, [suggestion?.id, savedImageUrl, placeImageUrl, googleImageUrl, staticMapUrl]);
+  }, [suggestion?.id, savedImageUrl, placeImageUrl, detailsPhotoUrl, googleImageUrl, staticMapUrl]);
 
   if (!suggestion) return null;
 
@@ -1044,6 +1084,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
             emoji: category.emoji,
             categoryId: category.categoryId,
             imageUrl,
+            placeId: String(result?.place_id || ''),
             geometry: result?.geometry || null,
             description: `${result.formatted_address || result.vicinity || ''}`.trim() || `${category.label} near ${resolvedAnchorLocation?.formattedAddress || resolvedAnchorLocation?.anchor || ''}.`,
             tip: buildPlaceSuggestionTip(result, resolvedAnchorLocation?.anchor || '', category),
