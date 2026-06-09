@@ -719,7 +719,7 @@ function isStaticMapSuggestionUrl(url) {
 
 function SuggestionCardInner({ s, darkMode, shadow }) {
   const cardBg = darkMode ? '#e2e8f0' : '#ffffff';
-  const [imageFailed, setImageFailed] = useState(false);
+  const [failedImageUrls, setFailedImageUrls] = useState([]);
   const savedImageUrl = String(s?.imageUrl || '').trim();
   const weakSavedImage = isStaticMapSuggestionUrl(savedImageUrl);
   const placePhotoQuery = useMemo(() => {
@@ -735,25 +735,27 @@ function SuggestionCardInner({ s, darkMode, shadow }) {
   }, [savedImageUrl, weakSavedImage, s?.label, s?.mapQuery]);
   const googleImageUrl = useGoogleImage(googleImageQuery);
   const staticMapUrl = useMemo(() => buildSuggestionStaticMapUrl(s), [s]);
+  const imageCandidates = useMemo(() => {
+    const ordered = [
+      weakSavedImage ? '' : savedImageUrl,
+      placeImageUrl,
+      detailsPhotoUrl,
+      googleImageUrl,
+      staticMapUrl,
+      savedImageUrl,
+    ].map((value) => String(value || '').trim()).filter(Boolean);
+    return Array.from(new Set(ordered));
+  }, [weakSavedImage, savedImageUrl, placeImageUrl, detailsPhotoUrl, googleImageUrl, staticMapUrl]);
   useEffect(() => {
-    setImageFailed(false);
-  }, [s?.id, savedImageUrl, placeImageUrl, detailsPhotoUrl, googleImageUrl, staticMapUrl]);
-  const resolvedImageUrl = String(
-    (weakSavedImage ? '' : savedImageUrl) ||
-    placeImageUrl ||
-    detailsPhotoUrl ||
-    googleImageUrl ||
-    staticMapUrl ||
-    savedImageUrl ||
-    ''
-  ).trim();
-  const displayImageUrl = imageFailed ? '' : resolvedImageUrl;
+    setFailedImageUrls([]);
+  }, [s?.id, imageCandidates]);
+  const displayImageUrl = imageCandidates.find((url) => !failedImageUrls.includes(url)) || '';
   return (
     <div style={{ background: cardBg, padding: '6px 6px 0', width: 120, borderRadius: 2, boxShadow: shadow, position: 'relative' }}>
       <Pushpin colorKey="teal" darkMode={false} />
       <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 1, background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34 }}>
         {displayImageUrl
-          ? <img src={displayImageUrl} alt={s.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} draggable={false} onError={() => setImageFailed(true)} />
+          ? <img src={displayImageUrl} alt={s.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} draggable={false} onError={() => setFailedImageUrls((prev) => (prev.includes(displayImageUrl) ? prev : [...prev, displayImageUrl]))} />
           : s.emoji}
       </div>
       <div style={{ padding: '5px 3px 7px', textAlign: 'center', fontFamily: CAVEAT, fontSize: 13, color: '#1a1a2e', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{s.label}</div>
@@ -767,7 +769,7 @@ function SuggestionPreviewSheet({ suggestion, onClose, onAdd, darkMode }) {
   const tp = darkMode ? '#e8eaf0' : '#1a1a2e';
   const ts = darkMode ? '#64748b' : '#9ca3af';
   const divider = darkMode ? 'rgba(255,255,255,0.07)' : '#f0ece4';
-  const [imageFailed, setImageFailed] = useState(false);
+  const [failedImageUrls, setFailedImageUrls] = useState([]);
   const savedImageUrl = String(suggestion?.imageUrl || '').trim();
   const weakSavedImage = isStaticMapSuggestionUrl(savedImageUrl);
   const placePhotoQuery = useMemo(() => {
@@ -783,23 +785,25 @@ function SuggestionPreviewSheet({ suggestion, onClose, onAdd, darkMode }) {
   }, [savedImageUrl, weakSavedImage, suggestion?.label, suggestion?.mapQuery]);
   const googleImageUrl = useGoogleImage(googleImageQuery);
   const staticMapUrl = useMemo(() => buildSuggestionStaticMapUrl(suggestion), [suggestion]);
+  const imageCandidates = useMemo(() => {
+    const ordered = [
+      weakSavedImage ? '' : savedImageUrl,
+      placeImageUrl,
+      detailsPhotoUrl,
+      googleImageUrl,
+      staticMapUrl,
+      savedImageUrl,
+    ].map((value) => String(value || '').trim()).filter(Boolean);
+    return Array.from(new Set(ordered));
+  }, [weakSavedImage, savedImageUrl, placeImageUrl, detailsPhotoUrl, googleImageUrl, staticMapUrl]);
   const mapsUrl = suggestion?.mapQuery
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(suggestion.mapQuery)}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(suggestion?.label || '')}`;
-  const resolvedImageUrl = String(
-    (weakSavedImage ? '' : savedImageUrl) ||
-    placeImageUrl ||
-    detailsPhotoUrl ||
-    googleImageUrl ||
-    staticMapUrl ||
-    savedImageUrl ||
-    ''
-  ).trim();
-  const displayImageUrl = imageFailed ? '' : resolvedImageUrl;
+  const displayImageUrl = imageCandidates.find((url) => !failedImageUrls.includes(url)) || '';
 
   useEffect(() => {
-    setImageFailed(false);
-  }, [suggestion?.id, savedImageUrl, placeImageUrl, detailsPhotoUrl, googleImageUrl, staticMapUrl]);
+    setFailedImageUrls([]);
+  }, [suggestion?.id, imageCandidates]);
 
   if (!suggestion) return null;
 
@@ -812,7 +816,7 @@ function SuggestionPreviewSheet({ suggestion, onClose, onAdd, darkMode }) {
 
         {displayImageUrl && (
           <div style={{ width: '100%', height: 210, overflow: 'hidden', position: 'relative' }}>
-            <img src={displayImageUrl} alt={suggestion.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={() => setImageFailed(true)} />
+            <img src={displayImageUrl} alt={suggestion.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={() => setFailedImageUrls((prev) => (prev.includes(displayImageUrl) ? prev : [...prev, displayImageUrl]))} />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.48))' }} />
           </div>
         )}
