@@ -697,6 +697,34 @@ function useSuggestionDetailsPhoto(suggestion) {
     let cancelled = false;
 
     async function loadPhoto() {
+      let resolvedUrl = '';
+      if (window.google?.maps?.places?.PlacesService) {
+        try {
+          const service = new window.google.maps.places.PlacesService(document.createElement('div'));
+          await new Promise((resolve) => {
+            service.getDetails(
+              { placeId, fields: ['photos'] },
+              (details, status) => {
+                if (status === window.google.maps.places.PlacesServiceStatus.OK) {
+                  const photo = Array.isArray(details?.photos) ? details.photos[0] : null;
+                  const nextUrl = photo?.getUrl?.({ maxWidth: 800 }) || '';
+                  if (nextUrl) {
+                    resolvedUrl = nextUrl;
+                  }
+                  if (!cancelled && nextUrl) {
+                    setUrl((prev) => (prev === nextUrl ? prev : nextUrl));
+                  }
+                }
+                resolve();
+              }
+            );
+          });
+        } catch {
+          // Fall through to server lookup.
+        }
+      }
+
+      if (resolvedUrl) return;
       try {
         const res = await fetch(`/api/places?action=details&place_id=${encodeURIComponent(placeId)}`);
         const data = res.ok ? await res.json() : null;
