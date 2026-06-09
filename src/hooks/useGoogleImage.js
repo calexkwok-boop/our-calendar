@@ -3,6 +3,13 @@ import { useState, useEffect } from "react";
 const _cache = {};
 const _inflight = {};
 
+function toProxyImageUrl(url) {
+  const raw = String(url || "").trim();
+  if (!raw) return "";
+  if (raw.startsWith("/")) return raw;
+  return `/api/image-proxy?url=${encodeURIComponent(raw)}`;
+}
+
 export default function useGoogleImage(query, options = {}) {
   const preferProductSearch = Boolean(options.preferProductSearch);
   const cacheKey = query ? `${preferProductSearch ? "product" : "image"}:${query}` : "";
@@ -65,13 +72,14 @@ export default function useGoogleImage(query, options = {}) {
         }
       }
 
-      _cache[cacheKey] = result || "";
+      const proxiedResult = toProxyImageUrl(result);
+      _cache[cacheKey] = proxiedResult || "";
       delete _inflight[cacheKey];
       if (!cancelled) {
-        const nextUrl = result || "";
+        const nextUrl = proxiedResult || "";
         setUrl((prev) => (prev === nextUrl ? prev : nextUrl));
       }
-      return result || "";
+      return proxiedResult || "";
     }
 
     if (_inflight[cacheKey]) {

@@ -673,7 +673,8 @@ function buildSuggestionStaticMapUrl(item) {
   const lat = Number(item?.geometry?.location?.lat);
   const lng = Number(item?.geometry?.location?.lng);
   if (!GOOGLE_MAPS_BROWSER_KEY || !Number.isFinite(lat) || !Number.isFinite(lng)) return '';
-  return `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(`${lat},${lng}`)}&zoom=16&size=800x800&scale=2&maptype=roadmap&markers=color:red%7C${encodeURIComponent(`${lat},${lng}`)}&key=${encodeURIComponent(GOOGLE_MAPS_BROWSER_KEY)}`;
+  const rawUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(`${lat},${lng}`)}&zoom=16&size=800x800&scale=2&maptype=roadmap&markers=color:red%7C${encodeURIComponent(`${lat},${lng}`)}&key=${encodeURIComponent(GOOGLE_MAPS_BROWSER_KEY)}`;
+  return `/api/image-proxy?url=${encodeURIComponent(rawUrl)}`;
 }
 
 function isStaticMapSuggestionUrl(url) {
