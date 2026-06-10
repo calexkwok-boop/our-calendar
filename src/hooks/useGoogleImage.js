@@ -10,6 +10,12 @@ function toProxyImageUrl(url) {
   return `/api/image-proxy?url=${encodeURIComponent(raw)}`;
 }
 
+function buildUnsplashFallbackUrl(query) {
+  const term = String(query || "").trim();
+  if (!term) return "";
+  return `https://source.unsplash.com/featured/800x800/?${encodeURIComponent(term)}`;
+}
+
 export default function useGoogleImage(query, options = {}) {
   const preferProductSearch = Boolean(options.preferProductSearch);
   const cacheKey = query ? `${preferProductSearch ? "product" : "image"}:${query}` : "";
@@ -75,6 +81,10 @@ export default function useGoogleImage(query, options = {}) {
         } catch {
           result = "";
         }
+      }
+
+      if (!result) {
+        result = buildUnsplashFallbackUrl(query);
       }
 
       const proxiedResult = toProxyImageUrl(result);
