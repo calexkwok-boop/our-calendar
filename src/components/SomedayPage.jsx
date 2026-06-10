@@ -677,6 +677,13 @@ function buildSuggestionStaticMapUrl(item) {
   return `/api/image-proxy?url=${encodeURIComponent(rawUrl)}`;
 }
 
+function buildSuggestionStreetViewUrl(item) {
+  const lat = Number(item?.geometry?.location?.lat);
+  const lng = Number(item?.geometry?.location?.lng);
+  if (!GOOGLE_MAPS_BROWSER_KEY || !Number.isFinite(lat) || !Number.isFinite(lng)) return '';
+  return `https://maps.googleapis.com/maps/api/streetview?size=800x800&location=${encodeURIComponent(`${lat},${lng}`)}&fov=90&pitch=5&key=${encodeURIComponent(GOOGLE_MAPS_BROWSER_KEY)}`;
+}
+
 function buildSuggestionLastResortImageUrl(item) {
   const baseQuery = [
     item?.label,
@@ -822,6 +829,7 @@ function SuggestionCardInner({ s, darkMode, shadow }) {
     return buildSuggestionGoogleImageQuery(s);
   }, [savedImageUrl, weakSavedImage, s]);
   const googleImageUrl = useGoogleImage(googleImageQuery);
+  const streetViewUrl = useMemo(() => buildSuggestionStreetViewUrl(s), [s]);
   const staticMapUrl = useMemo(() => buildSuggestionStaticMapUrl(s), [s]);
   const lastResortImageUrl = useMemo(() => buildSuggestionLastResortImageUrl(s), [s]);
   const imageCandidates = useMemo(() => {
@@ -830,12 +838,13 @@ function SuggestionCardInner({ s, darkMode, shadow }) {
       placeImageUrl,
       detailsPhotoUrl,
       googleImageUrl,
+      streetViewUrl,
       lastResortImageUrl,
       staticMapUrl,
       savedImageUrl,
     ].map((value) => String(value || '').trim()).filter(Boolean);
     return Array.from(new Set(ordered));
-  }, [weakSavedImage, savedImageUrl, placeImageUrl, detailsPhotoUrl, googleImageUrl, lastResortImageUrl, staticMapUrl]);
+  }, [weakSavedImage, savedImageUrl, placeImageUrl, detailsPhotoUrl, googleImageUrl, streetViewUrl, lastResortImageUrl, staticMapUrl]);
   useEffect(() => {
     setFailedImageUrls([]);
   }, [s?.id, imageCandidates]);
@@ -845,6 +854,7 @@ function SuggestionCardInner({ s, darkMode, shadow }) {
     `places:${placeImageUrl ? 'y' : 'n'}`,
     `details:${detailsPhotoUrl ? 'y' : 'n'}`,
     `google:${googleImageUrl ? 'y' : 'n'}`,
+    `street:${streetViewUrl ? 'y' : 'n'}`,
     `fallback:${lastResortImageUrl ? 'y' : 'n'}`,
     `map:${staticMapUrl ? 'y' : 'n'}`,
     `pid:${s?.placeId ? 'y' : 'n'}`,
@@ -889,6 +899,7 @@ function SuggestionPreviewSheet({ suggestion, onClose, onAdd, darkMode }) {
     return buildSuggestionGoogleImageQuery(suggestion);
   }, [savedImageUrl, weakSavedImage, suggestion]);
   const googleImageUrl = useGoogleImage(googleImageQuery);
+  const streetViewUrl = useMemo(() => buildSuggestionStreetViewUrl(suggestion), [suggestion]);
   const staticMapUrl = useMemo(() => buildSuggestionStaticMapUrl(suggestion), [suggestion]);
   const lastResortImageUrl = useMemo(() => buildSuggestionLastResortImageUrl(suggestion), [suggestion]);
   const imageCandidates = useMemo(() => {
@@ -897,12 +908,13 @@ function SuggestionPreviewSheet({ suggestion, onClose, onAdd, darkMode }) {
       placeImageUrl,
       detailsPhotoUrl,
       googleImageUrl,
+      streetViewUrl,
       lastResortImageUrl,
       staticMapUrl,
       savedImageUrl,
     ].map((value) => String(value || '').trim()).filter(Boolean);
     return Array.from(new Set(ordered));
-  }, [weakSavedImage, savedImageUrl, placeImageUrl, detailsPhotoUrl, googleImageUrl, lastResortImageUrl, staticMapUrl]);
+  }, [weakSavedImage, savedImageUrl, placeImageUrl, detailsPhotoUrl, googleImageUrl, streetViewUrl, lastResortImageUrl, staticMapUrl]);
   const mapsUrl = suggestion?.mapQuery
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(suggestion.mapQuery)}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(suggestion?.label || '')}`;
