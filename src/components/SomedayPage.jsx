@@ -684,15 +684,30 @@ function buildSuggestionStreetViewUrl(item) {
   return `/api/streetview?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}&size=800x800&fov=90&pitch=5`;
 }
 
+function buildReliableSuggestionFallbackUrl(item) {
+  const label = String(item?.label || '').trim().toLowerCase();
+  const category = String(item?.categoryId || '').trim().toLowerCase();
+
+  if (/\bcoffee|cafe|espresso|latte|caphe|ca phe\b/.test(label)) {
+    return 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=900&q=80';
+  }
+  if (/\bcocktail|bar|martini|wine|drink|speakeasy\b/.test(label)) {
+    return 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=900&q=80';
+  }
+  if (/\bdessert|gelato|ice cream|pastry|bakery|cake|sweet\b/.test(label)) {
+    return 'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=900&q=80';
+  }
+  if (category === 'food' || /\brestaurant|food|pho|banh mi|breakfast|lunch|dinner|eatery|bistro\b/.test(label)) {
+    return 'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=900&q=80';
+  }
+  if (/\bhotel|stay|inn|hostel|resort\b/.test(label)) {
+    return 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=900&q=80';
+  }
+  return 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80';
+}
+
 function buildSuggestionLastResortImageUrl(item) {
-  const baseQuery = [
-    item?.label,
-    item?.mapQuery,
-    item?.categoryId === 'food' ? 'cafe restaurant food drink interior' : 'travel place city neighborhood',
-  ].filter(Boolean).join(' ').trim();
-  if (!baseQuery) return '';
-  const rawUrl = `https://source.unsplash.com/featured/800x800/?${encodeURIComponent(baseQuery)}`;
-  return `/api/image-proxy?url=${encodeURIComponent(rawUrl)}`;
+  return buildReliableSuggestionFallbackUrl(item);
 }
 
 function buildSuggestionPlacePhotoQuery(item) {
@@ -838,13 +853,10 @@ function SuggestionCardInner({ s, darkMode, shadow }) {
       placeImageUrl,
       detailsPhotoUrl,
       googleImageUrl,
-      streetViewUrl,
       lastResortImageUrl,
-      staticMapUrl,
-      savedImageUrl,
     ].map((value) => String(value || '').trim()).filter(Boolean);
     return Array.from(new Set(ordered));
-  }, [weakSavedImage, savedImageUrl, placeImageUrl, detailsPhotoUrl, googleImageUrl, streetViewUrl, lastResortImageUrl, staticMapUrl]);
+  }, [weakSavedImage, savedImageUrl, placeImageUrl, detailsPhotoUrl, googleImageUrl, lastResortImageUrl]);
   useEffect(() => {
     setFailedImageUrls([]);
   }, [s?.id, imageCandidates]);
@@ -912,13 +924,10 @@ function SuggestionPreviewSheet({ suggestion, onClose, onAdd, darkMode }) {
       placeImageUrl,
       detailsPhotoUrl,
       googleImageUrl,
-      streetViewUrl,
       lastResortImageUrl,
-      staticMapUrl,
-      savedImageUrl,
     ].map((value) => String(value || '').trim()).filter(Boolean);
     return Array.from(new Set(ordered));
-  }, [weakSavedImage, savedImageUrl, placeImageUrl, detailsPhotoUrl, googleImageUrl, streetViewUrl, lastResortImageUrl, staticMapUrl]);
+  }, [weakSavedImage, savedImageUrl, placeImageUrl, detailsPhotoUrl, googleImageUrl, lastResortImageUrl]);
   const mapsUrl = suggestion?.mapQuery
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(suggestion.mapQuery)}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(suggestion?.label || '')}`;
