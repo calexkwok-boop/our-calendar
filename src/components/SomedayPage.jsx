@@ -584,7 +584,7 @@ const LOCAL_NEARBY_AMENITY_BY_TYPE = {
   store: ['marketplace', 'mall'],
 };
 
-const CHAPTER_SUGGESTIONS_CACHE_PREFIX = 'komo-chapter-suggestions-v7:';
+const CHAPTER_SUGGESTIONS_CACHE_PREFIX = 'komo-chapter-suggestions-v8:';
 const CHAPTER_SUGGESTIONS_CACHE_TTL_MS = 1000 * 60 * 30;
 
 const KNOWN_SUGGESTION_ANCHOR_COORDS = {
@@ -698,6 +698,8 @@ function pickTitleBasedFallback(label, urls = []) {
 function buildReliableSuggestionFallbackUrl(item) {
   const label = String(item?.label || '').trim().toLowerCase();
   const category = String(item?.categoryId || '').trim().toLowerCase();
+  const suggestionType = String(item?.suggestionType || item?.type || '').trim().toLowerCase();
+  const suggestionKey = String(item?.suggestionKey || '').trim().toLowerCase();
   const coffeeUrls = [
     'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=900&q=80',
     'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=80',
@@ -733,16 +735,16 @@ function buildReliableSuggestionFallbackUrl(item) {
     'https://images.unsplash.com/photo-1467269204594-9661b134dd2b?auto=format&fit=crop&w=900&q=80',
   ];
 
-  if (/\bcoffee|cafe|espresso|latte|caphe|ca phe\b/.test(label)) {
+  if (suggestionType === 'cafe' || suggestionKey === 'coffee' || /\bcoffee|cafe|espresso|latte|caphe|ca phe\b/.test(label)) {
     return pickTitleBasedFallback(label, coffeeUrls);
   }
-  if (/\bcocktail|bar|martini|wine|drink|speakeasy\b/.test(label)) {
+  if (suggestionType === 'bar' || suggestionKey === 'drinks' || suggestionKey === 'cocktail' || /\bcocktail|bar|martini|wine|drink|speakeasy\b/.test(label)) {
     return pickTitleBasedFallback(label, drinksUrls);
   }
-  if (/\bdessert|gelato|ice cream|pastry|bakery|cake|sweet\b/.test(label)) {
+  if (suggestionType === 'bakery' || suggestionKey === 'dessert' || suggestionKey === 'bakery' || /\bdessert|gelato|ice cream|pastry|bakery|cake|sweet\b/.test(label)) {
     return pickTitleBasedFallback(label, dessertUrls);
   }
-  if (category === 'food' || /\brestaurant|food|pho|banh mi|breakfast|lunch|dinner|eatery|bistro\b/.test(label)) {
+  if (suggestionType === 'restaurant' || suggestionKey === 'food' || suggestionKey === 'breakfast' || category === 'food' || /\brestaurant|food|pho|banh mi|breakfast|lunch|dinner|eatery|bistro\b/.test(label)) {
     return pickTitleBasedFallback(label, foodUrls);
   }
   if (/\bhotel|stay|inn|hostel|resort\b/.test(label)) {
@@ -1261,6 +1263,8 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
             label: result.name,
             emoji: category.emoji,
             categoryId: category.categoryId,
+            suggestionKey: String(category.key || '').trim(),
+            suggestionType: String(category.type || '').trim(),
             imageUrl,
             photoRef: String(result?.photos?.[0]?.photo_reference || ''),
             placeId: String(result?.place_id || ''),
