@@ -584,7 +584,7 @@ const LOCAL_NEARBY_AMENITY_BY_TYPE = {
   store: ['marketplace', 'mall'],
 };
 
-const CHAPTER_SUGGESTIONS_CACHE_PREFIX = 'komo-chapter-suggestions-v8:';
+const CHAPTER_SUGGESTIONS_CACHE_PREFIX = 'komo-chapter-suggestions-v9:';
 const CHAPTER_SUGGESTIONS_CACHE_TTL_MS = 1000 * 60 * 30;
 
 const KNOWN_SUGGESTION_ANCHOR_COORDS = {
@@ -748,16 +748,28 @@ function buildReliableSuggestionFallbackUrl(item) {
   const suggestionKey = String(item?.suggestionKey || '').trim().toLowerCase();
   const { coffeeUrls, drinksUrls, dessertUrls, foodUrls, stayUrls, generalUrls } = getSuggestionFallbackImagePools();
 
-  if (suggestionType === 'cafe' || suggestionKey === 'coffee' || /\bcoffee|cafe|espresso|latte|caphe|ca phe\b/.test(label)) {
+  if (suggestionType === 'cafe' || suggestionKey === 'coffee') {
     return pickTitleBasedFallback(label, coffeeUrls);
   }
-  if (suggestionType === 'bar' || suggestionKey === 'drinks' || suggestionKey === 'cocktail' || /\bcocktail|bar|martini|wine|drink|speakeasy\b/.test(label)) {
+  if (suggestionType === 'bar' || suggestionKey === 'drinks' || suggestionKey === 'cocktail') {
     return pickTitleBasedFallback(label, drinksUrls);
   }
-  if (suggestionType === 'bakery' || suggestionKey === 'dessert' || suggestionKey === 'bakery' || /\bdessert|gelato|ice cream|pastry|bakery|cake|sweet\b/.test(label)) {
+  if (suggestionType === 'bakery' || suggestionKey === 'dessert' || suggestionKey === 'bakery') {
     return pickTitleBasedFallback(label, dessertUrls);
   }
-  if (suggestionType === 'restaurant' || suggestionKey === 'food' || suggestionKey === 'breakfast' || category === 'food' || /\brestaurant|food|pho|banh mi|breakfast|lunch|dinner|eatery|bistro\b/.test(label)) {
+  if (suggestionType === 'restaurant' || suggestionKey === 'food' || suggestionKey === 'breakfast') {
+    return pickTitleBasedFallback(label, foodUrls);
+  }
+  if (/\bcoffee|cafe|espresso|latte|caphe|ca phe\b/.test(label)) {
+    return pickTitleBasedFallback(label, coffeeUrls);
+  }
+  if (/\bcocktail|bar|martini|wine|drink|speakeasy\b/.test(label)) {
+    return pickTitleBasedFallback(label, drinksUrls);
+  }
+  if (/\bdessert|gelato|ice cream|pastry|bakery|cake|sweet\b/.test(label)) {
+    return pickTitleBasedFallback(label, dessertUrls);
+  }
+  if (category === 'food' || /\brestaurant|food|pho|banh mi|breakfast|lunch|dinner|eatery|bistro\b/.test(label)) {
     return pickTitleBasedFallback(label, foodUrls);
   }
   if (/\bhotel|stay|inn|hostel|resort\b/.test(label)) {
