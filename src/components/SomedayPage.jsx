@@ -584,7 +584,7 @@ const LOCAL_NEARBY_AMENITY_BY_TYPE = {
   store: ['marketplace', 'mall'],
 };
 
-const CHAPTER_SUGGESTIONS_CACHE_PREFIX = 'komo-chapter-suggestions-v6:';
+const CHAPTER_SUGGESTIONS_CACHE_PREFIX = 'komo-chapter-suggestions-v7:';
 const CHAPTER_SUGGESTIONS_CACHE_TTL_MS = 1000 * 60 * 30;
 
 const KNOWN_SUGGESTION_ANCHOR_COORDS = {
@@ -859,6 +859,10 @@ function SuggestionCardInner({ s, darkMode, shadow }) {
     `map:${staticMapUrl ? 'y' : 'n'}`,
     `pid:${s?.placeId ? 'y' : 'n'}`,
     `geo:${s?.geometry?.location?.lat && s?.geometry?.location?.lng ? 'y' : 'n'}`,
+    `candidates:${imageCandidates.length}`,
+    `failed:${failedImageUrls.length}`,
+    `first:${String(imageCandidates[0] || '').slice(0, 72) || 'n'}`,
+    `lastFailed:${String(failedImageUrls[failedImageUrls.length - 1] || '').slice(0, 72) || 'n'}`,
   ].join(' ') : '';
   return (
     <div style={{ background: cardBg, padding: '6px 6px 0', width: 120, borderRadius: 2, boxShadow: shadow, position: 'relative' }}>
