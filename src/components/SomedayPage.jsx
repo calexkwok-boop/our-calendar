@@ -676,6 +676,17 @@ function buildSuggestionStaticMapUrl(item) {
   return `https://staticmap.openstreetmap.de/staticmap.php?center=${encodeURIComponent(`${lat},${lng}`)}&zoom=16&size=800x800&markers=${encodeURIComponent(`${lat},${lng},red-pushpin`)}`;
 }
 
+function buildSuggestionLastResortImageUrl(item) {
+  const baseQuery = [
+    item?.label,
+    item?.mapQuery,
+    item?.categoryId === 'food' ? 'cafe restaurant food drink interior' : 'travel place city neighborhood',
+  ].filter(Boolean).join(' ').trim();
+  if (!baseQuery) return '';
+  const rawUrl = `https://source.unsplash.com/featured/800x800/?${encodeURIComponent(baseQuery)}`;
+  return `/api/image-proxy?url=${encodeURIComponent(rawUrl)}`;
+}
+
 function buildSuggestionPlacePhotoUrl(photoRef, maxwidth = 800) {
   const ref = String(photoRef || '').trim();
   if (!ref) return '';
@@ -775,17 +786,19 @@ function SuggestionCardInner({ s, darkMode, shadow }) {
   }, [savedImageUrl, weakSavedImage, s?.label, s?.mapQuery]);
   const googleImageUrl = useGoogleImage(googleImageQuery);
   const staticMapUrl = useMemo(() => buildSuggestionStaticMapUrl(s), [s]);
+  const lastResortImageUrl = useMemo(() => buildSuggestionLastResortImageUrl(s), [s]);
   const imageCandidates = useMemo(() => {
     const ordered = [
       weakSavedImage ? '' : savedImageUrl,
       placeImageUrl,
       detailsPhotoUrl,
       googleImageUrl,
+      lastResortImageUrl,
       staticMapUrl,
       savedImageUrl,
     ].map((value) => String(value || '').trim()).filter(Boolean);
     return Array.from(new Set(ordered));
-  }, [weakSavedImage, savedImageUrl, placeImageUrl, detailsPhotoUrl, googleImageUrl, staticMapUrl]);
+  }, [weakSavedImage, savedImageUrl, placeImageUrl, detailsPhotoUrl, googleImageUrl, lastResortImageUrl, staticMapUrl]);
   useEffect(() => {
     setFailedImageUrls([]);
   }, [s?.id, imageCandidates]);
@@ -795,6 +808,7 @@ function SuggestionCardInner({ s, darkMode, shadow }) {
     `places:${placeImageUrl ? 'y' : 'n'}`,
     `details:${detailsPhotoUrl ? 'y' : 'n'}`,
     `google:${googleImageUrl ? 'y' : 'n'}`,
+    `fallback:${lastResortImageUrl ? 'y' : 'n'}`,
     `map:${staticMapUrl ? 'y' : 'n'}`,
     `pid:${s?.placeId ? 'y' : 'n'}`,
     `geo:${s?.geometry?.location?.lat && s?.geometry?.location?.lng ? 'y' : 'n'}`,
@@ -839,17 +853,19 @@ function SuggestionPreviewSheet({ suggestion, onClose, onAdd, darkMode }) {
   }, [savedImageUrl, weakSavedImage, suggestion?.label, suggestion?.mapQuery]);
   const googleImageUrl = useGoogleImage(googleImageQuery);
   const staticMapUrl = useMemo(() => buildSuggestionStaticMapUrl(suggestion), [suggestion]);
+  const lastResortImageUrl = useMemo(() => buildSuggestionLastResortImageUrl(suggestion), [suggestion]);
   const imageCandidates = useMemo(() => {
     const ordered = [
       weakSavedImage ? '' : savedImageUrl,
       placeImageUrl,
       detailsPhotoUrl,
       googleImageUrl,
+      lastResortImageUrl,
       staticMapUrl,
       savedImageUrl,
     ].map((value) => String(value || '').trim()).filter(Boolean);
     return Array.from(new Set(ordered));
-  }, [weakSavedImage, savedImageUrl, placeImageUrl, detailsPhotoUrl, googleImageUrl, staticMapUrl]);
+  }, [weakSavedImage, savedImageUrl, placeImageUrl, detailsPhotoUrl, googleImageUrl, lastResortImageUrl, staticMapUrl]);
   const mapsUrl = suggestion?.mapQuery
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(suggestion.mapQuery)}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(suggestion?.label || '')}`;
