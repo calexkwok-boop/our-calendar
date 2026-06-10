@@ -680,8 +680,8 @@ function buildSuggestionStaticMapUrl(item) {
 function buildSuggestionStreetViewUrl(item) {
   const lat = Number(item?.geometry?.location?.lat);
   const lng = Number(item?.geometry?.location?.lng);
-  if (!GOOGLE_MAPS_BROWSER_KEY || !Number.isFinite(lat) || !Number.isFinite(lng)) return '';
-  return `https://maps.googleapis.com/maps/api/streetview?size=800x800&location=${encodeURIComponent(`${lat},${lng}`)}&fov=90&pitch=5&key=${encodeURIComponent(GOOGLE_MAPS_BROWSER_KEY)}`;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return '';
+  return `/api/streetview?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}&size=800x800&fov=90&pitch=5`;
 }
 
 function buildSuggestionLastResortImageUrl(item) {
