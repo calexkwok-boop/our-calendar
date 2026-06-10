@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const _cache = {};
 const _inflight = {};
+const SUCCESS_TTL_MS = 1000 * 60 * 60 * 6;
+const FAILURE_TTL_MS = 1000 * 60 * 3;
 
 function toProxyImageUrl(url) {
   const raw = String(url || "").trim();
@@ -10,16 +12,28 @@ function toProxyImageUrl(url) {
   return `/api/image-proxy?url=${encodeURIComponent(raw)}`;
 }
 
+function readCacheEntry(cacheKey) {
+  const entry = _cache[cacheKey];
+  if (!entry) return null;
+  const ttl = entry.url ? SUCCESS_TTL_MS : FAILURE_TTL_MS;
+  if ((Date.now() - entry.ts) > ttl) {
+    delete _cache[cacheKey];
+    return null;
+  }
+  return entry;
+}
+
+function writeCacheEntry(cacheKey, url) {
+  _cache[cacheKey] = { url: String(url || ""), ts: Date.now() };
+}
+
 export default function useGoogleImage(query, options = {}) {
   const preferProductSearch = Boolean(options.preferProductSearch);
   const cacheKey = query ? `${preferProductSearch ? "product" : "image"}:${query}` : "";
   const [url, setUrl] = useState(() => {
     if (!cacheKey) return "";
-    if (Object.prototype.hasOwnProperty.call(_cache, cacheKey)) {
-      const cached = _cache[cacheKey] || "";
-      return cached || undefined;
-    }
-    return undefined;
+    const cached = readCacheEntry(cacheKey);
+    return cached ? (cached.url || "") : undefined;
   });
 
   useEffect(() => {
@@ -27,19 +41,18 @@ export default function useGoogleImage(query, options = {}) {
       setUrl((prev) => (prev ? "" : prev));
       return;
     }
-    if (Object.prototype.hasOwnProperty.call(_cache, cacheKey)) {
-      const cached = _cache[cacheKey] || "";
-      if (!cached) {
-        delete _cache[cacheKey];
-      } else {
-        setUrl((prev) => (prev === cached ? prev : cached));
-        return;
-      }
+
+    const cached = readCacheEntry(cacheKey);
+    if (cached) {
+      setUrl((prev) => (prev === cached.url ? prev : cached.url));
+      return;
     }
+
     let cancelled = false;
 
     async function resolveImage() {
       let result = "";
+
       if (preferProductSearch) {
         try {
           const productResponse = await fetch(`/api/product-search?q=${encodeURIComponent(query)}`);
@@ -48,19 +61,19 @@ export default function useGoogleImage(query, options = {}) {
             const productItems = Array.isArray(productData)
               ? productData
               : (productData?.items || productData?.results || productData?.products || []);
-            const productMatch = productItems.find(item => (
-              item?.image ||
-              item?.imageUrl ||
-              item?.thumbnail ||
-              item?.thumbnailUrl ||
-              item?.displayUrl
+            const productMatch = productItems.find((item) => (
+              item?.image
+              || item?.imageUrl
+              || item?.thumbnail
+              || item?.thumbnailUrl
+              || item?.displayUrl
             ));
-            result = productMatch?.image ||
-              productMatch?.imageUrl ||
-              productMatch?.thumbnail ||
-              productMatch?.thumbnailUrl ||
-              productMatch?.displayUrl ||
-              "";
+            result = productMatch?.image
+              || productMatch?.imageUrl
+              || productMatch?.thumbnail
+              || productMatch?.thumbnailUrl
+              || productMatch?.displayUrl
+              || "";
           }
         } catch {
           result = "";
@@ -78,17 +91,14 @@ export default function useGoogleImage(query, options = {}) {
       }
 
       const proxiedResult = toProxyImageUrl(result);
-      if (proxiedResult) {
-        _cache[cacheKey] = proxiedResult;
-      } else {
-        delete _cache[cacheKey];
-      }
+      writeCacheEntry(cacheKey, proxiedResult);
       delete _inflight[cacheKey];
+
       if (!cancelled) {
-        const nextUrl = proxiedResult || "";
-        setUrl((prev) => (prev === nextUrl ? prev : nextUrl));
+        setUrl((prev) => (prev === proxiedResult ? prev : proxiedResult));
       }
-      return proxiedResult || "";
+
+      return proxiedResult;
     }
 
     if (_inflight[cacheKey]) {
@@ -96,8 +106,7 @@ export default function useGoogleImage(query, options = {}) {
       _inflight[cacheKey]
         .then((result) => {
           if (!cancelled) {
-            const nextUrl = result || "";
-            setUrl((prev) => (prev === nextUrl ? prev : nextUrl));
+            setUrl((prev) => (prev === result ? prev : result));
           }
         })
         .catch(() => {

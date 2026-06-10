@@ -555,6 +555,10 @@ const ScrapbookHomeHybrid = ({
   }, [onOpenMemory, resolveEditableMemory]);
 
   React.useEffect(() => {
+    setAvatarImgError(false);
+  }, [profilePhotoUrl]);
+
+  React.useEffect(() => {
     loadedMemoryCollageUrlsRef.current = loadedMemoryCollageUrls;
   }, [loadedMemoryCollageUrls]);
 

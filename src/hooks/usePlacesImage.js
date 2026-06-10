@@ -2,16 +2,30 @@ import { useEffect, useState } from "react";
 
 const placesImageCache = {};
 const placesImageInflight = {};
+const SUCCESS_TTL_MS = 1000 * 60 * 60 * 6;
+const FAILURE_TTL_MS = 1000 * 60 * 3;
+
+function readCacheEntry(cacheKey) {
+  const entry = placesImageCache[cacheKey];
+  if (!entry) return null;
+  const ttl = entry.url ? SUCCESS_TTL_MS : FAILURE_TTL_MS;
+  if ((Date.now() - entry.ts) > ttl) {
+    delete placesImageCache[cacheKey];
+    return null;
+  }
+  return entry;
+}
+
+function writeCacheEntry(cacheKey, url) {
+  placesImageCache[cacheKey] = { url: String(url || ""), ts: Date.now() };
+}
 
 export default function usePlacesImage(query, type = "restaurant") {
   const cacheKey = query ? `${type}:${query}` : "";
   const [url, setUrl] = useState(() => {
     if (!cacheKey) return "";
-    if (Object.prototype.hasOwnProperty.call(placesImageCache, cacheKey)) {
-      const cached = placesImageCache[cacheKey] || "";
-      return cached || undefined;
-    }
-    return undefined;
+    const cached = readCacheEntry(cacheKey);
+    return cached ? (cached.url || "") : undefined;
   });
 
   useEffect(() => {
@@ -19,14 +33,11 @@ export default function usePlacesImage(query, type = "restaurant") {
       setUrl((prev) => (prev ? "" : prev));
       return;
     }
-    if (Object.prototype.hasOwnProperty.call(placesImageCache, cacheKey)) {
-      const cached = placesImageCache[cacheKey] || "";
-      if (!cached) {
-        delete placesImageCache[cacheKey];
-      } else {
-        setUrl((prev) => (prev === cached ? prev : cached));
-        return;
-      }
+
+    const cached = readCacheEntry(cacheKey);
+    if (cached) {
+      setUrl((prev) => (prev === cached.url ? prev : cached.url));
+      return;
     }
 
     let cancelled = false;
@@ -42,20 +53,18 @@ export default function usePlacesImage(query, type = "restaurant") {
         const nextUrl = photoRef
           ? `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800`
           : "";
-        if (nextUrl) {
-          placesImageCache[cacheKey] = nextUrl;
-        } else {
-          delete placesImageCache[cacheKey];
-        }
+
+        writeCacheEntry(cacheKey, nextUrl);
         delete placesImageInflight[cacheKey];
+
         if (!cancelled) {
-          const finalUrl = nextUrl || "";
-          setUrl((prev) => (prev === finalUrl ? prev : finalUrl));
+          setUrl((prev) => (prev === nextUrl ? prev : nextUrl));
         }
-        return nextUrl || "";
+
+        return nextUrl;
       } catch {
         delete placesImageInflight[cacheKey];
-        delete placesImageCache[cacheKey];
+        writeCacheEntry(cacheKey, "");
         if (!cancelled) setUrl((prev) => (prev ? "" : prev));
         return "";
       }
@@ -66,8 +75,7 @@ export default function usePlacesImage(query, type = "restaurant") {
       placesImageInflight[cacheKey]
         .then((nextUrl) => {
           if (!cancelled) {
-            const finalUrl = nextUrl || "";
-            setUrl((prev) => (prev === finalUrl ? prev : finalUrl));
+            setUrl((prev) => (prev === nextUrl ? prev : nextUrl));
           }
         })
         .catch(() => {
