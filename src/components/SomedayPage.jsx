@@ -584,7 +584,7 @@ const LOCAL_NEARBY_AMENITY_BY_TYPE = {
   store: ['marketplace', 'mall'],
 };
 
-const CHAPTER_SUGGESTIONS_CACHE_PREFIX = 'komo-chapter-suggestions-v5:';
+const CHAPTER_SUGGESTIONS_CACHE_PREFIX = 'komo-chapter-suggestions-v6:';
 const CHAPTER_SUGGESTIONS_CACHE_TTL_MS = 1000 * 60 * 30;
 
 const KNOWN_SUGGESTION_ANCHOR_COORDS = {
@@ -673,7 +673,8 @@ function buildSuggestionStaticMapUrl(item) {
   const lat = Number(item?.geometry?.location?.lat);
   const lng = Number(item?.geometry?.location?.lng);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return '';
-  return `https://staticmap.openstreetmap.de/staticmap.php?center=${encodeURIComponent(`${lat},${lng}`)}&zoom=16&size=800x800&markers=${encodeURIComponent(`${lat},${lng},red-pushpin`)}`;
+  const rawUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${encodeURIComponent(`${lat},${lng}`)}&zoom=16&size=800x800&markers=${encodeURIComponent(`${lat},${lng},red-pushpin`)}`;
+  return `/api/image-proxy?url=${encodeURIComponent(rawUrl)}`;
 }
 
 function buildSuggestionLastResortImageUrl(item) {
