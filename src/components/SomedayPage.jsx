@@ -695,45 +695,58 @@ function pickTitleBasedFallback(label, urls = []) {
   return urls[Math.abs(hash) % urls.length] || urls[0] || '';
 }
 
+function getSuggestionFallbackImagePools() {
+  return {
+    coffeeUrls: [
+      'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1511920170033-f8396924c348?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1447933601403-0c6688de566e?auto=format&fit=crop&w=900&q=80',
+    ],
+    drinksUrls: [
+      'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1470337458703-46ad1756a187?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=900&q=80',
+    ],
+    dessertUrls: [
+      'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1464306076886-da185f6a9d05?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=900&q=80',
+    ],
+    foodUrls: [
+      'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=900&q=80',
+    ],
+    stayUrls: [
+      'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1445019980597-93fa8acb246c?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1522798514-97ceb8c4f1c8?auto=format&fit=crop&w=900&q=80',
+    ],
+    generalUrls: [
+      'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1467269204594-9661b134dd2b?auto=format&fit=crop&w=900&q=80',
+    ],
+  };
+}
+
+function isGenericSuggestionFallbackUrl(url) {
+  const normalized = String(url || '').trim();
+  if (!normalized) return false;
+  const pools = getSuggestionFallbackImagePools();
+  return Object.values(pools).some((urls) => urls.includes(normalized));
+}
+
 function buildReliableSuggestionFallbackUrl(item) {
   const label = String(item?.label || '').trim().toLowerCase();
   const category = String(item?.categoryId || '').trim().toLowerCase();
   const suggestionType = String(item?.suggestionType || item?.type || '').trim().toLowerCase();
   const suggestionKey = String(item?.suggestionKey || '').trim().toLowerCase();
-  const coffeeUrls = [
-    'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=900&q=80',
-    'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=80',
-    'https://images.unsplash.com/photo-1511920170033-f8396924c348?auto=format&fit=crop&w=900&q=80',
-    'https://images.unsplash.com/photo-1447933601403-0c6688de566e?auto=format&fit=crop&w=900&q=80',
-  ];
-  const drinksUrls = [
-    'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=900&q=80',
-    'https://images.unsplash.com/photo-1470337458703-46ad1756a187?auto=format&fit=crop&w=900&q=80',
-    'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=80',
-    'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=900&q=80',
-  ];
-  const dessertUrls = [
-    'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=900&q=80',
-    'https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=900&q=80',
-    'https://images.unsplash.com/photo-1464306076886-da185f6a9d05?auto=format&fit=crop&w=900&q=80',
-    'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=900&q=80',
-  ];
-  const foodUrls = [
-    'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=900&q=80',
-    'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=900&q=80',
-    'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80',
-    'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=900&q=80',
-  ];
-  const stayUrls = [
-    'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=900&q=80',
-    'https://images.unsplash.com/photo-1445019980597-93fa8acb246c?auto=format&fit=crop&w=900&q=80',
-    'https://images.unsplash.com/photo-1522798514-97ceb8c4f1c8?auto=format&fit=crop&w=900&q=80',
-  ];
-  const generalUrls = [
-    'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80',
-    'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&w=900&q=80',
-    'https://images.unsplash.com/photo-1467269204594-9661b134dd2b?auto=format&fit=crop&w=900&q=80',
-  ];
+  const { coffeeUrls, drinksUrls, dessertUrls, foodUrls, stayUrls, generalUrls } = getSuggestionFallbackImagePools();
 
   if (suggestionType === 'cafe' || suggestionKey === 'coffee' || /\bcoffee|cafe|espresso|latte|caphe|ca phe\b/.test(label)) {
     return pickTitleBasedFallback(label, coffeeUrls);
@@ -878,7 +891,7 @@ function SuggestionCardInner({ s, darkMode, shadow }) {
   const cardBg = darkMode ? '#e2e8f0' : '#ffffff';
   const [failedImageUrls, setFailedImageUrls] = useState([]);
   const savedImageUrl = String(s?.imageUrl || '').trim();
-  const weakSavedImage = isStaticMapSuggestionUrl(savedImageUrl);
+  const weakSavedImage = isStaticMapSuggestionUrl(savedImageUrl) || isGenericSuggestionFallbackUrl(savedImageUrl);
   const placePhotoQuery = useMemo(() => {
     if (savedImageUrl && !weakSavedImage) return '';
     return buildSuggestionPlacePhotoQuery(s);
@@ -949,7 +962,7 @@ function SuggestionPreviewSheet({ suggestion, onClose, onAdd, darkMode }) {
   const divider = darkMode ? 'rgba(255,255,255,0.07)' : '#f0ece4';
   const [failedImageUrls, setFailedImageUrls] = useState([]);
   const savedImageUrl = String(suggestion?.imageUrl || '').trim();
-  const weakSavedImage = isStaticMapSuggestionUrl(savedImageUrl);
+  const weakSavedImage = isStaticMapSuggestionUrl(savedImageUrl) || isGenericSuggestionFallbackUrl(savedImageUrl);
   const placePhotoQuery = useMemo(() => {
     if (savedImageUrl && !weakSavedImage) return '';
     return buildSuggestionPlacePhotoQuery(suggestion);
