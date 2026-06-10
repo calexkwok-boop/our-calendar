@@ -688,6 +688,36 @@ function buildSuggestionLastResortImageUrl(item) {
   return `/api/image-proxy?url=${encodeURIComponent(rawUrl)}`;
 }
 
+function buildSuggestionPlacePhotoQuery(item) {
+  const label = String(item?.label || '').trim();
+  const mapQuery = String(item?.mapQuery || '').trim();
+  const rawAddress = String(item?.address || item?.formattedAddress || '').trim();
+  const normalizedMapQuery = mapQuery.toLowerCase();
+  const address = rawAddress || (
+    label && normalizedMapQuery.startsWith(label.toLowerCase())
+      ? mapQuery.slice(label.length).trim().replace(/^[-,]\s*/, '')
+      : mapQuery
+  );
+  const categoryHint = item?.categoryId === 'food' ? 'restaurant cafe' : 'tourist attraction landmark';
+  return [label, address, categoryHint].filter(Boolean).join(' ').trim();
+}
+
+function buildSuggestionGoogleImageQuery(item) {
+  const label = String(item?.label || '').trim();
+  const mapQuery = String(item?.mapQuery || '').trim();
+  const rawAddress = String(item?.address || item?.formattedAddress || '').trim();
+  const normalizedMapQuery = mapQuery.toLowerCase();
+  const address = rawAddress || (
+    label && normalizedMapQuery.startsWith(label.toLowerCase())
+      ? mapQuery.slice(label.length).trim().replace(/^[-,]\s*/, '')
+      : mapQuery
+  );
+  const categoryHint = item?.categoryId === 'food'
+    ? 'restaurant cafe food interior'
+    : 'travel landmark place';
+  return [label, address, categoryHint].filter(Boolean).join(' ').trim();
+}
+
 function buildSuggestionPlacePhotoUrl(photoRef, maxwidth = 800) {
   const ref = String(photoRef || '').trim();
   if (!ref) return '';
@@ -699,9 +729,15 @@ function buildSuggestionPlacePhotoUrl(photoRef, maxwidth = 800) {
 
 function useSuggestionDetailsPhoto(suggestion) {
   const placeId = String(suggestion?.placeId || '').trim();
+  const directPhotoRef = String(suggestion?.photoRef || '').trim();
   const [url, setUrl] = useState('');
 
   useEffect(() => {
+    if (directPhotoRef) {
+      const nextUrl = buildSuggestionPlacePhotoUrl(directPhotoRef, 800);
+      setUrl((prev) => (prev === nextUrl ? prev : nextUrl));
+      return;
+    }
     if (!placeId) {
       setUrl('');
       return;
@@ -756,7 +792,7 @@ function useSuggestionDetailsPhoto(suggestion) {
     return () => {
       cancelled = true;
     };
-  }, [placeId]);
+  }, [directPhotoRef, placeId]);
 
   return url;
 }
@@ -776,15 +812,15 @@ function SuggestionCardInner({ s, darkMode, shadow }) {
   const weakSavedImage = isStaticMapSuggestionUrl(savedImageUrl);
   const placePhotoQuery = useMemo(() => {
     if (savedImageUrl && !weakSavedImage) return '';
-    return String(s?.mapQuery || s?.label || '').trim();
-  }, [savedImageUrl, weakSavedImage, s?.label, s?.mapQuery]);
+    return buildSuggestionPlacePhotoQuery(s);
+  }, [savedImageUrl, weakSavedImage, s]);
   const placeImageType = s?.categoryId === 'food' ? 'restaurant' : 'tourist_attraction';
   const placeImageUrl = usePlacesImage(placePhotoQuery, placeImageType);
   const detailsPhotoUrl = useSuggestionDetailsPhoto(s);
   const googleImageQuery = useMemo(() => {
     if (savedImageUrl && !weakSavedImage) return '';
-    return String(s?.mapQuery || s?.label || '').trim();
-  }, [savedImageUrl, weakSavedImage, s?.label, s?.mapQuery]);
+    return buildSuggestionGoogleImageQuery(s);
+  }, [savedImageUrl, weakSavedImage, s]);
   const googleImageUrl = useGoogleImage(googleImageQuery);
   const staticMapUrl = useMemo(() => buildSuggestionStaticMapUrl(s), [s]);
   const lastResortImageUrl = useMemo(() => buildSuggestionLastResortImageUrl(s), [s]);
@@ -843,15 +879,15 @@ function SuggestionPreviewSheet({ suggestion, onClose, onAdd, darkMode }) {
   const weakSavedImage = isStaticMapSuggestionUrl(savedImageUrl);
   const placePhotoQuery = useMemo(() => {
     if (savedImageUrl && !weakSavedImage) return '';
-    return String(suggestion?.mapQuery || suggestion?.label || '').trim();
-  }, [savedImageUrl, weakSavedImage, suggestion?.label, suggestion?.mapQuery]);
+    return buildSuggestionPlacePhotoQuery(suggestion);
+  }, [savedImageUrl, weakSavedImage, suggestion]);
   const placeImageType = suggestion?.categoryId === 'food' ? 'restaurant' : 'tourist_attraction';
   const placeImageUrl = usePlacesImage(placePhotoQuery, placeImageType);
   const detailsPhotoUrl = useSuggestionDetailsPhoto(suggestion);
   const googleImageQuery = useMemo(() => {
     if (savedImageUrl && !weakSavedImage) return '';
-    return String(suggestion?.mapQuery || suggestion?.label || '').trim();
-  }, [savedImageUrl, weakSavedImage, suggestion?.label, suggestion?.mapQuery]);
+    return buildSuggestionGoogleImageQuery(suggestion);
+  }, [savedImageUrl, weakSavedImage, suggestion]);
   const googleImageUrl = useGoogleImage(googleImageQuery);
   const staticMapUrl = useMemo(() => buildSuggestionStaticMapUrl(suggestion), [suggestion]);
   const lastResortImageUrl = useMemo(() => buildSuggestionLastResortImageUrl(suggestion), [suggestion]);
@@ -1027,10 +1063,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
     const upgradeSuggestionImages = async () => {
       const upgraded = await Promise.all(liveSuggestions.map(async (suggestion) => {
         if (String(suggestion?.imageUrl || '').trim()) return suggestion;
-        const placeQuery = [
-          suggestion?.label,
-          suggestion?.mapQuery,
-        ].filter(Boolean).join(' ');
+        const placeQuery = buildSuggestionPlacePhotoQuery(suggestion);
 
         if (!placeQuery) return suggestion;
 
@@ -1044,6 +1077,7 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
             if (photoRef) {
               return {
                 ...suggestion,
+                photoRef: String(photoRef || ''),
                 imageUrl: `/api/places?action=photo&ref=${encodeURIComponent(photoRef)}&maxwidth=800`,
               };
             }
@@ -1158,8 +1192,10 @@ function SuggestionStrip({ chapter, chapterPins, initialSeed, onAdd, darkMode })
             emoji: category.emoji,
             categoryId: category.categoryId,
             imageUrl,
+            photoRef: String(result?.photos?.[0]?.photo_reference || ''),
             placeId: String(result?.place_id || ''),
             geometry: result?.geometry || null,
+            address: String(result?.formatted_address || result?.vicinity || '').trim(),
             description: `${result.formatted_address || result.vicinity || ''}`.trim() || `${category.label} near ${resolvedAnchorLocation?.formattedAddress || resolvedAnchorLocation?.anchor || ''}.`,
             tip: buildPlaceSuggestionTip(result, resolvedAnchorLocation?.anchor || '', category),
             whyItFits: buildPlaceSuggestionWhy(result, resolvedAnchorLocation?.anchor || '', category),
